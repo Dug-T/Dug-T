@@ -1,4 +1,4 @@
-- 👋 Hi, I’m @Dug-T
+- 👋 Hi, I’m @Dug-T (Douglas Thomson)
 - 👀 I’m interested in becoming an unreal game develeoper
 - 🌱 I’m currently learning Unreal Engine using tutorials on Udemy.com
 - 💞️ I’m looking to collaborate on my own projects and hopefully other projects
