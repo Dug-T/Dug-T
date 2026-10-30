@@ -2,7 +2,15 @@
 
 A realistic-style first-person shooter built with [Three.js](https://threejs.org/), and the sequel to [WallyMan Maze](../wallyman-maze/). Everything is in `index.html`, with `wallyman.jpg` as the start-screen portrait. All models, textures and sounds are generated in code; there are no image, model or audio files apart from the portrait.
 
-A Red Cell mercenary unit is closing in on a desert outpost at dusk. As WallyMan, hold it against wave after wave of soldiers among concrete buildings, shipping containers, sandbags, barriers, crates and oil drums. Every fifth wave, the Brute turns up.
+A Red Cell mercenary unit is moving into a small town at dusk. As WallyMan, hold the streets against wave after wave of soldiers. Every fifth wave, the Brute turns up.
+
+## The town
+
+- **Streets:** two main roads cross at a cobbled town square with a fountain, and side streets run round the edge. Roads have lane markings and kerbs; everything else is paved.
+- **Buildings:** painted two-storey houses with tiled roofs, shutters, doors and chimneys; three-storey apartment blocks with balconies and rooftop water tanks; and a church with a steeple on the square.
+- **Shops** with big windows, striped awnings and signs: Bakery, Café, Pharmacy, Grocery, Hardware, Garage and Hotel.
+- **Street life and cover:** parked cars (and two burnt-out wrecks), trees, street lamps, benches, bins, fire hydrants, dumpsters, crates, a shed, a shipping container, back gardens, a sandbagged checkpoint across the main road and concrete barriers on the cross street.
+- **Edge of town:** a picket fence, with fields, trees and hills beyond. Soldiers come in at the ends of the roads.
 
 ## Play
 
@@ -73,8 +81,9 @@ When you deploy, a female voice says "WallyMan Shooter" using the browser's buil
 
 ## How it works
 
-- **Level**: every solid is a box in `BOXES`. The same list builds the 3D scene, blocks movement, stops bullets, builds the path-finding grid and draws the radar.
-- **Look**: ACES film tone mapping, a soft-shadowed low sun, a gradient sky shader with haze, and textures (concrete, brick, facades with windows, wood, corrugated steel, dirt, asphalt) painted onto canvases at load time.
+- **Level**: every solid is a box in `BOXES`; the town's four quarters share one plan, mirrored, each with its own shops and colours. The same list builds the 3D scene, blocks movement, stops bullets, builds the path-finding grid and draws the radar. Walk-through details (benches, hydrants, bins, lawns) are in `DECOR`.
+- **Performance**: after the town is built, `mergeStatic()` merges every fixed piece that shares a look into one mesh, so roughly 700 pieces draw as about 120.
+- **Look**: ACES film tone mapping, a soft-shadowed low sun, a gradient sky shader with haze, and textures (plaster facades with shuttered windows, roof tiles, cobbles, paving, asphalt with road markings, shop signs, striped awnings, picket fencing, grass and wood) painted onto canvases at load time.
 - **Soldiers**: built from boxes and spheres with jointed hips, knees, shoulders and elbows. They animate walking and running, aim up and down at you, flinch when hit and fall when killed. Each has head, chest, belly and leg hit zones.
 - **Path-finding**: a 1 m grid over the compound. A flood fill from your position runs a few times a second, and soldiers step towards lower distances, so they route round buildings and containers.
 - **Shooting**: hitscan, from the camera with random spread inside the current cone. Enemy shots roll against a hit chance based on range and movement, and only when they have line of sight.
