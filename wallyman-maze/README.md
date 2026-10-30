@@ -47,9 +47,16 @@ A bonus fruit appears just below the Sentry bay twice per level: once when 30% o
 - Bonus fruit: see the table above
 - Extra life at 10,000 points
 
-## High scores
+## Announcer
 
-The top 10 scores are saved in your browser (`localStorage`) with your name and the level you reached. If you make the table, you're asked for your name when the game ends. Scores are kept per browser, so they don't carry across devices.
+When you press Play, a female voice says "WallyMan Maze". It uses your browser's built-in speech voices, so the exact voice depends on your device. If no female English voice is installed, it uses the default voice at a higher pitch. Turning the sound off (M) also silences the announcer.
+
+## Leaderboard
+
+- **Published page (claude.ai):** the leaderboard is shared by everyone who plays. Each player has one entry, their best run, and it updates live. Posting a score needs Contributor access to the page; viewers can still see the board.
+- **Opened as a file:** there's no shared database, so the game keeps a top 10 in your browser (`localStorage`) instead.
+
+Either way, when you set a new best you're asked for your name (up to 12 characters).
 
 ## How it works
 

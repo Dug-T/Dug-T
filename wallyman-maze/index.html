@@ -119,6 +119,8 @@
   .scores td { padding: 4px 6px; border-bottom: 1px solid rgba(58, 49, 144, 0.4); }
   .scores th:nth-child(2), .scores td:nth-child(2) { text-align: left; overflow-wrap: anywhere; }
   .scores th:last-child, .scores td:last-child { text-align: right; }
+  .scores .board-note { margin: 0 0 6px; font-size: 0.75rem; max-width: none; }
+  .name-row button:disabled { opacity: 0.6; cursor: progress; }
   .scores tr.mine td { color: var(--wally); font-weight: 700; }
   .scores .empty td { color: var(--muted); text-align: center; padding: 10px; }
   .panel.ended .intro { display: none; }
@@ -173,16 +175,17 @@
       <p id="blurb">You are <strong>WallyMan</strong>, trapped in a neon maze. Collect every spark to clear the level. Grab a <strong>flare</strong> and the Sentries panic, so hunt them for bonus points. Bonus fruit appears twice a level, so grab it before it fades.</p>
       <div id="finalScore" hidden></div>
       <form id="nameForm" hidden>
-        <label for="nameInput">New high score! Enter your name</label>
+        <label id="nameLabel" for="nameInput">New high score! Enter your name</label>
         <div class="name-row">
           <input id="nameInput" name="name" maxlength="12" autocomplete="off" spellcheck="false" placeholder="WallyMan">
-          <button type="submit">Save</button>
+          <button id="saveBtn" type="submit">Save</button>
         </div>
         <button id="skipBtn" type="button">Don't save</button>
       </form>
       <button id="startBtn" type="button">Play</button>
       <section class="scores" aria-labelledby="scoresHead">
         <h2 id="scoresHead">High scores</h2>
+        <p id="boardNote" class="board-note">Saved in this browser.</p>
         <table>
           <thead><tr><th>#</th><th>Name</th><th>Level</th><th>Score</th></tr></thead>
           <tbody id="scoreRows"></tbody>
@@ -695,8 +698,36 @@
     clear() { [523, 659, 784, 1047].forEach((f, i) => tone(f, 0, 0.16, 'triangle', 0.08, i * 0.12)); },
     life() { [880, 1175, 1568].forEach((f, i) => tone(f, 0, 0.12, 'square', 0.05, i * 0.09)); },
     fruit() { tone(600, 1200, 0.12, 'triangle', 0.08); tone(900, 1800, 0.12, 'triangle', 0.06, 0.1); },
-    start() { [392, 523, 659, 784].forEach((f, i) => tone(f, 0, 0.14, 'triangle', 0.07, i * 0.14)); },
+    start(delay = 0) { [392, 523, 659, 784].forEach((f, i) => tone(f, 0, 0.14, 'triangle', 0.07, delay + i * 0.14)); },
   };
+
+  // Announcer: a female voice says the game's name when a game starts. Uses the browser's
+  // built-in speech voices, so the exact voice depends on the device.
+  const FEMALE_VOICE = /\b(female|woman|samantha|victoria|karen|moira|tessa|fiona|serena|zira|hazel|susan|libby|sonia|aria|jenny|natasha|allison|ava|joanna|salli|kendra|kimberly|catherine|google us english)\b/i;
+  const hasSpeech = 'speechSynthesis' in window && typeof SpeechSynthesisUtterance === 'function';
+  function pickVoice() {
+    if (!hasSpeech) return null;
+    const voices = speechSynthesis.getVoices().filter((v) => /^en/i.test(v.lang));
+    return voices.find((v) => /female/i.test(v.name)) || voices.find((v) => FEMALE_VOICE.test(v.name)) || null;
+  }
+  let announcer = pickVoice();
+  if (hasSpeech) speechSynthesis.onvoiceschanged = () => { announcer = pickVoice(); };
+  function announce(text) {
+    if (muted || !hasSpeech) return false;
+    try {
+      speechSynthesis.cancel();
+      const line = new SpeechSynthesisUtterance(text);
+      const voice = announcer || pickVoice();
+      if (voice) line.voice = voice;
+      line.lang = voice ? voice.lang : 'en-GB';
+      line.pitch = voice ? 1.1 : 1.5; // no known female voice: lift the default voice's pitch
+      line.rate = 0.95;
+      speechSynthesis.speak(line);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
 
   // ---------- Game state ----------
   const $ = (id) => document.getElementById(id);
@@ -704,11 +735,14 @@
     score: $('score'), best: $('best'), level: $('level'), lives: $('lives'), tray: $('tray'),
     banner: $('banner'), overlay: $('overlay'), panel: document.querySelector('.panel'),
     title: $('title'), blurb: $('blurb'), finalScore: $('finalScore'), startBtn: $('startBtn'),
-    nameForm: $('nameForm'), nameInput: $('nameInput'), skipBtn: $('skipBtn'), scoreRows: $('scoreRows'),
+    nameForm: $('nameForm'), nameInput: $('nameInput'), nameLabel: $('nameLabel'), saveBtn: $('saveBtn'),
+    skipBtn: $('skipBtn'), scoreRows: $('scoreRows'), scoresHead: $('scoresHead'), boardNote: $('boardNote'),
     fruitList: $('fruitList'), camBtn: $('camBtn'), muteBtn: $('muteBtn'), pauseBtn: $('pauseBtn'),
   };
 
-  // ---------- High scores (kept in this browser) ----------
+  // ---------- High scores ----------
+  // Inside the published page the board is shared by everyone who plays it (one entry per
+  // player: their best run). Opened as a plain file, it falls back to a top 10 kept in this browser.
   const SCORES_KEY = 'wallyman-maze-scores';
   const MAX_SCORES = 10;
   let scores = [];
@@ -721,35 +755,70 @@
         .slice(0, MAX_SCORES);
     }
   } catch (e) { /* storage unavailable */ }
-  let best = scores.length ? scores[0].score : 0;
   let lastName = '';
   try { lastName = localStorage.getItem('wallyman-maze-name') || ''; } catch (e) { /* storage unavailable */ }
 
-  const qualifies = (s) => s > 0 && (scores.length < MAX_SCORES || s > scores[scores.length - 1].score);
-  function recordScore(name) {
-    const entry = { name: name.slice(0, 12), score, level, date: Date.now() };
+  const board = { shared: false, db: null, myId: null, myBest: 0, canWrite: false, rows: [], error: '' };
+  const cleanName = (n) => String(n || '').replace(/\s+/g, ' ').trim().slice(0, 12) || 'WallyMan';
+  const boardRows = () => (board.shared ? board.rows : scores);
+  const topScore = () => (boardRows()[0] ? boardRows()[0].score : 0);
+  let best = topScore();
+
+  // Does this score earn a name entry?
+  function qualifies(s) {
+    if (s <= 0) return false;
+    if (board.shared) return board.canWrite && s > board.myBest;
+    return scores.length < MAX_SCORES || s > scores[scores.length - 1].score;
+  }
+
+  function rememberName(name) {
+    lastName = name;
+    try { localStorage.setItem('wallyman-maze-name', name); } catch (e) { /* storage unavailable */ }
+  }
+
+  function recordLocal(name) {
+    const entry = { name, score, level, date: Date.now() };
     scores.push(entry);
     scores.sort((a, b) => b.score - a.score || a.date - b.date);
     scores = scores.slice(0, MAX_SCORES);
-    best = scores[0].score;
-    try {
-      localStorage.setItem(SCORES_KEY, JSON.stringify(scores));
-      localStorage.setItem('wallyman-maze-name', name);
-    } catch (e) { /* storage unavailable */ }
+    try { localStorage.setItem(SCORES_KEY, JSON.stringify(scores)); } catch (e) { /* storage unavailable */ }
     return entry;
   }
+
+  async function recordShared(name) {
+    const entry = { name, score, level, date: Date.now() };
+    try {
+      await board.db.doc('leaderboard/' + board.myId).set(entry);
+      board.myBest = score;
+      board.error = '';
+    } catch (e) {
+      if (e && (e.code === 'invalid_argument' || e.code === 'not_granted')) {
+        board.canWrite = false;
+        board.error = "Your score wasn't posted: you need Contributor access to this page to join the leaderboard.";
+      } else {
+        board.error = "Your score couldn't be posted just now. Beat it again to try once more.";
+      }
+    }
+  }
+
   function renderScores(highlight) {
+    const rows = boardRows();
+    ui.scoresHead.textContent = board.shared ? 'Leaderboard' : 'High scores';
+    ui.boardNote.textContent = board.error ||
+      (board.shared
+        ? (board.canWrite ? 'Shared with everyone who plays. Your best run counts.' : 'Shared leaderboard. Only players with Contributor access can post scores.')
+        : 'Saved in this browser.');
     ui.scoreRows.replaceChildren();
-    if (!scores.length) {
+    if (!rows.length) {
       const tr = document.createElement('tr');
       tr.className = 'empty';
       tr.innerHTML = '<td colspan="4">No scores yet. Set the first one.</td>';
       ui.scoreRows.appendChild(tr);
       return;
     }
-    scores.forEach((e, i) => {
+    rows.forEach((e, i) => {
       const tr = document.createElement('tr');
-      if (e === highlight) tr.className = 'mine';
+      if (board.shared ? e.id === board.myId : e === highlight) tr.className = 'mine';
       for (const v of [i + 1, e.name, e.level, e.score.toLocaleString()]) {
         const td = document.createElement('td');
         td.textContent = v;
@@ -757,6 +826,46 @@
       }
       ui.scoreRows.appendChild(tr);
     });
+  }
+
+  // Rows come from other players, so check every field before showing it.
+  function boardEntry(doc) {
+    const d = doc.data() || {};
+    const sc = Number(d.score), lv = Number(d.level);
+    if (!Number.isFinite(sc) || sc <= 0) return null;
+    return { id: doc.id, name: cleanName(d.name), score: Math.floor(sc), level: Number.isFinite(lv) ? Math.max(1, Math.floor(lv)) : 1 };
+  }
+
+  async function connectBoard() {
+    if (!window.claude || typeof window.claude.use !== 'function') return;
+    let db, user;
+    try { [db, user] = await Promise.all([window.claude.use('db'), window.claude.use('user')]); } catch (e) { return; }
+    if (!db) return;
+    board.db = db;
+    board.shared = true;
+    const safely = async (f) => { try { return await f(); } catch (e) { return null; } };
+    board.myId = user ? await safely(() => user.id()) : null;
+    const can = user ? await safely(() => user.can('data.write')) : null;
+    board.canWrite = !!board.myId && can !== false;
+    renderScores(null);
+    db.collection('leaderboard').orderBy('score', 'desc').limit(MAX_SCORES).onSnapshot((snap) => {
+      board.rows = snap.docs.map(boardEntry).filter(Boolean);
+      best = Math.max(topScore(), 0);
+      updateHUD();
+      if (ui.nameForm.hidden) renderScores(null);
+    }, () => {
+      board.error = "The leaderboard can't be reached right now.";
+      renderScores(null);
+    });
+    if (board.myId) {
+      try {
+        const mine = await db.doc('leaderboard/' + board.myId).get();
+        if (mine.exists) {
+          const e = boardEntry(mine);
+          if (e) { board.myBest = e.score; if (!lastName) lastName = e.name; }
+        }
+      } catch (e) { /* keep defaults */ }
+    }
   }
 
   let state = 'title';      // title | ready | play | dying | cleared | paused | over
@@ -846,9 +955,9 @@
     snapCamera = true;
   }
 
-  function startRound(label) {
+  function startRound(label, secs = 1.8) {
     state = 'ready';
-    stateT = 1.8;
+    stateT = secs;
     setBanner(label);
   }
 
@@ -862,8 +971,9 @@
     updateHUD();
     ui.overlay.hidden = true;
     ui.panel.classList.remove('ended');
-    sfx.start();
-    startRound('Ready');
+    const spoke = announce('Wally Man Maze!');
+    sfx.start(spoke ? 1.4 : 0);
+    startRound('Ready', spoke ? 2.6 : 1.8);
   }
 
   function showGameOverMenu(highlight) {
@@ -882,11 +992,15 @@
     ui.title.textContent = 'Game over';
     ui.blurb.textContent = 'The Sentries caught WallyMan. One more run?';
     ui.finalScore.hidden = false;
-    ui.finalScore.textContent = `Score ${score.toLocaleString()} · Level ${level}` + (score > 0 && score > (scores[0] ? scores[0].score : 0) ? ' · New best' : '');
+    const isTop = score > 0 && score > topScore();
+    const isPersonal = board.shared && score > 0 && score > board.myBest;
+    ui.finalScore.textContent = `Score ${score.toLocaleString()} · Level ${level}` +
+      (isTop ? ' · New top score' : isPersonal ? ' · New personal best' : '');
     ui.startBtn.textContent = 'Play again';
     ui.overlay.hidden = false;
     renderScores(null);
     if (qualifies(score)) {
+      ui.nameLabel.textContent = board.shared ? 'New personal best! Enter your name for the leaderboard' : 'New high score! Enter your name';
       ui.nameForm.hidden = false;
       ui.startBtn.hidden = true;
       ui.nameInput.value = lastName;
@@ -897,11 +1011,23 @@
     }
   }
 
-  ui.nameForm.addEventListener('submit', (e) => {
+  let saving = false;
+  ui.nameForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const name = ui.nameInput.value.trim() || 'WallyMan';
-    lastName = name;
-    showGameOverMenu(recordScore(name));
+    if (saving) return;
+    const name = cleanName(ui.nameInput.value);
+    rememberName(name);
+    if (board.shared) {
+      saving = true;
+      ui.saveBtn.disabled = true;
+      await recordShared(name);
+      saving = false;
+      ui.saveBtn.disabled = false;
+      showGameOverMenu(null);
+    } else {
+      showGameOverMenu(recordLocal(name));
+      best = topScore();
+    }
     updateHUD();
   });
   ui.skipBtn.addEventListener('click', () => showGameOverMenu(null));
@@ -917,6 +1043,7 @@
     ui.fruitList.appendChild(li);
   });
   renderScores(null);
+  connectBoard();
 
   // ---------- Movement ----------
   function posOf(e) {
@@ -1288,6 +1415,7 @@
   }
   function toggleMute() {
     muted = !muted;
+    if (muted && hasSpeech) speechSynthesis.cancel();
     ui.muteBtn.textContent = muted ? 'Sound off' : 'Sound on';
   }
   window.addEventListener('keydown', (e) => {
