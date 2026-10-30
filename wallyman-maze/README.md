@@ -104,6 +104,7 @@ If no female English voice is installed, it uses the default voice. Turning the 
 ## Leaderboard
 
 - **Published page (claude.ai):** the leaderboard is shared by everyone who plays. Each player has one entry, their best run, and it updates live. Posting a score needs Contributor access to the page; viewers can still see the board.
+- **Inside the Facebook, Instagram or Messenger app:** those apps open links in their own built-in browser, where you aren't signed in to Claude, so the shared leaderboard can't be reached. Scores save on that phone only, and the game says so under the high score table. Use the app's ⋯ menu → **Open in browser** (signed in to Claude) to post to the shared board.
 - **Opened as a file:** there's no shared database, so the game keeps a top 10 in your browser (`localStorage`) instead.
 - The all-time board's storage (the `leaderboard` collection and the `wallyman-maze-scores` browser key) is unchanged from earlier versions, so existing scores carry over. The daily board lives separately (the `daily` collection, one entry per player, and the `wallyman-maze-daily` browser key).
 

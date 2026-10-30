@@ -138,6 +138,7 @@
   .scores th:nth-child(2), .scores td:nth-child(2) { text-align: left; overflow-wrap: anywhere; }
   .scores th:last-child, .scores td:last-child { text-align: right; }
   .scores .board-note { margin: 0 0 6px; font-size: 0.75rem; max-width: none; }
+  .scores .board-note.warn { color: #ffb02e; font-weight: 600; }
   .name-row button:disabled { opacity: 0.6; cursor: progress; }
   .scores tr.mine td { color: var(--wally); font-weight: 700; }
   .scores .empty td { color: var(--muted); text-align: center; padding: 10px; }
@@ -1312,6 +1313,11 @@
     }
   }
 
+  function offlineNote() {
+    return inAppBrowser
+      ? "You're playing inside the Facebook (or Instagram) app, so scores only save on this phone, not the shared leaderboard. Tap the ⋯ menu and choose Open in browser, signed in to Claude, to save them."
+      : 'Scores only save on this device right now. Sign in to Claude in this browser to put them on the shared leaderboard.';
+  }
   function renderScores(highlight) {
     if (boardTab === 'daily') { renderDaily(highlight); return; }
     setTabs();
@@ -1320,7 +1326,8 @@
     ui.boardNote.textContent = board.error ||
       (board.shared
         ? (board.canWrite ? 'Shared with everyone who plays. Your best run counts.' : 'Shared leaderboard. Only players with Contributor access can post scores.')
-        : 'Saved in this browser.');
+        : board.blocked || inAppBrowser ? offlineNote() : 'Saved in this browser.');
+    ui.boardNote.classList.toggle('warn', !board.shared && (board.blocked || inAppBrowser));
     fillRows(rows, (e) => (board.shared ? e.id === board.myId : e === highlight));
   }
   function fillRows(rows, isMine) {
@@ -1352,11 +1359,19 @@
     return { id: doc.id, name: cleanName(d.name), score: Math.floor(sc), level: Number.isFinite(lv) ? Math.max(1, Math.floor(lv)) : 1 };
   }
 
+  // Facebook, Instagram and Messenger open links in their own built-in browser, where the
+  // player isn't signed in to Claude, so the shared leaderboard can't be reached from there.
+  const inAppBrowser = /FBAN|FBAV|FB_IAB|FBIOS|Instagram|Messenger/i.test(navigator.userAgent || '');
   async function connectBoard() {
     if (!window.claude || typeof window.claude.use !== 'function') return;
     let db, user;
-    try { [db, user] = await Promise.all([window.claude.use('db'), window.claude.use('user')]); } catch (e) { return; }
-    if (!db) return;
+    try { [db, user] = await Promise.all([window.claude.use('db'), window.claude.use('user')]); } catch (e) { db = null; }
+    if (!db) {
+      // On the published page, but the shared board isn't available to this viewer
+      board.blocked = true;
+      renderScores(null);
+      return;
+    }
     board.db = db;
     board.shared = true;
     const safely = async (f) => { try { return await f(); } catch (e) { return null; } };
@@ -1467,7 +1482,9 @@
     setTabs();
     ui.scoresHead.textContent = "Today's daily · " + dayLabel(dayKey());
     ui.boardNote.textContent = daily.error ||
-      (board.shared ? 'Everyone plays the same maze today. Your best run counts. A new maze arrives at midnight UTC.' : "Today's maze, saved in this browser.");
+      (board.shared ? 'Everyone plays the same maze today. Your best run counts. A new maze arrives at midnight UTC.'
+        : board.blocked || inAppBrowser ? offlineNote() : "Today's maze, saved in this browser.");
+    ui.boardNote.classList.toggle('warn', !board.shared && (board.blocked || inAppBrowser));
     fillRows(dailyRows(), (e) => (board.shared ? e.id === board.myId : e === highlight));
   }
   let boardTab = 'all';
@@ -1850,7 +1867,9 @@
       showSaveMsg(msg);
       showGameOverMenu(null);
     } else if (makesLocalTop(score)) {
-      showSaveMsg(`Saved! ${name} is in the high scores.`);
+      showSaveMsg(board.blocked || inAppBrowser
+        ? `Saved on this device only, ${name}. Open the game in your browser, signed in to Claude, to reach the shared leaderboard.`
+        : `Saved! ${name} is in the high scores.`);
       showGameOverMenu(recordLocal(name));
       best = topScore();
     } else {
