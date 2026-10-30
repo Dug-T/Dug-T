@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Glimmer Run</title>
+<title>WallyMan Maze</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=Monoton&display=swap">
 <style>
@@ -13,7 +13,8 @@
     --panel: rgba(13, 11, 38, 0.9);
     --line: #3a3190;
     --wall: #7a6cff;
-    --glim: #ffd23f;
+    --wally: #ffd23f;
+    --hood: #4d7dff;
     --text: #ecebff;
     --muted: #a19cd8;
     --display: "Monoton", "Chakra Petch", system-ui, sans-serif;
@@ -37,9 +38,11 @@
   }
   .stat { display: flex; flex-direction: column; line-height: 1.1; }
   .stat span { font-size: 0.68rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
-  .stat b { font-size: 1.25rem; font-weight: 700; color: var(--glim); font-variant-numeric: tabular-nums; }
+  .stat b { font-size: 1.25rem; font-weight: 700; color: var(--wally); font-variant-numeric: tabular-nums; }
   #lives { display: flex; gap: 6px; align-items: center; min-height: 1.4rem; }
-  #lives i { width: 14px; height: 14px; border-radius: 50%; background: var(--glim); box-shadow: 0 0 10px var(--glim); }
+  #lives i { width: 14px; height: 14px; border-radius: 50%; background: var(--hood); box-shadow: 0 0 10px var(--hood); }
+  #tray { display: flex; gap: 5px; align-items: center; }
+  #tray i { width: 11px; height: 11px; border-radius: 50%; background: var(--c); box-shadow: 0 0 8px var(--c); }
   .tools { margin-left: auto; display: flex; gap: 8px; pointer-events: auto; }
   .tools button {
     font: 600 0.75rem/1 var(--ui); letter-spacing: 0.1em; text-transform: uppercase;
@@ -47,11 +50,11 @@
     border-radius: 8px; padding: 8px 10px; cursor: pointer;
   }
   .tools button:hover { border-color: var(--wall); }
-  button:focus-visible { outline: 2px solid var(--glim); outline-offset: 2px; }
+  button:focus-visible { outline: 2px solid var(--wally); outline-offset: 2px; }
 
   #banner {
     position: absolute; left: 0; right: 0; top: 40%; z-index: 2; text-align: center; pointer-events: none;
-    font-family: var(--display); font-size: clamp(2rem, 8vw, 3.6rem); color: var(--glim);
+    font-family: var(--display); font-size: clamp(2rem, 8vw, 3.6rem); color: var(--wally);
     text-shadow: 0 0 18px rgba(255, 210, 63, 0.7);
   }
 
@@ -70,7 +73,7 @@
   }
   .panel h1 {
     margin: 0; font-family: var(--display); font-weight: 400; line-height: 1;
-    font-size: clamp(2.4rem, 11vw, 4.2rem); color: var(--glim);
+    font-size: clamp(2.4rem, 11vw, 4.2rem); color: var(--wally);
     text-shadow: 0 0 22px rgba(255, 210, 63, 0.55); text-wrap: balance;
   }
   .panel p { margin: 0; color: var(--muted); line-height: 1.5; max-width: 34ch; }
@@ -78,7 +81,7 @@
   #finalScore { font-size: 1.1rem; color: var(--text); }
   #startBtn {
     font: 700 1rem/1 var(--ui); letter-spacing: 0.16em; text-transform: uppercase;
-    color: var(--ink); background: var(--glim); border: 0; border-radius: 999px;
+    color: var(--ink); background: var(--wally); border: 0; border-radius: 999px;
     padding: 14px 40px; cursor: pointer; box-shadow: 0 0 24px rgba(255, 210, 63, 0.45);
   }
   #startBtn:hover { filter: brightness(1.08); }
@@ -89,6 +92,36 @@
   .keys { display: grid; grid-template-columns: auto auto; gap: 6px 14px; margin: 0; font-size: 0.8rem; color: var(--muted); text-align: left; }
   .keys dt { color: var(--text); font-weight: 600; }
   .keys dd { margin: 0; }
+  .fruits { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 12px; margin: 0; padding: 0; list-style: none; font-size: 0.8rem; color: var(--muted); }
+  .fruits li { display: flex; align-items: center; gap: 5px; }
+  .fruits i { width: 9px; height: 9px; border-radius: 50%; background: var(--c); box-shadow: 0 0 6px var(--c); }
+  .fruits b { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+  #nameForm { display: flex; flex-direction: column; gap: 8px; width: 100%; max-width: 20rem; }
+  #nameForm label { font-size: 0.85rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--wally); }
+  .name-row { display: flex; gap: 8px; }
+  #nameInput {
+    flex: 1; min-width: 0; font: 600 1rem var(--ui); color: var(--text); background: var(--ink);
+    border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px;
+  }
+  #nameInput:focus { outline: 2px solid var(--wally); outline-offset: 1px; }
+  .name-row button, #skipBtn {
+    font: 700 0.85rem/1 var(--ui); letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer;
+    border-radius: 8px; padding: 10px 14px;
+  }
+  .name-row button { color: var(--ink); background: var(--wally); border: 0; }
+  #skipBtn { align-self: center; color: var(--muted); background: none; border: 0; padding: 4px 8px; text-decoration: underline; }
+
+  .scores { width: 100%; }
+  .scores h2 { margin: 0 0 6px; font: 600 0.75rem var(--ui); letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); }
+  .scores table { width: 100%; border-collapse: collapse; font-size: 0.85rem; font-variant-numeric: tabular-nums; }
+  .scores th { font-weight: 600; font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); padding: 4px 6px; border-bottom: 1px solid var(--line); }
+  .scores td { padding: 4px 6px; border-bottom: 1px solid rgba(58, 49, 144, 0.4); }
+  .scores th:nth-child(2), .scores td:nth-child(2) { text-align: left; overflow-wrap: anywhere; }
+  .scores th:last-child, .scores td:last-child { text-align: right; }
+  .scores tr.mine td { color: var(--wally); font-weight: 700; }
+  .scores .empty td { color: var(--muted); text-align: center; padding: 10px; }
+  .panel.ended .intro { display: none; }
 
   .dpad {
     position: absolute; z-index: 2; left: 50%; transform: translateX(-50%);
@@ -124,6 +157,7 @@
     <div class="stat"><span>Best</span><b id="best">0</b></div>
     <div class="stat"><span>Level</span><b id="level">1</b></div>
     <div id="lives" aria-label="Lives left"></div>
+    <div id="tray" aria-label="Bonus fruit collected"></div>
     <div class="tools">
       <button id="camBtn" type="button" title="Switch camera (C)">View</button>
       <button id="muteBtn" type="button" title="Sound on or off (M)">Sound on</button>
@@ -135,17 +169,33 @@
 
   <div id="overlay">
     <div class="panel">
-      <h1 id="title">Glimmer Run</h1>
-      <p id="blurb">You are <strong>Glim</strong>, a spark of light lost in a neon maze. Collect every spark to clear the level. Grab a <strong>flare</strong> and the Sentries panic, so hunt them for bonus points.</p>
+      <h1 id="title">WallyMan Maze</h1>
+      <p id="blurb">You are <strong>WallyMan</strong>, trapped in a neon maze. Collect every spark to clear the level. Grab a <strong>flare</strong> and the Sentries panic, so hunt them for bonus points. Bonus fruit appears twice a level, so grab it before it fades.</p>
       <div id="finalScore" hidden></div>
+      <form id="nameForm" hidden>
+        <label for="nameInput">New high score! Enter your name</label>
+        <div class="name-row">
+          <input id="nameInput" name="name" maxlength="12" autocomplete="off" spellcheck="false" placeholder="WallyMan">
+          <button type="submit">Save</button>
+        </div>
+        <button id="skipBtn" type="button">Don't save</button>
+      </form>
       <button id="startBtn" type="button">Play</button>
-      <ul class="sentries">
+      <section class="scores" aria-labelledby="scoresHead">
+        <h2 id="scoresHead">High scores</h2>
+        <table>
+          <thead><tr><th>#</th><th>Name</th><th>Level</th><th>Score</th></tr></thead>
+          <tbody id="scoreRows"></tbody>
+        </table>
+      </section>
+      <ul class="fruits intro" id="fruitList"></ul>
+      <ul class="sentries intro">
         <li style="--c:#ff3355"><i></i>Rook <em>hunts you</em></li>
         <li style="--c:#b26bff"><i></i>Vex <em>cuts you off</em></li>
         <li style="--c:#22e3b5"><i></i>Mirra <em>flanks</em></li>
         <li style="--c:#ff9a3c"><i></i>Drift <em>roams</em></li>
       </ul>
-      <dl class="keys">
+      <dl class="keys intro">
         <dt>Arrows / WASD</dt><dd>Move</dd>
         <dt>C</dt><dd>Chase or overhead camera</dd>
         <dt>P</dt><dd>Pause</dd>
@@ -243,8 +293,8 @@
   const sun = new THREE.DirectionalLight(0xffffff, 0.35);
   sun.position.set(-6, 14, 8);
   scene.add(sun);
-  const glimLight = new THREE.PointLight(0xffd23f, 1.8, 7, 2);
-  scene.add(glimLight);
+  const wallyLight = new THREE.PointLight(0xfff0dd, 1.8, 7, 2);
+  scene.add(wallyLight);
 
   const floor = new THREE.Mesh(
     new THREE.PlaneGeometry(W + 6, H + 6),
@@ -359,25 +409,74 @@
     flareMeshes[r * W + c] = g;
   }
 
-  // Glim, the player
-  const glim = new THREE.Group();
-  const glimInner = new THREE.Group();
-  glim.add(glimInner);
-  const glimBody = new THREE.Mesh(
-    new THREE.SphereGeometry(0.38, 32, 24),
-    new THREE.MeshStandardMaterial({ color: 0xffd23f, emissive: 0xffa800, emissiveIntensity: 0.55, roughness: 0.35 })
-  );
-  glimInner.add(glimBody);
-  const eyeMat = new THREE.MeshBasicMaterial({ color: 0x1a1240 });
-  for (const sx of [-0.13, 0.13]) {
-    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.07, 12, 8), eyeMat);
-    eye.position.set(sx, 0.1, 0.33);
-    eye.scale.set(1, 1.35, 0.6);
-    glimInner.add(eye);
+  // WallyMan, the player: a head in a blue hood with goggles and a looped headpiece.
+  // The model faces +z; wallyInner turns it to face the direction of travel.
+  const wally = new THREE.Group();
+  const wallyInner = new THREE.Group();
+  wally.add(wallyInner);
+  const head = new THREE.Group();
+  head.scale.setScalar(0.95);
+  wallyInner.add(head);
+
+  const hoodMat = new THREE.MeshStandardMaterial({ color: 0x2f5bff, emissive: 0x1a3cff, emissiveIntensity: 0.35, roughness: 0.3, metalness: 0.15 });
+  const skinMat = new THREE.MeshStandardMaterial({ color: 0xf1c9b4, emissive: 0x6b3a2a, emissiveIntensity: 0.25, roughness: 0.6 });
+  const pinkMat = new THREE.MeshStandardMaterial({ color: 0xff4fa8, emissive: 0xd0207a, emissiveIntensity: 0.5, roughness: 0.4 });
+  const lensMat = new THREE.MeshStandardMaterial({ color: 0xf4f6ff, emissive: 0x9aa8ff, emissiveIntensity: 0.35, roughness: 0.2 });
+  const darkMat = new THREE.MeshBasicMaterial({ color: 0x1a1240 });
+
+  const hood = new THREE.Mesh(new THREE.SphereGeometry(0.3, 32, 24), hoodMat);
+  hood.scale.set(1, 1.08, 1);
+  // Bare face: a patch on the front of the hood, from forehead to chin
+  const face = new THREE.Mesh(new THREE.SphereGeometry(0.304, 32, 16, Math.PI / 2 - 0.85, 1.7, 0.95, 1.65), skinMat);
+  face.scale.copy(hood.scale);
+  head.add(hood, face);
+
+  // Goggles: two white lenses with blue rims and a bridge
+  for (const s of [-1, 1]) {
+    const lens = new THREE.Mesh(new THREE.SphereGeometry(0.085, 16, 12), lensMat);
+    lens.position.set(0.1 * s, 0.08, 0.272);
+    lens.scale.set(1, 0.75, 0.45);
+    lens.rotation.y = 0.35 * s;
+    const rim = new THREE.Mesh(new THREE.TorusGeometry(0.085, 0.022, 8, 24), hoodMat);
+    rim.position.copy(lens.position);
+    rim.scale.set(1, 0.78, 1);
+    rim.rotation.y = 0.35 * s;
+    const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.028, 10, 8), darkMat);
+    pupil.position.set(0.1 * s, 0.075, 0.31);
+    head.add(lens, rim, pupil);
   }
-  const glimHalo = makeHalo(0xffd23f, 2.2);
-  glim.add(glimHalo);
-  scene.add(glim);
+  const bridge = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.035, 0.04), hoodMat);
+  bridge.position.set(0, 0.1, 0.3);
+  const nose = new THREE.Mesh(new THREE.SphereGeometry(0.04, 12, 8), skinMat);
+  nose.position.set(0, -0.02, 0.305);
+  nose.scale.set(0.8, 1, 1);
+  const mouth = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.014, 0.02), darkMat);
+  mouth.position.set(0, -0.125, 0.268);
+  const collar = new THREE.Mesh(new THREE.TorusGeometry(0.17, 0.055, 10, 28), hoodMat);
+  collar.position.y = -0.31;
+  collar.rotation.x = Math.PI / 2;
+  const crest = new THREE.Mesh(new THREE.SphereGeometry(0.075, 16, 12), hoodMat);
+  crest.position.set(0, 0.33, 0.02);
+  head.add(bridge, nose, mouth, collar, crest);
+
+  // Headpiece: a big blue loop rising off each side, with a pink panel inside
+  for (const s of [-1, 1]) {
+    const curve = new THREE.CatmullRomCurve3([
+      [0.05, 0.3, 0.02], [0.2, 0.42, 0.04], [0.38, 0.55, 0.02], [0.56, 0.5, 0],
+      [0.6, 0.32, 0], [0.47, 0.2, 0], [0.32, 0.27, 0.02],
+    ].map(([x, y, z]) => new THREE.Vector3(x * s, y, z)));
+    const loop = new THREE.Mesh(new THREE.TubeGeometry(curve, 48, 0.05, 10, false), hoodMat);
+    const tip = new THREE.Mesh(new THREE.SphereGeometry(0.05, 10, 8), hoodMat);
+    tip.position.set(0.32 * s, 0.27, 0.02);
+    const panel = new THREE.Mesh(new THREE.SphereGeometry(0.12, 16, 12), pinkMat);
+    panel.position.set(0.44 * s, 0.38, 0);
+    panel.scale.set(1, 0.8, 0.3);
+    head.add(loop, tip, panel);
+  }
+
+  const wallyHalo = makeHalo(0x4d7dff, 2.4);
+  wally.add(wallyHalo);
+  scene.add(wally);
 
   // Sentries
   const SENTRY_DEFS = [
@@ -459,6 +558,114 @@
     pGeo.attributes.color.needsUpdate = true;
   }
 
+  // ---------- Bonus fruit ----------
+  const FRUIT_SPOT = { c: 10, r: 11 };
+  const fruitMat = (color, glow = 0.35) =>
+    new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: glow, roughness: 0.4 });
+  const stemMat = fruitMat(0x3fae4a, 0.25);
+  function stick(a, b, radius, mat) {
+    const dir = new THREE.Vector3().subVectors(b, a);
+    const m = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, dir.length(), 6), mat);
+    m.position.copy(a).addScaledVector(dir, 0.5);
+    m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.normalize());
+    return m;
+  }
+  const v3 = (x, y, z) => new THREE.Vector3(x, y, z);
+  const FRUITS = [
+    {
+      name: 'Cherries', points: 100, color: 0xff2d4a, make(g) {
+        const red = fruitMat(0xff2d4a);
+        for (const s of [-1, 1]) {
+          const berry = new THREE.Mesh(new THREE.SphereGeometry(0.11, 16, 12), red);
+          berry.position.set(0.09 * s, -0.08, 0);
+          g.add(berry, stick(v3(0.09 * s, 0, 0), v3(0.01, 0.2, 0), 0.012, stemMat));
+        }
+      },
+    },
+    {
+      name: 'Banana', points: 300, color: 0xffe14d, make(g) {
+        const arc = new THREE.Mesh(new THREE.TorusGeometry(0.17, 0.055, 10, 20, Math.PI * 0.85), fruitMat(0xffe14d));
+        arc.rotation.z = Math.PI + 0.25;
+        arc.position.y = 0.1;
+        const tipMat = fruitMat(0x5a3a1a, 0.1);
+        const a = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 6), tipMat);
+        a.position.set(-0.165, 0.05, 0);
+        g.add(arc, a);
+      },
+    },
+    {
+      name: 'Grapes', points: 500, color: 0x9b4dff, make(g) {
+        const purple = fruitMat(0x9b4dff);
+        const rows = [[-0.12, 0, 0.12], [-0.06, 0.06], [0]];
+        rows.forEach((xs, row) => xs.forEach((x) => {
+          const grape = new THREE.Mesh(new THREE.SphereGeometry(0.065, 12, 8), purple);
+          grape.position.set(x, 0.08 - row * 0.1, (row % 2) * 0.03);
+          g.add(grape);
+        }));
+        g.add(stick(v3(0, 0.12, 0), v3(0.02, 0.22, 0), 0.014, stemMat));
+      },
+    },
+    {
+      name: 'Pineapple', points: 700, color: 0xffb02e, make(g) {
+        const body = new THREE.Mesh(new THREE.SphereGeometry(0.13, 12, 10), fruitMat(0xffb02e));
+        body.scale.set(1, 1.3, 1);
+        body.position.y = -0.04;
+        g.add(body);
+        for (let i = 0; i < 5; i++) {
+          const leaf = new THREE.Mesh(new THREE.ConeGeometry(0.035, 0.18, 6), stemMat);
+          const a = (i / 5) * Math.PI * 2;
+          leaf.position.set(Math.cos(a) * 0.03, 0.18, Math.sin(a) * 0.03);
+          leaf.rotation.set(Math.sin(a) * 0.4, 0, -Math.cos(a) * 0.4);
+          g.add(leaf);
+        }
+      },
+    },
+    {
+      name: 'Watermelon', points: 1000, color: 0x3ddc6a, make(g) {
+        const slice = new THREE.Group();
+        const rind = new THREE.Mesh(
+          new THREE.SphereGeometry(0.19, 20, 10, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2),
+          fruitMat(0x2fb457, 0.3)
+        );
+        const flesh = new THREE.Mesh(new THREE.CircleGeometry(0.175, 24), fruitMat(0xff4060, 0.45));
+        flesh.rotation.x = -Math.PI / 2;
+        flesh.position.y = 0.001;
+        slice.add(rind, flesh);
+        const seedMat = fruitMat(0x1a1020, 0);
+        for (let i = 0; i < 6; i++) {
+          const seed = new THREE.Mesh(new THREE.SphereGeometry(0.018, 6, 4), seedMat);
+          const a = (i / 6) * Math.PI * 2;
+          seed.position.set(Math.cos(a) * 0.09, 0.01, Math.sin(a) * 0.09);
+          slice.add(seed);
+        }
+        slice.rotation.x = 0.9; // tilt the red face toward the camera
+        g.add(slice);
+      },
+    },
+    {
+      name: 'Gold star', points: 2000, color: 0xffd23f, make(g) {
+        const shape = new THREE.Shape();
+        for (let i = 0; i < 10; i++) {
+          const rad = i % 2 ? 0.08 : 0.2, a = (i / 10) * Math.PI * 2 + Math.PI / 2;
+          i ? shape.lineTo(Math.cos(a) * rad, Math.sin(a) * rad) : shape.moveTo(Math.cos(a) * rad, Math.sin(a) * rad);
+        }
+        const geo = new THREE.ExtrudeGeometry(shape, { depth: 0.06, bevelEnabled: true, bevelThickness: 0.02, bevelSize: 0.02, bevelSegments: 2 });
+        geo.center();
+        g.add(new THREE.Mesh(geo, fruitMat(0xffd23f, 0.6)));
+      },
+    },
+  ];
+  const fruitForLevel = (lvl) => FRUITS[Math.min(lvl - 1, FRUITS.length - 1)];
+  function makeFruitMesh(def) {
+    const g = new THREE.Group();
+    const model = new THREE.Group();
+    def.make(model);
+    g.add(model, makeHalo(def.color, 1.3));
+    g.userData.model = model;
+    g.position.set(wx(FRUIT_SPOT.c), 0.5, wz(FRUIT_SPOT.r));
+    return g;
+  }
+
   // ---------- Sound ----------
   let actx = null, muted = false, blipHigh = false;
   function initAudio() {
@@ -487,26 +694,80 @@
     death() { tone(760, 70, 1.1, 'sawtooth', 0.07); },
     clear() { [523, 659, 784, 1047].forEach((f, i) => tone(f, 0, 0.16, 'triangle', 0.08, i * 0.12)); },
     life() { [880, 1175, 1568].forEach((f, i) => tone(f, 0, 0.12, 'square', 0.05, i * 0.09)); },
+    fruit() { tone(600, 1200, 0.12, 'triangle', 0.08); tone(900, 1800, 0.12, 'triangle', 0.06, 0.1); },
     start() { [392, 523, 659, 784].forEach((f, i) => tone(f, 0, 0.14, 'triangle', 0.07, i * 0.14)); },
   };
 
   // ---------- Game state ----------
   const $ = (id) => document.getElementById(id);
   const ui = {
-    score: $('score'), best: $('best'), level: $('level'), lives: $('lives'),
-    banner: $('banner'), overlay: $('overlay'), title: $('title'), blurb: $('blurb'),
-    finalScore: $('finalScore'), startBtn: $('startBtn'),
-    camBtn: $('camBtn'), muteBtn: $('muteBtn'), pauseBtn: $('pauseBtn'),
+    score: $('score'), best: $('best'), level: $('level'), lives: $('lives'), tray: $('tray'),
+    banner: $('banner'), overlay: $('overlay'), panel: document.querySelector('.panel'),
+    title: $('title'), blurb: $('blurb'), finalScore: $('finalScore'), startBtn: $('startBtn'),
+    nameForm: $('nameForm'), nameInput: $('nameInput'), skipBtn: $('skipBtn'), scoreRows: $('scoreRows'),
+    fruitList: $('fruitList'), camBtn: $('camBtn'), muteBtn: $('muteBtn'), pauseBtn: $('pauseBtn'),
   };
 
-  let best = 0;
-  try { best = parseInt(localStorage.getItem('glimmer-run-best') || '0', 10) || 0; } catch (e) { /* storage unavailable */ }
+  // ---------- High scores (kept in this browser) ----------
+  const SCORES_KEY = 'wallyman-maze-scores';
+  const MAX_SCORES = 10;
+  let scores = [];
+  try {
+    const saved = JSON.parse(localStorage.getItem(SCORES_KEY) || '[]');
+    if (Array.isArray(saved)) {
+      scores = saved
+        .filter((e) => e && typeof e.score === 'number' && typeof e.name === 'string')
+        .sort((a, b) => b.score - a.score)
+        .slice(0, MAX_SCORES);
+    }
+  } catch (e) { /* storage unavailable */ }
+  let best = scores.length ? scores[0].score : 0;
+  let lastName = '';
+  try { lastName = localStorage.getItem('wallyman-maze-name') || ''; } catch (e) { /* storage unavailable */ }
+
+  const qualifies = (s) => s > 0 && (scores.length < MAX_SCORES || s > scores[scores.length - 1].score);
+  function recordScore(name) {
+    const entry = { name: name.slice(0, 12), score, level, date: Date.now() };
+    scores.push(entry);
+    scores.sort((a, b) => b.score - a.score || a.date - b.date);
+    scores = scores.slice(0, MAX_SCORES);
+    best = scores[0].score;
+    try {
+      localStorage.setItem(SCORES_KEY, JSON.stringify(scores));
+      localStorage.setItem('wallyman-maze-name', name);
+    } catch (e) { /* storage unavailable */ }
+    return entry;
+  }
+  function renderScores(highlight) {
+    ui.scoreRows.replaceChildren();
+    if (!scores.length) {
+      const tr = document.createElement('tr');
+      tr.className = 'empty';
+      tr.innerHTML = '<td colspan="4">No scores yet. Set the first one.</td>';
+      ui.scoreRows.appendChild(tr);
+      return;
+    }
+    scores.forEach((e, i) => {
+      const tr = document.createElement('tr');
+      if (e === highlight) tr.className = 'mine';
+      for (const v of [i + 1, e.name, e.level, e.score.toLocaleString()]) {
+        const td = document.createElement('td');
+        td.textContent = v;
+        tr.appendChild(td);
+      }
+      ui.scoreRows.appendChild(tr);
+    });
+  }
 
   let state = 'title';      // title | ready | play | dying | cleared | paused | over
   let pausedFrom = null;
   let score = 0, lives = 3, level = 1, bonusLifeGiven = false;
-  let sparksLeft = 0;
+  let sparksLeft = 0, eatenThisLevel = 0;
+  const totalPickups = sparkCells.length + flareCells.length;
+  const FRUIT_AT = [Math.round(totalPickups * 0.3), Math.round(totalPickups * 0.7)];
   const pickups = {};       // r*W+c -> 'spark' | 'flare'
+  let fruit = null;         // { mesh, def, t } while a bonus fruit is on the board
+  let collected = [];       // fruit eaten this game, for the HUD tray
   let player, sentries = [];
   let desired = -1;
   let stateT = 0, time = 0;
@@ -524,6 +785,15 @@
     ui.lives.innerHTML = '';
     for (let i = 0; i < Math.max(0, lives - 1); i++) ui.lives.appendChild(document.createElement('i'));
   }
+  function renderTray() {
+    ui.tray.replaceChildren();
+    for (const def of collected.slice(-7)) {
+      const dot = document.createElement('i');
+      dot.style.setProperty('--c', '#' + def.color.toString(16).padStart(6, '0'));
+      dot.title = def.name;
+      ui.tray.appendChild(dot);
+    }
+  }
   function updateHUD() {
     ui.score.textContent = score;
     ui.best.textContent = Math.max(best, score);
@@ -536,14 +806,27 @@
     updateHUD();
   }
 
+  function removeFruit() {
+    if (fruit) scene.remove(fruit.mesh);
+    fruit = null;
+  }
+  function spawnFruit() {
+    removeFruit();
+    const def = fruitForLevel(level);
+    fruit = { def, mesh: makeFruitMesh(def), t: 9.5 };
+    scene.add(fruit.mesh);
+  }
+
   function resetPickups() {
     sparksLeft = 0;
+    eatenThisLevel = 0;
     sparkCells.forEach(([c, r], i) => { pickups[r * W + c] = 'spark'; setSpark(i, true); sparksLeft++; });
     flareCells.forEach(([c, r]) => { pickups[r * W + c] = 'flare'; flareMeshes[r * W + c].visible = true; sparksLeft++; });
   }
 
   function resetActors() {
-    player = { c: START.c, r: START.r, d: -1, t: 0, face: 1, angle: -Math.PI / 2 };
+    removeFruit();
+    player = { c: START.c, r: START.r, d: -1, t: 0, face: 2, angle: 0 };
     desired = -1;
     sentries.forEach((s) => scene.remove(s.mesh.root));
     const releaseScale = Math.max(0.4, 1 - (level - 1) * 0.12);
@@ -558,8 +841,8 @@
     });
     mode = 0; modeIdx = 0; modeT = MODE_TIMES[0];
     frightT = 0; combo = 0;
-    glim.visible = true;
-    glimInner.scale.set(1, 1, 1);
+    wally.visible = true;
+    wallyInner.scale.set(1, 1, 1);
     snapCamera = true;
   }
 
@@ -572,30 +855,68 @@
   function newGame() {
     initAudio();
     score = 0; lives = 3; level = 1; bonusLifeGiven = false;
+    collected = [];
+    renderTray();
     resetPickups();
     resetActors();
     updateHUD();
     ui.overlay.hidden = true;
+    ui.panel.classList.remove('ended');
     sfx.start();
     startRound('Ready');
+  }
+
+  function showGameOverMenu(highlight) {
+    ui.nameForm.hidden = true;
+    ui.startBtn.hidden = false;
+    renderScores(highlight);
+    ui.startBtn.focus();
   }
 
   function gameOver() {
     state = 'over';
     setBanner('');
-    if (score > best) {
-      best = score;
-      try { localStorage.setItem('glimmer-run-best', String(best)); } catch (e) { /* storage unavailable */ }
-    }
+    removeFruit();
     updateHUD();
+    ui.panel.classList.add('ended');
     ui.title.textContent = 'Game over';
-    ui.blurb.textContent = 'The Sentries got the last of your light. One more run?';
+    ui.blurb.textContent = 'The Sentries caught WallyMan. One more run?';
     ui.finalScore.hidden = false;
-    ui.finalScore.textContent = `Score ${score} · Level ${level}` + (score >= best && score > 0 ? ' · New best' : '');
+    ui.finalScore.textContent = `Score ${score.toLocaleString()} · Level ${level}` + (score > 0 && score > (scores[0] ? scores[0].score : 0) ? ' · New best' : '');
     ui.startBtn.textContent = 'Play again';
     ui.overlay.hidden = false;
-    ui.startBtn.focus();
+    renderScores(null);
+    if (qualifies(score)) {
+      ui.nameForm.hidden = false;
+      ui.startBtn.hidden = true;
+      ui.nameInput.value = lastName;
+      ui.nameInput.focus();
+      ui.nameInput.select();
+    } else {
+      showGameOverMenu(null);
+    }
   }
+
+  ui.nameForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const name = ui.nameInput.value.trim() || 'WallyMan';
+    lastName = name;
+    showGameOverMenu(recordScore(name));
+    updateHUD();
+  });
+  ui.skipBtn.addEventListener('click', () => showGameOverMenu(null));
+
+  FRUITS.forEach((def) => {
+    const li = document.createElement('li');
+    li.style.setProperty('--c', '#' + def.color.toString(16).padStart(6, '0'));
+    li.innerHTML = '<i></i>';
+    li.append(def.name + ' ');
+    const b = document.createElement('b');
+    b.textContent = def.points;
+    li.appendChild(b);
+    ui.fruitList.appendChild(li);
+  });
+  renderScores(null);
 
   // ---------- Movement ----------
   function posOf(e) {
@@ -721,6 +1042,8 @@
     if (!kind) return;
     pickups[key] = null;
     sparksLeft--;
+    eatenThisLevel++;
+    if (FRUIT_AT.includes(eatenThisLevel)) spawnFruit();
     if (kind === 'spark') {
       setSpark(sparkIndex[key], false);
       addScore(10);
@@ -770,6 +1093,22 @@
     const pc = Math.round(p.x), pr = Math.round(p.y);
     if (pc >= 0 && pc < W && pr >= 0 && pr < H) eatAt(pc, pr);
 
+    if (fruit) {
+      fruit.t -= dt;
+      if (pc === FRUIT_SPOT.c && pr === FRUIT_SPOT.r) {
+        const { def } = fruit;
+        removeFruit();
+        addScore(def.points);
+        collected.push(def);
+        renderTray();
+        sfx.fruit();
+        burst(FRUIT_SPOT.c, FRUIT_SPOT.r, def.color, 30, 4);
+        popup(`${def.name} ${def.points}`, FRUIT_SPOT.c, FRUIT_SPOT.r, '#' + def.color.toString(16).padStart(6, '0'));
+      } else if (fruit.t <= 0) {
+        removeFruit();
+      }
+    }
+
     for (const s of sentries) updateSentry(s, dt);
 
     for (const s of sentries) {
@@ -790,7 +1129,7 @@
         state = 'dying';
         stateT = 1.7;
         sfx.death();
-        burst(p.x, p.y, 0xffd23f, 60, 5);
+        burst(p.x, p.y, 0x4d7dff, 60, 5);
         return;
       }
     }
@@ -813,12 +1152,12 @@
     } else if (state === 'dying') {
       stateT -= dt;
       const k = Math.max(0, stateT / 1.7);
-      glimInner.scale.setScalar(Math.max(0.001, k));
-      glimInner.rotation.y += dt * 14;
+      wallyInner.scale.setScalar(Math.max(0.001, k));
+      wallyInner.rotation.y += dt * 14;
       if (stateT <= 0) {
         lives--;
         updateHUD();
-        if (lives <= 0) { glim.visible = false; gameOver(); }
+        if (lives <= 0) { wally.visible = false; gameOver(); }
         else { resetActors(); startRound('Ready'); }
       }
     } else if (state === 'cleared') {
@@ -843,21 +1182,23 @@
     return a + d * k;
   }
   const faceAngle = (d) => Math.atan2(DX[d], DY[d]);
+  // WallyMan keeps his face toward the camera and only turns partway toward left or right
+  const wallyAngle = (d) => DX[d] * 0.9;
 
   function syncVisuals(dt) {
     const p = posOf(player);
     const moving = state === 'play' && player.d >= 0;
     const bob = Math.sin(time * (moving ? 14 : 4)) * (moving ? 0.05 : 0.03);
-    glim.position.set(wx(p.x), 0.42 + bob, wz(p.y));
+    wally.position.set(wx(p.x), 0.42 + bob, wz(p.y));
     if (state !== 'dying') {
-      player.angle = lerpAngle(player.angle, faceAngle(player.face), Math.min(1, dt * 14));
-      glimInner.rotation.y = player.angle;
+      player.angle = lerpAngle(player.angle, wallyAngle(player.face), Math.min(1, dt * 10));
+      wallyInner.rotation.y = player.angle;
       const squash = moving ? 1 + Math.sin(time * 14) * 0.05 : 1;
-      glimInner.scale.set(1 / squash, squash, 1 / squash);
+      wallyInner.scale.set(1 / squash, squash, 1 / squash);
     }
-    glimHalo.material.opacity = 0.45 + Math.sin(time * 3) * 0.1;
-    glimLight.position.set(glim.position.x, 1.4, glim.position.z);
-    glimLight.intensity = glim.visible ? 1.8 * glimInner.scale.y : 0;
+    wallyHalo.material.opacity = 0.45 + Math.sin(time * 3) * 0.1;
+    wallyLight.position.set(wally.position.x, 1.4, wally.position.z);
+    wallyLight.intensity = wally.visible ? 1.8 * wallyInner.scale.y : 0;
 
     for (const s of sentries) {
       const sp = posOf(s);
@@ -876,6 +1217,13 @@
       m.mat.emissive.copy(col);
       m.ringMat.color.copy(col);
       m.halo.material.color.copy(col);
+    }
+
+    if (fruit) {
+      const m = fruit.mesh;
+      m.userData.model.rotation.y += dt * 1.8;
+      m.position.y = 0.5 + Math.sin(time * 3) * 0.06;
+      m.visible = fruit.t > 2.5 || Math.floor(time * 8) % 2 === 0; // blink before it fades
     }
 
     for (const key in flareMeshes) {
@@ -943,6 +1291,7 @@
     ui.muteBtn.textContent = muted ? 'Sound off' : 'Sound on';
   }
   window.addEventListener('keydown', (e) => {
+    if (e.target instanceof HTMLInputElement) return; // typing a high-score name
     if (e.code in KEYS) {
       e.preventDefault();
       desired = KEYS[e.code];
@@ -951,7 +1300,7 @@
     if (e.code === 'KeyP' || e.code === 'Escape') togglePause();
     else if (e.code === 'KeyC') toggleCam();
     else if (e.code === 'KeyM') toggleMute();
-    else if ((e.code === 'Enter' || e.code === 'Space') && !ui.overlay.hidden) { e.preventDefault(); newGame(); }
+    else if ((e.code === 'Enter' || e.code === 'Space') && !ui.overlay.hidden && ui.nameForm.hidden) { e.preventDefault(); newGame(); }
   });
 
   let touchStart = null;
