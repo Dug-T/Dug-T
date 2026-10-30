@@ -1631,6 +1631,7 @@
     const aspect = app.clientWidth / Math.max(1, app.clientHeight);
     const inGame = state !== 'title' && state !== 'over';
     const targetLook = new THREE.Vector3(), targetPos = new THREE.Vector3();
+    let fogScale = 1;
     if (camMode === 'follow' && inGame) {
       const p = posOf(player);
       const fx = wx(p.x) * 0.8, fz = wz(p.y) * 0.85;
@@ -1641,6 +1642,7 @@
       targetPos.set(fx, 10.5 * back, fz + 7.5 * back);
     } else {
       const dist = 25 * Math.max(1, 1.05 / aspect);
+      fogScale = dist / 25; // the overhead camera backs off on tall screens, so push the fog back with it
       const sway = inGame ? 0 : Math.sin(time * 0.25) * 3;
       targetLook.set(0, 0, 0.6);
       targetPos.set(sway, dist * 0.86, dist * 0.5);
@@ -1651,6 +1653,10 @@
     camLook.lerp(targetLook, k);
     camera.position.copy(camPos);
     camera.lookAt(camLook);
+    scene.fog.near = 18 * fogScale;
+    scene.fog.far = 46 * fogScale;
+    camera.far = Math.max(140, 60 * fogScale);
+    camera.updateProjectionMatrix();
   }
 
   function resize() {
