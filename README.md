@@ -2,6 +2,7 @@
 - 👀 I’m interested in becoming an unreal game develeoper
 - 🌱 I’m currently learning Unreal Engine using tutorials on Udemy.com
 - 💞️ I’m looking to collaborate on my own projects and hopefully other projects
+- 🎮 Check out my 3D maze-chase game: [Glimmer Run](glimmer-run/)
 - 📫 How to reach me dugieth@gmail.com
 
 <!---
