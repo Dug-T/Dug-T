@@ -6,7 +6,7 @@ You play **WallyMan**, a hero in a blue hood, goggles and a looped headpiece, tr
 
 ## Play
 
-Open `index.html` in a modern browser. Keep `wallyman.jpg` next to it: it's the portrait on the start screen. It needs an internet connection to load Three.js from a CDN.
+Open `index.html` in a modern browser. Keep `wallyman.jpg` (the start-screen portrait) and `wallyman-maze-voice.mp3` (the announcer) next to it. It needs an internet connection to load Three.js from a CDN.
 
 | Control | Action |
 | --- | --- |
@@ -49,13 +49,11 @@ A bonus fruit appears just below the Sentry bay twice per level: once when 30% o
 
 ## Announcer
 
-When you press Play, a female voice says "WallyMan Maze". It uses your browser's built-in speech voices and picks the most natural-sounding female English voice available:
+When you press Play, the game plays `wallyman-maze-voice.mp3`, a recording of "WallyMan Maze". The game starts once the clip has finished. Turning the sound off (M) stops it.
 
-- **Microsoft Edge:** "Aria", "Sonia" or "Libby" (Online, Natural)
-- **Chrome:** Google's cloud voices ("Google US English", "Google UK English Female")
-- **Mac / iPhone:** "Enhanced" or "Premium" voices such as Zoe or Ava, otherwise Samantha. Installing one (System Settings → Accessibility → Spoken Content → Manage Voices) makes the announcer sound much more natural.
+If the clip can't play (for example the file is missing), the browser's built-in speech says the name instead, using the most natural-sounding female English voice it can find.
 
-If no female English voice is installed, it uses the default voice. Turning the sound off (M) also silences the announcer.
+To change the announcement, replace `wallyman-maze-voice.mp3` with another short clip. If it's a different length, update `VOICE_CLIP_SECS` in `index.html`.
 
 ## Leaderboard
 

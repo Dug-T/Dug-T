@@ -756,6 +756,26 @@
     }
   }
 
+  // Recorded "WallyMan Maze" played when a game starts. If the clip can't play
+  // (file missing, or the browser blocks it), the speech voice above says it instead.
+  const VOICE_CLIP_SECS = 2.9;
+  const voiceClip = new Audio('wallyman-maze-voice.mp3');
+  voiceClip.preload = 'auto';
+  let clipBroken = false;
+  voiceClip.addEventListener('error', () => { clipBroken = true; });
+  function playVoiceClip() {
+    if (muted || clipBroken) return false;
+    try {
+      voiceClip.currentTime = 0;
+      const playing = voiceClip.play();
+      if (playing && playing.catch) playing.catch(() => { clipBroken = true; announce('Wally Man Maze!'); });
+      return true;
+    } catch (e) {
+      clipBroken = true;
+      return false;
+    }
+  }
+
   // ---------- Game state ----------
   const $ = (id) => document.getElementById(id);
   const ui = {
@@ -1000,9 +1020,10 @@
     updateHUD();
     ui.overlay.hidden = true;
     ui.panel.classList.remove('ended');
-    const spoke = announce('Wally Man Maze!');
-    sfx.start(spoke ? 1.4 : 0);
-    startRound('Ready', spoke ? 2.6 : 1.8);
+    const clip = playVoiceClip();
+    const spoke = clip || announce('Wally Man Maze!');
+    sfx.start(clip ? VOICE_CLIP_SECS : spoke ? 1.4 : 0);
+    startRound('Ready', clip ? VOICE_CLIP_SECS + 0.5 : spoke ? 2.6 : 1.8);
   }
 
   function showGameOverMenu(highlight) {
@@ -1460,6 +1481,7 @@
   function toggleMute() {
     muted = !muted;
     if (muted && hasSpeech) speechSynthesis.cancel();
+    if (muted) voiceClip.pause();
     ui.muteBtn.textContent = muted ? 'Sound off' : 'Sound on';
   }
   window.addEventListener('keydown', (e) => {
