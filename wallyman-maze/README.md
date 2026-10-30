@@ -6,7 +6,7 @@ You play **WallyMan**, a hero in a blue hood, goggles and a looped headpiece, tr
 
 ## Play
 
-Open `index.html` in a modern browser. It needs an internet connection to load Three.js from a CDN.
+Open `index.html` in a modern browser. Keep `wallyman.jpg` next to it: it's the portrait on the start screen. It needs an internet connection to load Three.js from a CDN.
 
 | Control | Action |
 | --- | --- |
@@ -49,7 +49,13 @@ A bonus fruit appears just below the Sentry bay twice per level: once when 30% o
 
 ## Announcer
 
-When you press Play, a female voice says "WallyMan Maze". It uses your browser's built-in speech voices, so the exact voice depends on your device. If no female English voice is installed, it uses the default voice at a higher pitch. Turning the sound off (M) also silences the announcer.
+When you press Play, a female voice says "WallyMan Maze". It uses your browser's built-in speech voices and picks the most natural-sounding female English voice available:
+
+- **Microsoft Edge:** "Aria", "Sonia" or "Libby" (Online, Natural)
+- **Chrome:** Google's cloud voices ("Google US English", "Google UK English Female")
+- **Mac / iPhone:** "Enhanced" or "Premium" voices such as Zoe or Ava, otherwise Samantha. Installing one (System Settings → Accessibility → Spoken Content → Manage Voices) makes the announcer sound much more natural.
+
+If no female English voice is installed, it uses the default voice. Turning the sound off (M) also silences the announcer.
 
 ## Leaderboard
 

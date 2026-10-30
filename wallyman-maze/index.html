@@ -71,6 +71,12 @@
     display: flex; flex-direction: column; gap: 16px; align-items: center; text-align: center;
     padding: 28px 22px; background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
   }
+  .portrait {
+    width: clamp(96px, 30vw, 140px); height: auto; aspect-ratio: 1; max-width: 100%;
+    border-radius: 50%; object-fit: cover; object-position: center 35%;
+    border: 3px solid var(--hood); box-shadow: 0 0 0 6px rgba(77, 125, 255, 0.18), 0 0 32px rgba(77, 125, 255, 0.55);
+    background: var(--ink);
+  }
   .panel h1 {
     margin: 0; font-family: var(--display); font-weight: 400; line-height: 1;
     font-size: clamp(2.4rem, 11vw, 4.2rem); color: var(--wally);
@@ -172,6 +178,7 @@
 
   <div id="overlay">
     <div class="panel">
+      <img class="portrait intro" src="wallyman.jpg" alt="WallyMan in his blue hood, goggles and looped headpiece" width="262" height="262">
       <h1 id="title">WallyMan Maze</h1>
       <p id="blurb">You are <strong>WallyMan</strong>, trapped in a neon maze. Collect every spark to clear the level. Grab a <strong>flare</strong> and the Sentries panic, so hunt them for bonus points. Bonus fruit appears twice a level, so grab it before it fades.</p>
       <div id="finalScore" hidden></div>
@@ -704,13 +711,30 @@
   };
 
   // Announcer: a female voice says the game's name when a game starts. Uses the browser's
-  // built-in speech voices, so the exact voice depends on the device.
-  const FEMALE_VOICE = /\b(female|woman|samantha|victoria|karen|moira|tessa|fiona|serena|zira|hazel|susan|libby|sonia|aria|jenny|natasha|allison|ava|joanna|salli|kendra|kimberly|catherine|google us english)\b/i;
+  // built-in speech voices, preferring the natural-sounding (neural / enhanced) ones, so the
+  // exact voice depends on the device.
+  const FEMALE_VOICE = /\b(female|woman|samantha|victoria|karen|moira|tessa|fiona|serena|zira|hazel|susan|libby|sonia|maisie|aria|jenny|michelle|emma|ana|clara|natasha|allison|ava|zoe|nicky|kate|stephanie|joanna|salli|kendra|kimberly|catherine)\b/i;
+  const NATURAL_VOICE = /natural|neural|enhanced|premium|online/i;
+  const NOVELTY_VOICE = /bad news|bells|boing|bubbles|cellos|good news|jester|organ|superstar|trinoids|whisper|zarvox|albert|bahh|wobble|eloquence/i;
   const hasSpeech = 'speechSynthesis' in window && typeof SpeechSynthesisUtterance === 'function';
+  function voiceScore(v) {
+    if (!/^en/i.test(v.lang) || NOVELTY_VOICE.test(v.name)) return -1;
+    const female = /female/i.test(v.name) || FEMALE_VOICE.test(v.name) || /google uk english female|google us english/i.test(v.name);
+    if (!female) return -1;
+    let score = 10;
+    if (NATURAL_VOICE.test(v.name)) score += 6;   // Edge "Online (Natural)", Apple "Enhanced"/"Premium"
+    if (v.localService === false) score += 3;     // cloud voices (Chrome's Google voices) sound smoother
+    if (/^en[-_](gb|us)/i.test(v.lang)) score += 1;
+    return score;
+  }
   function pickVoice() {
     if (!hasSpeech) return null;
-    const voices = speechSynthesis.getVoices().filter((v) => /^en/i.test(v.lang));
-    return voices.find((v) => /female/i.test(v.name)) || voices.find((v) => FEMALE_VOICE.test(v.name)) || null;
+    let best = null, bestScore = 0;
+    for (const v of speechSynthesis.getVoices()) {
+      const sc = voiceScore(v);
+      if (sc > bestScore) { best = v; bestScore = sc; }
+    }
+    return best;
   }
   let announcer = pickVoice();
   if (hasSpeech) speechSynthesis.onvoiceschanged = () => { announcer = pickVoice(); };
@@ -719,11 +743,12 @@
     try {
       speechSynthesis.cancel();
       const line = new SpeechSynthesisUtterance(text);
+      line.volume = 1;
       const voice = announcer || pickVoice();
       if (voice) line.voice = voice;
       line.lang = voice ? voice.lang : 'en-GB';
-      line.pitch = voice ? 1.1 : 1.5; // no known female voice: lift the default voice's pitch
-      line.rate = 0.95;
+      line.pitch = voice ? 1 : 1.15; // natural pitch; only a slight lift when no female voice exists
+      line.rate = 0.92;
       speechSynthesis.speak(line);
       return true;
     } catch (e) {
