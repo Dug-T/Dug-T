@@ -2,7 +2,7 @@
 
 A 3D maze-chase arcade game built with [Three.js](https://threejs.org/). Everything is in one file, `index.html`.
 
-You play **WallyMan**, a hero in a blue hood, goggles and a looped headpiece, trapped in a neon maze. Collect every spark to clear the level while four Sentry drones hunt you. Grab a **flare** to scare the Sentries for a few seconds, then chase them down for bonus points.
+You play **WallyMan**, a hero in a blue hood, goggles and a looped headpiece, trapped in a neon maze. Collect every spark to clear the level while four Sentry drones hunt you. Grab a **flare** to scare the Sentries for a few seconds, then chase them down for bonus points. WallyMan can also breathe fire from his mouth to burn Sentries back to their bay, as long as he has fuel.
 
 ## Play
 
@@ -11,6 +11,7 @@ Open `index.html` in a modern browser. Keep `wallyman.jpg` (the start-screen por
 | Control | Action |
 | --- | --- |
 | Arrow keys / WASD | Move (or swipe / use the on-screen pad on touch screens) |
+| F / Space | Breathe fire (or double-tap the screen on touch screens, or double-click with a mouse) |
 | C | Switch between chase camera and overhead camera |
 | P / Esc | Pause |
 | M | Sound on or off |
@@ -39,11 +40,19 @@ A bonus fruit appears just below the Sentry bay twice per level: once when 30% o
 | 5 | Watermelon | 1000 |
 | 6+ | Gold star | 2000 |
 
+## Flamethrower and fuel
+
+Double-tap the screen (or press F / Space) and WallyMan breathes a burst of fire from his mouth in the direction he's facing. The flame reaches up to four tiles and stops at walls. Any Sentry it touches is burned back to the bay.
+
+- The **fuel gauge** in the HUD starts full at the start of each game. Each burst burns about a fifth of the tank, and the gauge blinks red when it's nearly empty. With an empty tank, nothing fires.
+- **Fuel cans** (red jerry cans) appear on random open tiles, up to two at a time, roughly every 9 to 15 seconds. Each one adds 40 fuel. Cans are cleared at the end of each level.
+
 ## Scoring
 
 - Spark: 10
 - Flare: 50
 - Sentries eaten during one flare: 200, 400, 800, 1600
+- Sentry burned by the flame: 300 (or the flare chain value above if it was scared)
 - Bonus fruit: see the table above
 - Extra life at 10,000 points
 

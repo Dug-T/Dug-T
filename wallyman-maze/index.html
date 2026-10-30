@@ -41,6 +41,18 @@
   .stat b { font-size: 1.25rem; font-weight: 700; color: var(--wally); font-variant-numeric: tabular-nums; }
   #lives { display: flex; gap: 6px; align-items: center; min-height: 1.4rem; }
   #lives i { width: 14px; height: 14px; border-radius: 50%; background: var(--hood); box-shadow: 0 0 10px var(--hood); }
+  .fuel .gauge {
+    width: 76px; height: 10px; margin-top: 4px; box-sizing: border-box; overflow: hidden;
+    border: 1px solid var(--line); border-radius: 999px; background: rgba(58, 49, 144, 0.35);
+  }
+  #fuelBar {
+    display: block; height: 100%; width: 100%; border-radius: inherit;
+    background: linear-gradient(90deg, #ff3d1f, #ff8a1f, #ffd23f); box-shadow: 0 0 8px #ff8a1f;
+    transition: width 0.15s linear;
+  }
+  .fuel.low span { color: #ff5a3c; }
+  .fuel.low .gauge, .fuel.empty .gauge { animation: blink 0.5s steps(2) infinite; }
+  @keyframes blink { 50% { border-color: #ff3d1f; box-shadow: 0 0 10px #ff3d1f; } }
   #tray { display: flex; gap: 5px; align-items: center; }
   #tray i { width: 11px; height: 11px; border-radius: 50%; background: var(--c); box-shadow: 0 0 8px var(--c); }
   .tools { margin-left: auto; display: flex; gap: 8px; pointer-events: auto; }
@@ -165,6 +177,7 @@
     <div class="stat"><span>Score</span><b id="score">0</b></div>
     <div class="stat"><span>Best</span><b id="best">0</b></div>
     <div class="stat"><span>Level</span><b id="level">1</b></div>
+    <div class="stat fuel" id="fuelStat"><span>Fuel</span><div class="gauge" role="meter" aria-label="Flame fuel" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100" id="fuelGauge"><i id="fuelBar"></i></div></div>
     <div id="lives" aria-label="Lives left"></div>
     <div id="tray" aria-label="Bonus fruit collected"></div>
     <div class="tools">
@@ -180,7 +193,7 @@
     <div class="panel">
       <img class="portrait intro" src="wallyman.jpg" alt="WallyMan in his blue hood, goggles and looped headpiece" width="262" height="262">
       <h1 id="title">WallyMan Maze</h1>
-      <p id="blurb">You are <strong>WallyMan</strong>, trapped in a neon maze. Collect every spark to clear the level. Grab a <strong>flare</strong> and the Sentries panic, so hunt them for bonus points. Bonus fruit appears twice a level, so grab it before it fades.</p>
+      <p id="blurb">You are <strong>WallyMan</strong>, trapped in a neon maze. Collect every spark to clear the level. Grab a <strong>flare</strong> and the Sentries panic, so hunt them for bonus points. Bonus fruit appears twice a level, so grab it before it fades. <strong>Double-tap</strong> the screen (or press F) to breathe fire at the Sentries. Fire burns fuel, so pick up <strong>fuel cans</strong> to top up.</p>
       <div id="finalScore" hidden></div>
       <p id="saveMsg" role="status" hidden></p>
       <form id="nameForm" hidden>
@@ -209,6 +222,7 @@
       </ul>
       <dl class="keys intro">
         <dt>Arrows / WASD</dt><dd>Move</dd>
+        <dt>F / Space</dt><dd>Breathe fire</dd>
         <dt>C</dt><dd>Chase or overhead camera</dd>
         <dt>P</dt><dd>Pause</dd>
         <dt>M</dt><dd>Sound</dd>
@@ -570,6 +584,55 @@
     pGeo.attributes.color.needsUpdate = true;
   }
 
+  // Flame: bigger, rising particles that start white-hot and cool to red as they fly
+  const FMAX = 320;
+  const fPos = new Float32Array(FMAX * 3), fCol = new Float32Array(FMAX * 3);
+  const fGeo = new THREE.BufferGeometry();
+  fGeo.setAttribute('position', new THREE.BufferAttribute(fPos, 3));
+  fGeo.setAttribute('color', new THREE.BufferAttribute(fCol, 3));
+  const flamePoints = new THREE.Points(fGeo, new THREE.PointsMaterial({
+    size: 0.42, vertexColors: true, transparent: true, map: glowTex,
+    blending: THREE.AdditiveBlending, depthWrite: false,
+  }));
+  flamePoints.frustumCulled = false;
+  scene.add(flamePoints);
+  const fparts = [];
+  for (let i = 0; i < FMAX; i++) fparts.push({ life: 0 });
+  let fNext = 0;
+  const flameLight = new THREE.PointLight(0xff7a1f, 0, 6, 2);
+  scene.add(flameLight);
+  // Shoot n flame particles from (x, z) along grid direction d, reaching about `len` tiles
+  function emitFlame(x, z, d, len, n) {
+    const speed = 9;
+    for (let i = 0; i < n; i++) {
+      const p = fparts[fNext];
+      fNext = (fNext + 1) % FMAX;
+      const side = (Math.random() - 0.5) * 1.1, s = speed * (0.85 + Math.random() * 0.3);
+      Object.assign(p, {
+        x: x + DX[d] * 0.3, y: 0.3, z: z + DY[d] * 0.3,
+        vx: DX[d] * s + DY[d] * side, vy: 0.2 + Math.random() * 0.8, vz: DY[d] * s + DX[d] * side,
+        life: (len / s) * (0.75 + Math.random() * 0.3),
+      });
+      p.max = p.life;
+    }
+  }
+  function updateFlame(dt) {
+    for (let i = 0; i < FMAX; i++) {
+      const p = fparts[i];
+      if (p.life > 0) {
+        p.life -= dt;
+        p.x += p.vx * dt; p.y += p.vy * dt; p.z += p.vz * dt;
+        const t = 1 - Math.max(0, p.life / p.max), fade = 1 - t * t;
+        fPos[i * 3] = p.x; fPos[i * 3 + 1] = p.y; fPos[i * 3 + 2] = p.z;
+        fCol[i * 3] = fade; fCol[i * 3 + 1] = (0.85 - 0.65 * t) * fade; fCol[i * 3 + 2] = 0.4 * (1 - t) * fade;
+      } else {
+        fPos[i * 3 + 1] = -50;
+      }
+    }
+    fGeo.attributes.position.needsUpdate = true;
+    fGeo.attributes.color.needsUpdate = true;
+  }
+
   // ---------- Bonus fruit ----------
   const FRUIT_SPOT = { c: 10, r: 11 };
   const fruitMat = (color, glow = 0.35) =>
@@ -678,6 +741,27 @@
     return g;
   }
 
+  // ---------- Fuel cans ----------
+  // A red jerry can with a yellow spout and a white stripe; it tops up the flame fuel.
+  const canRed = new THREE.MeshStandardMaterial({ color: 0xff3b2f, emissive: 0xc0180c, emissiveIntensity: 0.55, roughness: 0.35, metalness: 0.2 });
+  function makeCanMesh(c, r) {
+    const g = new THREE.Group();
+    const model = new THREE.Group();
+    const body = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.32, 0.14), canRed);
+    const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.265, 0.045, 0.145), fruitMat(0xffffff, 0.5));
+    const spout = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.04, 0.1, 10), fruitMat(0xffd23f, 0.5));
+    spout.position.set(0.08, 0.2, 0);
+    spout.rotation.z = -0.5;
+    const handle = new THREE.Mesh(new THREE.TorusGeometry(0.055, 0.018, 6, 14, Math.PI), canRed);
+    handle.position.set(-0.04, 0.16, 0);
+    model.add(body, stripe, spout, handle);
+    model.scale.setScalar(1.3);
+    g.add(model, makeHalo(0xff7a1f, 1.2));
+    g.userData.model = model;
+    g.position.set(wx(c), 0.5, wz(r));
+    return g;
+  }
+
   // ---------- Sound ----------
   let actx = null, muted = false, blipHigh = false;
   function initAudio() {
@@ -699,6 +783,27 @@
     o.start(t0);
     o.stop(t0 + dur + 0.02);
   }
+  // Filtered white noise for the roar of the flame
+  let noiseBuf = null;
+  function noise(dur, vol) {
+    if (!actx || muted) return;
+    if (!noiseBuf) {
+      noiseBuf = actx.createBuffer(1, actx.sampleRate, actx.sampleRate);
+      const data = noiseBuf.getChannelData(0);
+      for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+    }
+    const t0 = actx.currentTime;
+    const src = actx.createBufferSource(), filter = actx.createBiquadFilter(), g = actx.createGain();
+    src.buffer = noiseBuf;
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(1400, t0);
+    filter.frequency.exponentialRampToValueAtTime(250, t0 + dur);
+    g.gain.setValueAtTime(vol, t0);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    src.connect(filter).connect(g).connect(actx.destination);
+    src.start(t0);
+    src.stop(t0 + dur + 0.02);
+  }
   const sfx = {
     spark() { blipHigh = !blipHigh; tone(blipHigh ? 660 : 520, 0, 0.05, 'square', 0.035); },
     flare() { tone(220, 880, 0.35, 'sawtooth', 0.05); },
@@ -707,6 +812,9 @@
     clear() { [523, 659, 784, 1047].forEach((f, i) => tone(f, 0, 0.16, 'triangle', 0.08, i * 0.12)); },
     life() { [880, 1175, 1568].forEach((f, i) => tone(f, 0, 0.12, 'square', 0.05, i * 0.09)); },
     fruit() { tone(600, 1200, 0.12, 'triangle', 0.08); tone(900, 1800, 0.12, 'triangle', 0.06, 0.1); },
+    flame() { noise(0.75, 0.22); tone(120, 50, 0.6, 'sawtooth', 0.03); },
+    fuel() { [330, 440, 554, 660].forEach((f, i) => tone(f, 0, 0.08, 'square', 0.045, i * 0.06)); },
+    empty() { tone(180, 110, 0.15, 'square', 0.045); },
     start(delay = 0) { [392, 523, 659, 784].forEach((f, i) => tone(f, 0, 0.14, 'triangle', 0.07, delay + i * 0.14)); },
   };
 
@@ -784,6 +892,7 @@
     title: $('title'), blurb: $('blurb'), finalScore: $('finalScore'), startBtn: $('startBtn'),
     nameForm: $('nameForm'), nameInput: $('nameInput'), nameLabel: $('nameLabel'), saveBtn: $('saveBtn'), saveMsg: $('saveMsg'),
     skipBtn: $('skipBtn'), scoreRows: $('scoreRows'), scoresHead: $('scoresHead'), boardNote: $('boardNote'),
+    fuelStat: $('fuelStat'), fuelGauge: $('fuelGauge'), fuelBar: $('fuelBar'),
     fruitList: $('fruitList'), camBtn: $('camBtn'), muteBtn: $('muteBtn'), pauseBtn: $('pauseBtn'),
   };
 
@@ -933,6 +1042,11 @@
   const MODE_TIMES = [7, 20, 7, 20, 5, 20, 5, Infinity];
   let frightT = 0, combo = 0;
   let camMode = 'follow';
+  // Flamethrower: a double-tap (or F / Space) breathes fire for a short burst, burning fuel
+  const FUEL_MAX = 100, FUEL_BURN = 30, FLAME_BURST = 0.7, FLAME_RANGE = 4, CAN_FUEL = 40, MAX_CANS = 2;
+  let fuel = FUEL_MAX, flameT = 0, shownFuel = -1;
+  const flame = { d: 2, len: 0 };
+  let cans = [], canT = 0;
 
   const playerSpeed = () => 6.4 + Math.min(level - 1, 6) * 0.25;
   const sentrySpeed = () => 6.0 + Math.min(level - 1, 6) * 0.35;
@@ -975,7 +1089,29 @@
     scene.add(fruit.mesh);
   }
 
+  function removeCans() {
+    cans.forEach((k) => scene.remove(k.mesh));
+    cans = [];
+  }
+  // Drop a can on a random open tile away from WallyMan, the fruit spot and the tunnel mouths
+  function spawnCan() {
+    const p = posOf(player);
+    const taken = new Set(cans.map((k) => k.r * W + k.c));
+    const spots = openTiles.filter(([c, r]) =>
+      !(r === TUNNEL_ROW && (c < 2 || c > W - 3)) &&
+      !(c === FRUIT_SPOT.c && r === FRUIT_SPOT.r) &&
+      !taken.has(r * W + c) &&
+      (c - p.x) ** 2 + (r - p.y) ** 2 > 16);
+    if (!spots.length) return;
+    const [c, r] = spots[(Math.random() * spots.length) | 0];
+    const mesh = makeCanMesh(c, r);
+    scene.add(mesh);
+    cans.push({ c, r, mesh });
+  }
+
   function resetPickups() {
+    removeCans();
+    canT = 2;
     sparksLeft = 0;
     eatenThisLevel = 0;
     sparkCells.forEach(([c, r], i) => { pickups[r * W + c] = 'spark'; setSpark(i, true); sparksLeft++; });
@@ -999,6 +1135,7 @@
     });
     mode = 0; modeIdx = 0; modeT = MODE_TIMES[0];
     frightT = 0; combo = 0;
+    flameT = 0;
     wally.visible = true;
     wallyInner.scale.set(1, 1, 1);
     snapCamera = true;
@@ -1013,6 +1150,7 @@
   function newGame() {
     initAudio();
     score = 0; lives = 3; level = 1; bonusLifeGiven = false;
+    fuel = FUEL_MAX;
     collected = [];
     renderTray();
     resetPickups();
@@ -1037,6 +1175,7 @@
     state = 'over';
     setBanner('');
     removeFruit();
+    removeCans();
     updateHUD();
     ui.panel.classList.add('ended');
     ui.title.textContent = 'Game over';
@@ -1267,6 +1406,55 @@
     setTimeout(() => el.remove(), 950);
   }
 
+  // Send a Sentry back to the bay, as when it is eaten or burned
+  function zapSentry(s, sp, pts, label) {
+    s.scared = false;
+    if (s.state === 'leaving') { s.state = 'entering'; s.c = EXIT.c; }
+    else s.state = 'eaten';
+    addScore(pts);
+    sfx.sentry();
+    burst(sp.x, sp.y, s.mesh.base.getHex(), 30, 5);
+    popup(label, sp.x, sp.y, '#8ff7ff');
+  }
+  const scaredPoints = () => { const pts = 200 * 2 ** combo; combo = Math.min(combo + 1, 3); return pts; };
+
+  function fireFlame() {
+    if (state !== 'play') return;
+    if (fuel <= 0) {
+      sfx.empty();
+      const p = posOf(player);
+      popup('Out of fuel', p.x, p.y, '#ff5a3c');
+      ui.fuelStat.classList.add('empty');
+      setTimeout(() => ui.fuelStat.classList.remove('empty'), 900);
+      return;
+    }
+    sfx.flame();
+    flameT = FLAME_BURST;
+  }
+
+  // The flame runs from WallyMan's mouth up to FLAME_RANGE tiles ahead, stopped by walls.
+  // Sentries caught in it are burned back to the bay.
+  function updateFlameAttack(dt, p) {
+    flameT -= dt;
+    fuel = Math.max(0, fuel - FUEL_BURN * dt);
+    if (fuel <= 0) flameT = 0;
+    const d = player.face;
+    let c = Math.round(p.x), r = Math.round(p.y), k = 0;
+    while (k < FLAME_RANGE && walkable(c + DX[d], r + DY[d])) { c += DX[d]; r += DY[d]; k++; }
+    const grow = Math.min(1, (FLAME_BURST - flameT) / 0.12);
+    flame.d = d;
+    flame.len = Math.max(0.5, ((c - p.x) * DX[d] + (r - p.y) * DY[d] + 0.45) * grow);
+    for (const s of sentries) {
+      if (s.state !== 'active' && s.state !== 'leaving') continue;
+      const sp = posOf(s);
+      const ox = sp.x - p.x, oy = sp.y - p.y;
+      const along = ox * DX[d] + oy * DY[d], across = Math.abs(ox * DY[d] - oy * DX[d]);
+      if (along < -0.3 || along > flame.len + 0.2 || across > 0.55) continue;
+      const pts = s.scared ? scaredPoints() : 300;
+      zapSentry(s, sp, pts, `Toasted ${pts}`);
+    }
+  }
+
   function updatePlay(dt) {
     // Scatter / chase rhythm pauses while the Sentries are scared
     if (frightT > 0) {
@@ -1284,6 +1472,22 @@
     const p = posOf(player);
     const pc = Math.round(p.x), pr = Math.round(p.y);
     if (pc >= 0 && pc < W && pr >= 0 && pr < H) eatAt(pc, pr);
+
+    const can = cans.find((k) => k.c === pc && k.r === pr);
+    if (can) {
+      scene.remove(can.mesh);
+      cans = cans.filter((k) => k !== can);
+      fuel = Math.min(FUEL_MAX, fuel + CAN_FUEL);
+      sfx.fuel();
+      burst(pc, pr, 0xff7a1f, 24, 3.5);
+      popup(`Fuel +${CAN_FUEL}`, pc, pr, '#ff8a1f');
+    }
+    if ((canT -= dt) <= 0) {
+      if (cans.length < MAX_CANS) spawnCan();
+      canT = 9 + Math.random() * 6;
+    }
+
+    if (flameT > 0) updateFlameAttack(dt, p);
 
     if (fruit) {
       fruit.t -= dt;
@@ -1308,15 +1512,8 @@
       const sp = posOf(s);
       if ((sp.x - p.x) ** 2 + (sp.y - p.y) ** 2 > 0.42) continue;
       if (s.scared) {
-        s.scared = false;
-        if (s.state === 'leaving') { s.state = 'entering'; s.c = EXIT.c; }
-        else s.state = 'eaten';
-        const pts = 200 * 2 ** combo;
-        combo = Math.min(combo + 1, 3);
-        addScore(pts);
-        sfx.sentry();
-        burst(sp.x, sp.y, s.mesh.base.getHex(), 30, 5);
-        popup(String(pts), sp.x, sp.y, '#8ff7ff');
+        const pts = scaredPoints();
+        zapSentry(s, sp, pts, String(pts));
       } else {
         state = 'dying';
         stateT = 1.7;
@@ -1388,6 +1585,19 @@
       const squash = moving ? 1 + Math.sin(time * 14) * 0.05 : 1;
       wallyInner.scale.set(1 / squash, squash, 1 / squash);
     }
+    // Open the mouth and light the maze while the flame is going
+    const flaming = flameT > 0 && state === 'play';
+    mouth.scale.set(flaming ? 1.3 : 1, flaming ? 5 : 1, 1);
+    if (flaming) emitFlame(wally.position.x, wally.position.z, flame.d, flame.len, 6);
+    flameLight.intensity = flaming ? 2.6 + Math.random() * 0.8 : 0;
+    flameLight.position.set(wally.position.x + DX[flame.d] * flame.len * 0.5, 0.8, wally.position.z + DY[flame.d] * flame.len * 0.5);
+    const shown = Math.ceil(fuel);
+    if (shown !== shownFuel) {
+      shownFuel = shown;
+      ui.fuelBar.style.width = shown + '%';
+      ui.fuelGauge.setAttribute('aria-valuenow', shown);
+      ui.fuelStat.classList.toggle('low', shown < 25);
+    }
     wallyHalo.material.opacity = 0.45 + Math.sin(time * 3) * 0.1;
     wallyLight.position.set(wally.position.x, 1.4, wally.position.z);
     wallyLight.intensity = wally.visible ? 1.8 * wallyInner.scale.y : 0;
@@ -1418,6 +1628,11 @@
       m.visible = fruit.t > 2.5 || Math.floor(time * 8) % 2 === 0; // blink before it fades
     }
 
+    for (const k of cans) {
+      k.mesh.userData.model.rotation.y += dt * 1.5;
+      k.mesh.position.y = 0.5 + Math.sin(time * 3 + k.c) * 0.06;
+    }
+
     for (const key in flareMeshes) {
       const g = flareMeshes[key];
       const s = 1 + Math.sin(time * 6) * 0.18;
@@ -1426,6 +1641,7 @@
       g.userData.core.rotation.x += dt * 1.3;
     }
     updateParticles(dt);
+    updateFlame(dt);
   }
 
   // ---------- Camera ----------
@@ -1436,6 +1652,7 @@
     const aspect = app.clientWidth / Math.max(1, app.clientHeight);
     const inGame = state !== 'title' && state !== 'over';
     const targetLook = new THREE.Vector3(), targetPos = new THREE.Vector3();
+    let fogScale = 1;
     if (camMode === 'follow' && inGame) {
       const p = posOf(player);
       const fx = wx(p.x) * 0.8, fz = wz(p.y) * 0.85;
@@ -1446,6 +1663,7 @@
       targetPos.set(fx, 10.5 * back, fz + 7.5 * back);
     } else {
       const dist = 25 * Math.max(1, 1.05 / aspect);
+      fogScale = dist / 25; // the overhead camera backs off on tall screens, so push the fog back with it
       const sway = inGame ? 0 : Math.sin(time * 0.25) * 3;
       targetLook.set(0, 0, 0.6);
       targetPos.set(sway, dist * 0.86, dist * 0.5);
@@ -1456,6 +1674,10 @@
     camLook.lerp(targetLook, k);
     camera.position.copy(camPos);
     camera.lookAt(camLook);
+    scene.fog.near = 18 * fogScale;
+    scene.fog.far = 46 * fogScale;
+    camera.far = Math.max(140, 60 * fogScale);
+    camera.updateProjectionMatrix();
   }
 
   function resize() {
@@ -1494,19 +1716,41 @@
     if (e.code === 'KeyP' || e.code === 'Escape') togglePause();
     else if (e.code === 'KeyC') toggleCam();
     else if (e.code === 'KeyM') toggleMute();
+    else if ((e.code === 'KeyF' || e.code === 'Space') && ui.overlay.hidden) { e.preventDefault(); fireFlame(); }
     else if ((e.code === 'Enter' || e.code === 'Space') && !ui.overlay.hidden && ui.nameForm.hidden) { e.preventDefault(); newGame(); }
   });
 
-  let touchStart = null;
-  canvas.addEventListener('touchstart', (e) => { const t = e.touches[0]; touchStart = { x: t.clientX, y: t.clientY }; }, { passive: true });
+  // Swipe to steer; two quick taps in about the same place breathe fire
+  let touchStart = null, tap = null, lastTap = null, lastTouch = 0;
+  canvas.addEventListener('touchstart', (e) => {
+    const t = e.touches[0];
+    touchStart = { x: t.clientX, y: t.clientY };
+    tap = { x: t.clientX, y: t.clientY, t: performance.now(), moved: false };
+  }, { passive: true });
   canvas.addEventListener('touchmove', (e) => {
     if (!touchStart) return;
     const t = e.touches[0], dx = t.clientX - touchStart.x, dy = t.clientY - touchStart.y;
     if (Math.max(Math.abs(dx), Math.abs(dy)) < 22) return;
     desired = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 3 : 1) : (dy > 0 ? 2 : 0);
     touchStart = { x: t.clientX, y: t.clientY };
+    if (tap) tap.moved = true;
   }, { passive: true });
-  canvas.addEventListener('touchend', () => { touchStart = null; });
+  canvas.addEventListener('touchend', () => {
+    touchStart = null;
+    const now = performance.now();
+    lastTouch = now;
+    if (tap && !tap.moved && now - tap.t < 300) {
+      if (lastTap && now - lastTap.t < 350 && Math.hypot(tap.x - lastTap.x, tap.y - lastTap.y) < 70) {
+        fireFlame();
+        lastTap = null;
+      } else {
+        lastTap = { x: tap.x, y: tap.y, t: now };
+      }
+    }
+    tap = null;
+  });
+  // Double-click does the same with a mouse; skip the one a phone sends after a double-tap
+  canvas.addEventListener('dblclick', () => { if (performance.now() - lastTouch > 800) fireFlame(); });
 
   document.querySelectorAll('.dpad button').forEach((b) => {
     b.addEventListener('pointerdown', (e) => { e.preventDefault(); desired = Number(b.dataset.dir); });
