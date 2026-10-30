@@ -183,7 +183,8 @@
   }
   .tabs button[aria-selected="true"] { color: var(--ink); background: var(--wally); border-color: var(--wally); }
   .escape { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 12px; box-sizing: border-box; border: 1px solid #ffb02e; border-radius: 12px; background: rgba(255, 176, 46, 0.08); }
-  #escapeBtn {
+  .escape-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+  #escapeBtn, #androidBtn {
     font: 700 0.9rem/1 var(--ui); letter-spacing: 0.12em; text-transform: uppercase; cursor: pointer;
     color: var(--ink); background: #ffb02e; border: 0; border-radius: 999px; padding: 12px 24px;
   }
@@ -248,7 +249,10 @@
       <img class="portrait intro" src="wallyman.jpg" alt="WallyMan in his blue hood, goggles and looped headpiece" width="262" height="262">
       <h1 id="title">WallyMan Maze</h1>
       <div class="escape" id="escapeBox" hidden>
-        <button id="escapeBtn" type="button">Open in your browser</button>
+        <div class="escape-row">
+          <button id="androidBtn" type="button">Android: open in Chrome</button>
+          <button id="escapeBtn" type="button">iPhone: open in your browser</button>
+        </div>
         <p id="escapeMsg">You're inside the Facebook app, so your scores can't reach the leaderboard. Open the game in your phone's browser to save them.</p>
         <div id="escapeHelp" hidden>
           <ol>
@@ -1395,18 +1399,19 @@
   // is copied so it can be pasted into the browser.
   const GAME_URL = 'https://claude.ai/artifact/V8EDhQECUoJ6CKYjxQER9S';
   const isAndroid = /Android/i.test(navigator.userAgent || '');
-  function escapeUrl() {
-    const bare = GAME_URL.replace(/^https:\/\//, '');
-    return isAndroid
-      ? `intent://${bare}#Intent;scheme=https;S.browser_fallback_url=${encodeURIComponent(GAME_URL)};end`
-      : 'x-safari-https://' + bare;
+  const bareUrl = GAME_URL.replace(/^https:\/\//, '');
+  // Android: hand the link straight to Chrome
+  function openAndroid() {
+    tryOpen(`intent://${bareUrl}#Intent;scheme=https;S.browser_fallback_url=${encodeURIComponent(GAME_URL)};end`);
   }
+  // iPhone: Facebook usually blocks the switch to Safari silently, so show the manual steps
+  // and the copy-link box straight away, and still try the Safari link in case it works.
   function openOutside() {
-    // Show the manual steps straight away: the in-app browser or the page's frame often
-    // blocks the switch silently, and there's no way to tell that it did.
     $('escapeHelp').hidden = false;
-    $('escapeMsg').textContent = "If your browser didn't open, do this instead:";
-    const url = escapeUrl();
+    $('escapeMsg').textContent = 'On iPhone, do this:';
+    tryOpen('x-safari-https://' + bareUrl);
+  }
+  function tryOpen(url) {
     let opened = null;
     try { opened = window.open(url, '_blank'); } catch (e) { /* popups blocked */ }
     if (!opened) {
@@ -1428,6 +1433,10 @@
     $('escapeBox').hidden = false;
     $('escapeLink').value = GAME_URL;
     $('escapeBtn').addEventListener('click', openOutside);
+    $('androidBtn').addEventListener('click', openAndroid);
+    // Put the button for this phone first
+    if (isAndroid) $('androidBtn').parentElement.prepend($('androidBtn'));
+    else $('escapeBtn').parentElement.prepend($('escapeBtn'));
     $('copyBtn').addEventListener('click', copyLink);
   }
 
