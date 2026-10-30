@@ -132,7 +132,6 @@
   #skipBtn { align-self: center; color: var(--muted); background: none; border: 0; padding: 4px 8px; text-decoration: underline; }
 
   .scores { width: 100%; }
-  .scores h2 { margin: 0 0 6px; font: 600 0.75rem var(--ui); letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); }
   .scores table { width: 100%; border-collapse: collapse; font-size: 0.85rem; font-variant-numeric: tabular-nums; }
   .scores th { font-weight: 600; font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); padding: 4px 6px; border-bottom: 1px solid var(--line); }
   .scores td { padding: 4px 6px; border-bottom: 1px solid rgba(58, 49, 144, 0.4); }
@@ -143,6 +142,46 @@
   .scores tr.mine td { color: var(--wally); font-weight: 700; }
   .scores .empty td { color: var(--muted); text-align: center; padding: 10px; }
   .panel.ended .intro { display: none; }
+
+  #powers { display: flex; gap: 6px; align-items: center; }
+  #powers span {
+    font: 700 0.68rem/1 var(--ui); letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink);
+    background: var(--c); border-radius: 999px; padding: 4px 8px; box-shadow: 0 0 10px var(--c);
+    font-variant-numeric: tabular-nums;
+  }
+  #powers span.ending { animation: blink-chip 0.3s steps(2) infinite; }
+  @keyframes blink-chip { 50% { opacity: 0.35; } }
+  .play-row { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+  #dailyBtn {
+    font: 700 0.9rem/1.1 var(--ui); letter-spacing: 0.12em; text-transform: uppercase; cursor: pointer;
+    color: var(--wally); background: rgba(255, 210, 63, 0.08); border: 2px solid var(--wally); border-radius: 999px;
+    padding: 9px 26px; display: flex; flex-direction: column; align-items: center; gap: 2px;
+  }
+  #dailyBtn small { font: 600 0.68rem var(--ui); letter-spacing: 0.08em; color: var(--muted); text-transform: none; }
+  #dailyBtn:hover { background: rgba(255, 210, 63, 0.16); }
+  .panel #unlockMsg { color: #3dff9a; font-weight: 700; }
+  .skins { width: 100%; }
+  .skins h2, .scores h2 { margin: 0 0 6px; font: 600 0.75rem var(--ui); letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); }
+  #skinList { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+  #skinList button {
+    display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer;
+    font: 600 0.68rem var(--ui); color: var(--text); background: none; border: 0; padding: 2px; width: 58px;
+  }
+  #skinList i {
+    width: 34px; height: 34px; border-radius: 50%; background: var(--c); box-sizing: border-box;
+    border: 3px solid var(--p); box-shadow: 0 0 10px var(--c);
+  }
+  #skinList button[aria-pressed="true"] i { outline: 2px solid var(--wally); outline-offset: 3px; }
+  #skinList button:disabled { cursor: default; color: var(--muted); }
+  #skinList button:disabled i { filter: grayscale(0.85) brightness(0.5); box-shadow: none; }
+  #skinList .prism i { background: conic-gradient(#ff3355, #ffd23f, #3dff9a, #4dc3ff, #b26bff, #ff3355); }
+  .tabs { display: flex; justify-content: center; gap: 6px; margin-bottom: 8px; }
+  .tabs button {
+    font: 600 0.72rem/1 var(--ui); letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer;
+    color: var(--muted); background: none; border: 1px solid var(--line); border-radius: 999px; padding: 7px 12px;
+  }
+  .tabs button[aria-selected="true"] { color: var(--ink); background: var(--wally); border-color: var(--wally); }
+  .link-btn { font: 600 0.75rem var(--ui); color: var(--muted); background: none; border: 0; text-decoration: underline; cursor: pointer; padding: 4px 8px; }
 
   .dpad {
     position: absolute; z-index: 2; left: 50%; transform: translateX(-50%);
@@ -176,13 +215,14 @@
   <header class="hud">
     <div class="stat"><span>Score</span><b id="score">0</b></div>
     <div class="stat"><span>Best</span><b id="best">0</b></div>
-    <div class="stat"><span>Level</span><b id="level">1</b></div>
+    <div class="stat"><span id="levelLabel">Level</span><b id="level">1</b></div>
     <div class="stat fuel" id="fuelStat"><span>Fuel</span><div class="gauge" role="meter" aria-label="Flame fuel" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100" id="fuelGauge"><i id="fuelBar"></i></div></div>
     <div id="lives" aria-label="Lives left"></div>
     <div id="tray" aria-label="Bonus fruit collected"></div>
+    <div id="powers" aria-label="Power-ups running"></div>
     <div class="tools">
       <button id="camBtn" type="button" title="Switch camera (C)">View</button>
-      <button id="muteBtn" type="button" title="Sound on or off (M)">Sound on</button>
+      <button id="muteBtn" type="button" title="Music and sound, sound only, or off (M)">Sound on</button>
       <button id="pauseBtn" type="button" title="Pause (P)">Pause</button>
     </div>
   </header>
@@ -193,8 +233,9 @@
     <div class="panel">
       <img class="portrait intro" src="wallyman.jpg" alt="WallyMan in his blue hood, goggles and looped headpiece" width="262" height="262">
       <h1 id="title">WallyMan Maze</h1>
-      <p id="blurb">You are <strong>WallyMan</strong>, trapped in a neon maze. Collect every spark to clear the level. Grab a <strong>flare</strong> and the Sentries panic, so hunt them for bonus points. Bonus fruit appears twice a level, so grab it before it fades. <strong>Double-tap</strong> the screen (or press F) to breathe fire at the Sentries. Fire burns fuel, so pick up <strong>fuel cans</strong> to top up.</p>
+      <p id="blurb">You are <strong>WallyMan</strong>, trapped in a neon maze. Collect every spark to clear the level. Grab a <strong>flare</strong> and the Sentries panic, so hunt them for bonus points. Bonus fruit appears twice a level, so grab it before it fades. <strong>Double-tap</strong> the screen (or press F) to breathe fire at the Sentries. Fire burns fuel, so pick up <strong>fuel cans</strong> to top up. Every level is a new maze, and from level 3 the <strong>Titan</strong> boss joins the hunt: flares don't scare it, only fire takes it down.</p>
       <div id="finalScore" hidden></div>
+      <p id="unlockMsg" role="status" hidden></p>
       <p id="saveMsg" role="status" hidden></p>
       <form id="nameForm" hidden>
         <label id="nameLabel" for="nameInput">New high score! Enter your name</label>
@@ -204,9 +245,20 @@
         </div>
         <button id="skipBtn" type="button">Skip</button>
       </form>
-      <button id="startBtn" type="button">Play</button>
+      <div class="play-row" id="playRow">
+        <button id="startBtn" type="button">Play</button>
+        <button id="dailyBtn" type="button">Daily challenge<small id="dailyDate">Today's maze</small></button>
+      </div>
+      <section class="skins" aria-labelledby="skinsHead">
+        <h2 id="skinsHead">Skins</h2>
+        <div id="skinList"></div>
+      </section>
       <section class="scores" aria-labelledby="scoresHead">
         <h2 id="scoresHead">High scores</h2>
+        <div class="tabs" role="tablist" aria-label="Which leaderboard">
+          <button id="tabAll" type="button" role="tab" aria-selected="true">All-time</button>
+          <button id="tabDaily" type="button" role="tab" aria-selected="false">Today's daily</button>
+        </div>
         <p id="boardNote" class="board-note">Saved in this browser.</p>
         <table>
           <thead><tr><th>#</th><th>Name</th><th>Level</th><th>Score</th></tr></thead>
@@ -214,19 +266,22 @@
         </table>
       </section>
       <ul class="fruits intro" id="fruitList"></ul>
+      <ul class="fruits intro" id="powerList"></ul>
       <ul class="sentries intro">
         <li style="--c:#ff3355"><i></i>Rook <em>hunts you</em></li>
         <li style="--c:#b26bff"><i></i>Vex <em>cuts you off</em></li>
         <li style="--c:#22e3b5"><i></i>Mirra <em>flanks</em></li>
         <li style="--c:#ff9a3c"><i></i>Drift <em>roams</em></li>
+        <li style="--c:#ff2bd6"><i></i>Titan <em>only fire stops it</em></li>
       </ul>
       <dl class="keys intro">
         <dt>Arrows / WASD</dt><dd>Move</dd>
         <dt>F / Space</dt><dd>Breathe fire</dd>
         <dt>C</dt><dd>Chase or overhead camera</dd>
         <dt>P</dt><dd>Pause</dd>
-        <dt>M</dt><dd>Sound</dd>
+        <dt>M</dt><dd>Music and sound, sound only, or off</dd>
       </dl>
+      <button id="buzzBtn" class="link-btn intro" type="button" hidden>Vibration on</button>
     </div>
   </div>
 
@@ -244,8 +299,9 @@
   'use strict';
 
   // ---------- Maze ----------
+  // Level 1 is the classic maze; later levels and the daily challenge are generated from it.
   // # wall   . spark   o flare   D sentry gate   G sentry bay   P start   (space) empty floor
-  const MAZE = [
+  const CLASSIC = [
     '#####################',
     '#.........#.........#',
     '#o##.###..#..###.##o#',
@@ -268,14 +324,103 @@
     '#...................#',
     '#####################',
   ];
-  const H = MAZE.length, W = MAZE[0].length;
+  const H = CLASSIC.length, W = CLASSIC[0].length;
   const TUNNEL_ROW = 9;
   const EXIT = { c: 10, r: 7 };
   // Directions: 0 up, 1 left, 2 down, 3 right (opposite = (d + 2) % 4)
   const DX = [0, -1, 0, 1], DY = [-1, 0, 1, 0];
+  const START = { c: 10, r: 15 };
+  let MAZE = CLASSIC;
 
-  let START = { c: 10, r: 15 };
-  MAZE.forEach((row, r) => { const c = row.indexOf('P'); if (c >= 0) START = { c, r }; });
+  // Seeded random numbers, so a level or a day always builds the same maze for everyone
+  function seededRandom(seed) {
+    let h = 1779033703 ^ seed.length;
+    for (let i = 0; i < seed.length; i++) { h = Math.imul(h ^ seed.charCodeAt(i), 3432918353); h = (h << 13) | (h >>> 19); }
+    let a = h >>> 0;
+    return () => {
+      a = (a + 0x6d2b79f5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  // Generated mazes keep the classic border, Sentry bay (with the corridor ring around it),
+  // side tunnel and start row. Everything else starts as a full lattice of corridors, and
+  // random stretches are walled in (mirrored left to right) as long as no dead end appears
+  // and every tile stays reachable.
+  function isFixed(c, r) {
+    if (r === 0 || r === H - 1 || c === 0 || c === W - 1) return true;
+    if (r >= 6 && r <= 12 && (c <= 4 || c >= W - 5)) return true;
+    if (r >= 7 && r <= 11 && c >= 5 && c <= W - 6) return true;
+    return r === START.r && Math.abs(c - START.c) <= 2;
+  }
+  const LINE_COLS = [1, 4, 6, 8, 10, 12, 14, 16, 19];
+  const LINE_ROWS = [1, 3, 5, 7, 9, 11, 13, 15, 17, 19];
+  function generateMaze(seed) {
+    const rand = seededRandom(seed);
+    const g = CLASSIC.map((row) => [...row]);
+    for (let r = 0; r < H; r++) for (let c = 0; c < W; c++) {
+      if (!isFixed(c, r)) g[r][c] = LINE_COLS.includes(c) || LINE_ROWS.includes(r) ? '.' : '#';
+    }
+    const open = (c, r) => {
+      if (r < 0 || r >= H) return false;
+      if (c < 0 || c >= W) return r === TUNNEL_ROW;
+      return g[r][c] !== '#' && g[r][c] !== 'D' && g[r][c] !== 'G';
+    };
+    const degree = (c, r) => { let n = 0; for (let d = 0; d < 4; d++) if (open(c + DX[d], r + DY[d])) n++; return n; };
+    const connected = () => {
+      let total = 0;
+      for (let r = 0; r < H; r++) for (let c = 0; c < W; c++) if (open(c, r)) total++;
+      const seen = new Set([START.r * W + START.c]), q = [[START.c, START.r]];
+      while (q.length) {
+        const [c, r] = q.pop();
+        for (let d = 0; d < 4; d++) {
+          const nc = (c + DX[d] + W) % W, nr = r + DY[d];
+          if (!open(nc, nr) || seen.has(nr * W + nc)) continue;
+          seen.add(nr * W + nc);
+          q.push([nc, nr]);
+        }
+      }
+      return seen.size === total;
+    };
+    // Stretches of corridor between neighbouring lattice crossings, left half only
+    const segs = [];
+    for (const r of LINE_ROWS) for (let i = 0; LINE_COLS[i] < 10; i++) {
+      const tiles = [];
+      for (let c = LINE_COLS[i] + 1; c < LINE_COLS[i + 1]; c++) tiles.push([c, r]);
+      segs.push(tiles);
+    }
+    for (const c of LINE_COLS.filter((x) => x <= 10)) for (let i = 0; i + 1 < LINE_ROWS.length; i++) segs.push([[c, LINE_ROWS[i] + 1]]);
+    const free = segs.filter((tiles) => tiles.every(([c, r]) => !isFixed(c, r)));
+    for (let i = free.length - 1; i > 0; i--) { const j = (rand() * (i + 1)) | 0; [free[i], free[j]] = [free[j], free[i]]; }
+    const target = Math.round(free.length * 0.58);
+    let removed = 0;
+    for (const tiles of free) {
+      if (removed >= target) break;
+      const cells = tiles.flatMap(([c, r]) => [[c, r], [W - 1 - c, r]]);
+      if (cells.some(([c, r]) => g[r][c] === '#')) continue;
+      cells.forEach(([c, r]) => { g[r][c] = '#'; });
+      let ok = true;
+      for (const [c, r] of cells) for (let d = 0; d < 4 && ok; d++) {
+        const nc = c + DX[d], nr = r + DY[d];
+        if (open(nc, nr) && nc >= 0 && nc < W && degree(nc, nr) < 2) ok = false;
+      }
+      if (ok && connected()) removed++;
+      else cells.forEach(([c, r]) => { g[r][c] = '.'; });
+    }
+    // Flares go on the floor tile nearest each corner
+    for (const [tc, tr] of [[1, 2], [1, 16]]) {
+      let spot = null, bestD = Infinity;
+      for (let r = 1; r < H - 1; r++) for (let c = 1; c < 10; c++) {
+        if (g[r][c] !== '.' || isFixed(c, r)) continue;
+        const d = (c - tc) ** 2 + (r - tr) ** 2;
+        if (d < bestD) { bestD = d; spot = [c, r]; }
+      }
+      if (spot) { g[spot[1]][spot[0]] = 'o'; g[spot[1]][W - 1 - spot[0]] = 'o'; }
+    }
+    return g.map((row) => row.join(''));
+  }
 
   function tile(c, r) {
     if (r < 0 || r >= H) return '#';
@@ -285,9 +430,10 @@
   function walkable(c, r) { const t = tile(c, r); return t !== '#' && t !== 'D' && t !== 'G'; }
 
   // Only tiles reachable from the start count as pickups.
-  const reachable = Array.from({ length: H }, () => new Array(W).fill(false));
-  const openTiles = [];
-  {
+  let reachable = [], openTiles = [];
+  function findReachable() {
+    reachable = Array.from({ length: H }, () => new Array(W).fill(false));
+    openTiles = [];
     const q = [[START.c, START.r]];
     reachable[START.r][START.c] = true;
     while (q.length) {
@@ -356,62 +502,21 @@
 
   const dummy = new THREE.Object3D();
 
-  // Walls: dark blocks with neon strips along every edge that faces open floor
-  const wallCells = [];
-  for (let r = 0; r < H; r++) for (let c = 0; c < W; c++) if (MAZE[r][c] === '#') wallCells.push([c, r]);
-  const walls = new THREE.InstancedMesh(
-    new THREE.BoxGeometry(1, 0.7, 1),
-    new THREE.MeshStandardMaterial({ color: 0x120f3a, emissive: 0x16114f, emissiveIntensity: 0.35, roughness: 0.7 }),
-    wallCells.length
-  );
-  wallCells.forEach(([c, r], i) => {
-    dummy.position.set(wx(c), 0.35, wz(r));
-    dummy.scale.set(1, 1, 1);
-    dummy.updateMatrix();
-    walls.setMatrixAt(i, dummy.matrix);
-  });
-  scene.add(walls);
+  // Each maze gets its own neon colour for the wall strips
+  const MAZE_COLORS = [0x7a6cff, 0x22e3b5, 0xff5fa2, 0x4dc3ff, 0xffb02e, 0x9dff5c, 0xff6a3d];
+  let edgeColor = MAZE_COLORS[0];
+  const wallMat = new THREE.MeshStandardMaterial({ color: 0x120f3a, emissive: 0x16114f, emissiveIntensity: 0.35, roughness: 0.7 });
+  const edgeMat = new THREE.MeshBasicMaterial({ color: edgeColor });
+  const gateMat = new THREE.MeshBasicMaterial({ color: 0xff7ad9 });
+  const sparkMat = new THREE.MeshBasicMaterial({ color: 0xffe7b0 });
+  const boxGeo = new THREE.BoxGeometry(1, 1, 1);
+  const wallGeo = new THREE.BoxGeometry(1, 0.7, 1);
+  const sparkGeo = new THREE.SphereGeometry(0.085, 10, 8);
+  const flareGeo = new THREE.IcosahedronGeometry(0.2, 0);
+  const flareMat = new THREE.MeshStandardMaterial({ color: 0x8ff7ff, emissive: 0x5ae6ff, emissiveIntensity: 0.9, flatShading: true });
+  let mazeGroup = null, sparks = null, builtMaze = null;
+  let sparkCells = [], flareCells = [], sparkIndex = {}, flareMeshes = {};
 
-  const edgeSpots = [];
-  for (const [c, r] of wallCells) {
-    for (let d = 0; d < 4; d++) {
-      const nc = c + DX[d], nr = r + DY[d];
-      if (nc < 0 || nc >= W || nr < 0 || nr >= H) continue;
-      if (MAZE[nr][nc] !== '#') edgeSpots.push([c + DX[d] * 0.47, r + DY[d] * 0.47, DX[d] !== 0]);
-    }
-  }
-  const edgeMat = new THREE.MeshBasicMaterial({ color: 0x7a6cff });
-  const edges = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), edgeMat, edgeSpots.length);
-  edgeSpots.forEach(([c, r, vertical], i) => {
-    dummy.position.set(wx(c), 0.72, wz(r));
-    dummy.scale.set(vertical ? 0.07 : 1.07, 0.06, vertical ? 1.07 : 0.07);
-    dummy.updateMatrix();
-    edges.setMatrixAt(i, dummy.matrix);
-  });
-  scene.add(edges);
-
-  MAZE.forEach((row, r) => [...row].forEach((ch, c) => {
-    if (ch !== 'D') return;
-    const gate = new THREE.Mesh(new THREE.BoxGeometry(1, 0.08, 0.12), new THREE.MeshBasicMaterial({ color: 0xff7ad9 }));
-    gate.position.set(wx(c), 0.4, wz(r));
-    scene.add(gate);
-  }));
-
-  // Pickups
-  const sparkCells = [], flareCells = [];
-  for (let r = 0; r < H; r++) for (let c = 0; c < W; c++) {
-    if (!reachable[r][c]) continue;
-    if (MAZE[r][c] === '.') sparkCells.push([c, r]);
-    if (MAZE[r][c] === 'o') flareCells.push([c, r]);
-  }
-  const sparks = new THREE.InstancedMesh(
-    new THREE.SphereGeometry(0.085, 10, 8),
-    new THREE.MeshBasicMaterial({ color: 0xffe7b0 }),
-    sparkCells.length
-  );
-  scene.add(sparks);
-  const sparkIndex = {};
-  sparkCells.forEach(([c, r], i) => { sparkIndex[r * W + c] = i; });
   function setSpark(i, on) {
     const [c, r] = sparkCells[i];
     dummy.position.set(wx(c), 0.4, wz(r));
@@ -421,18 +526,78 @@
     sparks.setMatrixAt(i, dummy.matrix);
     sparks.instanceMatrix.needsUpdate = true;
   }
-  const flareMeshes = {};
-  for (const [c, r] of flareCells) {
-    const g = new THREE.Group();
-    const core = new THREE.Mesh(
-      new THREE.IcosahedronGeometry(0.2, 0),
-      new THREE.MeshStandardMaterial({ color: 0x8ff7ff, emissive: 0x5ae6ff, emissiveIntensity: 0.9, flatShading: true })
-    );
-    g.add(core, makeHalo(0x5ae6ff, 1.4));
-    g.position.set(wx(c), 0.45, wz(r));
-    g.userData.core = core;
-    scene.add(g);
-    flareMeshes[r * W + c] = g;
+
+  // Swap in a maze layout and rebuild its walls, gate and pickups
+  function loadMaze(rows, colorIdx) {
+    edgeColor = MAZE_COLORS[colorIdx % MAZE_COLORS.length];
+    edgeMat.color.setHex(edgeColor);
+    if (rows === builtMaze) return;
+    builtMaze = rows;
+    MAZE = rows;
+    findReachable();
+    if (mazeGroup) {
+      scene.remove(mazeGroup);
+      mazeGroup.traverse((o) => { if (o.isInstancedMesh) o.dispose(); });
+    }
+    mazeGroup = new THREE.Group();
+    scene.add(mazeGroup);
+
+    // Walls: dark blocks with neon strips along every edge that faces open floor
+    const wallCells = [];
+    for (let r = 0; r < H; r++) for (let c = 0; c < W; c++) if (MAZE[r][c] === '#') wallCells.push([c, r]);
+    const walls = new THREE.InstancedMesh(wallGeo, wallMat, wallCells.length);
+    wallCells.forEach(([c, r], i) => {
+      dummy.position.set(wx(c), 0.35, wz(r));
+      dummy.scale.set(1, 1, 1);
+      dummy.updateMatrix();
+      walls.setMatrixAt(i, dummy.matrix);
+    });
+    mazeGroup.add(walls);
+
+    const edgeSpots = [];
+    for (const [c, r] of wallCells) {
+      for (let d = 0; d < 4; d++) {
+        const nc = c + DX[d], nr = r + DY[d];
+        if (nc < 0 || nc >= W || nr < 0 || nr >= H) continue;
+        if (MAZE[nr][nc] !== '#') edgeSpots.push([c + DX[d] * 0.47, r + DY[d] * 0.47, DX[d] !== 0]);
+      }
+    }
+    const edges = new THREE.InstancedMesh(boxGeo, edgeMat, edgeSpots.length);
+    edgeSpots.forEach(([c, r, vertical], i) => {
+      dummy.position.set(wx(c), 0.72, wz(r));
+      dummy.scale.set(vertical ? 0.07 : 1.07, 0.06, vertical ? 1.07 : 0.07);
+      dummy.updateMatrix();
+      edges.setMatrixAt(i, dummy.matrix);
+    });
+    mazeGroup.add(edges);
+
+    MAZE.forEach((row, r) => [...row].forEach((ch, c) => {
+      if (ch !== 'D') return;
+      const gate = new THREE.Mesh(boxGeo, gateMat);
+      gate.scale.set(1, 0.08, 0.12);
+      gate.position.set(wx(c), 0.4, wz(r));
+      mazeGroup.add(gate);
+    }));
+
+    // Pickups
+    sparkCells = []; flareCells = []; sparkIndex = {}; flareMeshes = {};
+    for (let r = 0; r < H; r++) for (let c = 0; c < W; c++) {
+      if (!reachable[r][c]) continue;
+      if (MAZE[r][c] === '.') sparkCells.push([c, r]);
+      if (MAZE[r][c] === 'o') flareCells.push([c, r]);
+    }
+    sparks = new THREE.InstancedMesh(sparkGeo, sparkMat, sparkCells.length);
+    mazeGroup.add(sparks);
+    sparkCells.forEach(([c, r], i) => { sparkIndex[r * W + c] = i; });
+    for (const [c, r] of flareCells) {
+      const g = new THREE.Group();
+      const core = new THREE.Mesh(flareGeo, flareMat);
+      g.add(core, makeHalo(0x5ae6ff, 1.4));
+      g.position.set(wx(c), 0.45, wz(r));
+      g.userData.core = core;
+      mazeGroup.add(g);
+      flareMeshes[r * W + c] = g;
+    }
   }
 
   // WallyMan, the player: a head in a blue hood with goggles and a looped headpiece.
@@ -762,11 +927,107 @@
     return g;
   }
 
+  // ---------- Power-ups ----------
+  // One power-up at a time appears on a random tile: a speed bolt, a shield or a snowflake freeze.
+  const POWERS = {
+    speed: { name: 'Speed boost', short: 'Speed', color: 0xc6ff3d, secs: 6 },
+    shield: { name: 'Shield', short: 'Shield', color: 0x3dff9a, secs: 10 },
+    freeze: { name: 'Freeze', short: 'Freeze', color: 0x9fe8ff, secs: 4.5 },
+  };
+  const hex = (n) => '#' + n.toString(16).padStart(6, '0');
+  function makePowerMesh(kind) {
+    const def = POWERS[kind];
+    const g = new THREE.Group();
+    const model = new THREE.Group();
+    const mat = fruitMat(def.color, 0.6);
+    if (kind === 'speed') {
+      const bolt = new THREE.Shape();
+      [[0.06, 0.22], [-0.1, 0.0], [0.0, 0.0], [-0.06, -0.22], [0.11, 0.04], [0.01, 0.04]].forEach(([x, y], i) =>
+        (i ? bolt.lineTo(x, y) : bolt.moveTo(x, y)));
+      const geo = new THREE.ExtrudeGeometry(bolt, { depth: 0.06, bevelEnabled: true, bevelThickness: 0.015, bevelSize: 0.015, bevelSegments: 1 });
+      geo.center();
+      model.add(new THREE.Mesh(geo, mat));
+      model.scale.setScalar(1.4);
+    } else if (kind === 'shield') {
+      const plate = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.06, 6), mat);
+      plate.rotation.x = Math.PI / 2;
+      const rim = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.025, 6, 6), fruitMat(0xffffff, 0.6));
+      rim.rotation.z = Math.PI / 6;
+      const boss = new THREE.Mesh(new THREE.SphereGeometry(0.06, 10, 8), fruitMat(0xffffff, 0.6));
+      boss.position.z = 0.04;
+      model.add(plate, rim, boss);
+    } else {
+      for (let i = 0; i < 3; i++) {
+        const arm = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.04, 0.04), mat);
+        arm.rotation.z = (i * Math.PI) / 3;
+        model.add(arm);
+      }
+      for (let i = 0; i < 6; i++) {
+        const a = (i * Math.PI) / 3, tip = new THREE.Mesh(new THREE.OctahedronGeometry(0.045, 0), fruitMat(0xffffff, 0.7));
+        tip.position.set(Math.cos(a) * 0.22, Math.sin(a) * 0.22, 0);
+        model.add(tip);
+      }
+    }
+    g.add(model, makeHalo(def.color, 1.4));
+    g.userData.model = model;
+    return g;
+  }
+  // The bubble around WallyMan while the shield is up
+  const shieldBubble = new THREE.Mesh(
+    new THREE.SphereGeometry(0.62, 24, 16),
+    new THREE.MeshBasicMaterial({ color: 0x3dff9a, transparent: true, opacity: 0.22, blending: THREE.AdditiveBlending, depthWrite: false })
+  );
+  shieldBubble.visible = false;
+  wally.add(shieldBubble);
+  const ICE = new THREE.Color(0x9fe8ff);
+
+  // ---------- Boss Sentry ----------
+  // Titan: bigger, slower, never scared by flares, and only the flamethrower brings it down.
+  const BOSS = { name: 'Titan', color: 0xff2bd6, hp: 1.0, points: 1500, fromLevel: 3 };
+  function makeBossMesh() {
+    const m = makeSentryMesh(BOSS.color);
+    m.root.scale.setScalar(1.45);
+    m.mat.color.setHex(0x3a0f4a);
+    const spikeMat = fruitMat(0xffd23f, 0.6);
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2;
+      const spike = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.2, 6), spikeMat);
+      spike.position.set(Math.cos(a) * 0.44, 0, Math.sin(a) * 0.44);
+      spike.rotation.set(Math.sin(a) * Math.PI / 2, 0, -Math.cos(a) * Math.PI / 2);
+      m.spin.add(spike);
+    }
+    const crown = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.22, 4), spikeMat);
+    crown.position.y = 0.52;
+    m.spin.add(crown);
+    // Health bar that floats above it
+    const barBack = new THREE.Mesh(new THREE.PlaneGeometry(0.8, 0.09), new THREE.MeshBasicMaterial({ color: 0x07061a, transparent: true, opacity: 0.7, depthTest: false }));
+    const bar = new THREE.Mesh(new THREE.PlaneGeometry(0.76, 0.06), new THREE.MeshBasicMaterial({ color: 0xff2bd6, depthTest: false }));
+    bar.position.z = 0.001;
+    const hpBar = new THREE.Group();
+    hpBar.add(barBack, bar);
+    hpBar.position.y = 0.85;
+    hpBar.renderOrder = 5;
+    m.root.add(hpBar);
+    return Object.assign(m, { hpBar, bar, bossBody: new THREE.Color(0x3a0f4a) });
+  }
+
   // ---------- Sound ----------
-  let actx = null, muted = false, blipHigh = false;
+  // Sound setting cycles all on -> effects only (no music) -> off, and is remembered.
+  const SOUND_MODES = ['all', 'fx', 'off'];
+  let soundMode = 'all';
+  try { if (SOUND_MODES.includes(localStorage.getItem('wallyman-maze-sound'))) soundMode = localStorage.getItem('wallyman-maze-sound'); } catch (e) { /* storage unavailable */ }
+  let muted = soundMode === 'off';
+  let actx = null, sfxBus = null, musicBus = null, blipHigh = false;
   function initAudio() {
     try {
-      actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+      if (!actx) {
+        actx = new (window.AudioContext || window.webkitAudioContext)();
+        sfxBus = actx.createGain();
+        musicBus = actx.createGain();
+        musicBus.gain.value = 0;
+        sfxBus.connect(actx.destination);
+        musicBus.connect(actx.destination);
+      }
       if (actx.state === 'suspended') actx.resume();
     } catch (e) { actx = null; }
   }
@@ -779,44 +1040,133 @@
     if (f2) o.frequency.exponentialRampToValueAtTime(f2, t0 + dur);
     g.gain.setValueAtTime(vol, t0);
     g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-    o.connect(g).connect(actx.destination);
+    o.connect(g).connect(sfxBus);
     o.start(t0);
     o.stop(t0 + dur + 0.02);
   }
-  // Filtered white noise for the roar of the flame
+  // Filtered white noise: the roar and whoosh of the flame, and the music's hi-hats
   let noiseBuf = null;
-  function noise(dur, vol) {
+  function noise(dur, vol, { type = 'lowpass', f1 = 1400, f2 = 250, at = 0, bus = sfxBus } = {}) {
     if (!actx || muted) return;
     if (!noiseBuf) {
       noiseBuf = actx.createBuffer(1, actx.sampleRate, actx.sampleRate);
       const data = noiseBuf.getChannelData(0);
       for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
     }
-    const t0 = actx.currentTime;
+    const t0 = at || actx.currentTime;
     const src = actx.createBufferSource(), filter = actx.createBiquadFilter(), g = actx.createGain();
     src.buffer = noiseBuf;
-    filter.type = 'lowpass';
-    filter.frequency.setValueAtTime(1400, t0);
-    filter.frequency.exponentialRampToValueAtTime(250, t0 + dur);
+    filter.type = type;
+    filter.frequency.setValueAtTime(f1, t0);
+    filter.frequency.exponentialRampToValueAtTime(f2, t0 + dur);
     g.gain.setValueAtTime(vol, t0);
     g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-    src.connect(filter).connect(g).connect(actx.destination);
+    src.connect(filter).connect(g).connect(bus);
     src.start(t0);
     src.stop(t0 + dur + 0.02);
   }
   const sfx = {
-    spark() { blipHigh = !blipHigh; tone(blipHigh ? 660 : 520, 0, 0.05, 'square', 0.035); },
+    // Chomp: alternating down and up sweeps as WallyMan eats along a row of sparks
+    spark() { blipHigh = !blipHigh; blipHigh ? tone(520, 300, 0.07, 'triangle', 0.09) : tone(300, 520, 0.07, 'triangle', 0.09); },
     flare() { tone(220, 880, 0.35, 'sawtooth', 0.05); },
     sentry() { tone(500, 1600, 0.22, 'triangle', 0.09); },
     death() { tone(760, 70, 1.1, 'sawtooth', 0.07); },
     clear() { [523, 659, 784, 1047].forEach((f, i) => tone(f, 0, 0.16, 'triangle', 0.08, i * 0.12)); },
     life() { [880, 1175, 1568].forEach((f, i) => tone(f, 0, 0.12, 'square', 0.05, i * 0.09)); },
     fruit() { tone(600, 1200, 0.12, 'triangle', 0.08); tone(900, 1800, 0.12, 'triangle', 0.06, 0.1); },
-    flame() { noise(0.75, 0.22); tone(120, 50, 0.6, 'sawtooth', 0.03); },
+    flame() {
+      noise(0.3, 0.2, { type: 'bandpass', f1: 300, f2: 2600 }); // whoosh as it ignites
+      noise(0.75, 0.22);                                         // then the roar
+      tone(120, 50, 0.6, 'sawtooth', 0.03);
+    },
     fuel() { [330, 440, 554, 660].forEach((f, i) => tone(f, 0, 0.08, 'square', 0.045, i * 0.06)); },
     empty() { tone(180, 110, 0.15, 'square', 0.045); },
     start(delay = 0) { [392, 523, 659, 784].forEach((f, i) => tone(f, 0, 0.14, 'triangle', 0.07, delay + i * 0.14)); },
+    power() { [660, 880, 1320].forEach((f, i) => tone(f, f * 1.5, 0.1, 'triangle', 0.07, i * 0.07)); },
+    speed() { tone(300, 1400, 0.3, 'sawtooth', 0.04); },
+    shield() { tone(440, 660, 0.25, 'sine', 0.1); tone(660, 990, 0.25, 'sine', 0.07, 0.08); },
+    shieldHit() { tone(900, 200, 0.35, 'square', 0.06); noise(0.25, 0.15, { type: 'highpass', f1: 3000, f2: 800 }); },
+    freeze() { [1568, 1319, 1175, 988, 1319].forEach((f, i) => tone(f, 0, 0.09, 'sine', 0.07, i * 0.05)); },
+    bossHit() { tone(90, 60, 0.12, 'square', 0.05); },
+    bossDown() { tone(200, 40, 0.9, 'sawtooth', 0.09); noise(0.9, 0.25, { f1: 2000, f2: 100 }); },
+    bossOut() { tone(110, 0, 0.35, 'sawtooth', 0.06); tone(104, 0, 0.35, 'sawtooth', 0.06, 0.3); },
+    unlock() { [784, 988, 1175, 1568].forEach((f, i) => tone(f, 0, 0.18, 'triangle', 0.07, i * 0.1)); },
   };
+
+  // Chase theme: a looping 4-bar tune (bass, lead, kick and hi-hat) scheduled a little ahead on
+  // the audio clock. It speeds up each level and switches to a jittery variation while the
+  // Sentries are scared.
+  const NOTE = (n) => 440 * 2 ** ((n - 69) / 12); // MIDI note number to Hz
+  // 32 eighth notes; null is a rest. Chords: A minor, F, G, E.
+  const BASS = [45, 45, 57, 45, 45, 57, 45, 52, 41, 41, 53, 41, 41, 53, 41, 48, 43, 43, 55, 43, 43, 55, 43, 50, 40, 40, 52, 40, 44, 47, 52, 56];
+  const LEAD = [
+    76, null, 72, 76, 81, null, 79, 76, 77, null, 72, 77, 81, null, 77, 72,
+    79, null, 74, 79, 83, null, 81, 79, 76, 75, 76, 80, 83, null, 80, 76,
+  ];
+  const FRIGHT = [84, 79, 84, 79, 83, 78, 83, 78, 82, 77, 82, 77, 81, 76, 81, 76];
+  const music = { playing: false, step: 0, next: 0 };
+  function musicNote(freq, t0, dur, type, vol) {
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.type = type;
+    o.frequency.setValueAtTime(freq, t0);
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.linearRampToValueAtTime(vol, t0 + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    o.connect(g).connect(musicBus);
+    o.start(t0);
+    o.stop(t0 + dur + 0.02);
+  }
+  function playStep(i, t0, stepDur) {
+    const k = i % 32;
+    if (frightT > 0) {
+      musicNote(NOTE(FRIGHT[i % 16]), t0, stepDur * 0.8, 'square', 0.035);
+      if (k % 2 === 0) musicNote(NOTE(BASS[k]), t0, stepDur * 0.9, 'triangle', 0.09);
+      return;
+    }
+    musicNote(NOTE(BASS[k]), t0, stepDur * 0.9, 'triangle', 0.13);
+    if (LEAD[k] !== null) musicNote(NOTE(LEAD[k]), t0, stepDur * 1.6, 'square', 0.03);
+    if (k % 4 === 0) {
+      const o = actx.createOscillator(), g = actx.createGain();
+      o.frequency.setValueAtTime(130, t0);
+      o.frequency.exponentialRampToValueAtTime(40, t0 + 0.12);
+      g.gain.setValueAtTime(0.25, t0);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.14);
+      o.connect(g).connect(musicBus);
+      o.start(t0);
+      o.stop(t0 + 0.16);
+    }
+    noise(0.04, k % 2 ? 0.04 : 0.025, { type: 'highpass', f1: 7000, f2: 6000, at: t0, bus: musicBus });
+  }
+  function musicTick() {
+    const want = !!actx && soundMode === 'all' && state === 'play';
+    if (want !== music.playing) {
+      music.playing = want;
+      if (actx) {
+        musicBus.gain.cancelScheduledValues(actx.currentTime);
+        musicBus.gain.setTargetAtTime(want ? 1 : 0, actx.currentTime, want ? 0.05 : 0.08);
+      }
+      if (want) music.next = actx.currentTime + 0.05;
+    }
+    if (!music.playing) return;
+    const bpm = 132 + Math.min(level - 1, 10) * 4 + (bossOut() ? 8 : 0);
+    const stepDur = 30 / bpm;
+    if (music.next < actx.currentTime) music.next = actx.currentTime + 0.02; // after a stall, don't burst-play missed notes
+    while (music.next < actx.currentTime + 0.15) {
+      playStep(music.step, music.next, stepDur);
+      music.next += stepDur;
+      music.step++;
+    }
+  }
+  setInterval(musicTick, 30);
+
+  // Haptics: a short buzz on phones that support it (Android browsers; iPhones don't)
+  const canBuzz = typeof navigator.vibrate === 'function';
+  let buzzOn = true;
+  try { buzzOn = localStorage.getItem('wallyman-maze-buzz') !== 'off'; } catch (e) { /* storage unavailable */ }
+  function buzz(pattern) {
+    if (!canBuzz || !buzzOn) return;
+    try { navigator.vibrate(pattern); } catch (e) { /* not allowed here */ }
+  }
 
   // Announcer: a female voice says the game's name when a game starts. Uses the browser's
   // built-in speech voices, preferring the natural-sounding (neural / enhanced) ones, so the
@@ -894,6 +1244,9 @@
     skipBtn: $('skipBtn'), scoreRows: $('scoreRows'), scoresHead: $('scoresHead'), boardNote: $('boardNote'),
     fuelStat: $('fuelStat'), fuelGauge: $('fuelGauge'), fuelBar: $('fuelBar'),
     fruitList: $('fruitList'), camBtn: $('camBtn'), muteBtn: $('muteBtn'), pauseBtn: $('pauseBtn'),
+    levelLabel: $('levelLabel'), powers: $('powers'), dailyBtn: $('dailyBtn'), dailyDate: $('dailyDate'),
+    unlockMsg: $('unlockMsg'), skinList: $('skinList'), tabAll: $('tabAll'), tabDaily: $('tabDaily'),
+    powerList: $('powerList'), buzzBtn: $('buzzBtn'),
   };
 
   // ---------- High scores ----------
@@ -960,12 +1313,17 @@
   }
 
   function renderScores(highlight) {
+    if (boardTab === 'daily') { renderDaily(highlight); return; }
+    setTabs();
     const rows = boardRows();
     ui.scoresHead.textContent = board.shared ? 'Leaderboard' : 'High scores';
     ui.boardNote.textContent = board.error ||
       (board.shared
         ? (board.canWrite ? 'Shared with everyone who plays. Your best run counts.' : 'Shared leaderboard. Only players with Contributor access can post scores.')
         : 'Saved in this browser.');
+    fillRows(rows, (e) => (board.shared ? e.id === board.myId : e === highlight));
+  }
+  function fillRows(rows, isMine) {
     ui.scoreRows.replaceChildren();
     if (!rows.length) {
       const tr = document.createElement('tr');
@@ -976,7 +1334,7 @@
     }
     rows.forEach((e, i) => {
       const tr = document.createElement('tr');
-      if (board.shared ? e.id === board.myId : e === highlight) tr.className = 'mine';
+      if (isMine(e)) tr.className = 'mine';
       for (const v of [i + 1, e.name, e.level, e.score.toLocaleString()]) {
         const td = document.createElement('td');
         td.textContent = v;
@@ -1024,14 +1382,175 @@
         }
       } catch (e) { /* keep defaults */ }
     }
+    noteBest(board.myBest);
+    connectDaily();
+  }
+
+  // ---------- Daily challenge ----------
+  // One generated maze per day (UTC, so everyone shares it), with its own leaderboard that
+  // never touches the all-time one. Shared: one doc per player at daily/<id>, holding the best
+  // run of the day it names. In a plain file: a top 10 for today kept in this browser.
+  const DAILY_KEY = 'wallyman-maze-daily';
+  const dayKey = () => new Date().toISOString().slice(0, 10);
+  const dayLabel = (d) => new Date(d + 'T12:00:00Z').toLocaleDateString(undefined, { day: 'numeric', month: 'short', timeZone: 'UTC' });
+  const daily = { day: dayKey(), rows: [], myBest: 0, unsub: null, error: '' };
+  let dailyLocal = { day: daily.day, scores: [] };
+  function loadDailyLocal() {
+    const today = dayKey();
+    try {
+      const saved = JSON.parse(localStorage.getItem(DAILY_KEY) || 'null');
+      if (saved && saved.day === today && Array.isArray(saved.scores)) {
+        dailyLocal = { day: today, scores: saved.scores.filter((e) => e && typeof e.score === 'number' && typeof e.name === 'string').slice(0, MAX_SCORES) };
+        return;
+      }
+    } catch (e) { /* storage unavailable */ }
+    dailyLocal = { day: today, scores: [] };
+  }
+  loadDailyLocal();
+  const dailyRows = () => (board.shared ? daily.rows : dailyLocal.scores);
+  const dailyTop = () => (dailyRows()[0] ? dailyRows()[0].score : 0);
+  const makesDailyTop = (s) => s > 0 && (dailyLocal.scores.length < MAX_SCORES || s > dailyLocal.scores[dailyLocal.scores.length - 1].score);
+
+  function connectDaily() {
+    const db = board.db;
+    if (!db) return;
+    daily.day = dayKey();
+    if (daily.unsub) daily.unsub();
+    daily.rows = [];
+    daily.unsub = db.collection('daily').where('day', '==', daily.day).orderBy('score', 'desc').limit(MAX_SCORES).onSnapshot((snap) => {
+      daily.rows = snap.docs.map(boardEntry).filter(Boolean);
+      daily.error = '';
+      updateHUD();
+      if (ui.nameForm.hidden) renderScores(null);
+    }, () => {
+      daily.error = "Today's leaderboard can't be reached right now.";
+      renderScores(null);
+    });
+    daily.myBest = 0;
+    if (board.myId) {
+      db.doc('daily/' + board.myId).get().then((mine) => {
+        const d = mine.exists ? mine.data() || {} : {};
+        if (d.day === daily.day) { const e = boardEntry(mine); if (e) daily.myBest = e.score; }
+        noteBest(Number(d.score) || 0);
+      }).catch(() => { /* keep defaults */ });
+    }
+  }
+
+  async function recordDailyShared(name) {
+    const ref = board.db.doc('daily/' + board.myId);
+    try {
+      if (score > daily.myBest) {
+        await ref.set({ name, score, level, day: runDay, date: Date.now() });
+        daily.myBest = score;
+        return `Saved! ${name} is on today's leaderboard with ${score.toLocaleString()}.`;
+      }
+      await ref.update({ name });
+      return `Name saved. Your best today is ${daily.myBest.toLocaleString()}, so beat it to climb higher.`;
+    } catch (e) {
+      if (e && (e.code === 'invalid_argument' || e.code === 'not_granted')) {
+        board.canWrite = false;
+        return "Your name wasn't saved: you need Contributor access to this page to join the leaderboard. Ask the owner to share it with you as a Contributor.";
+      }
+      return "Your name couldn't be saved just now. Check your connection and try again next game.";
+    }
+  }
+  function recordDailyLocal(name) {
+    if (dailyLocal.day !== runDay) dailyLocal = { day: runDay, scores: [] };
+    const entry = { name, score, level, date: Date.now() };
+    dailyLocal.scores.push(entry);
+    dailyLocal.scores.sort((a, b) => b.score - a.score || a.date - b.date);
+    dailyLocal.scores = dailyLocal.scores.slice(0, MAX_SCORES);
+    try { localStorage.setItem(DAILY_KEY, JSON.stringify(dailyLocal)); } catch (e) { /* storage unavailable */ }
+    return entry;
+  }
+  function renderDaily(highlight) {
+    setTabs();
+    ui.scoresHead.textContent = "Today's daily · " + dayLabel(dayKey());
+    ui.boardNote.textContent = daily.error ||
+      (board.shared ? 'Everyone plays the same maze today. Your best run counts. A new maze arrives at midnight UTC.' : "Today's maze, saved in this browser.");
+    fillRows(dailyRows(), (e) => (board.shared ? e.id === board.myId : e === highlight));
+  }
+  let boardTab = 'all';
+  function setTabs() {
+    ui.tabAll.setAttribute('aria-selected', String(boardTab === 'all'));
+    ui.tabDaily.setAttribute('aria-selected', String(boardTab === 'daily'));
+  }
+  function showTab(tab) {
+    boardTab = tab;
+    if (tab === 'daily' && dayKey() !== daily.day) { loadDailyLocal(); connectDaily(); }
+    renderScores(null);
+  }
+  ui.tabAll.addEventListener('click', () => showTab('all'));
+  ui.tabDaily.addEventListener('click', () => showTab('daily'));
+  ui.dailyDate.textContent = dayLabel(dayKey()) + ' maze';
+
+  // ---------- Skins ----------
+  // Unlocked by the player's best score in any mode, and remembered in this browser.
+  const SKINS = [
+    { id: 'classic', name: 'Classic', need: 0, hood: 0x2f5bff, glow: 0x1a3cff, panel: 0xff4fa8, halo: 0x4d7dff },
+    { id: 'ember', name: 'Ember', need: 2000, hood: 0xff5a1f, glow: 0xc02a00, panel: 0xffd23f, halo: 0xff7a1f },
+    { id: 'mint', name: 'Mint', need: 5000, hood: 0x1fd6a0, glow: 0x0a8a64, panel: 0xff6fd8, halo: 0x3dffc0 },
+    { id: 'royal', name: 'Royal', need: 10000, hood: 0x7b2cff, glow: 0x4a12c0, panel: 0xffd23f, halo: 0xb26bff },
+    { id: 'gold', name: 'Gold', need: 20000, hood: 0xffc42e, glow: 0xa06a00, panel: 0xff3355, halo: 0xffd23f },
+    { id: 'shadow', name: 'Shadow', need: 35000, hood: 0x22223a, glow: 0x3a2a7a, panel: 0x00e5ff, halo: 0x7a6cff },
+    { id: 'prism', name: 'Prism', need: 50000, hood: 0xff3355, glow: 0x802040, panel: 0xffffff, halo: 0xffffff, prism: true },
+  ];
+  let careerBest = 0, skinId = 'classic';
+  try {
+    careerBest = Math.max(0, Number(localStorage.getItem('wallyman-maze-best')) || 0, ...scores.map((e) => e.score));
+    skinId = localStorage.getItem('wallyman-maze-skin') || 'classic';
+  } catch (e) { /* storage unavailable */ }
+  const skinById = (id) => SKINS.find((k) => k.id === id) || SKINS[0];
+  if (skinById(skinId).need > careerBest) skinId = 'classic';
+  // Raise the best score that skins unlock from; returns the skins this unlocked
+  function noteBest(sc) {
+    if (!(sc > careerBest)) return [];
+    const fresh = SKINS.filter((k) => k.need > careerBest && k.need <= sc);
+    careerBest = sc;
+    try { localStorage.setItem('wallyman-maze-best', String(careerBest)); } catch (e) { /* storage unavailable */ }
+    renderSkins();
+    return fresh;
+  }
+  function applySkin() {
+    const k = skinById(skinId);
+    hoodMat.color.setHex(k.hood);
+    hoodMat.emissive.setHex(k.glow);
+    hoodMat.metalness = k.id === 'gold' ? 0.6 : 0.15;
+    pinkMat.color.setHex(k.panel);
+    pinkMat.emissive.setHex(k.panel).multiplyScalar(0.7);
+    wallyHalo.material.color.setHex(k.halo);
+    document.documentElement.style.setProperty('--hood', hex(k.halo));
+  }
+  function renderSkins() {
+    ui.skinList.replaceChildren();
+    for (const k of SKINS) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      const open = careerBest >= k.need;
+      b.disabled = !open;
+      b.className = k.prism ? 'prism' : '';
+      b.setAttribute('aria-pressed', String(k.id === skinId));
+      b.style.setProperty('--c', hex(k.hood));
+      b.style.setProperty('--p', hex(k.panel));
+      b.title = open ? k.name : `Score ${k.need.toLocaleString()} to unlock ${k.name}`;
+      b.innerHTML = '<i></i>';
+      b.append(open ? k.name : '🔒 ' + (k.need >= 1000 ? k.need / 1000 + 'k' : k.need));
+      b.addEventListener('click', () => {
+        skinId = k.id;
+        try { localStorage.setItem('wallyman-maze-skin', skinId); } catch (e) { /* storage unavailable */ }
+        applySkin();
+        renderSkins();
+      });
+      ui.skinList.appendChild(b);
+    }
   }
 
   let state = 'title';      // title | ready | play | dying | cleared | paused | over
   let pausedFrom = null;
   let score = 0, lives = 3, level = 1, bonusLifeGiven = false;
   let sparksLeft = 0, eatenThisLevel = 0;
-  const totalPickups = sparkCells.length + flareCells.length;
-  const FRUIT_AT = [Math.round(totalPickups * 0.3), Math.round(totalPickups * 0.7)];
+  let FRUIT_AT = [];
+  let runMode = 'classic', runDay = dayKey(); // classic | daily
   const pickups = {};       // r*W+c -> 'spark' | 'flare'
   let fruit = null;         // { mesh, def, t } while a bonus fruit is on the board
   let collected = [];       // fruit eaten this game, for the HUD tray
@@ -1047,9 +1566,20 @@
   let fuel = FUEL_MAX, flameT = 0, shownFuel = -1;
   const flame = { d: 2, len: 0 };
   let cans = [], canT = 0;
+  // Power-ups: one on the board at a time; each kind has its own countdown once collected
+  let power = null, powerT = 0, graceT = 0;
+  const powerLeft = { speed: 0, shield: 0, freeze: 0 };
+  let shownPowers = '';
 
-  const playerSpeed = () => 6.4 + Math.min(level - 1, 6) * 0.25;
-  const sentrySpeed = () => 6.0 + Math.min(level - 1, 6) * 0.35;
+  // Sentries keep getting faster up to level 13; WallyMan's own speed tops out at level 9
+  const playerSpeed = () => (6.4 + Math.min(level - 1, 8) * 0.2) * (powerLeft.speed > 0 ? 1.4 : 1);
+  const sentrySpeed = () => 6.0 + Math.min(level - 1, 6) * 0.35 + Math.max(0, Math.min(level - 7, 6)) * 0.15;
+  const bossLevel = () => (runMode === 'daily' ? 1 : BOSS.fromLevel);
+  const bossOut = () => sentries.some((s) => s.boss && (s.state === 'active' || s.state === 'leaving'));
+  // Level 1 is the classic maze, each later level a new generated one; the daily run keeps today's maze
+  const mazeFor = (lvl) => (runMode === 'daily' ? generateMaze('daily-' + runDay)
+    : lvl === 1 ? CLASSIC : generateMaze('level-' + lvl));
+  const mazeColorFor = (lvl) => (runMode === 'daily' ? 3 + lvl : lvl - 1);
   const frightTime = () => Math.max(1.5, 7 - (level - 1) * 0.8);
 
   function setBanner(text) { ui.banner.textContent = text || ''; ui.banner.hidden = !text; }
@@ -1068,9 +1598,24 @@
   }
   function updateHUD() {
     ui.score.textContent = score;
-    ui.best.textContent = Math.max(best, score);
+    ui.best.textContent = Math.max(runMode === 'daily' ? dailyTop() : best, score);
     ui.level.textContent = level;
+    ui.levelLabel.textContent = runMode === 'daily' ? 'Daily' : 'Level';
     renderLives();
+  }
+  function renderPowers() {
+    const key = Object.keys(powerLeft).map((k) => (powerLeft[k] > 0 ? k + Math.ceil(powerLeft[k]) : '')).join();
+    if (key === shownPowers) return;
+    shownPowers = key;
+    ui.powers.replaceChildren();
+    for (const k of Object.keys(powerLeft)) {
+      if (powerLeft[k] <= 0) continue;
+      const chip = document.createElement('span');
+      chip.style.setProperty('--c', hex(POWERS[k].color));
+      chip.textContent = `${POWERS[k].short} ${Math.ceil(powerLeft[k])}`;
+      if (powerLeft[k] < 2) chip.className = 'ending';
+      ui.powers.appendChild(chip);
+    }
   }
   function addScore(n) {
     score += n;
@@ -1093,27 +1638,63 @@
     cans.forEach((k) => scene.remove(k.mesh));
     cans = [];
   }
-  // Drop a can on a random open tile away from WallyMan, the fruit spot and the tunnel mouths
-  function spawnCan() {
+  // A random open tile away from WallyMan, the fruit spot, the tunnel mouths and other items
+  function freeSpot() {
     const p = posOf(player);
     const taken = new Set(cans.map((k) => k.r * W + k.c));
+    if (power) taken.add(power.r * W + power.c);
     const spots = openTiles.filter(([c, r]) =>
       !(r === TUNNEL_ROW && (c < 2 || c > W - 3)) &&
       !(c === FRUIT_SPOT.c && r === FRUIT_SPOT.r) &&
       !taken.has(r * W + c) &&
       (c - p.x) ** 2 + (r - p.y) ** 2 > 16);
-    if (!spots.length) return;
-    const [c, r] = spots[(Math.random() * spots.length) | 0];
+    return spots.length ? spots[(Math.random() * spots.length) | 0] : null;
+  }
+  function spawnCan() {
+    const spot = freeSpot();
+    if (!spot) return;
+    const [c, r] = spot;
     const mesh = makeCanMesh(c, r);
     scene.add(mesh);
     cans.push({ c, r, mesh });
   }
 
+  function removePower() {
+    if (power) scene.remove(power.mesh);
+    power = null;
+  }
+  function spawnPower() {
+    const spot = freeSpot();
+    if (!spot) return;
+    const kinds = Object.keys(POWERS);
+    const kind = kinds[(Math.random() * kinds.length) | 0];
+    const [c, r] = spot;
+    const mesh = makePowerMesh(kind);
+    mesh.position.set(wx(c), 0.5, wz(r));
+    scene.add(mesh);
+    power = { kind, c, r, mesh, t: 10 };
+  }
+  function grabPower(kind, c, r) {
+    const def = POWERS[kind];
+    powerLeft[kind] = def.secs;
+    sfx.power();
+    sfx[kind]();
+    buzz([25, 30, 25]);
+    burst(c, r, def.color, 30, 4);
+    popup(def.name, c, r, hex(def.color));
+    if (kind === 'freeze') sentries.forEach((s) => { s.reverse = false; });
+  }
+
   function resetPickups() {
     removeCans();
+    removePower();
     canT = 2;
+    powerT = 8 + Math.random() * 4;
     sparksLeft = 0;
     eatenThisLevel = 0;
+    for (const k in pickups) delete pickups[k];
+    const total = sparkCells.length + flareCells.length;
+    FRUIT_AT = [Math.round(total * 0.3), Math.round(total * 0.7)];
     sparkCells.forEach(([c, r], i) => { pickups[r * W + c] = 'spark'; setSpark(i, true); sparksLeft++; });
     flareCells.forEach(([c, r]) => { pickups[r * W + c] = 'flare'; flareMeshes[r * W + c].visible = true; sparksLeft++; });
   }
@@ -1133,9 +1714,19 @@
       };
       return s;
     });
+    if (level >= bossLevel()) {
+      sentries.push({
+        idx: 4, kind: 4, boss: true, name: BOSS.name, corner: [START.c, START.r], mesh: makeBossMesh(),
+        c: EXIT.c, r: 9, d: -1, t: 0, state: 'bay', scared: false, reverse: false,
+        release: 9 * releaseScale, wander: [START.c, START.r], wanderT: 0, angle: 0, hp: BOSS.hp, hurtT: 0, stunT: 0,
+      });
+    }
     mode = 0; modeIdx = 0; modeT = MODE_TIMES[0];
     frightT = 0; combo = 0;
     flameT = 0;
+    graceT = 0;
+    for (const k in powerLeft) powerLeft[k] = 0;
+    renderPowers();
     wally.visible = true;
     wallyInner.scale.set(1, 1, 1);
     snapCamera = true;
@@ -1147,12 +1738,16 @@
     setBanner(label);
   }
 
-  function newGame() {
+  function newGame(modeName = 'classic') {
     initAudio();
+    runMode = modeName;
+    runDay = dayKey();
+    if (runMode === 'daily' && dailyLocal.day !== runDay) { loadDailyLocal(); connectDaily(); }
     score = 0; lives = 3; level = 1; bonusLifeGiven = false;
     fuel = FUEL_MAX;
     collected = [];
     renderTray();
+    loadMaze(mazeFor(1), mazeColorFor(1));
     resetPickups();
     resetActors();
     updateHUD();
@@ -1161,12 +1756,13 @@
     const clip = playVoiceClip();
     const spoke = clip || announce('Wally Man Maze!');
     sfx.start(clip ? VOICE_CLIP_SECS : spoke ? 1.4 : 0);
-    startRound('Ready', clip ? VOICE_CLIP_SECS + 0.5 : spoke ? 2.6 : 1.8);
+    startRound(runMode === 'daily' ? 'Daily challenge' : 'Ready', clip ? VOICE_CLIP_SECS + 0.5 : spoke ? 2.6 : 1.8);
   }
 
+  const playRow = document.getElementById('playRow');
   function showGameOverMenu(highlight) {
     ui.nameForm.hidden = true;
-    ui.startBtn.hidden = false;
+    playRow.hidden = false;
     renderScores(highlight);
     ui.startBtn.focus();
   }
@@ -1176,26 +1772,39 @@
     setBanner('');
     removeFruit();
     removeCans();
+    removePower();
+    for (const k in powerLeft) powerLeft[k] = 0;
+    renderPowers();
     updateHUD();
+    const isDaily = runMode === 'daily';
     ui.panel.classList.add('ended');
     ui.title.textContent = 'Game over';
-    ui.blurb.textContent = 'The Sentries caught WallyMan. One more run?';
+    ui.blurb.textContent = isDaily ? "That's your daily run. Try today's maze again, or play the classic game." : 'The Sentries caught WallyMan. One more run?';
     ui.finalScore.hidden = false;
-    const isTop = score > 0 && score > topScore();
-    const isPersonal = board.shared && score > 0 && score > board.myBest;
-    ui.finalScore.textContent = `Score ${score.toLocaleString()} · Level ${level}` +
-      (isTop ? ' · New top score' : isPersonal ? ' · New personal best' : '');
-    ui.startBtn.textContent = 'Play again';
+    const isTop = score > 0 && score > (isDaily ? dailyTop() : topScore());
+    const myBest = isDaily ? daily.myBest : board.myBest;
+    const isPersonal = board.shared && score > 0 && score > myBest;
+    ui.finalScore.textContent = `${isDaily ? 'Daily · ' : ''}Score ${score.toLocaleString()} · Level ${level}` +
+      (isTop ? (isDaily ? ' · Top score today' : ' · New top score') : isPersonal ? ' · New personal best' : '');
+    ui.startBtn.textContent = isDaily ? 'Classic game' : 'Play again';
+    ui.dailyBtn.firstChild.textContent = isDaily ? 'Daily again' : 'Daily challenge';
     ui.overlay.hidden = false;
+    boardTab = isDaily ? 'daily' : 'all';
     renderScores(null);
     ui.saveMsg.hidden = true;
+    const fresh = noteBest(score);
+    ui.unlockMsg.hidden = !fresh.length;
+    if (fresh.length) {
+      ui.unlockMsg.textContent = `New skin unlocked: ${fresh.map((k) => k.name).join(' and ')}! Pick it below.`;
+      sfx.unlock();
+    }
     const canPost = !board.shared || board.canWrite;
     if (score > 0 && canPost) {
-      const newBest = board.shared ? score > board.myBest : makesLocalTop(score);
+      const newBest = board.shared ? score > myBest : isDaily ? makesDailyTop(score) : makesLocalTop(score);
       ui.nameLabel.textContent = (newBest ? 'New best! ' : '') +
-        (board.shared ? 'Type your name for the leaderboard' : 'Type your name for the high scores');
+        (isDaily ? "Type your name for today's leaderboard" : board.shared ? 'Type your name for the leaderboard' : 'Type your name for the high scores');
       ui.nameForm.hidden = false;
-      ui.startBtn.hidden = true;
+      playRow.hidden = true;
       ui.nameInput.value = lastName;
       ui.nameInput.focus();
       ui.nameInput.select();
@@ -1216,7 +1825,23 @@
     if (saving) return;
     const name = cleanName(ui.nameInput.value);
     rememberName(name);
-    if (board.shared) {
+    if (runMode === 'daily') {
+      if (board.shared) {
+        saving = true;
+        ui.saveBtn.disabled = true;
+        const msg = await recordDailyShared(name);
+        saving = false;
+        ui.saveBtn.disabled = false;
+        showSaveMsg(msg);
+        showGameOverMenu(null);
+      } else if (makesDailyTop(score)) {
+        showSaveMsg(`Saved! ${name} is on today's board.`);
+        showGameOverMenu(recordDailyLocal(name));
+      } else {
+        showSaveMsg(`Not quite today's top ${MAX_SCORES}, ${name}. One more run?`);
+        showGameOverMenu(null);
+      }
+    } else if (board.shared) {
       saving = true;
       ui.saveBtn.disabled = true;
       const msg = await recordShared(name);
@@ -1246,6 +1871,18 @@
     li.appendChild(b);
     ui.fruitList.appendChild(li);
   });
+  for (const [kind, def] of Object.entries(POWERS)) {
+    const li = document.createElement('li');
+    li.style.setProperty('--c', hex(def.color));
+    li.innerHTML = '<i></i>';
+    li.append(def.name + ' ');
+    const b = document.createElement('b');
+    b.textContent = { speed: 'go faster', shield: 'blocks one hit', freeze: 'stops the Sentries' }[kind];
+    li.appendChild(b);
+    ui.powerList.appendChild(li);
+  }
+  renderSkins();
+  applySkin();
   renderScores(null);
   connectBoard();
 
@@ -1290,9 +1927,10 @@
 
   function sentryTarget(s) {
     if (s.state === 'eaten') return [EXIT.c, EXIT.r];
-    if (mode === 0) return s.corner;
     const p = posOf(player);
     const pc = Math.round(p.x), pr = Math.round(p.y);
+    if (s.boss) return [pc, pr];                                // Titan: never lets up
+    if (mode === 0) return s.corner;
     const pd = player.d >= 0 ? player.d : player.face;
     switch (s.kind) {
       case 0: return [pc, pr];                                  // Rook: straight at you
@@ -1328,11 +1966,13 @@
   function updateSentry(s, dt) {
     switch (s.state) {
       case 'bay':
-        s.release -= dt;
+        if (powerLeft.freeze <= 0) s.release -= dt;
         s.r = 9 + Math.sin(time * 5 + s.idx * 2) * 0.2;
         if (s.release <= 0) s.state = 'leaving';
         break;
       case 'leaving': {
+        if (powerLeft.freeze > 0) break;
+        if (s.boss && s.c === EXIT.c && s.r >= 8.9 && !s.announced) { s.announced = true; sfx.bossOut(); }
         const step = 3.2 * dt;
         if (Math.abs(s.c - EXIT.c) > 1e-3) {
           s.c += Math.sign(EXIT.c - s.c) * Math.min(step, Math.abs(EXIT.c - s.c));
@@ -1346,7 +1986,7 @@
       }
       case 'entering':
         s.r += 6 * dt;
-        if (s.r >= 9) { s.r = 9; s.c = EXIT.c; s.state = 'bay'; s.release = 0.6; s.d = -1; s.t = 0; s.scared = false; }
+        if (s.r >= 9) { s.r = 9; s.c = EXIT.c; s.state = 'bay'; s.release = s.boss ? 8 : 0.6; s.d = -1; s.t = 0; s.scared = false; }
         break;
       default: {
         if (s.reverse) { s.reverse = false; if (s.state === 'active') reverseActor(s, (s.d + 2) % 4); }
@@ -1354,7 +1994,9 @@
           s.wanderT = 4;
           s.wander = openTiles[(Math.random() * openTiles.length) | 0];
         }
+        if (s.state !== 'eaten' && (powerLeft.freeze > 0 || (s.stunT = Math.max(0, (s.stunT || 0) - dt)) > 0)) break;
         let speed = s.state === 'eaten' ? 13 : s.scared ? 3.6 : sentrySpeed();
+        if (s.boss && s.state !== 'eaten') speed *= s.hurtT > 0 ? 0.45 : 0.8;
         const inTunnel = s.r === TUNNEL_ROW && (s.c <= 4 || s.c >= W - 5);
         if (inTunnel && s.state !== 'eaten') speed *= 0.55;
         advance(s, speed * dt, sentryChoose);
@@ -1387,7 +2029,7 @@
       frightT = frightTime();
       combo = 0;
       sentries.forEach((s) => {
-        if (s.state === 'eaten' || s.state === 'entering') return;
+        if (s.state === 'eaten' || s.state === 'entering' || s.boss) return;
         s.scared = true;
         if (s.state === 'active') s.reverse = true;
       });
@@ -1414,7 +2056,7 @@
     addScore(pts);
     sfx.sentry();
     burst(sp.x, sp.y, s.mesh.base.getHex(), 30, 5);
-    popup(label, sp.x, sp.y, '#8ff7ff');
+    if (label) popup(label, sp.x, sp.y, '#8ff7ff');
   }
   const scaredPoints = () => { const pts = 200 * 2 ** combo; combo = Math.min(combo + 1, 3); return pts; };
 
@@ -1450,14 +2092,36 @@
       const ox = sp.x - p.x, oy = sp.y - p.y;
       const along = ox * DX[d] + oy * DY[d], across = Math.abs(ox * DY[d] - oy * DX[d]);
       if (along < -0.3 || along > flame.len + 0.2 || across > 0.55) continue;
+      if (s.boss) {
+        // The Titan soaks up fire: it slows and its health bar drains until it breaks
+        s.hp -= dt;
+        if (s.hurtT <= 0) sfx.bossHit();
+        s.hurtT = 0.25;
+        if (Math.random() < 0.5) burst(sp.x, sp.y, 0xffd23f, 3, 3);
+        if (s.hp <= 0) {
+          s.hp = BOSS.hp;
+          zapSentry(s, sp, BOSS.points, '');
+          sfx.bossDown();
+          buzz([40, 30, 40, 30, 120]);
+          burst(sp.x, sp.y, 0xffd23f, 60, 6);
+          popup(`Titan down ${BOSS.points}`, sp.x, sp.y, '#ff2bd6');
+        }
+        continue;
+      }
       const pts = s.scared ? scaredPoints() : 300;
       zapSentry(s, sp, pts, `Toasted ${pts}`);
     }
   }
 
   function updatePlay(dt) {
-    // Scatter / chase rhythm pauses while the Sentries are scared
-    if (frightT > 0) {
+    for (const k in powerLeft) powerLeft[k] = Math.max(0, powerLeft[k] - dt);
+    graceT = Math.max(0, graceT - dt);
+    for (const s of sentries) if (s.boss) s.hurtT -= dt;
+    renderPowers();
+    // Scatter / chase rhythm pauses while the Sentries are scared or frozen
+    if (powerLeft.freeze > 0) {
+      // hold everything
+    } else if (frightT > 0) {
       frightT -= dt;
       if (frightT <= 0) { frightT = 0; sentries.forEach((s) => { s.scared = false; }); }
     } else {
@@ -1479,6 +2143,7 @@
       cans = cans.filter((k) => k !== can);
       fuel = Math.min(FUEL_MAX, fuel + CAN_FUEL);
       sfx.fuel();
+      buzz(35);
       burst(pc, pr, 0xff7a1f, 24, 3.5);
       popup(`Fuel +${CAN_FUEL}`, pc, pr, '#ff8a1f');
     }
@@ -1486,6 +2151,20 @@
       if (cans.length < MAX_CANS) spawnCan();
       canT = 9 + Math.random() * 6;
     }
+
+    if (power) {
+      if (power.c === pc && power.r === pr) {
+        const { kind } = power;
+        removePower();
+        grabPower(kind, pc, pr);
+      } else if ((power.t -= dt) <= 0) {
+        removePower();
+      }
+    } else if ((powerT -= dt) <= 0) {
+      spawnPower();
+      powerT = 14 + Math.random() * 8;
+    }
+    if (powerLeft.speed > 0 && player.d >= 0 && Math.random() < 0.5) burst(p.x, p.y, 0xc6ff3d, 1, 1.2);
 
     if (flameT > 0) updateFlameAttack(dt, p);
 
@@ -1510,14 +2189,26 @@
     for (const s of sentries) {
       if (s.state !== 'active' && s.state !== 'leaving') continue;
       const sp = posOf(s);
-      if ((sp.x - p.x) ** 2 + (sp.y - p.y) ** 2 > 0.42) continue;
+      if ((sp.x - p.x) ** 2 + (sp.y - p.y) ** 2 > (s.boss ? 0.6 : 0.42)) continue;
       if (s.scared) {
         const pts = scaredPoints();
         zapSentry(s, sp, pts, String(pts));
+      } else if (graceT > 0) {
+        // just bounced off the shield: a moment to get clear
+      } else if (powerLeft.shield > 0) {
+        // The shield pops and takes the hit: a Sentry is knocked back to the bay, the Titan is stunned
+        powerLeft.shield = 0;
+        graceT = 1.5;
+        sfx.shieldHit();
+        buzz(60);
+        burst(p.x, p.y, 0x3dff9a, 40, 5);
+        if (s.boss) { s.stunT = 1.5; popup('Blocked', p.x, p.y, '#3dff9a'); }
+        else zapSentry(s, sp, 100, 'Blocked 100');
       } else {
         state = 'dying';
         stateT = 1.7;
         sfx.death();
+        buzz([90, 50, 180]);
         burst(p.x, p.y, 0x4d7dff, 60, 5);
         return;
       }
@@ -1551,14 +2242,14 @@
       }
     } else if (state === 'cleared') {
       stateT -= dt;
-      edgeMat.color.setHex(Math.floor(stateT * 5) % 2 ? 0xffffff : 0x7a6cff);
+      edgeMat.color.setHex(Math.floor(stateT * 5) % 2 ? 0xffffff : edgeColor);
       if (stateT <= 0) {
-        edgeMat.color.setHex(0x7a6cff);
         level++;
+        loadMaze(mazeFor(level), mazeColorFor(level));
         resetPickups();
         resetActors();
         updateHUD();
-        startRound('Level ' + level);
+        startRound(level === bossLevel() ? 'Level ' + level + ': Titan!' : 'Level ' + level);
       }
     }
   }
@@ -1599,6 +2290,15 @@
       ui.fuelStat.classList.toggle('low', shown < 25);
     }
     wallyHalo.material.opacity = 0.45 + Math.sin(time * 3) * 0.1;
+    // Shield bubble (flickers as it runs out); WallyMan blinks while recovering from a blocked hit
+    shieldBubble.visible = powerLeft.shield > 0 && (powerLeft.shield > 2 || Math.floor(time * 8) % 2 === 0);
+    shieldBubble.material.opacity = 0.18 + Math.sin(time * 6) * 0.06;
+    head.visible = !(graceT > 0 && Math.floor(time * 12) % 2);
+    if (skinById(skinId).prism) {
+      hoodMat.color.setHSL((time * 0.15) % 1, 0.9, 0.55);
+      hoodMat.emissive.copy(hoodMat.color).multiplyScalar(0.5);
+      wallyHalo.material.color.copy(hoodMat.color);
+    }
     wallyLight.position.set(wally.position.x, 1.4, wally.position.z);
     wallyLight.intensity = wally.visible ? 1.8 * wallyInner.scale.y : 0;
 
@@ -1606,7 +2306,8 @@
       const sp = posOf(s);
       const m = s.mesh;
       m.root.position.set(wx(sp.x), 0.55 + Math.sin(time * 3 + s.idx) * 0.06, wz(sp.y));
-      m.spin.rotation.y += dt * (s.scared ? 6 : 2);
+      const frozen = powerLeft.freeze > 0 && !s.scared && s.state !== 'eaten' && s.state !== 'entering';
+      if (!frozen) m.spin.rotation.y += dt * (s.scared ? 6 : 2);
       const ghost = s.state === 'eaten' || s.state === 'entering';
       m.spin.visible = !ghost;
       m.halo.visible = !ghost;
@@ -1615,10 +2316,25 @@
       m.face.rotation.y = s.angle;
       let col = m.base;
       if (s.scared) col = frightT < 2 && Math.floor(time * 6) % 2 ? FLASH : SCARED;
-      m.mat.color.copy(col);
+      if (frozen) col = powerLeft.freeze < 1.2 && Math.floor(time * 8) % 2 ? m.base : ICE;
+      if (s.boss && s.hurtT > 0) col = Math.floor(time * 20) % 2 ? FLASH : m.base;
+      m.mat.color.copy(s.boss && col === m.base ? m.bossBody : col);
       m.mat.emissive.copy(col);
       m.ringMat.color.copy(col);
       m.halo.material.color.copy(col);
+      if (s.boss) {
+        m.hpBar.visible = !ghost && s.hp < BOSS.hp;
+        m.hpBar.quaternion.copy(camera.quaternion);
+        m.bar.scale.x = Math.max(0.001, s.hp / BOSS.hp);
+        m.bar.position.x = -0.38 * (1 - s.hp / BOSS.hp);
+      }
+    }
+
+    if (power) {
+      const m = power.mesh;
+      m.userData.model.rotation.y += dt * 2;
+      m.position.y = 0.5 + Math.sin(time * 3) * 0.06;
+      m.visible = power.t > 2.5 || Math.floor(time * 8) % 2 === 0;
     }
 
     if (fruit) {
@@ -1700,12 +2416,27 @@
     camMode = camMode === 'follow' ? 'overhead' : 'follow';
     ui.camBtn.textContent = camMode === 'follow' ? 'View' : 'Chase';
   }
+  const SOUND_LABELS = { all: 'Sound on', fx: 'Music off', off: 'Sound off' };
   function toggleMute() {
-    muted = !muted;
+    soundMode = SOUND_MODES[(SOUND_MODES.indexOf(soundMode) + 1) % SOUND_MODES.length];
+    muted = soundMode === 'off';
+    try { localStorage.setItem('wallyman-maze-sound', soundMode); } catch (e) { /* storage unavailable */ }
     if (muted && hasSpeech) speechSynthesis.cancel();
     if (muted) voiceClip.pause();
-    ui.muteBtn.textContent = muted ? 'Sound off' : 'Sound on';
+    ui.muteBtn.textContent = SOUND_LABELS[soundMode];
   }
+  ui.muteBtn.textContent = SOUND_LABELS[soundMode];
+  function renderBuzz() {
+    ui.buzzBtn.hidden = !canBuzz;
+    ui.buzzBtn.textContent = buzzOn ? 'Vibration on' : 'Vibration off';
+  }
+  ui.buzzBtn.addEventListener('click', () => {
+    buzzOn = !buzzOn;
+    try { localStorage.setItem('wallyman-maze-buzz', buzzOn ? 'on' : 'off'); } catch (e) { /* storage unavailable */ }
+    renderBuzz();
+    buzz(40);
+  });
+  renderBuzz();
   window.addEventListener('keydown', (e) => {
     if (e.target instanceof HTMLInputElement) return; // typing a high-score name
     if (e.code in KEYS) {
@@ -1717,7 +2448,7 @@
     else if (e.code === 'KeyC') toggleCam();
     else if (e.code === 'KeyM') toggleMute();
     else if ((e.code === 'KeyF' || e.code === 'Space') && ui.overlay.hidden) { e.preventDefault(); fireFlame(); }
-    else if ((e.code === 'Enter' || e.code === 'Space') && !ui.overlay.hidden && ui.nameForm.hidden) { e.preventDefault(); newGame(); }
+    else if ((e.code === 'Enter' || e.code === 'Space') && !ui.overlay.hidden && ui.nameForm.hidden && !(e.target instanceof HTMLButtonElement)) { e.preventDefault(); newGame(runMode); }
   });
 
   // Swipe to steer; two quick taps in about the same place breathe fire
@@ -1755,13 +2486,15 @@
   document.querySelectorAll('.dpad button').forEach((b) => {
     b.addEventListener('pointerdown', (e) => { e.preventDefault(); desired = Number(b.dataset.dir); });
   });
-  ui.startBtn.addEventListener('click', newGame);
+  ui.startBtn.addEventListener('click', () => newGame('classic'));
+  ui.dailyBtn.addEventListener('click', () => newGame('daily'));
   ui.camBtn.addEventListener('click', toggleCam);
   ui.muteBtn.addEventListener('click', toggleMute);
   ui.pauseBtn.addEventListener('click', togglePause);
   document.addEventListener('visibilitychange', () => { if (document.hidden && (state === 'play' || state === 'ready')) togglePause(); });
 
   // ---------- Boot ----------
+  loadMaze(CLASSIC, 0);
   resetPickups();
   resetActors();
   updateHUD();

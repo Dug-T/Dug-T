@@ -6,7 +6,7 @@ You play **WallyMan**, a hero in a blue hood, goggles and a looped headpiece, tr
 
 ## Play
 
-Open `index.html` in a modern browser. Keep `wallyman.jpg` next to it: it's the portrait on the start screen. It needs an internet connection to load Three.js from a CDN.
+Open `index.html` in a modern browser. Keep `wallyman.jpg` (the portrait on the start screen) and `wallyman-maze-voice.mp3` (the "WallyMan Maze" voice at the start) next to it. It needs an internet connection to load Three.js from a CDN.
 
 | Control | Action |
 | --- | --- |
@@ -14,7 +14,7 @@ Open `index.html` in a modern browser. Keep `wallyman.jpg` next to it: it's the 
 | F / Space | Breathe fire (or double-tap the screen on touch screens, or double-click with a mouse) |
 | C | Switch between chase camera and overhead camera |
 | P / Esc | Pause |
-| M | Sound on or off |
+| M | Cycle sound: music and effects, effects only, off |
 
 ## The Sentries
 
@@ -24,8 +24,41 @@ Open `index.html` in a modern browser. Keep `wallyman.jpg` next to it: it's the 
 | Vex (violet) | Aims four tiles ahead of you to cut you off |
 | Mirra (teal) | Moves to the opposite side of you from Rook, pinning you between them |
 | Drift (orange) | Wanders the maze, then pounces when you get close |
+| Titan (pink, spiked, boss) | Joins from level 3 (level 1 in the daily challenge). Always heads for you, a little slower than the others |
 
-Sentries switch between *scatter* (each retreats to its own corner) and *chase*. Every level they get faster and flares wear off sooner.
+Sentries switch between *scatter* (each retreats to its own corner) and *chase*. Every level they get faster (up to level 13) and flares wear off sooner.
+
+### Titan, the boss Sentry
+
+Flares don't scare the Titan and you can't eat it. Only the flamethrower hurts it: keep it in the flame and its health bar drains (about two full bursts). Burning it down scores 1,500 and sends it back to the bay for 8 seconds before it comes out again.
+
+## Mazes
+
+Level 1 is the classic maze. Every later level is a new maze, generated from the level number, so level 5 is the same maze for everyone. Each maze has its own neon colour. Generated mazes keep the classic border, Sentry bay, side tunnel and start row; the rest starts as a full grid of corridors and random stretches are walled in (mirrored left to right) as long as no dead end appears and every tile stays reachable (`generateMaze()`).
+
+## Power-ups
+
+One power-up at a time appears on a random tile, about every 15 to 20 seconds, and fades after 10 seconds. The HUD shows a countdown chip for each one that's running.
+
+| Power-up | Looks like | Effect |
+| --- | --- | --- |
+| Speed boost | Green-yellow lightning bolt | WallyMan moves 40% faster for 6 seconds |
+| Shield | Green hexagon | A bubble that blocks one catch for 10 seconds. A Sentry that hits it is knocked back to the bay (100 points); the Titan is stunned |
+| Freeze | Ice-blue snowflake | All Sentries stop for 4.5 seconds. They can still catch you if you run into them |
+
+## Daily challenge
+
+The **Daily challenge** button plays today's maze, generated from the date (UTC), so everyone gets the same maze on the same day and a new one at midnight UTC. The Titan is in from the first level, and clearing the maze replays it faster. It has its own leaderboard ("Today's daily" tab) that's completely separate from the all-time high scores.
+
+## Skins
+
+Your best score in any mode unlocks new looks for WallyMan: Ember (2,000), Mint (5,000), Royal (10,000), Gold (20,000), Shadow (35,000) and Prism (50,000, colour-cycling). Pick one on the start or game-over screen; the choice is remembered in this browser.
+
+## Sound, music and vibration
+
+- A chase theme plays during play. It speeds up each level, gets a bit faster while the Titan is out, and switches to a jittery variation while the Sentries are scared.
+- Effects: a chomp for sparks, a whoosh and roar for the flame, and sounds for power-ups, fuel, the Titan and unlocks.
+- On phones that support it (Android browsers; iPhones don't), the game buzzes when you're caught, pick up fuel or a power-up, or bring down the Titan. A **Vibration** button on the start screen turns it off.
 
 ## Bonus fruit
 
@@ -53,6 +86,8 @@ Double-tap the screen (or press F / Space) and WallyMan breathes a burst of fire
 - Flare: 50
 - Sentries eaten during one flare: 200, 400, 800, 1600
 - Sentry burned by the flame: 300 (or the flare chain value above if it was scared)
+- Titan burned down: 1,500
+- Sentry knocked back by the shield: 100
 - Bonus fruit: see the table above
 - Extra life at 10,000 points
 
@@ -70,6 +105,7 @@ If no female English voice is installed, it uses the default voice. Turning the 
 
 - **Published page (claude.ai):** the leaderboard is shared by everyone who plays. Each player has one entry, their best run, and it updates live. Posting a score needs Contributor access to the page; viewers can still see the board.
 - **Opened as a file:** there's no shared database, so the game keeps a top 10 in your browser (`localStorage`) instead.
+- The all-time board's storage (the `leaderboard` collection and the `wallyman-maze-scores` browser key) is unchanged from earlier versions, so existing scores carry over. The daily board lives separately (the `daily` collection, one entry per player, and the `wallyman-maze-daily` browser key).
 
 At the end of every game that scores points, you can type your name (up to 12 characters):
 
@@ -85,4 +121,4 @@ At the end of every game that scores points, you can type your name (up to 12 ch
 - **WallyMan model**: built from Three.js primitives (spheres, tori and a tube along a curve for each headpiece loop). His face stays turned toward the camera and leans left or right as he moves.
 - **Rendering**: walls, neon edge strips and sparks are `InstancedMesh`es, so the whole maze is drawn in a few draw calls.
 
-To change the layout, edit the `MAZE` array at the top of the script. Keep every row the same width. To add or change fruit, edit the `FRUITS` list.
+To change the level 1 layout, edit the `CLASSIC` array at the top of the script. Keep every row the same width. To add or change fruit, edit the `FRUITS` list.
