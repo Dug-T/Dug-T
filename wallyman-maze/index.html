@@ -182,6 +182,12 @@
     color: var(--muted); background: none; border: 1px solid var(--line); border-radius: 999px; padding: 7px 12px;
   }
   .tabs button[aria-selected="true"] { color: var(--ink); background: var(--wally); border-color: var(--wally); }
+  .escape { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 12px; box-sizing: border-box; border: 1px solid #ffb02e; border-radius: 12px; background: rgba(255, 176, 46, 0.08); }
+  #escapeBtn {
+    font: 700 0.9rem/1 var(--ui); letter-spacing: 0.12em; text-transform: uppercase; cursor: pointer;
+    color: var(--ink); background: #ffb02e; border: 0; border-radius: 999px; padding: 12px 24px;
+  }
+  .panel .escape p { font-size: 0.8rem; color: var(--text); }
   .link-btn { font: 600 0.75rem var(--ui); color: var(--muted); background: none; border: 0; text-decoration: underline; cursor: pointer; padding: 4px 8px; }
 
   .dpad {
@@ -234,6 +240,10 @@
     <div class="panel">
       <img class="portrait intro" src="wallyman.jpg" alt="WallyMan in his blue hood, goggles and looped headpiece" width="262" height="262">
       <h1 id="title">WallyMan Maze</h1>
+      <div class="escape" id="escapeBox" hidden>
+        <button id="escapeBtn" type="button">Open in your browser</button>
+        <p id="escapeMsg">You're inside the Facebook app, so your scores can't reach the leaderboard. Tap to open the game in your phone's browser.</p>
+      </div>
       <p id="blurb">You are <strong>WallyMan</strong>, trapped in a neon maze. Collect every spark to clear the level. Grab a <strong>flare</strong> and the Sentries panic, so hunt them for bonus points. Bonus fruit appears twice a level, so grab it before it fades. <strong>Double-tap</strong> the screen (or press F) to breathe fire at the Sentries. Fire burns fuel, so pick up <strong>fuel cans</strong> to top up. Every level is a new maze, and from level 3 the <strong>Titan</strong> boss joins the hunt: flares don't scare it, only fire takes it down.</p>
       <div id="finalScore" hidden></div>
       <p id="unlockMsg" role="status" hidden></p>
@@ -1362,6 +1372,39 @@
   // Facebook, Instagram and Messenger open links in their own built-in browser, where the
   // player isn't signed in to Claude, so the shared leaderboard can't be reached from there.
   const inAppBrowser = /FBAN|FBAV|FB_IAB|FBIOS|Instagram|Messenger/i.test(navigator.userAgent || '');
+  // One tap to leave the in-app browser: Android hands the link to Chrome with an intent://
+  // link, iPhones (iOS 17+) to Safari with x-safari-https://. If the app blocks both, the link
+  // is copied so it can be pasted into the browser.
+  const GAME_URL = 'https://claude.ai/artifact/V8EDhQECUoJ6CKYjxQER9S';
+  const isAndroid = /Android/i.test(navigator.userAgent || '');
+  function escapeUrl() {
+    const bare = GAME_URL.replace(/^https:\/\//, '');
+    return isAndroid
+      ? `intent://${bare}#Intent;scheme=https;S.browser_fallback_url=${encodeURIComponent(GAME_URL)};end`
+      : 'x-safari-https://' + bare;
+  }
+  function openOutside() {
+    const url = escapeUrl();
+    let opened = null;
+    try { opened = window.open(url, '_blank'); } catch (e) { /* popups blocked */ }
+    if (!opened) {
+      try { window.top.location.href = url; } catch (e) { /* not allowed from this frame */ }
+    }
+    // If we're still here a moment later, fall back to copying the link
+    setTimeout(() => {
+      if (document.hidden) return;
+      const msg = $('escapeMsg');
+      const copied = () => { msg.textContent = 'Link copied. If the browser didn\'t open, tap the ⋯ menu and choose Open in browser, or paste the link into your browser.'; };
+      try {
+        navigator.clipboard.writeText(GAME_URL).then(copied, () => { msg.textContent = 'Tap the ⋯ menu at the top and choose Open in browser.'; });
+      } catch (e) { msg.textContent = 'Tap the ⋯ menu at the top and choose Open in browser.'; }
+    }, 1200);
+  }
+  if (inAppBrowser) {
+    $('escapeBox').hidden = false;
+    $('escapeBtn').addEventListener('click', openOutside);
+  }
+
   async function connectBoard() {
     if (!window.claude || typeof window.claude.use !== 'function') return;
     let db, user;
