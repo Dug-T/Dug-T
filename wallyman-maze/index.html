@@ -79,6 +79,7 @@
   .panel p { margin: 0; color: var(--muted); line-height: 1.5; max-width: 34ch; }
   .panel p strong { color: var(--text); font-weight: 600; }
   #finalScore { font-size: 1.1rem; color: var(--text); }
+  .panel #saveMsg { color: var(--wally); font-weight: 600; }
   #startBtn {
     font: 700 1rem/1 var(--ui); letter-spacing: 0.16em; text-transform: uppercase;
     color: var(--ink); background: var(--wally); border: 0; border-radius: 999px;
@@ -174,13 +175,14 @@
       <h1 id="title">WallyMan Maze</h1>
       <p id="blurb">You are <strong>WallyMan</strong>, trapped in a neon maze. Collect every spark to clear the level. Grab a <strong>flare</strong> and the Sentries panic, so hunt them for bonus points. Bonus fruit appears twice a level, so grab it before it fades.</p>
       <div id="finalScore" hidden></div>
+      <p id="saveMsg" role="status" hidden></p>
       <form id="nameForm" hidden>
         <label id="nameLabel" for="nameInput">New high score! Enter your name</label>
         <div class="name-row">
           <input id="nameInput" name="name" maxlength="12" autocomplete="off" spellcheck="false" placeholder="WallyMan">
           <button id="saveBtn" type="submit">Save</button>
         </div>
-        <button id="skipBtn" type="button">Don't save</button>
+        <button id="skipBtn" type="button">Skip</button>
       </form>
       <button id="startBtn" type="button">Play</button>
       <section class="scores" aria-labelledby="scoresHead">
@@ -735,7 +737,7 @@
     score: $('score'), best: $('best'), level: $('level'), lives: $('lives'), tray: $('tray'),
     banner: $('banner'), overlay: $('overlay'), panel: document.querySelector('.panel'),
     title: $('title'), blurb: $('blurb'), finalScore: $('finalScore'), startBtn: $('startBtn'),
-    nameForm: $('nameForm'), nameInput: $('nameInput'), nameLabel: $('nameLabel'), saveBtn: $('saveBtn'),
+    nameForm: $('nameForm'), nameInput: $('nameInput'), nameLabel: $('nameLabel'), saveBtn: $('saveBtn'), saveMsg: $('saveMsg'),
     skipBtn: $('skipBtn'), scoreRows: $('scoreRows'), scoresHead: $('scoresHead'), boardNote: $('boardNote'),
     fruitList: $('fruitList'), camBtn: $('camBtn'), muteBtn: $('muteBtn'), pauseBtn: $('pauseBtn'),
   };
@@ -764,12 +766,8 @@
   const topScore = () => (boardRows()[0] ? boardRows()[0].score : 0);
   let best = topScore();
 
-  // Does this score earn a name entry?
-  function qualifies(s) {
-    if (s <= 0) return false;
-    if (board.shared) return board.canWrite && s > board.myBest;
-    return scores.length < MAX_SCORES || s > scores[scores.length - 1].score;
-  }
+  // Does this score make the browser's own top 10?
+  const makesLocalTop = (s) => s > 0 && (scores.length < MAX_SCORES || s > scores[scores.length - 1].score);
 
   function rememberName(name) {
     lastName = name;
@@ -785,19 +783,25 @@
     return entry;
   }
 
+  // Each player has one leaderboard entry. A new best replaces it; otherwise only the name changes.
   async function recordShared(name) {
-    const entry = { name, score, level, date: Date.now() };
+    const ref = board.db.doc('leaderboard/' + board.myId);
     try {
-      await board.db.doc('leaderboard/' + board.myId).set(entry);
-      board.myBest = score;
+      if (score > board.myBest) {
+        await ref.set({ name, score, level, date: Date.now() });
+        board.myBest = score;
+        board.error = '';
+        return `Saved! ${name} is on the leaderboard with ${score.toLocaleString()}.`;
+      }
+      await ref.update({ name });
       board.error = '';
+      return `Name saved. Your best of ${board.myBest.toLocaleString()} still stands, so beat it to climb higher.`;
     } catch (e) {
       if (e && (e.code === 'invalid_argument' || e.code === 'not_granted')) {
         board.canWrite = false;
-        board.error = "Your score wasn't posted: you need Contributor access to this page to join the leaderboard.";
-      } else {
-        board.error = "Your score couldn't be posted just now. Beat it again to try once more.";
+        return "Your name wasn't saved: you need Contributor access to this page to join the leaderboard. Ask the owner to share it with you as a Contributor.";
       }
+      return "Your name couldn't be saved just now. Check your connection and try again next game.";
     }
   }
 
@@ -999,16 +1003,26 @@
     ui.startBtn.textContent = 'Play again';
     ui.overlay.hidden = false;
     renderScores(null);
-    if (qualifies(score)) {
-      ui.nameLabel.textContent = board.shared ? 'New personal best! Enter your name for the leaderboard' : 'New high score! Enter your name';
+    ui.saveMsg.hidden = true;
+    const canPost = !board.shared || board.canWrite;
+    if (score > 0 && canPost) {
+      const newBest = board.shared ? score > board.myBest : makesLocalTop(score);
+      ui.nameLabel.textContent = (newBest ? 'New best! ' : '') +
+        (board.shared ? 'Type your name for the leaderboard' : 'Type your name for the high scores');
       ui.nameForm.hidden = false;
       ui.startBtn.hidden = true;
       ui.nameInput.value = lastName;
       ui.nameInput.focus();
       ui.nameInput.select();
     } else {
+      if (score > 0) showSaveMsg('Ask the owner for Contributor access to put your name on the leaderboard.');
       showGameOverMenu(null);
     }
+  }
+
+  function showSaveMsg(text) {
+    ui.saveMsg.textContent = text;
+    ui.saveMsg.hidden = !text;
   }
 
   let saving = false;
@@ -1020,13 +1034,18 @@
     if (board.shared) {
       saving = true;
       ui.saveBtn.disabled = true;
-      await recordShared(name);
+      const msg = await recordShared(name);
       saving = false;
       ui.saveBtn.disabled = false;
+      showSaveMsg(msg);
       showGameOverMenu(null);
-    } else {
+    } else if (makesLocalTop(score)) {
+      showSaveMsg(`Saved! ${name} is in the high scores.`);
       showGameOverMenu(recordLocal(name));
       best = topScore();
+    } else {
+      showSaveMsg(`Not quite the top ${MAX_SCORES} this time, ${name}. One more run?`);
+      showGameOverMenu(null);
     }
     updateHUD();
   });

@@ -56,7 +56,12 @@ When you press Play, a female voice says "WallyMan Maze". It uses your browser's
 - **Published page (claude.ai):** the leaderboard is shared by everyone who plays. Each player has one entry, their best run, and it updates live. Posting a score needs Contributor access to the page; viewers can still see the board.
 - **Opened as a file:** there's no shared database, so the game keeps a top 10 in your browser (`localStorage`) instead.
 
-Either way, when you set a new best you're asked for your name (up to 12 characters).
+At the end of every game that scores points, you can type your name (up to 12 characters):
+
+- **New best:** your entry is saved with that score.
+- **Not a new best:** the name on your entry is updated, and your best score stays.
+- **No Contributor access:** the game tells you to ask the owner for access instead of showing the name box.
+- **Opened as a file:** names go into the browser's top 10 when the score is good enough to make it.
 
 ## How it works
 
