@@ -126,6 +126,19 @@ const Audio8 = (() => {
       mel: 'F5/4 D5/4 Bb4/4 | C5/4 Eb5/4 G5/4 | F5/6 Eb5/2 D5/4 | C5/12 | F5/4 D5/4 Bb4/4 | Eb5/4 G5/4 Bb5/4 | A5/4 G5/4 A5/4 | Bb5/12 |' +
         'D6/4 C6/4 Bb5/4 | C6/6 Bb5/2 A5/4 | G5/4 F5/4 Eb5/4 | F5/12 | D5/4 Eb5/4 F5/4 | G5/4 Eb5/4 C5/4 | D5/4 F5/4 A4/4 | Bb4/12',
     },
+    beach: {
+      bpm: 152, swing: 0.32, bass: 'bounce', harm: 'stab', drums: 'k.hsh.hsk.hsh.hh', lead: 'p25',
+      chords: 'G C D G G C D G Em C A D',
+      mel: 'B4/2 D5/2 G5/2 D5/2 E5/3 D5/1 B4/4 | C5/2 E5/2 G5/2 E5/2 A5/4 G5/4 | F#5/2 A5/2 F#5/2 D5/2 E5/2 F#5/2 D5/4 | G5/6 D5/2 B4/4 r/4 |' +
+        'B4/2 D5/2 G5/2 D5/2 E5/3 D5/1 G5/4 | A5/2 G5/2 E5/2 C5/2 E5/4 G5/4 | F#5/3 E5/1 D5/2 C5/2 B4/2 A4/2 F#4/4 | G4/12 r/4 |' +
+        'E5/2 G5/2 B5/4 A5/2 G5/2 E5/4 | E5/2 G5/2 C6/4 B5/2 A5/2 G5/4 | A5/3 G5/1 F#5/2 E5/2 C#5/2 E5/2 A5/4 | F#5/2 E5/2 D5/2 A4/2 D5/8',
+    },
+    snow: {
+      bpm: 150, swing: 0, bar: 12, bass: 'waltz', harm: 'arp', drums: 'k.....h.....', lead: 'p12',
+      chords: 'Am F G C Am F G Am Dm Am E Am',
+      mel: 'E5/4 A5/4 B5/4 | C6/6 B5/2 A5/4 | B5/4 G5/4 D5/4 | E5/12 | E5/4 A5/4 B5/4 | C6/4 D6/4 E6/4 | D6/4 B5/4 G5/4 | A5/12 |' +
+        'F5/4 A5/4 D6/4 | C6/6 B5/2 A5/4 | G#5/4 B5/4 E6/4 | A5/8 r/4',
+    },
     castle: {
       bpm: 146, swing: 0, bass: 'drive', harm: 'stab', drums: 'k.hks.h.k.hks.ss', lead: 'p25',
       chords: 'Dm Bb Dm A F Gm A Dm',
@@ -251,6 +264,8 @@ const Audio8 = (() => {
     boom: (t) => { noise(t, 0.9, 0.5, sfxBus, 'lowpass', 800); tone('sine', 120, t, 0.8, 0.4, sfxBus, { slide: 30 }); },
     spark: (t) => noise(t, 0.12, 0.15, sfxBus, 'bandpass', 4000, 3),
     tick: (t) => tone('p50', 1800, t, 0.02, 0.05, sfxBus),
+    spring: (t) => tone('p25', 180, t, 0.3, 0.14, sfxBus, { slide: 1100, slideT: 0.25 }),
+    letter: (t) => tone('p50', 1500, t, 0.03, 0.07, sfxBus),
     map: (t) => tone('triangle', 600, t, 0.05, 0.2, sfxBus, { slide: 900 }),
   };
   function sfx(name) {

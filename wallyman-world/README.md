@@ -16,9 +16,10 @@ Open `index.html` in any modern browser — or enable **GitHub Pages** for this 
 
 ## What's in it
 
-- **Title screen & file select** – animated logo, 3 save slots (saved in your browser), sound toggle, erase file.
+- **Title screen & file select** – animated logo, 3 save slots (saved in your browser), high scores, sound toggle, erase file.
 - **Wally Island overworld map** – walk between levels; clearing a level unlocks the next path.
-- **4 levels**: Wally's Backyard (grassland), Cavern Commute (cave), Cloudtop Climb (sky), Static Fortress (castle + boss fight against **Baron Static**).
+- **8 levels**: Wally's Backyard (grassland), Cavern Commute (cave), Cloudtop Climb (sky), Static Fortress (castle + boss fight against **Baron Static**), Sunny Shoreline (beach with springboards), Frosty Peaks (slippery ice), Deep Dark Mine (cave), and Static Tower (the final rematch with a tougher Baron Static).
+- **High score table** – when a run ends (game over or beating the game) a top-10 score lets you enter your name arcade-style (D-pad + A, or just type). Scores are kept in the browser; when the game runs as a claude.ai artifact they are also shared through its database for players allowed to save there.
 - **Power-ups** from bonus `W` blocks: Energy Drink (+1 heart), Signal Phone (fire sonic pings with X), WallyMan Badge (1-UP). 100 coins = extra life.
 - **Enemies**: Grumbles (stompable), Prickles (spiky – don't stomp!), Buzzers (flying), Hoppers (jumping frogs).
 - Checkpoint flags, Signal Tower goal posts, time bonus tally, moving platforms, lava, spikes.

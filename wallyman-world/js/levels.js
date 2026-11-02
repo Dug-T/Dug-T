@@ -1,6 +1,6 @@
 'use strict';
 // Level layouts. Tiles:  # ground  B brick  W bonus(coin)  P bonus(energy drink)  S bonus(signal phone)
-// O bonus(1-up badge)  X solid block  = one-way platform  ^ spikes  L lava  o coin
+// O bonus(1-up badge)  X solid block  = one-way platform  ^ spikes  L lava  o coin  J springboard
 // Spawns: @ start  g grumble  p prickle  z buzzer  h hopper  m/n moving platform (horiz/vert)
 //         C checkpoint  G goal tower  K boss
 function LevelBuilder(w) {
@@ -92,7 +92,7 @@ const LEVELS = [
     },
   },
   {
-    name: 'STATIC FORTRESS', theme: 'castle', music: 'castle', time: 400, width: 190, boss: true,
+    name: 'STATIC FORTRESS', theme: 'castle', music: 'castle', time: 400, width: 190, boss: true, bossHp: 3,
     build(b) {
       b.fill(0, 0, 189, 1, '#');
       b.ground(0, 20).set(2, 11, '@');
@@ -111,6 +111,75 @@ const LEVELS = [
       b.ground(147, 189);
       b.fill(150, 10, 150, 11, 'X').set(152, 11, 'g').fill(156, 9, 156, 11, 'X').row(160, 8, 'WOW');
       b.set(184, 10, 'K');
+    },
+  },
+  {
+    name: 'SUNNY SHORELINE', theme: 'beach', music: 'beach', time: 300, width: 200,
+    build(b) {
+      b.ground(0, 30).set(2, 11, '@');
+      b.coins(6, 9, 4).row(12, 8, 'WPW').set(20, 11, 'g').set(26, 11, 'h');
+      b.set(29, 11, 'J');
+      b.ground(31, 44, 6).coins(33, 4, 5).set(40, 5, 'p');
+      b.ground(45, 70).set(50, 11, 'g').set(53, 11, 'g').set(58, 7, 'z').row(56, 8, 'BWBSB');
+      b.row(72, 9, '==');
+      b.ground(75, 110).set(78, 11, 'C').set(85, 11, 'h').set(92, 11, 'J').coins(90, 3, 5);
+      b.row(97, 7, '=====').set(100, 4, 'z').set(104, 11, 'p').set(107, 11, 'g');
+      b.set(113, 10, 'm');
+      b.ground(117, 131).stairsUp(122, 3).set(130, 11, 'J');
+      b.row(134, 8, '==');
+      b.ground(139, 199).set(145, 11, 'g').set(148, 11, 'g').set(155, 11, 'h').set(160, 11, 'p');
+      b.row(164, 8, 'WOW').set(170, 6, 'z').stairsUp(176, 5);
+      b.set(190, 11, 'G');
+    },
+  },
+  {
+    name: 'FROSTY PEAKS', theme: 'snow', music: 'snow', time: 300, width: 200, ice: true,
+    build(b) {
+      b.ground(0, 25).set(2, 11, '@');
+      b.coins(5, 9, 4).row(10, 8, 'BPB').set(16, 11, 'g').set(22, 11, 'p');
+      b.ground(29, 50, 10).set(35, 9, 'g').set(40, 6, 'z').set(45, 9, 'g');
+      b.ground(51, 60).set(55, 11, 'h');
+      b.row(62, 9, '==');
+      b.ground(65, 100).set(68, 11, 'C').row(72, 8, 'WSW').set(78, 11, 'p').set(82, 11, 'g').set(84, 11, 'g');
+      b.stairsUp(88, 3).fill(91, 9, 95, 11, 'X').stairsDown(96, 3).set(92, 5, 'z');
+      b.set(103, 10, 'n');
+      b.ground(106, 140).set(112, 11, 'h').set(118, 11, 'p').set(124, 11, 'g').set(126, 11, 'g').row(130, 8, 'BWBOB');
+      b.ground(145, 170, 11).set(150, 7, 'z').set(158, 10, 'p').set(165, 10, 'g').coins(152, 8, 4);
+      b.ground(174, 199).stairsUp(178, 4);
+      b.set(192, 11, 'G');
+    },
+  },
+  {
+    name: 'DEEP DARK MINE', theme: 'cave', music: 'cave', time: 320, width: 210,
+    build(b) {
+      b.fill(0, 0, 209, 1, '#');
+      b.ground(0, 22).set(2, 11, '@').row(8, 8, 'BWB').set(14, 11, 'g').set(19, 11, 'p');
+      b.fill(23, 13, 30, 13, '^').row(24, 10, '===').row(28, 9, '==');
+      b.ground(31, 55).fill(36, 2, 50, 8, '#').coins(38, 10, 10).set(42, 11, 'g').set(47, 11, 'g');
+      b.fill(56, 13, 75, 13, '^').set(58, 10, 'm').set(66, 9, 'n').set(71, 10, 'm');
+      b.ground(76, 110).set(79, 11, 'C').set(84, 11, 'h').row(88, 7, 'BBPBB').set(95, 11, 'p').set(100, 11, 'p').set(104, 6, 'z');
+      b.fill(111, 13, 118, 13, '^').fill(113, 10, 113, 13, 'X').fill(116, 9, 116, 13, 'X');
+      b.ground(119, 160).fill(125, 2, 140, 8, '#').coins(127, 10, 12).set(130, 11, 'g').set(135, 11, 'g').set(138, 11, 'h');
+      b.row(146, 8, 'WSW').set(150, 6, 'z').set(155, 11, 'p');
+      b.ground(165, 209).set(170, 11, 'g').set(172, 11, 'g').set(178, 11, 'h').row(182, 8, 'BOB').stairsUp(188, 5);
+      b.set(200, 11, 'G');
+    },
+  },
+  {
+    name: 'STATIC TOWER', theme: 'castle', music: 'castle', time: 400, width: 220, boss: true, bossHp: 5,
+    build(b) {
+      b.fill(0, 0, 219, 1, '#');
+      b.ground(0, 18).set(2, 11, '@');
+      b.fill(19, 13, 24, 13, 'L').set(21, 10, 'X');
+      b.ground(25, 45).fill(30, 11, 31, 11, '^').row(34, 8, 'BPBWB').set(38, 11, 'g').set(42, 11, 'p');
+      b.fill(46, 13, 60, 13, 'L').set(48, 10, 'm').set(54, 9, 'n').set(58, 10, 'm');
+      b.ground(61, 95).set(64, 11, 'C').set(70, 6, 'z').set(76, 8, 'z').fill(80, 10, 80, 11, 'X').set(84, 11, 'h').set(88, 11, 'p').row(90, 8, 'WSW');
+      b.fill(96, 13, 104, 13, 'L').row(98, 9, '===').row(102, 8, '==');
+      b.ground(105, 140).stairsUp(110, 4).fill(114, 8, 120, 11, 'X').stairsDown(121, 4).set(117, 4, 'z');
+      b.set(128, 11, 'g').set(130, 11, 'g').set(135, 11, 'p');
+      b.fill(141, 13, 150, 13, 'L').set(143, 10, 'm').set(147, 9, 'm');
+      b.ground(151, 219).fill(156, 10, 156, 11, 'X').set(160, 11, 'g').row(165, 8, 'WOWPW').set(172, 11, 'h');
+      b.set(214, 10, 'K');
     },
   },
 ];

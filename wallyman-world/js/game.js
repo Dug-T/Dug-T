@@ -4,7 +4,7 @@ const cv = document.getElementById('screen');
 const ctx = cv.getContext('2d');
 ctx.imageSmoothingEnabled = false;
 let frame = 0;
-const SOLID = new Set(['#', 'B', 'W', 'P', 'S', 'O', 'U', 'X', '^']);
+const SOLID = new Set(['#', 'B', 'W', 'P', 'S', 'O', 'U', 'X', '^', 'J']);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const approach = (v, t, d) => (v < t ? Math.min(t, v + d) : Math.max(t, v - d));
 const overlap = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
@@ -23,7 +23,8 @@ const Input = (() => {
     KeyZ: 'jump', Space: 'jump', KeyK: 'jump', KeyX: 'run', ShiftLeft: 'run', ShiftRight: 'run', KeyJ: 'run',
     Enter: 'start', KeyP: 'start', Escape: 'back', Backspace: 'back',
   };
-  addEventListener('keydown', (e) => { const a = map[e.code]; if (a) { if (!e.repeat) hit[a] = 1; kb[a] = 1; e.preventDefault(); } Audio8.unlock(); });
+  const typed = [];
+  addEventListener('keydown', (e) => { if (e.key && e.key.length === 1 && /[a-z0-9 .!-]/i.test(e.key)) typed.push(e.key.toUpperCase()); if (typed.length > 8) typed.shift(); const a = map[e.code]; if (a) { if (!e.repeat) hit[a] = 1; kb[a] = 1; e.preventDefault(); } Audio8.unlock(); });
   addEventListener('keyup', (e) => { const a = map[e.code]; if (a) { kb[a] = 0; e.preventDefault(); } });
   addEventListener('blur', () => names.forEach((n) => { kb[n] = 0; }));
   document.querySelectorAll('[data-k]').forEach((el) => {
@@ -51,6 +52,7 @@ const Input = (() => {
   }
   return {
     poll, down: (k) => !!st[k], pressed: (k) => !!(st[k] && !prev[k]),
+    takeTyped: () => typed.splice(0), clearTyped: () => { typed.length = 0; },
     confirm: () => !!((st.start && !prev.start) || (st.jump && !prev.jump)),
   };
 })();
@@ -62,13 +64,64 @@ const Save = (() => {
   const KEY = 'wallyman-world-save-v1';
   let slots = [null, null, null];
   try { const d = JSON.parse(localStorage.getItem(KEY)); if (Array.isArray(d)) slots = [d[0] || null, d[1] || null, d[2] || null]; } catch (e) { /* ignore */ }
+  slots.forEach((s) => { if (s) { s.cleared = Array.from({ length: 8 }, (_, i) => !!(s.cleared && s.cleared[i])); } });
   return {
     slots,
-    fresh: () => ({ cleared: [false, false, false, false], lives: 5, score: 0, coins: 0, node: 0 }),
+    fresh: () => ({ cleared: Array(8).fill(false), lives: 5, score: 0, coins: 0, node: 0 }),
     persist() { try { localStorage.setItem(KEY, JSON.stringify(slots)); } catch (e) { /* ignore */ } },
   };
 })();
 let game = null; // active save slot
+
+// =====================================================================
+// High scores: saved on this device, and shared through the play page's
+// database when it is available (everyone sees scores from players allowed
+// to save there; everyone else's stay on their own device).
+// =====================================================================
+const Scores = (() => {
+  const KEY = 'wallyman-world-scores-v1', NAME_KEY = 'wallyman-world-lastname';
+  let local = [], shared = [], db = null, online = false;
+  try { const d = JSON.parse(localStorage.getItem(KEY)); if (Array.isArray(d)) local = d; } catch (e) { /* ignore */ }
+  const clean = (e) => ({
+    id: String(e.id || ''), name: String(e.name || '').toUpperCase().replace(/[^A-Z0-9 .!-]/g, '').slice(0, 8).trim() || 'WALLY',
+    score: Math.max(0, Math.min(9999999, Math.floor(Number(e.score) || 0))), level: Math.max(1, Math.min(8, Math.floor(Number(e.level) || 1))),
+    ts: Number(e.ts) || 0, done: !!e.done,
+  });
+  (async () => {
+    try {
+      if (!window.claude || !window.claude.use) return;
+      db = await window.claude.use('db');
+      if (!db) return;
+      db.collection('scores').orderBy('score', 'desc').limit(50).onSnapshot((snap) => {
+        shared = snap.docs.map((d) => clean(Object.assign({ id: d.id }, d.data())));
+        online = true;
+      }, () => { online = false; });
+    } catch (e) { db = null; }
+  })();
+  function list() {
+    const byId = new Map();
+    for (const e of local.concat(shared)) { const c = clean(e); if (c.id && c.score > 0) byId.set(c.id, c); }
+    return [...byId.values()].sort((a, b) => b.score - a.score || a.ts - b.ts).slice(0, 10);
+  }
+  function qualifies(score) { const l = list(); return score > 0 && (l.length < 10 || score > l[l.length - 1].score); }
+  function add(name, score, level, done) {
+    const e = clean({ id: 'w' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7), name, score, level, ts: Date.now(), done });
+    local.push(e); local.sort((a, b) => b.score - a.score); local = local.slice(0, 20);
+    try { localStorage.setItem(KEY, JSON.stringify(local)); localStorage.setItem(NAME_KEY, e.name); } catch (err) { /* ignore */ }
+    if (db) db.collection('scores').doc(e.id).set({ name: e.name, score: e.score, level: e.level, ts: e.ts, done: e.done }).catch(() => {});
+    return e.id;
+  }
+  function lastName() { try { return localStorage.getItem(NAME_KEY) || ''; } catch (e) { return ''; } }
+  return { list, qualifies, add, lastName, isShared: () => online };
+})();
+function bestLevel() { return Math.max(1, Math.min(8, game.cleared.filter(Boolean).length + 1)); }
+// After a run ends: name entry if the score made the table, then the table.
+function finishRun(done, then) {
+  const score = game.score, level = done ? 8 : bestLevel();
+  game.score = 0; game.coins = 0; game.lives = 5; Save.persist();
+  if (Scores.qualifies(score)) return NameEntryScene(score, level, done, then);
+  return then();
+}
 
 // =====================================================================
 // Scene manager + fades
@@ -96,6 +149,15 @@ function drawParallax(theme, camx, groundY) {
   }
 }
 // draw WallyMan with his feet centred at (cx, feetY)
+function drawSnow(camx) {
+  ctx.fillStyle = '#ffffff';
+  for (let i = 0; i < 46; i++) {
+    const sp = 0.35 + (i % 3) * 0.2;
+    const x = (((i * 53 + Math.sin(frame * 0.02 + i) * 6 - camx * (0.4 + (i % 3) * 0.2)) % VW) + VW) % VW;
+    const y = (i * 37 + frame * sp) % VH;
+    ctx.fillRect(Math.round(x), Math.round(y), i % 4 ? 1 : 2, i % 4 ? 1 : 2);
+  }
+}
 function drawWally(cx, feetY, pose, face, o = {}) { Wally.draw(ctx, cx, feetY, pose, face, Object.assign({ t: frame }, o)); }
 
 // ---------- title logo (built once) ----------
@@ -137,8 +199,8 @@ function TitleScene() {
     const s = Save.slots[i];
     if (!s) return `FILE ${'ABC'[i]}   NEW GAME`;
     const n = s.cleared.filter(Boolean).length;
-    return `FILE ${'ABC'[i]}   #${n}  *${pad(s.lives, 2)}`;
-  }).concat([`SOUND: ${Audio8.isEnabled() ? 'ON' : 'OFF'}`, eraseMode ? 'CANCEL ERASE' : 'ERASE FILE']);
+    return `FILE ${'ABC'[i]}   #${n}/8  *${pad(s.lives, 2)}`;
+  }).concat(['HIGH SCORES', `SOUND: ${Audio8.isEnabled() ? 'ON' : 'OFF'}`, eraseMode ? 'CANCEL ERASE' : 'ERASE FILE']);
   return {
     enter() { Audio8.play('title'); },
     update() {
@@ -153,8 +215,8 @@ function TitleScene() {
         if (Input.confirm()) { Audio8.unlock(); Audio8.play('menu'); Audio8.sfx('confirm'); mode = 'menu'; }
         return;
       }
-      if (Input.pressed('down')) { sel = (sel + 1) % 5; Audio8.sfx('select'); }
-      if (Input.pressed('up')) { sel = (sel + 4) % 5; Audio8.sfx('select'); }
+      if (Input.pressed('down')) { sel = (sel + 1) % 6; Audio8.sfx('select'); }
+      if (Input.pressed('up')) { sel = (sel + 5) % 6; Audio8.sfx('select'); }
       if (Input.pressed('back')) { if (eraseMode) eraseMode = false; else { mode = 'press'; Audio8.play('title'); } }
       if (Input.confirm()) {
         if (sel < 3) {
@@ -166,7 +228,7 @@ function TitleScene() {
             Audio8.sfx('confirm');
             go(() => MapScene());
           }
-        } else if (sel === 3) { Audio8.setEnabled(!Audio8.isEnabled()); Audio8.sfx('confirm'); } else { eraseMode = !eraseMode; Audio8.sfx('select'); }
+        } else if (sel === 3) { Audio8.sfx('confirm'); go(() => HighScoreScene(null, () => TitleScene())); } else if (sel === 4) { Audio8.setEnabled(!Audio8.isEnabled()); Audio8.sfx('confirm'); } else { eraseMode = !eraseMode; Audio8.sfx('select'); }
       }
     },
     draw() {
@@ -181,18 +243,20 @@ function TitleScene() {
       drawWally(hero.x, hero.y, hero.y < 192 ? (hero.vy < 0 ? 'jump' : 'fall') : 'run' + (Math.floor(hero.anim) % 8), 1);
       if (Sprites.portrait.complete && Sprites.portrait.naturalWidth) ctx.drawImage(Sprites.portrait, 200, 192 - Sprites.portrait.naturalHeight + 4);
       drawLogo(14);
-      if (mode === 'press') {
+      if (mode === 'press' && t % 900 > 560 && Scores.list().length) {
+        drawScoreTable(14, 102, 176, 6, null);
+      } else if (mode === 'press') {
         if ((t >> 5) % 2 === 0) txt('PRESS START', 92, 132, '#fff', { outline: '#101848' });
         txt('Z/SPACE: JUMP   X/SHIFT: RUN', 12, 152, '#d8f0ff');
         txt('ENTER: START/PAUSE', 12, 162, '#d8f0ff');
       } else {
-        drawWindow(16, 112, 172, 78);
+        drawWindow(16, 108, 172, 88);
         items().forEach((s, i) => {
-          const y = 120 + i * 13 + (i >= 3 ? 3 : 0);
+          const y = 116 + i * 12 + (i >= 3 ? 4 : 0);
           txt(s, 34, y, i === sel ? (eraseMode && i < 3 ? '#ff8080' : '#ffe040') : '#fff');
           if (i === sel) txt('>', 24 + ((t >> 3) & 1), y, '#ffe040');
         });
-        if (eraseMode) txt('PICK A FILE TO ERASE', 30, 196, '#ff8080', { outline: '#000' });
+        if (eraseMode) txt('PICK A FILE TO ERASE', 30, 199, '#ff8080', { outline: '#000' });
       }
       txt('@2026 DUG-T', 4, 214, '#fff');
     },
@@ -203,30 +267,39 @@ function TitleScene() {
 // Overworld map: Wally Island
 // =====================================================================
 const NODES = [
-  { x: 36, y: 150, kind: 'home', name: "WALLY'S HOUSE" },
-  { x: 78, y: 112, kind: 'level', li: 0 },
-  { x: 126, y: 146, kind: 'level', li: 1 },
-  { x: 170, y: 104, kind: 'level', li: 2 },
-  { x: 214, y: 70, kind: 'castle', li: 3 },
-];
+  { x: 26, y: 176, kind: 'home', name: "WALLY'S HOUSE" },
+  { x: 58, y: 146, kind: 'level', li: 0 },
+  { x: 98, y: 170, kind: 'level', li: 1 },
+  { x: 132, y: 138, kind: 'level', li: 2 },
+  { x: 98, y: 106, kind: 'castle', li: 3 },
+  { x: 132, y: 72, kind: 'level', li: 4 },
+  { x: 176, y: 90, kind: 'level', li: 5 },
+  { x: 204, y: 134, kind: 'level', li: 6 },
+  { x: 230, y: 74, kind: 'castle', li: 7 },
+]
 const Island = (() => {
   const c = Sprites.canvas(VW, VH), x = c.getContext('2d'), r = Sprites.rng(42);
-  const blobs = NODES.map((n) => [n.x, n.y + 4, 34]).concat([[56, 132, 30], [102, 128, 30], [150, 126, 30], [192, 88, 30], [128, 170, 22], [190, 140, 24]]);
+  const blobs = NODES.map((n) => [n.x, n.y + 4, 30]).concat([[74, 122, 28], [160, 112, 30], [200, 108, 26], [168, 152, 24], [60, 178, 24], [150, 172, 22], [118, 100, 24]]);
   const img = x.createImageData(VW, VH);
   for (let yy = 0; yy < VH; yy++) for (let xx = 0; xx < VW; xx++) {
     let f = 0;
     for (const [bx, by, br] of blobs) f += (br * br) / ((xx - bx) ** 2 + ((yy - by) * 1.25) ** 2 + 1);
     let col = null;
-    if (f > 2.2) col = ((xx + yy) % 2 === 0 && f < 3.2) ? [74, 184, 78] : [90, 204, 88];
-    else if (f > 1.6) col = [240, 216, 140];
-    else if (f > 1.35) col = [140, 200, 248];
+    const near = (n, r) => (xx - NODES[n].x) ** 2 + (yy - NODES[n].y) ** 2 < r * r;
+    if (f > 1.9) {
+      col = ((xx + yy) % 2 === 0 && f < 2.6) ? [74, 184, 78] : [90, 204, 88];
+      if (near(6, 30)) col = (xx + yy) % 2 === 0 && f < 2.6 ? [200, 220, 248] : [244, 248, 255];
+      if (near(5, 24)) col = (xx + yy) % 2 === 0 ? [240, 216, 140] : [248, 228, 160];
+      if (near(4, 22) || near(8, 24)) col = (xx + yy) % 2 === 0 ? [96, 110, 96] : [112, 128, 108];
+    } else if (f > 1.45) col = [240, 216, 140];
+    else if (f > 1.25) col = [140, 200, 248];
     if (f > 6 && r() < 0.03) col = [60, 150, 60];
     if (col) { const i = (yy * VW + xx) * 4; img.data[i] = col[0]; img.data[i + 1] = col[1]; img.data[i + 2] = col[2]; img.data[i + 3] = 255; }
   }
   x.putImageData(img, 0, 0);
   // little trees & rocks
   const tree = Sprites.fromRows(['..KKK..', '.KGGGK.', 'KGgGGGK', 'KGGGgGK', '.KGGGK.', '..KTK..', '..KTK..'], { K: '#14401a', G: '#30a040', g: '#68d870', T: '#8a5a2a' });
-  [[20, 120], [60, 160], [100, 100], [148, 170], [196, 120], [232, 96], [120, 118], [92, 168], [176, 154], [44, 104]].forEach(([a, b]) => x.drawImage(tree, a, b));
+  [[18, 150], [74, 158], [118, 154], [150, 120], [70, 124], [186, 152], [214, 106], [44, 132], [160, 158]].forEach(([a, b]) => x.drawImage(tree, a, b));
   return c;
 })();
 function MapScene() {
@@ -314,8 +387,8 @@ function IntroScene(li, fromCheckpoint) {
 function GameOverScene() {
   let t = 0;
   return {
-    enter() { Audio8.play('gameover'); game.lives = 5; game.coins = 0; Save.persist(); },
-    update() { t++; if (t > 300 || (t > 60 && Input.confirm())) go(() => TitleScene()); },
+    enter() { Audio8.play('gameover'); },
+    update() { t++; if (t > 300 || (t > 60 && Input.confirm())) go(() => finishRun(false, () => HighScoreScene(null, () => TitleScene()))); },
     draw() {
       ctx.fillStyle = '#000'; ctx.fillRect(0, 0, VW, VH);
       txt('GAME OVER', 128, 96, '#f04040', { scale: 3, align: 'center', outline: '#400' });
@@ -327,7 +400,7 @@ function EndingScene() {
   const lines = ['THE STATIC IS GONE!', '', 'BARON STATIC HAS BEEN', 'UNPLUGGED FOR GOOD AND', 'WALLY ISLAND HAS FULL', 'SIGNAL ONCE AGAIN.', '', 'THANKS FOR PLAYING', 'WALLYMAN WORLD!', '', 'STARRING WALLYMAN', 'CREATED BY DUG-T'];
   return {
     enter() { Audio8.play('victory'); },
-    update() { t++; if (t > 240 && Input.confirm()) go(() => TitleScene()); },
+    update() { t++; if (t > 240 && Input.confirm()) go(() => finishRun(true, () => HighScoreScene(null, () => TitleScene()))); },
     draw() {
       drawParallax('sky', t * 0.4);
       if (Sprites.portrait.complete && Sprites.portrait.naturalWidth) ctx.drawImage(Sprites.portrait, 196, 112 + Math.round(Math.sin(t * 0.05) * 3));
@@ -335,6 +408,102 @@ function EndingScene() {
       const shown = Math.min(lines.length, Math.floor(t / 30));
       for (let i = 0; i < shown; i++) txt(lines[i], 18, 28 + i * 14, i === 0 || i === 8 ? '#ffe040' : '#fff');
       if (t > 240 && (t >> 5) % 2 === 0) txt('PRESS START', 62, 196, '#5ff0ff');
+    },
+  };
+}
+
+function MessageScene(lines, next) {
+  let t = 0;
+  return {
+    enter() { Audio8.play('map'); },
+    update() { t++; if (t > 60 && Input.confirm()) go(next); },
+    draw() {
+      ctx.fillStyle = '#000'; ctx.fillRect(0, 0, VW, VH);
+      drawWindow(20, 30, 216, 150);
+      const shown = Math.min(lines.length, Math.floor(t / 12));
+      for (let i = 0; i < shown; i++) txt(lines[i], 128, 46 + i * 14, i === lines.length - 1 ? '#ffe040' : '#fff', { align: 'center' });
+      if (t > 60 && (t >> 5) % 2 === 0) txt('PRESS START', 128, 190, '#5ff0ff', { align: 'center' });
+    },
+  };
+}
+function drawScoreTable(x, y, w, rows, highlight) {
+  const list = Scores.list();
+  drawWindow(x, y, w, 22 + rows * 11);
+  txt(Scores.isShared() ? 'HIGH SCORES' : 'HIGH SCORES', x + w / 2, y + 6, '#ffe040', { align: 'center' });
+  for (let i = 0; i < rows; i++) {
+    const e = list[i], yy = y + 18 + i * 11;
+    const hl = e && e.id === highlight && (frame >> 3) % 2 === 0;
+    const col = hl ? '#5ff0ff' : i === 0 ? '#ffe040' : '#fff';
+    txt(String(i + 1).padStart(2, ' '), x + 8, yy, col);
+    if (!e) { txt('--------', x + 26, yy, '#7880b0'); continue; }
+    txt(e.name, x + 26, yy, col);
+    txt(e.done ? '#' : 'L' + e.level, x + w - 64, yy, col);
+    txt(pad(e.score, 7), x + w - 50, yy, col);
+  }
+}
+function HighScoreScene(highlight, next) {
+  let t = 0;
+  return {
+    enter() { Audio8.play('menu'); },
+    update() { t++; if (t > 20 && (Input.confirm() || Input.pressed('back'))) { Audio8.sfx('confirm'); go(next); } },
+    draw() {
+      drawParallax('grass', t * 0.4);
+      drawScoreTable(20, 20, 216, 10, highlight);
+      txt('# = BEAT THE GAME   L = LEVEL REACHED', 128, 160, '#fff', { align: 'center' });
+      if ((t >> 5) % 2 === 0) txt('PRESS START', 128, 196, '#fff', { align: 'center', outline: '#101848' });
+    },
+  };
+}
+// Arcade-style name entry: pick letters with the D-pad, or just type.
+function NameEntryScene(score, level, done, then) {
+  const GRID = ['ABCDEFGHIJ', 'KLMNOPQRST', 'UVWXYZ0123', '456789-.! '];
+  let name = Scores.lastName().slice(0, 8), cx = 0, cy = 0, t = 0;
+  const finish = () => {
+    const n = name.trim() || 'WALLY';
+    const id = Scores.add(n, score, level, done);
+    Audio8.sfx('oneup');
+    go(() => HighScoreScene(id, () => TitleScene()));
+  };
+  return {
+    enter() { Audio8.play('menu'); Input.clearTyped(); },
+    update() {
+      t++;
+      const typedKeys = Input.takeTyped();
+      if (typedKeys.length) {
+        for (const ch of typedKeys) if (name.length < 8) { name += ch; Audio8.sfx('letter'); }
+        return;
+      }
+      if (Input.pressed('back')) { name = name.slice(0, -1); Audio8.sfx('select'); return; }
+      if (Input.pressed('start')) { finish(); return; }
+      if (Input.pressed('right')) { cx = (cx + 1) % 10; Audio8.sfx('select'); }
+      if (Input.pressed('left')) { cx = (cx + 9) % 10; Audio8.sfx('select'); }
+      if (Input.pressed('down')) { cy = (cy + 1) % 5; Audio8.sfx('select'); }
+      if (Input.pressed('up')) { cy = (cy + 4) % 5; Audio8.sfx('select'); }
+      if (Input.pressed('run')) { name = name.slice(0, -1); Audio8.sfx('select'); }
+      if (Input.pressed('jump')) {
+        if (cy === 4) { if (cx < 5) { name = name.slice(0, -1); Audio8.sfx('select'); } else finish(); } else if (name.length < 8) { name += GRID[cy][cx]; Audio8.sfx('letter'); } else Audio8.sfx('bump');
+      }
+    },
+    draw() {
+      drawParallax('sky', t * 0.3);
+      txt(done ? 'YOU SAVED WALLY ISLAND!' : 'NEW HIGH SCORE!', 128, 12, '#ffe040', { align: 'center', outline: '#101848' });
+      txt('SCORE ' + pad(score, 7), 128, 26, '#fff', { align: 'center', outline: '#101848' });
+      drawWindow(48, 40, 160, 24);
+      const shown = name + ((t >> 4) % 2 === 0 && name.length < 8 ? '_' : '');
+      txt('NAME: ' + shown, 58, 49, '#5ff0ff');
+      drawWindow(28, 70, 200, 110);
+      for (let r = 0; r < 4; r++) for (let c = 0; c < 10; c++) {
+        const ch = GRID[r][c], X = 44 + c * 17, Y = 82 + r * 18, on = r === cy && c === cx;
+        if (on) { ctx.fillStyle = '#ffe040'; ctx.fillRect(X - 4, Y - 4, 13, 15); ctx.fillStyle = '#101848'; ctx.fillRect(X - 3, Y - 3, 11, 13); }
+        txt(ch === ' ' ? '_' : ch, X, Y, on ? '#ffe040' : '#fff');
+      }
+      [['DEL', 0], ['END', 1]].forEach(([lbl, k]) => {
+        const X = 62 + k * 86, Y = 158, on = cy === 4 && (k === 0 ? cx < 5 : cx >= 5);
+        if (on) { ctx.fillStyle = '#ffe040'; ctx.fillRect(X - 5, Y - 4, 31, 15); ctx.fillStyle = '#101848'; ctx.fillRect(X - 4, Y - 3, 29, 13); }
+        txt(lbl, X, Y, on ? '#ffe040' : '#fff');
+      });
+      txt('A: PICK  B: DELETE  START: DONE', 128, 190, '#fff', { align: 'center', outline: '#101848' });
+      txt('OR JUST TYPE YOUR NAME', 128, 202, '#d8f0ff', { align: 'center', outline: '#101848' });
     },
   };
 }
@@ -413,7 +582,7 @@ class Play {
       case 'm': case 'n': this.platforms.push({ x, y, w: 48, h: 8, ox: x, oy: y, axis: sp.t === 'm' ? 'x' : 'y', t: 0, dx: 0, dy: 0 }); break;
       case 'C': E({ type: 'checkpoint', x: x + 4, y: y - 16, w: 8, h: 32, on: this.cpHit }); break;
       case 'G': E({ type: 'goal', x: x + 2, y: y - 80, w: 12, h: 96 }); break;
-      case 'K': E({ type: 'boss', x, y: y - 14, w: 28, h: 30, hp: 3, inv: 0, jumpT: 120, enemy: true, boss: true }); break;
+      case 'K': E({ type: 'boss', x, y: y - 14, w: 28, h: 30, hp: this.def.bossHp || 3, maxHp: this.def.bossHp || 3, inv: 0, jumpT: 120, enemy: true, boss: true }); break;
     }
   }
 
@@ -531,22 +700,27 @@ class Play {
     if (this.state === 'bossdead') {
       if (this.stateT % 8 === 0 && this.stateT < 100) { Audio8.sfx('boom'); this.parts.push({ k: 'boom', x: this.bossX + Math.random() * 32, y: this.bossY + Math.random() * 32, life: 20 }); }
       if (this.stateT === 110) Audio8.play('clear');
-      if (this.stateT > 300) { game.cleared[this.li] = true; game.node = 4; Save.persist(); go(() => EndingScene()); this.state = 'done'; }
+      if (this.stateT > 300) {
+        game.cleared[this.li] = true; game.node = Math.max(game.node, this.li + 1); Save.persist(); this.state = 'done';
+        if (this.li === LEVELS.length - 1) go(() => EndingScene());
+        else go(() => MessageScene(['BARON STATIC IS BEATEN...', 'BUT HE ESCAPED!', '', 'HE FLED NORTH ACROSS', 'WALLY ISLAND TO HIS', 'STATIC TOWER.', '', 'AFTER HIM, WALLYMAN!'], () => MapScene()));
+      }
     }
   }
   updatePlayer() {
     const p = this.p, auto = this.state === 'clear';
     if (p.inv > 0) p.inv--;
     const run = !auto && Input.down('run');
-    const max = run ? 2.8 : 1.6, acc = run ? 0.11 : 0.08;
+    const ice = this.def.ice && p.onGround;
+    const max = run ? 2.8 : 1.6, acc = (run ? 0.11 : 0.08) * (ice ? 0.45 : 1);
     let dir = auto ? (this.stateT > 30 ? 1 : 0) : (Input.down('right') ? 1 : 0) - (Input.down('left') ? 1 : 0);
     p.crouch = !auto && p.onGround && Input.down('down') && !dir;
     if (p.crouch) dir = 0;
     if (dir) {
-      if (Math.sign(p.vx) === -dir && p.onGround) { p.vx += dir * 0.2; p.skid = true; } else { p.vx += dir * acc; p.skid = false; }
+      if (Math.sign(p.vx) === -dir && p.onGround) { p.vx += dir * (ice ? 0.06 : 0.2); p.skid = true; } else { p.vx += dir * acc; p.skid = false; }
       if (Math.abs(p.vx) > max) p.vx = approach(p.vx, dir * max, 0.12);
       p.face = dir;
-    } else { p.vx = approach(p.vx, 0, p.onGround ? 0.09 : 0.03); p.skid = false; }
+    } else { p.vx = approach(p.vx, 0, p.onGround ? (ice ? 0.015 : 0.09) : 0.03); p.skid = false; }
     if (auto) p.vx = Math.min(p.vx, 1.2);
 
     if (!auto && Input.pressed('jump')) p.jumpBuf = 6; else if (p.jumpBuf > 0) p.jumpBuf--;
@@ -555,7 +729,8 @@ class Play {
       p.vy = -(5.4 + Math.abs(p.vx) * 0.25); p.jumpBuf = 0; p.coyote = 0; Audio8.sfx('jump');
       p.sx = 0.8; p.sy = 1.2; this.dust(p.x + p.w / 2, p.y + p.h, 2);
     }
-    const hold = !auto && Input.down('jump') && p.vy < 0;
+    if (p.vy >= 0) p.boost = false;
+    const hold = (p.boost || (!auto && Input.down('jump'))) && p.vy < 0;
     p.vy = Math.min(5.5, p.vy + (hold ? 0.19 : 0.5));
 
     if (!auto && p.power === 'signal' && Input.pressed('run') && this.pings.length < 2) {
@@ -574,6 +749,10 @@ class Play {
     if (p.hurtT > 0) p.hurtT--;
     if (Math.abs(p.vx) > 2.5 && frame % 3 === 0) { p.trail.unshift({ x: p.x, y: p.y, pose: this.playerPose(), face: p.face }); p.trail.length = Math.min(p.trail.length, 3); } else if (frame % 3 === 0) p.trail.pop();
     if (p.ceil) this.hitBlock(p.ceil.tx, p.ceil.ty);
+    if (p.onGround && p.groundTile === 'J') {
+      p.vy = Input.down('jump') ? -7.8 : -7.0; p.boost = true; p.onGround = false; p.sy = 1.3; p.sx = 0.75; Audio8.sfx('spring');
+      this.bumps.push({ tx: Math.floor((p.x + p.w / 2) / TS), ty: Math.floor((p.y + p.h + 1) / TS), t: 0, spring: true });
+    }
     if (p.x < this.camMin) { p.x = this.camMin; if (p.vx < 0) p.vx = 0; }
     if (this.bossLock && p.x + p.w > this.lv.w * TS) p.x = this.lv.w * TS - p.w;
     if (p.onGround && p.groundTile === '^') this.hurt(true);
@@ -681,10 +860,10 @@ class Play {
     if (e.inv > 0) e.inv--;
     e.vy = Math.min(6, e.vy + 0.3);
     if (this.bossLock && this.state === 'play') {
-      const speed = 0.6 + (3 - e.hp) * 0.3;
+      const hurtN = e.maxHp - e.hp, speed = 0.6 + hurtN * (e.maxHp > 3 ? 0.22 : 0.3) + (e.maxHp > 3 ? 0.2 : 0);
       if (e.onGround) {
         if (e.t % 50 === 0) e.vx = (p.x < e.x ? -1 : 1) * speed;
-        if (--e.jumpT <= 0) { e.vy = -6 - (3 - e.hp) * 0.3; e.jumpT = 110 - (3 - e.hp) * 20; e.leapt = true; }
+        if (--e.jumpT <= 0) { e.vy = -6 - Math.min(2, hurtN * 0.3); e.jumpT = Math.max(50, 110 - hurtN * 15); e.leapt = true; }
       }
     } else e.vx = 0;
     const was = e.onGround;
@@ -692,7 +871,7 @@ class Play {
     if (e.hitWall) e.vx = -e.vx;
     if (e.onGround && !was && e.leapt) {
       e.leapt = false; this.shake = 12; Audio8.sfx('spark');
-      for (const d of [-1, 1]) this.ents.push({ type: 'spark', hazard: true, alive: true, x: e.x + 10, y: e.y + e.h - 10, w: 8, h: 10, vx: d * (1.6 + (3 - e.hp) * 0.3), vy: 0, t: 0, life: 240 });
+      for (const d of [-1, 1]) this.ents.push({ type: 'spark', hazard: true, alive: true, x: e.x + 10, y: e.y + e.h - 10, w: 8, h: 10, vx: d * (1.6 + (e.maxHp - e.hp) * 0.25), vy: 0, t: 0, life: 240 });
     }
     if (this.state !== 'play' || !overlap(p, e)) return;
     if (e.inv === 0 && p.vy > 0 && p.prevBottom <= e.y + 10) {
@@ -715,6 +894,7 @@ class Play {
     for (const pl of this.platforms) this.drawPlatform(pl, cx);
     for (const e of this.ents) if (!e.item) this.drawEnt(e, cx);
     this.drawPlayer(cx);
+    if (this.def.theme === 'snow') drawSnow(cx);
     for (const g of this.pings) this.drawPing(g, cx);
     for (const q of this.parts) this.drawPart(q, cx);
     this.drawHUD();
@@ -741,6 +921,7 @@ class Play {
         case 'X': img = T.solid; break;
         case '=': img = T.oneway; break;
         case '^': img = T.spikes; break;
+        case 'J': img = T.spring[bump && bump.t < 6 ? 1 : 0]; dy = 0; break;
         case 'L': img = this.tile(tx, ty - 1) === 'L' ? T.lavaFill : T.lava[lavaF]; break;
         case 'o': {
           const w = [8, 6, 2, 6][(frame >> 3) % 4];
@@ -863,7 +1044,7 @@ class Play {
     ctx.fillStyle = '#5a3a20'; ctx.fillRect(x + 1, y + 15, 30, 2);
     ctx.fillStyle = '#2a2a3a'; ctx.fillRect(x + 3, y + 3, 22, 12);
     for (let i = 0; i < 40; i++) { const v = (Math.random() * 200 + 40) | 0; ctx.fillStyle = `rgb(${v},${v},${v + 20})`; ctx.fillRect(x + 3 + ((Math.random() * 22) | 0), y + 3 + ((Math.random() * 12) | 0), 2, 1); }
-    ctx.fillStyle = e.hp < 3 ? '#ff3040' : '#ff8030';
+    ctx.fillStyle = e.hp < e.maxHp ? '#ff3040' : '#ff8030';
     ctx.fillRect(x + 7, y + 6, 4, 3); ctx.fillRect(x + 17, y + 6, 4, 3);
     ctx.fillStyle = '#1a1020'; ctx.fillRect(x + 6, y + 5, 6, 1); ctx.fillRect(x + 16, y + 5, 6, 1); ctx.fillRect(x + 9, y + 11, 10, 2);
     ctx.fillStyle = '#c8ccd8'; ctx.fillRect(x + 27, y + 4, 2, 2); ctx.fillRect(x + 27, y + 9, 2, 2);
@@ -906,7 +1087,7 @@ class Play {
     txt(pad(game.score, 7), 206, 15, '#fff');
     if (this.def.boss && this.bossLock) {
       const b = this.ents.find((e) => e.boss);
-      if (b) { txt('BARON STATIC', 8, 26, '#ff8080'); for (let i = 0; i < 3; i++) { ctx.fillStyle = i < b.hp ? '#ff3040' : '#402028'; ctx.fillRect(84 + i * 8, 27, 6, 5); } }
+      if (b) { txt('BARON STATIC', 8, 26, '#ff8080'); for (let i = 0; i < b.maxHp; i++) { ctx.fillStyle = i < b.hp ? '#ff3040' : '#402028'; ctx.fillRect(84 + i * 8, 27, 6, 5); } }
     }
   }
 }
