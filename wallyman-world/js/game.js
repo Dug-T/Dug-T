@@ -511,12 +511,16 @@ function NameEntryScene(score, level, done, then) {
 // =====================================================================
 // The platforming!
 // =====================================================================
+// Tight timer, in real seconds: about 1.8x the time it takes to simply walk to the
+// end of the level, plus extra for the boss arena.
+function levelTime(def) { return Math.ceil(((def.width * TS) / 1.6 / 60) * 1.8 / 5) * 5 + (def.boss ? 45 : 0); }
+
 class Play {
   constructor(li, fromCheckpoint) {
     this.li = li; this.lv = buildLevel(li); this.def = this.lv.def;
     this.T = Sprites.tiles[this.def.theme];
     this.ents = []; this.parts = []; this.pings = []; this.balls = []; this.platforms = []; this.bumps = [];
-    this.state = 'play'; this.stateT = 0; this.paused = false; this.time = this.def.time; this.timeTick = 0;
+    this.state = 'play'; this.stateT = 0; this.paused = false; this.time = levelTime(this.def); this.timeTick = 0;
     this.cpHit = !!fromCheckpoint && !!this.lv.checkpoint; this.bossLock = false; this.camMin = 0; this.shake = 0;
     const s = this.cpHit ? this.lv.checkpoint : this.lv.start;
     this.p = { x: s.x * TS + 3, y: (s.y + 1) * TS - 22, w: 10, h: 22, vx: 0, vy: 0, face: 1, onGround: false, hearts: 2, power: 'none', inv: 0, anim: 0, jumpBuf: 0, coyote: 0, prevBottom: 0, platform: null, sx: 1, sy: 1, hurtT: 0, trail: [], ammo: 3, charge: 0, boots: false, dj: false };
@@ -701,9 +705,10 @@ class Play {
     }
 
     // timer
-    if (this.state === 'play' && ++this.timeTick >= 40) {
+    if (this.state === 'play' && ++this.timeTick >= 60) {
       this.timeTick = 0; this.time--;
-      if (this.time === 100) this.parts.push({ k: 'text', s: 'HURRY UP!', x: this.cam.x + 100, y: 100, vy: 0, life: 120, fixed: true });
+      if (this.time === 20) { this.parts.push({ k: 'text', s: 'HURRY UP!', x: this.cam.x + 100, y: 100, vy: 0, life: 120, fixed: true }); Audio8.sfx('pause'); }
+      if (this.time <= 10 && this.time > 0) Audio8.sfx('tick');
       if (this.time <= 0) { this.time = 0; this.die(); }
     }
     if (this.state === 'clear') this.updateClear();
@@ -807,7 +812,7 @@ class Play {
   updateClear() {
     const t = this.stateT;
     if (t > 120 && this.time > 0) {
-      const d = Math.min(this.time, 3); this.time -= d; game.score += d * 50;
+      if (t % 3 === 0) { const d = Math.min(this.time, 1); this.time -= d; game.score += d * 100; }
       if (t % 4 === 0) Audio8.sfx('tick');
     }
     if (t === 420) {
@@ -1248,7 +1253,7 @@ class Play {
     { let ix = 86; if (p.power === 'signal') { ctx.drawImage(Sprites.miniPhone, ix, 15); ix += 6; } if (p.boots) { ctx.drawImage(Sprites.miniBoots, ix, 16); ix += 7; } if (p.charge > 0 && (p.charge > 120 || (frame >> 2) & 1)) ctx.drawImage(Sprites.miniBattery, ix, 15); }
     ctx.drawImage(Sprites.ballIcon, 62, 15); txt('*' + p.ammo, 70, 15, p.ammo ? '#fff' : '#ff6060');
     txt('TIME', 112, 6, '#ffe040');
-    txt(pad(this.time, 3), 117, 15, this.time <= 100 && (frame >> 4) & 1 ? '#ff6060' : '#fff');
+    txt(pad(this.time, 3), 117, 15, this.time <= 20 && (frame >> 4) & 1 ? '#ff6060' : '#fff');
     ctx.drawImage(Sprites.coinIcon, 176, 6); txt('*' + pad(game.coins, 2), 183, 6, '#fff');
     txt(pad(game.score, 7), 206, 15, '#fff');
     if (this.def.boss && this.bossLock) {

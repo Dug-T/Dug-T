@@ -21,7 +21,7 @@ LevelBuilder.prototype = {
 const LEVELS = [
   {
     name: "WALLY'S BACKYARD", theme: 'grass', music: 'grass', time: 300, width: 200,
-    extras: [['c', 58], ['t', 96], ['u', 108], ['g', 134], ['p', 166], ['h', 45]],
+    extras: [['u', 12], ['c', 58], ['t', 96], ['u', 108], ['g', 134], ['p', 166], ['h', 45]],
     build(b) {
       b.ground(0, 38).set(3, 11, '@');
       b.coins(8, 9, 4);
