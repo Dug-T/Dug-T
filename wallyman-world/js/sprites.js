@@ -105,6 +105,33 @@ const Sprites = (() => {
     '...KGRRGRRGKKKK.', '...KGGGGGGGKggK.', '...KGGGGGGGKKKK.', '..KKKKKKKKKKK...', '..KdddddddddK...', '.KdddddddddddK..', '.KKKKKKKKKKKKK..', '................'],
   { K: '#1a1020', G: '#5a6a8a', R: '#ff3040', Y: '#ffe040', g: '#8a9ab8', d: '#3a3a4a' });
   S.turret = { r: tu, l: flip(tu) };
+  // ---- Dino: WallyMan's rideable dinosaur friend (teal, yellow belly, orange spikes, red saddle) ----
+  const DPAL = { K: '#1a1020', T: '#2ec4b6', t: '#1a8a80', k: '#0e5a54', W: '#ffffff', E: '#1a1020', O: '#ff8c42', S: '#e83850', s: '#ff8090', Y: '#ffe08a', w: '#f8f0d8' };
+  const dinoTop = [
+    '...............KKKKKK...',
+    '..............KTTTTTTK..',
+    '.............KTTTTTWWTK.',
+    '.............KTTTTTWEKTK',
+    '............KTTTTTTTTTTK',
+    '............KTTTTkkkkkK.',
+    '............KtTTTTTTTK..',
+    '....O.O.O..KtTTTTTTK....',
+    '...KOKOKOKKSsSSTTTK.....',
+    '..KTTTTTTTSSSSSTTTK.....',
+    '.KTTTTTTTTTSSSTTYYK.....',
+    'KTTTTTTTTTTTTTTYYYKTK...',
+    'KTTKTTTTTTTTTTYYYYK.....',
+    '.KKtTTTTTTTTTTYYYYK.....',
+    '...KtTTTTTTTTTYYYK......',
+    '....KttTTTTTTTTTK.......',
+  ];
+  const dinoLegs = [
+    ['....KTTTK...KTTTK.......', '....KTTTK...KTTTK.......', '....KtTTK...KTTTK.......', '...KTTTTK..KTTTTK.......', '...KwwwwK..KwwwwK.......', '...KKKKKK..KKKKKK.......'],
+    ['...KTTTK.....KTTTK......', '..KtTTK.......KTTTK.....', '.KtTTK.........KTTTK....', 'KTTTTK.........KTTTTK...', 'KwwwwK.........KwwwwK...', 'KKKKKK.........KKKKKK...'],
+    ['......KTTTKTTTK.........', '......KtTTKTTTK.........', '.....KtTTTKTTTK.........', '.....KTTTTKTTTTK........', '.....KwwwwKwwwwK........', '.....KKKKKKKKKKK........'],
+  ];
+  const dino = dinoLegs.map((l) => fromRows(dinoTop.concat(l), DPAL));
+  S.dino = { r: dino, l: dino.map(flip) };
   // ---- new power-ups ----
   S.battery = fromRows(['................', '......KKKK......', '......KwwK......', '....KKKKKKKK....', '....KGGGGGGK....', '....KGGYGGgK....', '....KGYYGGgK....', '....KYYYYYgK....',
     '....KGGYYGgK....', '....KGYYGGgK....', '....KGYGGGgK....', '....KGGGGGgK....', '....KKKKKKKK....', '....KddddddK....', '....KKKKKKKK....', '................'],

@@ -44,6 +44,7 @@ const Wally = (() => {
     crouch: { bob: 4, lean: 1, front: [1.25, 2.3], back: [0.95, 2.1], armF: [0.6, 1.5], armB: [-0.2, 0.5], cape: [0.25, 0.5, 9], phone: true },
     hurt: { bob: 0, lean: -2, front: [0.6, 0.25], back: [-0.5, 0.6], armF: [1.9, 2.5], armB: [-2.4, -3.0], cape: [1.7, 1.6, 10], ouch: true },
     throw: { bob: 0, lean: 1, front: [0.35, 0.15], back: [-0.35, 0.3], armF: [1.65, 1.6], armB: [-0.8, -0.3], cape: [0.8, 1.0, 10], fist: true },
+    ride: { bob: 0, lean: 1, front: [1.45, 1.25], back: [1.15, 1.45], armF: [1.0, 1.55], armB: [0.7, 1.4], cape: [1.0, 1.2, 10] },
     win0: { bob: 0, lean: 0, front: [0.3, 0.1], back: [-0.3, 0.1], armF: [2.1, 2.45], armB: [-0.95, 0.95], cape: [0.8, 1.2, 10], fist: true },
     win1: { bob: 1, lean: 0, front: [0.3, 0.1], back: [-0.3, 0.1], armF: [1.9, 2.7], armB: [-0.95, 0.95], cape: [0.9, 1.2, 10], fist: true },
   });

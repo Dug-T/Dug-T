@@ -235,7 +235,7 @@ function buildLevel(i) {
       if (spot && spot[1] >= 5 && b.g[spot[1] - 3][spot[0]] === '.' && b.g[spot[1] - 4][spot[0]] === '.') { b.g[spot[1] - 3][spot[0]] = to; return; }
     }
   };
-  swap(105, 'V'); swap(20, 'Q');
+  swap(12, 'D'); swap(105, 'V'); swap(20, 'Q');
   const ENT = 'gpzhmnCGKabctu';
   for (let y = 0; y < 14; y++) for (let x = 0; x < b.w; x++) {
     const c = b.g[y][x];
