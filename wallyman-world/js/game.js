@@ -4,7 +4,7 @@ const cv = document.getElementById('screen');
 const ctx = cv.getContext('2d');
 ctx.imageSmoothingEnabled = false;
 let frame = 0;
-const SOLID = new Set(['#', 'B', 'W', 'P', 'S', 'O', 'U', 'X', '^', 'J']);
+const SOLID = new Set(['#', 'B', 'W', 'P', 'S', 'O', 'A', 'U', 'X', '^', 'J']);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const approach = (v, t, d) => (v < t ? Math.min(t, v + d) : Math.max(t, v - d));
 const overlap = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
@@ -247,7 +247,7 @@ function TitleScene() {
         drawScoreTable(14, 102, 176, 6, null);
       } else if (mode === 'press') {
         if ((t >> 5) % 2 === 0) txt('PRESS START', 92, 132, '#fff', { outline: '#101848' });
-        txt('Z/SPACE: JUMP   X/SHIFT: RUN', 12, 152, '#d8f0ff');
+        txt('Z/SPACE: JUMP   X/SHIFT: RUN+FIRE', 12, 152, '#d8f0ff');
         txt('ENTER: START/PAUSE', 12, 162, '#d8f0ff');
       } else {
         drawWindow(16, 108, 172, 88);
@@ -515,11 +515,11 @@ class Play {
   constructor(li, fromCheckpoint) {
     this.li = li; this.lv = buildLevel(li); this.def = this.lv.def;
     this.T = Sprites.tiles[this.def.theme];
-    this.ents = []; this.parts = []; this.pings = []; this.platforms = []; this.bumps = [];
+    this.ents = []; this.parts = []; this.pings = []; this.balls = []; this.platforms = []; this.bumps = [];
     this.state = 'play'; this.stateT = 0; this.paused = false; this.time = this.def.time; this.timeTick = 0;
     this.cpHit = !!fromCheckpoint && !!this.lv.checkpoint; this.bossLock = false; this.camMin = 0; this.shake = 0;
     const s = this.cpHit ? this.lv.checkpoint : this.lv.start;
-    this.p = { x: s.x * TS + 3, y: (s.y + 1) * TS - 22, w: 10, h: 22, vx: 0, vy: 0, face: 1, onGround: false, hearts: 2, power: 'none', inv: 0, anim: 0, jumpBuf: 0, coyote: 0, prevBottom: 0, platform: null, sx: 1, sy: 1, hurtT: 0, trail: [] };
+    this.p = { x: s.x * TS + 3, y: (s.y + 1) * TS - 22, w: 10, h: 22, vx: 0, vy: 0, face: 1, onGround: false, hearts: 2, power: 'none', inv: 0, anim: 0, jumpBuf: 0, coyote: 0, prevBottom: 0, platform: null, sx: 1, sy: 1, hurtT: 0, trail: [], ammo: 3 };
     this.cam = { x: clamp(this.p.x - 100, 0, this.lv.w * TS - VW) };
     this.spawnIdx = 0;
     while (this.spawnIdx < this.lv.spawns.length && this.lv.spawns[this.spawnIdx].x * TS < this.p.x - 140) {
@@ -581,6 +581,7 @@ class Play {
       case 'h': E({ type: 'hopper', x: x + 1, y: y + 2, w: 14, h: 14, wait: 60, enemy: true, stomp: true }); break;
       case 'm': case 'n': this.platforms.push({ x, y, w: 48, h: 8, ox: x, oy: y, axis: sp.t === 'm' ? 'x' : 'y', t: 0, dx: 0, dy: 0 }); break;
       case 'C': E({ type: 'checkpoint', x: x + 4, y: y - 16, w: 8, h: 32, on: this.cpHit }); break;
+      case 'a': E({ type: 'ammo', item: true, x: x + 2, y: y + 2, w: 12, h: 14, rise: 0 }); break;
       case 'G': E({ type: 'goal', x: x + 2, y: y - 80, w: 12, h: 96 }); break;
       case 'K': E({ type: 'boss', x, y: y - 14, w: 28, h: 30, hp: this.def.bossHp || 3, maxHp: this.def.bossHp || 3, inv: 0, jumpT: 120, enemy: true, boss: true }); break;
     }
@@ -593,11 +594,11 @@ class Play {
     const c = this.tile(tx, ty);
     const bx = tx * TS, by = ty * TS;
     for (const e of this.ents) if (e.enemy && e.alive && !e.dying && !e.boss && overlap(e, { x: bx, y: by - 6, w: 16, h: 6 })) this.flipKill(e);
-    if ('WPSO'.includes(c)) {
+    if ('WPSOA'.includes(c)) {
       this.setTile(tx, ty, 'U'); this.bumps.push({ tx, ty, t: 0 });
       if (c === 'W') { this.addCoin(); this.parts.push({ k: 'coinpop', x: bx + 4, y: by - 14, vy: -4, life: 26 }); } else {
         Audio8.sfx('sprout');
-        const type = c === 'P' ? 'drink' : c === 'S' ? 'phone' : 'badge';
+        const type = c === 'P' ? 'drink' : c === 'S' ? 'phone' : c === 'A' ? 'ammo' : 'badge';
         this.ents.push({ type, item: true, alive: true, x: bx + 2, y: by, w: 12, h: 14, vx: 0, vy: 0, rise: 16, t: 0 });
       }
     } else if (c === 'B') {
@@ -611,6 +612,7 @@ class Play {
   playerPose() {
     const p = this.p;
     if (p.hurtT > 0) return 'hurt';
+    if (p.fire > 2 && p.onGround) return 'throw';
     if (this.state === 'clear' && Math.abs(p.vx) < 0.2 && p.onGround) return 'win' + ((frame >> 4) & 1);
     if (this.state === 'bossdead' && p.onGround && Math.abs(p.vx) < 0.2) return 'win' + ((frame >> 4) & 1);
     if (!p.onGround) return p.vy < 0 ? 'jump' : 'fall';
@@ -675,6 +677,7 @@ class Play {
     for (const e of this.ents) if (e.alive) this.updateEnt(e);
     this.ents = this.ents.filter((e) => e.alive);
     this.updatePings();
+    this.updateBalls();
     for (const q of this.parts) { q.life--; if (q.vx) q.x += q.vx; if (q.vy) q.y += q.vy; if (q.g) q.vy += q.g; if (q.k === 'coinpop') q.vy += 0.3; }
     this.parts = this.parts.filter((q) => q.life > 0);
     for (const b of this.bumps) b.t++;
@@ -733,9 +736,15 @@ class Play {
     const hold = (p.boost || (!auto && Input.down('jump'))) && p.vy < 0;
     p.vy = Math.min(5.5, p.vy + (hold ? 0.19 : 0.5));
 
-    if (!auto && p.power === 'signal' && Input.pressed('run') && this.pings.length < 2) {
-      this.pings.push({ x: p.x + (p.face > 0 ? p.w : -8), y: p.y + 8, w: 8, h: 8, vx: p.face * 3.6, life: 55 });
-      Audio8.sfx('ping'); p.fire = 8;
+    // B: throw a rolling cannonball (or a Signal ping once the cannonballs run out)
+    if (!auto && Input.pressed('run') && !p.crouch) {
+      if (p.ammo > 0 && this.balls.length < 2) {
+        p.ammo--; p.fire = 10; Audio8.sfx('cannon');
+        this.balls.push({ x: p.x + p.w / 2 - 4 + p.face * 8, y: p.y + 8, w: 8, h: 8, vx: p.face * 2.6 + p.vx * 0.4, vy: -1.6, fuse: 150, spin: 0 });
+      } else if (p.power === 'signal' && this.pings.length < 2) {
+        this.pings.push({ x: p.x + (p.face > 0 ? p.w : -8), y: p.y + 8, w: 8, h: 8, vx: p.face * 3.6, life: 55 });
+        Audio8.sfx('ping'); p.fire = 8;
+      } else if (p.ammo <= 0) Audio8.sfx('tick');
     }
     if (p.fire > 0) p.fire--;
 
@@ -831,8 +840,8 @@ class Play {
         if (e.life <= 0 || SOLID.has(this.tile(Math.floor((e.x + (e.vx > 0 ? e.w : 0)) / TS), Math.floor((e.y + 4) / TS)))) e.alive = false;
         break;
       case 'boss': this.updateBoss(e); return;
-      case 'drink': case 'phone': case 'badge':
-        if (e.rise > 0) { e.y -= 0.5; e.rise -= 0.5; if (e.rise <= 0) e.vx = e.type === 'phone' ? 0 : e.type === 'badge' ? 1.2 : 1; break; }
+      case 'drink': case 'phone': case 'badge': case 'ammo':
+        if (e.rise > 0) { e.y -= 0.5; e.rise -= 0.5; if (e.rise <= 0) e.vx = e.type === 'phone' || e.type === 'ammo' ? 0 : e.type === 'badge' ? 1.2 : 1; break; }
         e.vy = Math.min(5, e.vy + 0.3);
         this.move(e, true);
         if (e.hitWall) e.vx = -e.hitWall * Math.abs(e.vx);
@@ -849,6 +858,7 @@ class Play {
       e.alive = false;
       if (e.type === 'drink') { if (p.hearts >= 3) this.addScore(1000, e.x, e.y); else { p.hearts++; this.parts.push({ k: 'text', s: '+$', x: e.x, y: e.y - 8, vy: -0.5, life: 50 }); } Audio8.sfx('power'); }
       if (e.type === 'phone') { p.power = 'signal'; Audio8.sfx('signal'); this.parts.push({ k: 'text', s: 'SIGNAL!', x: e.x - 12, y: e.y - 8, vy: -0.5, life: 60 }); }
+      if (e.type === 'ammo') { p.ammo = Math.min(9, p.ammo + 3); Audio8.sfx('reload'); this.parts.push({ k: 'text', s: '+3', x: e.x, y: e.y - 8, vy: -0.5, life: 50 }); }
       if (e.type === 'badge') { game.lives++; Audio8.sfx('oneup'); this.parts.push({ k: 'text', s: '1UP', x: e.x, y: e.y - 8, vy: -0.5, life: 60 }); }
     }
     if ((e.enemy || e.hazard) && overlap(p, e)) {
@@ -874,14 +884,67 @@ class Play {
       for (const d of [-1, 1]) this.ents.push({ type: 'spark', hazard: true, alive: true, x: e.x + 10, y: e.y + e.h - 10, w: 8, h: 10, vx: d * (1.6 + (e.maxHp - e.hp) * 0.25), vy: 0, t: 0, life: 240 });
     }
     if (this.state !== 'play' || !overlap(p, e)) return;
-    if (e.inv === 0 && p.vy > 0 && p.prevBottom <= e.y + 10) {
-      e.hp--; e.inv = 90; p.vy = -6.5; this.shake = 16; Audio8.sfx('bosshit'); this.addScore(1000, e.x, e.y - 8);
-      if (e.hp <= 0) {
-        e.alive = false; this.state = 'bossdead'; this.stateT = 0; this.bossX = e.x; this.bossY = e.y; Audio8.stop();
-        this.ents.forEach((s) => { if (s.type === 'spark') s.alive = false; });
-        this.addScore(5000);
+    if (e.inv === 0 && p.vy > 0 && p.prevBottom <= e.y + 10) { p.vy = -6.5; this.damageBoss(e); } else if (e.inv === 0) this.hurt();
+  }
+  damageBoss(e) {
+    if (e.inv > 0 || !e.alive || this.state !== 'play') return;
+    e.hp--; e.inv = 90; this.shake = 16; Audio8.sfx('bosshit'); this.addScore(1000, e.x, e.y - 8);
+    if (e.hp <= 0) {
+      e.alive = false; this.state = 'bossdead'; this.stateT = 0; this.bossX = e.x; this.bossY = e.y; Audio8.stop();
+      this.ents.forEach((s) => { if (s.type === 'spark') s.alive = false; });
+      this.balls.length = 0;
+      this.addScore(5000);
+    }
+  }
+  // ---------- cannonballs ----------
+  updateBalls() {
+    for (const bl of this.balls) {
+      bl.fuse--; bl.spin += bl.vx * 0.25;
+      bl.vy = Math.min(5, bl.vy + 0.3);
+      const wasGround = bl.onGround;
+      this.move(bl, true);
+      if (bl.onGround && !wasGround && bl.vy === 0 && bl.bounced !== true) { bl.vy = -1.2; bl.bounced = true; }
+      if (bl.hitWall || bl.fuse <= 0) { this.explode(bl.x + 4, bl.y + 4); bl.dead = true; continue; }
+      if (bl.y > VH + 16) { bl.dead = true; continue; }
+      for (const e of this.ents) {
+        if (!e.enemy || !e.alive || e.dying || !overlap(bl, e)) continue;
+        this.explode(bl.x + 4, bl.y + 4); bl.dead = true; break;
       }
-    } else if (e.inv === 0) this.hurt();
+    }
+    this.balls = this.balls.filter((bl) => !bl.dead);
+  }
+  explode(x, y) {
+    const R = 30;
+    Audio8.sfx('boom'); this.shake = Math.max(this.shake, 10);
+    this.parts.push({ k: 'blast', x, y, life: 24 });
+    for (let i = 0; i < 8; i++) { const a = (i / 8) * Math.PI * 2; this.parts.push({ k: 'dust', x: x + Math.cos(a) * 10, y: y + Math.sin(a) * 8, vx: Math.cos(a) * 1.2, vy: Math.sin(a) * 1.2 - 0.4, life: 18 }); }
+    for (const e of this.ents) {
+      if (!e.enemy || !e.alive || e.dying) continue;
+      const dx = e.x + e.w / 2 - x, dy = e.y + e.h / 2 - y;
+      if (dx * dx + dy * dy > (R + e.w / 2) ** 2) continue;
+      if (e.boss) this.damageBoss(e); else this.flipKill(e);
+    }
+    for (let ty = Math.floor((y - R) / TS); ty <= Math.floor((y + R) / TS); ty++) {
+      for (let tx = Math.floor((x - R) / TS); tx <= Math.floor((x + R) / TS); tx++) {
+        if (this.tile(tx, ty) !== 'B') continue;
+        const dx = tx * TS + 8 - x, dy = ty * TS + 8 - y;
+        if (dx * dx + dy * dy > R * R) continue;
+        this.setTile(tx, ty, '.'); this.addScore(50);
+        for (const [ox, oy, vx, vy] of [[0, 0, -1.2, -5], [8, 0, 1.2, -5], [0, 8, -1, -3.5], [8, 8, 1, -3.5]]) this.parts.push({ k: 'frag', x: tx * TS + ox, y: ty * TS + oy, vx, vy, g: 0.3, life: 70 });
+      }
+    }
+  }
+  drawBall(bl, cx) {
+    const x = Math.round(bl.x - cx), y = Math.round(bl.y);
+    const warn = bl.fuse < 45 && (bl.fuse >> 2) % 2 === 0;
+    ctx.fillStyle = '#1a1020'; ctx.fillRect(x + 2, y, 4, 8); ctx.fillRect(x, y + 2, 8, 4); ctx.fillRect(x + 1, y + 1, 6, 6);
+    ctx.fillStyle = warn ? '#e83030' : '#3a3a4a'; ctx.fillRect(x + 2, y + 1, 4, 6); ctx.fillRect(x + 1, y + 2, 6, 4);
+    // rolling highlight
+    const a = bl.spin, hx = Math.round(x + 3.5 + Math.cos(a) * 1.8), hy = Math.round(y + 3.5 + Math.sin(a) * 1.8);
+    ctx.fillStyle = warn ? '#ffb0a0' : '#a8a8c0'; ctx.fillRect(hx, hy, 1, 1);
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(x + 2, y + 2, 1, 1);
+    // fuse spark
+    ctx.fillStyle = (frame >> 1) & 1 ? '#ffe040' : '#ff7020'; ctx.fillRect(x + 3 + Math.round(Math.cos(a + 1) * 3), y - 1 + Math.round(Math.sin(a + 1) * 1), 2, 2);
   }
 
   // ---------- drawing ----------
@@ -896,6 +959,7 @@ class Play {
     this.drawPlayer(cx);
     if (this.def.theme === 'snow') drawSnow(cx);
     for (const g of this.pings) this.drawPing(g, cx);
+    for (const bl of this.balls) this.drawBall(bl, cx);
     for (const q of this.parts) this.drawPart(q, cx);
     this.drawHUD();
     if (this.paused) {
@@ -916,7 +980,7 @@ class Play {
       switch (c) {
         case '#': img = this.tile(tx, ty - 1) === '#' ? T.fill : T.top; break;
         case 'B': img = T.brick; break;
-        case 'W': case 'P': case 'S': case 'O': img = T.bonus[bonusF]; break;
+        case 'W': case 'P': case 'S': case 'O': case 'A': img = T.bonus[bonusF]; break;
         case 'U': img = T.used; break;
         case 'X': img = T.solid; break;
         case '=': img = T.oneway; break;
@@ -962,7 +1026,7 @@ class Play {
     const pose = this.playerPose();
     const face = p.skid ? -p.face : p.face;
     Wally.draw(ctx, fx, fy, pose, face, {
-      t: frame, sx: p.sx, sy: p.sy, signal, white: p.fire > 4 || p.hurtT > 18,
+      t: frame, sx: p.sx, sy: p.sy, signal, white: p.hurtT > 18,
       glow: signal ? 0.25 + 0.2 * Math.sin(frame * 0.15) : 0,
     });
   }
@@ -996,6 +1060,7 @@ class Play {
         break;
       }
       case 'badge': ctx.drawImage(Sprites.badge, x - 2, y - 2); break;
+      case 'ammo': ctx.drawImage(Sprites.ammo, x - 2, y - 2 + (e.rise > 0 ? 0 : Math.round(Math.sin(e.t * 0.1)))); break;
       case 'spark': {
         ctx.fillStyle = (e.t >> 1) & 1 ? '#ffffff' : '#ffe040';
         ctx.fillRect(x + 3, y, 2, 3); ctx.fillRect(x + 1, y + 3, 4, 2); ctx.fillRect(x + 3, y + 5, 4, 2); ctx.fillRect(x + 2, y + 7, 2, 3);
@@ -1065,6 +1130,14 @@ class Play {
       case 'frag': ctx.drawImage(this.T.brick, 0, 0, 6, 6, x, y, 6, 6); break;
       case 'star': ctx.fillStyle = '#fff'; { const r = 12 - q.life; [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([a, b]) => ctx.fillRect(x + a * r, y + b * r, 2, 2)); } break;
       case 'spark': ctx.fillStyle = q.life & 2 ? '#fff' : '#ffe040'; ctx.fillRect(x + 3, y, 2, 8); ctx.fillRect(x, y + 3, 8, 2); break;
+      case 'blast': {
+        const k = 24 - q.life, r = Math.min(30, 6 + k * 3);
+        const ring = (rad, col) => { ctx.fillStyle = col; for (let a = 0; a < 32; a++) { const t = (a / 32) * Math.PI * 2; ctx.fillRect(Math.round(x + Math.cos(t) * rad) - 1, Math.round(y + Math.sin(t) * rad * 0.85) - 1, 3, 3); } };
+        if (k < 8) { ctx.fillStyle = '#ffffff'; ctx.fillRect(x - r / 2, y - r / 2, r, r); ctx.fillStyle = '#ffe040'; ctx.fillRect(x - r / 2 - 2, y - r / 4, r + 4, r / 2); }
+        ring(r, k < 10 ? '#ffe040' : '#ff7020');
+        if (r > 10) ring(r - 6, k < 12 ? '#ff7020' : '#a03010');
+        break;
+      }
       case 'dust': {
         const r = Math.round(2 + (18 - q.life) / 5);
         ctx.save(); ctx.globalAlpha = Math.min(1, q.life / 10) * 0.85;
@@ -1081,6 +1154,7 @@ class Play {
     txt('*' + pad(Math.max(0, game.lives), 2), 14, 15, '#fff');
     for (let i = 0; i < 3; i++) ctx.drawImage(i < p.hearts ? Sprites.heart : Sprites.heartEmpty, 62 + i * 9, 6);
     if (p.power === 'signal') { ctx.drawImage(Sprites.phone, 88, 2); }
+    ctx.drawImage(Sprites.ballIcon, 62, 15); txt('*' + p.ammo, 70, 15, p.ammo ? '#fff' : '#ff6060');
     txt('TIME', 112, 6, '#ffe040');
     txt(pad(this.time, 3), 117, 15, this.time <= 100 && (frame >> 4) & 1 ? '#ff6060' : '#fff');
     ctx.drawImage(Sprites.coinIcon, 176, 6); txt('*' + pad(game.coins, 2), 183, 6, '#fff');

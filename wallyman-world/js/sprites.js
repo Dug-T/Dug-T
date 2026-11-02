@@ -79,6 +79,12 @@ const Sprites = (() => {
     'KOOgOOOgOOOOgOOK', 'KOOgOOgOgOOgOOOK', 'KOOOgOgOgOOgOOOK', 'KOOOOgOOOgOOOOOK', '.KOOOOOOOOOOOOK.', '..KKOOOOOOOOKK..',
     '....KKKKKKKK....', '................', '................', '................',
   ], { K: '#1f9a3a', O: '#f2702a', g: '#0e6a26' });
+  S.ammo = fromRows([
+    '................', '................', '......KKKK......', '.....KbbbwK.....', '.....KbbbbK.....', '...KKKKbbKKKK...',
+    '..KbbbwKKbbbwK..', '..KbbbbKKbbbbK..', '..KbbbbKKbbbbK..', '.KKKKKKKKKKKKKK.', '.KTTTTTTTTTTTTK.', '.KtTTtTTtTTtTTK.',
+    '.KTTTTTTTTTTTTK.', '.KttttttttttttK.', '.KKKKKKKKKKKKKK.', '................',
+  ], { K: '#1a1020', b: '#3a3a4a', w: '#c8c8e0', T: '#c08040', t: '#8a5a2a' });
+  S.ballIcon = fromRows(['.KKK.', 'KbwbK', 'KbbbK', 'KbbbK', '.KKK.'], { K: '#1a1020', b: '#4a4a5a', w: '#c8c8e0' });
   S.coin = fromRows([
     '..KKKK..', '.KYYYYK.', 'KYYwwYYK', 'KYwYYoYK', 'KYwYYoYK', 'KYwYYoYK', 'KYwYYoYK', 'KYwYYoYK', 'KYwYYoYK', 'KYwYYoYK',
     'KYwYYoYK', 'KYYooYYK', '.KYYYYK.', '..KKKK..',

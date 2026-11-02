@@ -10,7 +10,7 @@ Open `index.html` in any modern browser — or enable **GitHub Pages** for this 
 | --- | --- | --- | --- |
 | Move | Arrows / WASD | D-pad / stick | ◀ ▶ |
 | Jump (hold for higher) | Z / Space | A | A |
-| Run / fire Signal Ping | X / Shift | X / B | B |
+| Run (hold) / throw cannonball (tap) | X / Shift | X / B | B |
 | Start / Pause | Enter | Start | START |
 | Back (menus) / exit level when paused | Esc / X | Select | B |
 
@@ -20,6 +20,7 @@ Open `index.html` in any modern browser — or enable **GitHub Pages** for this 
 - **Wally Island overworld map** – walk between levels; clearing a level unlocks the next path.
 - **8 levels**: Wally's Backyard (grassland), Cavern Commute (cave), Cloudtop Climb (sky), Static Fortress (castle + boss fight against **Baron Static**), Sunny Shoreline (beach with springboards), Frosty Peaks (slippery ice), Deep Dark Mine (cave), and Static Tower (the final rematch with a tougher Baron Static).
 - **High score table** – when a run ends (game over or beating the game) a top-10 score lets you enter your name arcade-style (D-pad + A, or just type). Scores are kept in the browser; when the game runs as a claude.ai artifact they are also shared through its database for players allowed to save there.
+- **Cannonballs** – tap B to throw a rolling cannonball that explodes on enemies, walls or when its fuse runs out, blasting nearby enemies and bricks (it can hurt the boss too). You start each life with 3; ammo crates (+3, max 9) sit along every level and in one bonus block per level. With the Signal Phone you fire sonic pings once the cannonballs run out.
 - **Power-ups** from bonus `W` blocks: Energy Drink (+1 heart), Signal Phone (fire sonic pings with X), WallyMan Badge (1-UP). 100 coins = extra life.
 - **Enemies**: Grumbles (stompable), Prickles (spiky – don't stomp!), Buzzers (flying), Hoppers (jumping frogs).
 - Checkpoint flags, Signal Tower goal posts, time bonus tally, moving platforms, lava, spikes.

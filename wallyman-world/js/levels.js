@@ -189,7 +189,17 @@ function buildLevel(i) {
   def.build(b);
   const spawns = [];
   let start = { x: 2, y: 11 }, goal = null, checkpoint = null;
-  const ENT = 'gpzhmnCGK';
+  // Cannonball ammo: a few crates on the ground through each level, plus one bonus block turned into an ammo block.
+  for (const want of [24, 70, 115, 160]) {
+    for (let d = 0; d < 20; d++) {
+      const x = want + d;
+      if (x >= b.w - 20) break;
+      const free = (xx) => b.g[11][xx] === '.' && b.g[12][xx] === '#' && b.g[10][xx] === '.';
+      if (free(x) && free(x - 1) && free(x + 1)) { b.g[11][x] = 'a'; break; }
+    }
+  }
+  for (let x = 60; x < b.w; x++) { const y = b.g.findIndex((r) => r[x] === 'W'); if (y >= 0) { b.g[y][x] = 'A'; break; } }
+  const ENT = 'gpzhmnCGKa';
   for (let y = 0; y < 14; y++) for (let x = 0; x < b.w; x++) {
     const c = b.g[y][x];
     if (c === '@') { start = { x, y }; b.g[y][x] = '.'; } else if (ENT.includes(c)) {
