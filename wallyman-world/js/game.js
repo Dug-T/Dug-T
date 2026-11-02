@@ -1097,7 +1097,7 @@ class Play {
 // =====================================================================
 function resize() {
   const touch = document.body.classList.contains('touch');
-  const availH = innerHeight - (touch && innerHeight > innerWidth ? 190 : 0);
+  const availH = innerHeight - (touch && innerHeight > innerWidth ? 300 : 0);
   let s = Math.min(innerWidth / VW, availH / VH);
   if (s >= 2) s = Math.floor(s);
   cv.style.width = Math.floor(VW * s) + 'px';
