@@ -126,6 +126,11 @@ const Audio8 = (() => {
       mel: 'F5/4 D5/4 Bb4/4 | C5/4 Eb5/4 G5/4 | F5/6 Eb5/2 D5/4 | C5/12 | F5/4 D5/4 Bb4/4 | Eb5/4 G5/4 Bb5/4 | A5/4 G5/4 A5/4 | Bb5/12 |' +
         'D6/4 C6/4 Bb5/4 | C6/6 Bb5/2 A5/4 | G5/4 F5/4 Eb5/4 | F5/12 | D5/4 Eb5/4 F5/4 | G5/4 Eb5/4 C5/4 | D5/4 F5/4 A4/4 | Bb4/12',
     },
+    charge: {
+      bpm: 184, swing: 0, bass: 'drive', harm: 'stab', drums: 'khskhskhkhshkhsh', lead: 'p25',
+      chords: 'C F G C',
+      mel: 'C5/2 E5/2 G5/2 C6/2 G5/2 E5/2 C6/4 | A5/2 F5/2 C6/2 A5/2 F5/4 C6/4 | B5/2 G5/2 D6/2 B5/2 G5/4 D6/4 | C6/4 G5/2 E5/2 C5/8',
+    },
     beach: {
       bpm: 152, swing: 0.32, bass: 'bounce', harm: 'stab', drums: 'k.hsh.hsk.hsh.hh', lead: 'p25',
       chords: 'G C D G G C D G Em C A D',
@@ -266,6 +271,11 @@ const Audio8 = (() => {
     tick: (t) => tone('p50', 1800, t, 0.02, 0.05, sfxBus),
     cannon: (t) => { tone('sine', 220, t, 0.14, 0.35, sfxBus, { slide: 70 }); noise(t, 0.1, 0.18, sfxBus, 'lowpass', 900); },
     reload: (t) => { noise(t, 0.04, 0.2, sfxBus, 'highpass', 2500); noise(t + 0.09, 0.05, 0.22, sfxBus, 'bandpass', 1800, 2); tone('p25', freq(76), t + 0.16, 0.08, 0.1, sfxBus); },
+    lasercharge: (t) => tone('sine', 300, t, 0.7, 0.08, sfxBus, { slide: 1400, slideT: 0.7 }),
+    laser: (t) => { tone('p12', 1760, t, 0.45, 0.1, sfxBus, { slide: 440, slideT: 0.45 }); noise(t, 0.4, 0.12, sfxBus, 'bandpass', 3000, 1); },
+    swoop: (t) => tone('triangle', 900, t, 0.2, 0.12, sfxBus, { slide: 300 }),
+    snort: (t) => { noise(t, 0.18, 0.2, sfxBus, 'lowpass', 600); tone('square', 120, t, 0.12, 0.06, sfxBus, { slide: 70 }); },
+    zap: (t) => tone('p50', 1400, t, 0.1, 0.07, sfxBus, { slide: 700 }),
     spring: (t) => tone('p25', 180, t, 0.3, 0.14, sfxBus, { slide: 1100, slideT: 0.25 }),
     letter: (t) => tone('p50', 1500, t, 0.03, 0.07, sfxBus),
     map: (t) => tone('triangle', 600, t, 0.05, 0.2, sfxBus, { slide: 900 }),

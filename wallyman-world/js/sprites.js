@@ -85,6 +85,36 @@ const Sprites = (() => {
     '.KTTTTTTTTTTTTK.', '.KttttttttttttK.', '.KKKKKKKKKKKKKK.', '................',
   ], { K: '#1a1020', b: '#3a3a4a', w: '#c8c8e0', T: '#c08040', t: '#8a5a2a' });
   S.ballIcon = fromRows(['.KKK.', 'KbwbK', 'KbbbK', 'KbbbK', '.KKK.'], { K: '#1a1020', b: '#4a4a5a', w: '#c8c8e0' });
+  // ---- new enemies ----
+  const BATPAL = { K: '#1a1020', M: '#7a3aa8', W: '#ffffff', E: '#ff3040', f: '#ffffff' };
+  S.bat = [
+    fromRows(['................', 'K..............K', 'KK............KK', 'KMK...KKKK...KMK', 'KMMK.KMMMMK.KMMK', '.KMMKMWMMWMKMMK.', '.KMMMMEMMEMMMMK.', '..KMMMMMMMMMMK..',
+      '...KKMfMMfMKK...', '.....KMMMMK.....', '......KKKK......', '................', '................', '................', '................', '................'], BATPAL),
+    fromRows(['................', '................', '................', '......KKKK......', '.....KMMMMK.....', '..KKKMWMMWMKKK..', '.KMMMMEMMEMMMMK.', 'KMMMMMMMMMMMMMMK',
+      'KMMKKMfMMfMKKMMK', 'KMK..KMMMMK..KMK', 'KK....KKKK....KK', 'K..............K', '................', '................', '................', '................'], BATPAL),
+  ];
+  const CHPAL = { K: '#1a1020', G: '#8a90a8', g: '#c0c8e0', R: '#ff3040', w: '#f0f0f0', d: '#4a4a5a' };
+  const chTop = ['................', '................', '................', '..........KK....', '.........KwK....', '...KKKKKKKwK....', '..KGGGGGGGGKK...', '.KGgGGGGGGGGRK..',
+    '.KGGGGGGGGGGGGK.', '.KGgGGgGGGGGKKK.', '.KGGGGGGGGGGGK..', '..KGGGGGGGGGK...'];
+  const ch = [
+    fromRows(chTop.concat(['..KKdKKKKdKKK...', '..KddK..KddK....', '..KKKK..KKKK....', '................']), CHPAL),
+    fromRows(chTop.concat(['..KKKdKKKKdKK...', '...KddK..KddK...', '...KKKK..KKKK...', '................']), CHPAL),
+  ];
+  S.charger = { r: ch, l: ch.map(flip) };
+  const tu = fromRows(['................', '.......K........', '......KYK.......', '.......K........', '.......K........', '....KKKKKKK.....', '...KGGGGGGGK....', '...KGRRGRRGK....',
+    '...KGRRGRRGKKKK.', '...KGGGGGGGKggK.', '...KGGGGGGGKKKK.', '..KKKKKKKKKKK...', '..KdddddddddK...', '.KdddddddddddK..', '.KKKKKKKKKKKKK..', '................'],
+  { K: '#1a1020', G: '#5a6a8a', R: '#ff3040', Y: '#ffe040', g: '#8a9ab8', d: '#3a3a4a' });
+  S.turret = { r: tu, l: flip(tu) };
+  // ---- new power-ups ----
+  S.battery = fromRows(['................', '......KKKK......', '......KwwK......', '....KKKKKKKK....', '....KGGGGGGK....', '....KGGYGGgK....', '....KGYYGGgK....', '....KYYYYYgK....',
+    '....KGGYYGgK....', '....KGYYGGgK....', '....KGYGGGgK....', '....KGGGGGgK....', '....KKKKKKKK....', '....KddddddK....', '....KKKKKKKK....', '................'],
+  { K: '#1a1020', G: '#3ce060', g: '#1f9a3a', Y: '#ffe040', w: '#c8c8d8', d: '#4a4a5a' });
+  S.boots = fromRows(['................', '................', '.....KKKK.......', '....KOOOOK......', '....KOOOOK.KK...', '....KOOOOKKWWK..', '....KoOOOKWWK...', '....KOOOOKKK....',
+    '....KOOOOK......', '...KOOOOOOKK....', '..KOOOOOOOOOK...', '..KoooooooooK...', '..KKKKKKKKKKK...', '...yYy..yYy.....', '....y....y......', '................'],
+  { K: '#1a1020', O: '#f2702a', o: '#b4461a', W: '#ffffff', Y: '#ffe040', y: '#ff7020' });
+  S.miniPhone = fromRows(['KKK', 'KsK', 'KsK', 'KPK', 'KPK', 'KKK'], { K: '#1a1020', s: '#5ff0ff', P: '#3a4450' });
+  S.miniBoots = fromRows(['.KK..', '.KOK.', '.KOK.', 'KOOOK', 'KKKKK'], { K: '#1a1020', O: '#f2702a' });
+  S.miniBattery = fromRows(['.KK.', 'KGGK', 'KYGK', 'KGYK', 'KGGK', 'KKKK'], { K: '#1a1020', G: '#3ce060', Y: '#ffe040' });
   S.coin = fromRows([
     '..KKKK..', '.KYYYYK.', 'KYYwwYYK', 'KYwYYoYK', 'KYwYYoYK', 'KYwYYoYK', 'KYwYYoYK', 'KYwYYoYK', 'KYwYYoYK', 'KYwYYoYK',
     'KYwYYoYK', 'KYYooYYK', '.KYYYYK.', '..KKKK..',
@@ -302,6 +332,46 @@ const Sprites = (() => {
       ],
     },
   };
+
+  // ---- extra parallax layers for every world ----
+  const disc = (x, cx, cy, r, col) => { for (let yy = -r; yy <= r; yy++) { const h = Math.round(Math.sqrt(r * r - yy * yy)); x.fillStyle = col; x.fillRect(Math.round(cx - h), Math.round(cy + yy), h * 2, 1); } };
+  const peaks = (x, base, amp, period, col, cap, seed) => {
+    const r = rng(seed);
+    const pk = []; for (let i = -period; i < 512 + period; i += period * (0.6 + r() * 0.8)) pk.push([i, base - amp * (0.5 + r() * 0.5)]);
+    for (let i = 0; i < 512; i++) {
+      let h = 224;
+      for (const [px0, py] of pk) h = Math.min(h, py + Math.abs(i - px0) * 1.1);
+      h = Math.round(h); x.fillStyle = col; x.fillRect(i, h, 1, 224 - h);
+      if (cap) { x.fillStyle = cap; x.fillRect(i, h, 1, Math.max(0, Math.min(10, base - h - 8))); }
+    }
+  };
+  const extra = {
+    grass: [
+      { c: layer(512, 224, (x) => peaks(x, 120, 60, 90, '#9ac0e8', '#f0f8ff', 4)), f: 0.06 },
+      { c: layer(512, 224, (x) => { const r = rng(21); for (let i = 0; i < 26; i++) { const cx = i * 20 + r() * 10, rr = 8 + r() * 8; disc(x, cx, 194, rr, '#1f7a3a'); disc(x, cx - 2, 192, rr - 3, '#2f9a48'); x.fillStyle = '#5ac868'; x.fillRect(Math.round(cx - rr / 2), Math.round(194 - rr + 2), 3, 1); } }), f: 0.7 },
+    ],
+    cave: [
+      { c: layer(512, 224, (x) => { const r = rng(31); for (let i = 0; i < 22; i++) { const cx = (r() * 512) | 0, cy = 50 + ((r() * 110) | 0), h = 4 + ((r() * 6) | 0), col = ['#5ff0ff', '#f078ff', '#80ff98'][i % 3]; for (let k = 0; k < h; k++) { const w = k < h / 2 ? k : h - k; x.fillStyle = col; x.fillRect(cx - w, cy + k, w * 2 + 1, 1); } x.fillStyle = '#ffffff'; x.fillRect(cx, cy + 1, 1, 1); } }), f: 0.1 },
+      { c: layer(512, 224, (x) => { const r = rng(33); for (let i = 0; i < 18; i++) { const cx = i * 29 + ((r() * 12) | 0), len = 40 + ((r() * 40) | 0), w = 4 + ((r() * 5) | 0); for (let k = 0; k < len; k++) { const ww = Math.max(0, Math.round(w * (1 - k / len))); x.fillStyle = k % 9 < 1 ? '#3a2a58' : '#160c2a'; x.fillRect(cx - ww, k, ww * 2 + 1, 1); } x.fillStyle = '#7af0ff'; x.fillRect(cx, len + 2 + (i % 3) * 3, 1, 2); } }), f: 0.7 },
+    ],
+    sky: [
+      { c: layer(512, 224, (x) => { x.fillStyle = 'rgba(255,255,255,0.55)'; for (let i = 0; i < 9; i++) x.fillRect((i * 61) % 512, 20 + i * 9, 50 + (i % 4) * 20, 1); }), f: 0.06, drift: 0.15 },
+      { c: layer(512, 224, (x) => { [[80, 110, 26], [260, 90, 20], [420, 128, 30]].forEach(([cx, cy, w]) => { for (let k = 0; k < w; k++) { const ww = Math.round(w * (1 - k / w) * 0.9); x.fillStyle = k < 3 ? '#4ac060' : k % 5 ? '#a07858' : '#80583a'; x.fillRect(cx - ww, cy + k, ww * 2, 1); } x.fillStyle = '#2f9a48'; x.fillRect(cx - w + 4, cy - 6, 3, 6); disc(x, cx - w + 5, cy - 9, 5, '#2f9a48'); }); }), f: 0.25 },
+    ],
+    castle: [
+      { c: layer(512, 224, (x) => { for (let k = 0; k < 4; k++) { const cx = 70 + k * 128; x.fillStyle = '#1a0610'; x.fillRect(cx - 1, 32, 22, 4); for (let yy = 36; yy < 96; yy++) { const sw = yy > 86 ? Math.abs(91 - yy) : 0; x.fillStyle = '#a01828'; x.fillRect(cx + sw / 2, yy, 20 - sw, 1); } x.fillStyle = '#ffe040'; x.fillRect(cx + 9, 46, 4, 6); x.fillRect(cx + 7, 52, 4, 4); x.fillRect(cx + 9, 56, 4, 6); x.fillStyle = '#e04050'; x.fillRect(cx + 1, 36, 2, 50); } }), f: 0.42 },
+      { c: layer(512, 224, (x) => { for (let k = 0; k < 6; k++) { const cx = 40 + k * 86, len = 60 + (k % 3) * 30; for (let yy = 32; yy < 32 + len; yy += 4) { x.fillStyle = '#5a5a6a'; x.fillRect(cx, yy, 2, 3); x.fillStyle = '#8a8a9a'; x.fillRect(cx, yy, 1, 1); } x.fillStyle = '#3a3a4a'; x.fillRect(cx - 3, 32 + len, 8, 6); } }), f: 0.72 },
+    ],
+    beach: [
+      { c: layer(512, 224, (x) => { [[60, 0], [250, 1], [400, 0]].forEach(([bx, big]) => { const s2 = big ? 1.4 : 1; x.fillStyle = '#ffffff'; for (let k = 0; k < 12 * s2; k++) x.fillRect(Math.round(bx + 2), Math.round(134 - k), Math.round((12 * s2 - k) * 0.6), 1); x.fillStyle = '#8a4a2a'; x.fillRect(bx - 6, 134, 18 * s2, 3); x.fillStyle = '#1a1020'; x.fillRect(bx + 1, 120 - 4 * s2, 1, 16 * s2); }); }), f: 0.16 },
+      { c: layer(512, 224, (x) => { const r = rng(41); for (let i = 0; i < 9; i++) { const cx = i * 60 + r() * 20, rr = 22 + r() * 12; for (let yy = -rr; yy <= 0; yy++) { const h = Math.round(Math.sqrt(rr * rr - yy * yy) * 1.4); x.fillStyle = yy > -4 ? '#d8b060' : '#f0d088'; x.fillRect(Math.round(cx - h), 200 + yy, h * 2, 1); } x.fillStyle = '#4a9a40'; for (let g = 0; g < 4; g++) x.fillRect(Math.round(cx - 6 + g * 4), Math.round(200 - rr - 3), 1, 4); } }), f: 0.72 },
+    ],
+    snow: [
+      { c: layer(512, 224, (x) => peaks(x, 110, 70, 110, '#c0cce8', '#ffffff', 7)), f: 0.05 },
+      { c: layer(512, 224, (x) => { const r = rng(51); for (let i = 0; i < 12; i++) { const cx = i * 44 + r() * 20, rr = 12 + r() * 10; for (let yy = -rr; yy <= 0; yy++) { const h = Math.round(Math.sqrt(rr * rr - yy * yy) * 1.6); x.fillStyle = yy > -3 ? '#b8d0f0' : '#ffffff'; x.fillRect(Math.round(cx - h), 198 + yy, h * 2, 1); } } }), f: 0.75 },
+    ],
+  };
+  for (const k of Object.keys(extra)) { S.bg[k].layers.push(...extra[k]); S.bg[k].layers.sort((a, b) => a.f - b.f); }
 
   S.portrait = new Image();
   S.portrait.src = 'assets/wallyman-portrait.png';

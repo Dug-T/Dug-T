@@ -4,7 +4,7 @@ const cv = document.getElementById('screen');
 const ctx = cv.getContext('2d');
 ctx.imageSmoothingEnabled = false;
 let frame = 0;
-const SOLID = new Set(['#', 'B', 'W', 'P', 'S', 'O', 'A', 'U', 'X', '^', 'J']);
+const SOLID = new Set(['#', 'B', 'W', 'P', 'S', 'O', 'A', 'V', 'Q', 'U', 'X', '^', 'J']);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const approach = (v, t, d) => (v < t ? Math.min(t, v + d) : Math.max(t, v - d));
 const overlap = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
@@ -519,7 +519,7 @@ class Play {
     this.state = 'play'; this.stateT = 0; this.paused = false; this.time = this.def.time; this.timeTick = 0;
     this.cpHit = !!fromCheckpoint && !!this.lv.checkpoint; this.bossLock = false; this.camMin = 0; this.shake = 0;
     const s = this.cpHit ? this.lv.checkpoint : this.lv.start;
-    this.p = { x: s.x * TS + 3, y: (s.y + 1) * TS - 22, w: 10, h: 22, vx: 0, vy: 0, face: 1, onGround: false, hearts: 2, power: 'none', inv: 0, anim: 0, jumpBuf: 0, coyote: 0, prevBottom: 0, platform: null, sx: 1, sy: 1, hurtT: 0, trail: [], ammo: 3 };
+    this.p = { x: s.x * TS + 3, y: (s.y + 1) * TS - 22, w: 10, h: 22, vx: 0, vy: 0, face: 1, onGround: false, hearts: 2, power: 'none', inv: 0, anim: 0, jumpBuf: 0, coyote: 0, prevBottom: 0, platform: null, sx: 1, sy: 1, hurtT: 0, trail: [], ammo: 3, charge: 0, boots: false, dj: false };
     this.cam = { x: clamp(this.p.x - 100, 0, this.lv.w * TS - VW) };
     this.spawnIdx = 0;
     while (this.spawnIdx < this.lv.spawns.length && this.lv.spawns[this.spawnIdx].x * TS < this.p.x - 140) {
@@ -581,6 +581,10 @@ class Play {
       case 'h': E({ type: 'hopper', x: x + 1, y: y + 2, w: 14, h: 14, wait: 60, enemy: true, stomp: true }); break;
       case 'm': case 'n': this.platforms.push({ x, y, w: 48, h: 8, ox: x, oy: y, axis: sp.t === 'm' ? 'x' : 'y', t: 0, dx: 0, dy: 0 }); break;
       case 'C': E({ type: 'checkpoint', x: x + 4, y: y - 16, w: 8, h: 32, on: this.cpHit }); break;
+      case 'b': E({ type: 'bat', x: x + 1, y, w: 14, h: 10, oy: y, enemy: true, stomp: true, state: 'hang' }); break;
+      case 'c': E({ type: 'charger', x: x + 1, y: y + 2, w: 14, h: 14, vx: 0.4 * toward, enemy: true, stomp: true, charge: 0 }); break;
+      case 't': E({ type: 'turret', x: x + 1, y: y + 2, w: 14, h: 14, enemy: true, stomp: true, cool: 90, face: toward }); break;
+      case 'u': E({ type: 'ufo', x, y: -24, w: 28, h: 12, enemy: true, stomp: true, state: 'enter', shots: 0, timer: 0, beamX: 0, beamEnd: 0 }); break;
       case 'a': E({ type: 'ammo', item: true, x: x + 2, y: y + 2, w: 12, h: 14, rise: 0 }); break;
       case 'G': E({ type: 'goal', x: x + 2, y: y - 80, w: 12, h: 96 }); break;
       case 'K': E({ type: 'boss', x, y: y - 14, w: 28, h: 30, hp: this.def.bossHp || 3, maxHp: this.def.bossHp || 3, inv: 0, jumpT: 120, enemy: true, boss: true }); break;
@@ -594,11 +598,11 @@ class Play {
     const c = this.tile(tx, ty);
     const bx = tx * TS, by = ty * TS;
     for (const e of this.ents) if (e.enemy && e.alive && !e.dying && !e.boss && overlap(e, { x: bx, y: by - 6, w: 16, h: 6 })) this.flipKill(e);
-    if ('WPSOA'.includes(c)) {
+    if ('WPSOAVQ'.includes(c)) {
       this.setTile(tx, ty, 'U'); this.bumps.push({ tx, ty, t: 0 });
       if (c === 'W') { this.addCoin(); this.parts.push({ k: 'coinpop', x: bx + 4, y: by - 14, vy: -4, life: 26 }); } else {
         Audio8.sfx('sprout');
-        const type = c === 'P' ? 'drink' : c === 'S' ? 'phone' : c === 'A' ? 'ammo' : 'badge';
+        const type = { P: 'drink', S: 'phone', A: 'ammo', V: 'battery', Q: 'boots', O: 'badge' }[c];
         this.ents.push({ type, item: true, alive: true, x: bx + 2, y: by, w: 12, h: 14, vx: 0, vy: 0, rise: 16, t: 0 });
       }
     } else if (c === 'B') {
@@ -621,7 +625,10 @@ class Play {
     if (Math.abs(p.vx) > 0.15) return (Math.abs(p.vx) > 2.2 ? 'run' : 'walk') + (Math.floor(p.anim) % 8);
     return 'idle' + ((frame >> 4) % 4);
   }
-  flipKill(e) { e.dying = 'flip'; e.vy = -3.5; e.vx = this.p.x < e.x ? 0.8 : -0.8; Audio8.sfx('kick'); this.addScore(200, e.x, e.y); }
+  flipKill(e) {
+    e.dying = 'flip'; e.vy = -3.5; e.vx = this.p.x < e.x ? 0.8 : -0.8;
+    if (e.type === 'ufo') { Audio8.sfx('boom'); this.parts.push({ k: 'blast', x: e.x + 14, y: e.y + 6, life: 24 }); this.addScore(1000, e.x, e.y); } else { Audio8.sfx('kick'); this.addScore(200, e.x, e.y); }
+  }
   stomp(e) {
     const p = this.p;
     p.vy = Input.down('jump') ? -6.2 : -3.8; p.y = e.y - p.h - 0.1;
@@ -631,10 +638,10 @@ class Play {
   }
   hurt(spike) {
     const p = this.p;
-    if (p.inv > 0 || this.state !== 'play') return;
+    if (p.inv > 0 || p.charge > 0 || this.state !== 'play') return;
     p.hearts--;
     if (p.hearts <= 0) { this.die(); return; }
-    p.inv = 120; p.hurtT = 24; p.power = 'none'; Audio8.sfx('hurt');
+    p.inv = 120; p.hurtT = 24; p.power = 'none'; p.boots = false; Audio8.sfx('hurt');
     if (spike) p.vy = -5;
   }
   die() {
@@ -732,6 +739,16 @@ class Play {
       p.vy = -(5.4 + Math.abs(p.vx) * 0.25); p.jumpBuf = 0; p.coyote = 0; Audio8.sfx('jump');
       p.sx = 0.8; p.sy = 1.2; this.dust(p.x + p.w / 2, p.y + p.h, 2);
     }
+    if (p.onGround) p.dj = false;
+    if (!auto && p.boots && !p.onGround && p.coyote === 0 && !p.dj && Input.pressed('jump')) {
+      p.vy = -5.4; p.dj = true; p.jumpBuf = 0; Audio8.sfx('jump'); p.sx = 0.8; p.sy = 1.2;
+      for (let i = 0; i < 4; i++) this.parts.push({ k: 'flame', x: p.x + p.w / 2 + (i - 1.5) * 3, y: p.y + p.h, vy: 1 + i * 0.2, life: 14 });
+    }
+    if (p.charge > 0) {
+      p.charge--;
+      if (frame % 5 === 0) this.parts.push({ k: 'spark', x: p.x - 4 + Math.random() * 14, y: p.y + Math.random() * 18, life: 10 });
+      if (p.charge === 0 && this.state === 'play') Audio8.play(this.bossLock ? 'boss' : this.def.music);
+    }
     if (p.vy >= 0) p.boost = false;
     const hold = (p.boost || (!auto && Input.down('jump'))) && p.vy < 0;
     p.vy = Math.min(5.5, p.vy + (hold ? 0.19 : 0.5));
@@ -740,7 +757,8 @@ class Play {
     if (!auto && Input.pressed('run') && !p.crouch) {
       if (p.ammo > 0 && this.balls.length < 2) {
         p.ammo--; p.fire = 10; Audio8.sfx('cannon');
-        this.balls.push({ x: p.x + p.w / 2 - 4 + p.face * 8, y: p.y + 8, w: 8, h: 8, vx: p.face * 2.6 + p.vx * 0.4, vy: -1.6, fuse: 150, spin: 0 });
+        const lob = Input.down('up');
+        this.balls.push({ x: p.x + p.w / 2 - 4 + (lob ? 0 : p.face * 8), y: p.y + (lob ? -6 : 6), w: 8, h: 8, vx: lob ? p.face * 0.35 + p.vx * 0.5 : p.face * 2.6 + p.vx * 0.4, vy: lob ? -9.6 : -1.6, fuse: 150, spin: 0 });
       } else if (p.power === 'signal' && this.pings.length < 2) {
         this.pings.push({ x: p.x + (p.face > 0 ? p.w : -8), y: p.y + 8, w: 8, h: 8, vx: p.face * 3.6, life: 55 });
         Audio8.sfx('ping'); p.fire = 8;
@@ -835,16 +853,40 @@ class Play {
         this.move(e, true);
         if (e.hitWall) e.vx = -e.vx;
         break;
+      case 'bat':
+        if (e.state === 'hang') { if (Math.abs(p.x - e.x) < 72 && p.y > e.y) { e.state = 'swoop'; e.vx = p.x < e.x ? -1.4 : 1.4; e.vy = 2.6; Audio8.sfx('swoop'); } } else {
+          e.x += e.vx; e.y += e.vy; e.vy = Math.max(-1.4, e.vy - 0.055);
+          if (e.vy < 0 && e.y <= e.oy) { e.y = e.oy; e.vy = 0; }
+        }
+        break;
+      case 'charger': {
+        e.vy = Math.min(5, e.vy + 0.3);
+        const dir = Math.sign(e.vx) || 1;
+        if (e.charge > 0) { e.charge--; if (e.charge % 6 === 0 && e.onGround) this.dust(e.x + 7 - dir * 6, e.y + e.h, 1); if (e.charge === 0) e.vx = dir * 0.4; } else if (e.onGround && Math.abs(p.y - e.y) < 30 && Math.sign(p.x - e.x) === dir && Math.abs(p.x - e.x) < 130) { e.charge = 80; e.vx = dir * 2.4; Audio8.sfx('snort'); } else if (e.onGround && !this.groundAhead(e)) e.vx = -e.vx;
+        this.move(e, true);
+        if (e.hitWall) { e.vx = -e.hitWall * 0.4; if (e.charge) this.shake = 4; e.charge = 0; }
+        break;
+      }
+      case 'turret':
+        e.vy = Math.min(5, e.vy + 0.3); this.move(e, true); e.face = p.x < e.x ? -1 : 1;
+        if (--e.cool <= 0) {
+          e.cool = 130;
+          if (Math.abs(p.x - e.x) < 220) { Audio8.sfx('zap'); this.ents.push({ type: 'bolt', hazard: true, alive: true, x: e.x + (e.face > 0 ? 14 : -6), y: e.y + 6, w: 6, h: 6, vx: e.face * 1.7, vy: 0, t: 0, life: 220 }); }
+        }
+        break;
+      case 'ufo': this.updateUfo(e); return;
+      case 'bolt':
       case 'spark':
         e.x += e.vx; e.life--;
         if (e.life <= 0 || SOLID.has(this.tile(Math.floor((e.x + (e.vx > 0 ? e.w : 0)) / TS), Math.floor((e.y + 4) / TS)))) e.alive = false;
         break;
       case 'boss': this.updateBoss(e); return;
-      case 'drink': case 'phone': case 'badge': case 'ammo':
-        if (e.rise > 0) { e.y -= 0.5; e.rise -= 0.5; if (e.rise <= 0) e.vx = e.type === 'phone' || e.type === 'ammo' ? 0 : e.type === 'badge' ? 1.2 : 1; break; }
+      case 'drink': case 'phone': case 'badge': case 'ammo': case 'battery': case 'boots':
+        if (e.rise > 0) { e.y -= 0.5; e.rise -= 0.5; if (e.rise <= 0) e.vx = { phone: 0, ammo: 0, badge: 1.2, battery: 1.3, boots: 0.8 }[e.type] ?? 1; break; }
         e.vy = Math.min(5, e.vy + 0.3);
         this.move(e, true);
         if (e.hitWall) e.vx = -e.hitWall * Math.abs(e.vx);
+        if (e.type === 'battery' && e.onGround) e.vy = -3.6;
         break;
       case 'checkpoint':
         if (!e.on && p.x + p.w > e.x && this.state === 'play') { e.on = true; this.cpHit = true; Audio8.sfx('check'); if (p.hearts < 2) p.hearts = 2; }
@@ -858,11 +900,14 @@ class Play {
       e.alive = false;
       if (e.type === 'drink') { if (p.hearts >= 3) this.addScore(1000, e.x, e.y); else { p.hearts++; this.parts.push({ k: 'text', s: '+$', x: e.x, y: e.y - 8, vy: -0.5, life: 50 }); } Audio8.sfx('power'); }
       if (e.type === 'phone') { p.power = 'signal'; Audio8.sfx('signal'); this.parts.push({ k: 'text', s: 'SIGNAL!', x: e.x - 12, y: e.y - 8, vy: -0.5, life: 60 }); }
+      if (e.type === 'battery') { p.charge = 600; Audio8.sfx('power'); Audio8.play('charge'); this.parts.push({ k: 'text', s: 'SUPER CHARGE!', x: e.x - 30, y: e.y - 8, vy: -0.5, life: 60 }); }
+      if (e.type === 'boots') { p.boots = true; Audio8.sfx('power'); this.parts.push({ k: 'text', s: 'JET BOOTS!', x: e.x - 20, y: e.y - 8, vy: -0.5, life: 60 }); }
       if (e.type === 'ammo') { p.ammo = Math.min(9, p.ammo + 3); Audio8.sfx('reload'); this.parts.push({ k: 'text', s: '+3', x: e.x, y: e.y - 8, vy: -0.5, life: 50 }); }
       if (e.type === 'badge') { game.lives++; Audio8.sfx('oneup'); this.parts.push({ k: 'text', s: '1UP', x: e.x, y: e.y - 8, vy: -0.5, life: 60 }); }
     }
     if ((e.enemy || e.hazard) && overlap(p, e)) {
-      if (e.stomp && p.vy > 0 && p.prevBottom <= e.y + 7) this.stomp(e); else this.hurt();
+      if (p.charge > 0 && e.enemy) this.flipKill(e);
+      else if (e.stomp && p.vy > 0 && p.prevBottom <= e.y + 7) this.stomp(e); else this.hurt();
     }
   }
   updateBoss(e) {
@@ -886,6 +931,45 @@ class Play {
     if (this.state !== 'play' || !overlap(p, e)) return;
     if (e.inv === 0 && p.vy > 0 && p.prevBottom <= e.y + 10) { p.vy = -6.5; this.damageBoss(e); } else if (e.inv === 0) this.hurt();
   }
+  beamEnd(x, y0) {
+    for (let ty = Math.max(0, Math.floor(y0 / TS)); ty < 14; ty++) if (SOLID.has(this.tile(Math.floor(x / TS), ty))) return ty * TS;
+    return VH + 16;
+  }
+  updateUfo(e) {
+    const p = this.p, hover = () => 26 + Math.sin(e.t * 0.05) * 4;
+    if (e.state === 'enter') { e.y += 1; if (e.y >= 26) { e.state = 'hover'; e.timer = 100; } } else if (e.state === 'hover') {
+      e.x += clamp(p.x + p.w / 2 - (e.x + e.w / 2), -1.1, 1.1); e.y = hover();
+      if (--e.timer <= 0 && this.state === 'play') { e.state = 'charge'; e.timer = 45; e.beamX = e.x + e.w / 2; Audio8.sfx('lasercharge'); }
+    } else if (e.state === 'charge') {
+      e.y = hover(); e.beamX = e.x + e.w / 2; e.beamEnd = this.beamEnd(e.beamX, e.y + e.h);
+      if (--e.timer <= 0) { e.state = 'fire'; e.timer = 28; Audio8.sfx('laser'); this.shake = 6; }
+    } else if (e.state === 'fire') {
+      e.beamEnd = this.beamEnd(e.beamX, e.y + e.h);
+      if (e.timer % 3 === 0 && e.beamEnd < VH) this.parts.push({ k: 'spark', x: e.beamX - 4 + (Math.random() * 8 - 4), y: e.beamEnd - 6, life: 8 });
+      if (--e.timer <= 0) { e.shots++; e.state = e.shots >= 5 ? 'leave' : 'hover'; e.timer = 150; } else if (this.state === 'play' && p.x + p.w > e.beamX - 6 && p.x < e.beamX + 6 && p.y < e.beamEnd && p.y + p.h > e.y + e.h) this.hurt();
+    } else if (e.state === 'leave') { e.y -= 1.2; e.x += 1.6; if (e.y < -40) e.alive = false; }
+    if (this.state === 'play' && overlap(p, e)) {
+      if (p.charge > 0 || (p.vy > 0 && p.prevBottom <= e.y + 6)) { if (p.charge <= 0) { p.vy = Input.down('jump') ? -6.2 : -3.8; } this.flipKill(e); } else this.hurt();
+    }
+  }
+  drawUfo(e, x, y) {
+    const bx = Math.round(e.beamX - (e.x - x)), top = y + 12;
+    if (e.state === 'charge' && (frame >> 1) & 1) { ctx.fillStyle = 'rgba(255,80,80,0.8)'; ctx.fillRect(bx, top, 1, e.beamEnd - top); ctx.fillRect(bx - 3, e.beamEnd - 2, 7, 2); }
+    if (e.state === 'fire') {
+      const w = 10 + ((frame >> 1) & 1) * 2;
+      ctx.fillStyle = 'rgba(95,240,255,0.55)'; ctx.fillRect(bx - w / 2 - 2, top, w + 4, e.beamEnd - top);
+      ctx.fillStyle = '#5ff0ff'; ctx.fillRect(bx - w / 2, top, w, e.beamEnd - top);
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(bx - 2, top, 4, e.beamEnd - top);
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(bx - 9, e.beamEnd - 3, 18, 3);
+    }
+    for (let yy = -7; yy <= 0; yy++) { const h = Math.round(Math.sqrt(49 - yy * yy)); ctx.fillStyle = '#1a1020'; ctx.fillRect(x + 14 - h - 1, y + 4 + yy, h * 2 + 2, 1); ctx.fillStyle = yy < -4 ? '#c8f8ff' : '#7ad8f0'; ctx.fillRect(x + 14 - h, y + 4 + yy, h * 2, 1); }
+    ctx.fillStyle = '#5ae060'; ctx.fillRect(x + 11, y - 1, 6, 5); ctx.fillStyle = '#1a1020'; ctx.fillRect(x + 12, y + 1, 1, 1); ctx.fillRect(x + 15, y + 1, 1, 1);
+    ctx.fillStyle = '#1a1020'; ctx.fillRect(x - 2, y + 4, 32, 7); ctx.fillRect(x + 2, y + 11, 24, 2);
+    ctx.fillStyle = '#a8b0c8'; ctx.fillRect(x - 1, y + 5, 30, 3); ctx.fillStyle = '#6a7090'; ctx.fillRect(x - 1, y + 8, 30, 2); ctx.fillRect(x + 3, y + 10, 22, 2);
+    ctx.fillStyle = '#e8ecf8'; ctx.fillRect(x + 1, y + 5, 26, 1);
+    for (let i = 0; i < 5; i++) { const k = ((frame >> 3) + i) % 3; ctx.fillStyle = k === 0 ? '#ffe040' : k === 1 ? '#ff3040' : '#5ff0ff'; ctx.fillRect(x + 2 + i * 6, y + 8, 2, 2); }
+    if (e.state === 'charge') { ctx.fillStyle = (frame >> 1) & 1 ? '#ff3040' : '#ffffff'; ctx.fillRect(x + 11, y + 11, 6, 2); }
+  }
   damageBoss(e) {
     if (e.inv > 0 || !e.alive || this.state !== 'play') return;
     e.hp--; e.inv = 90; this.shake = 16; Audio8.sfx('bosshit'); this.addScore(1000, e.x, e.y - 8);
@@ -904,7 +988,7 @@ class Play {
       const wasGround = bl.onGround;
       this.move(bl, true);
       if (bl.onGround && !wasGround && bl.vy === 0 && bl.bounced !== true) { bl.vy = -1.2; bl.bounced = true; }
-      if (bl.hitWall || bl.fuse <= 0) { this.explode(bl.x + 4, bl.y + 4); bl.dead = true; continue; }
+      if (bl.hitWall || bl.ceil || bl.fuse <= 0) { this.explode(bl.x + 4, bl.y + 4); bl.dead = true; continue; }
       if (bl.y > VH + 16) { bl.dead = true; continue; }
       for (const e of this.ents) {
         if (!e.enemy || !e.alive || e.dying || !overlap(bl, e)) continue;
@@ -980,7 +1064,7 @@ class Play {
       switch (c) {
         case '#': img = this.tile(tx, ty - 1) === '#' ? T.fill : T.top; break;
         case 'B': img = T.brick; break;
-        case 'W': case 'P': case 'S': case 'O': case 'A': img = T.bonus[bonusF]; break;
+        case 'W': case 'P': case 'S': case 'O': case 'A': case 'V': case 'Q': img = T.bonus[bonusF]; break;
         case 'U': img = T.used; break;
         case 'X': img = T.solid; break;
         case '=': img = T.oneway; break;
@@ -1026,8 +1110,8 @@ class Play {
     const pose = this.playerPose();
     const face = p.skid ? -p.face : p.face;
     Wally.draw(ctx, fx, fy, pose, face, {
-      t: frame, sx: p.sx, sy: p.sy, signal, white: p.hurtT > 18,
-      glow: signal ? 0.25 + 0.2 * Math.sin(frame * 0.15) : 0,
+      t: frame, sx: p.sx, sy: p.sy, signal, white: p.hurtT > 18 || (p.charge > 0 && (frame >> 2) % 2 === 0),
+      glow: p.charge > 0 ? 0.7 : signal ? 0.25 + 0.2 * Math.sin(frame * 0.15) : 0,
     });
   }
   drawPing(g, cx) {
@@ -1061,6 +1145,13 @@ class Play {
       }
       case 'badge': ctx.drawImage(Sprites.badge, x - 2, y - 2); break;
       case 'ammo': ctx.drawImage(Sprites.ammo, x - 2, y - 2 + (e.rise > 0 ? 0 : Math.round(Math.sin(e.t * 0.1)))); break;
+      case 'bat': put(Sprites.bat[e.state === 'hang' ? 1 : (e.t >> 3) & 1], -1, -3); break;
+      case 'charger': put(Sprites.charger[e.vx > 0 ? 'r' : 'l'][(e.t >> (e.charge ? 2 : 3)) & 1], -1, -2); break;
+      case 'turret': put(Sprites.turret[e.face > 0 ? 'r' : 'l'], -1, -2); if (e.cool < 25 && (frame >> 2) & 1) { ctx.fillStyle = '#ff3040'; ctx.fillRect(x + 6, y - 1, 3, 3); } break;
+      case 'ufo': this.drawUfo(e, x, y); break;
+      case 'bolt': ctx.fillStyle = '#1a1020'; ctx.fillRect(x - 1, y, 8, 6); ctx.fillRect(x, y - 1, 6, 8); ctx.fillStyle = (e.t >> 1) & 1 ? '#ffe040' : '#ff8030'; ctx.fillRect(x, y, 6, 6); ctx.fillStyle = '#fff'; ctx.fillRect(x + 1, y + 1, 2, 2); break;
+      case 'battery': ctx.drawImage(Sprites.battery, x - 2, y - 1); break;
+      case 'boots': ctx.drawImage(Sprites.boots, x - 2, y - 1); break;
       case 'spark': {
         ctx.fillStyle = (e.t >> 1) & 1 ? '#ffffff' : '#ffe040';
         ctx.fillRect(x + 3, y, 2, 3); ctx.fillRect(x + 1, y + 3, 4, 2); ctx.fillRect(x + 3, y + 5, 4, 2); ctx.fillRect(x + 2, y + 7, 2, 3);
@@ -1130,6 +1221,7 @@ class Play {
       case 'frag': ctx.drawImage(this.T.brick, 0, 0, 6, 6, x, y, 6, 6); break;
       case 'star': ctx.fillStyle = '#fff'; { const r = 12 - q.life; [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([a, b]) => ctx.fillRect(x + a * r, y + b * r, 2, 2)); } break;
       case 'spark': ctx.fillStyle = q.life & 2 ? '#fff' : '#ffe040'; ctx.fillRect(x + 3, y, 2, 8); ctx.fillRect(x, y + 3, 8, 2); break;
+      case 'flame': ctx.fillStyle = q.life > 8 ? '#ffe040' : '#ff7020'; ctx.fillRect(x - 1, y, 3, 3); break;
       case 'blast': {
         const k = 24 - q.life, r = Math.min(30, 6 + k * 3);
         const ring = (rad, col) => { ctx.fillStyle = col; for (let a = 0; a < 32; a++) { const t = (a / 32) * Math.PI * 2; ctx.fillRect(Math.round(x + Math.cos(t) * rad) - 1, Math.round(y + Math.sin(t) * rad * 0.85) - 1, 3, 3); } };
@@ -1153,7 +1245,7 @@ class Play {
     txt('WALLYMAN', 8, 6, '#f2702a');
     txt('*' + pad(Math.max(0, game.lives), 2), 14, 15, '#fff');
     for (let i = 0; i < 3; i++) ctx.drawImage(i < p.hearts ? Sprites.heart : Sprites.heartEmpty, 62 + i * 9, 6);
-    if (p.power === 'signal') { ctx.drawImage(Sprites.phone, 88, 2); }
+    { let ix = 86; if (p.power === 'signal') { ctx.drawImage(Sprites.miniPhone, ix, 15); ix += 6; } if (p.boots) { ctx.drawImage(Sprites.miniBoots, ix, 16); ix += 7; } if (p.charge > 0 && (p.charge > 120 || (frame >> 2) & 1)) ctx.drawImage(Sprites.miniBattery, ix, 15); }
     ctx.drawImage(Sprites.ballIcon, 62, 15); txt('*' + p.ammo, 70, 15, p.ammo ? '#fff' : '#ff6060');
     txt('TIME', 112, 6, '#ffe040');
     txt(pad(this.time, 3), 117, 15, this.time <= 100 && (frame >> 4) & 1 ? '#ff6060' : '#fff');

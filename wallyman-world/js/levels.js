@@ -21,6 +21,7 @@ LevelBuilder.prototype = {
 const LEVELS = [
   {
     name: "WALLY'S BACKYARD", theme: 'grass', music: 'grass', time: 300, width: 200,
+    extras: [['c', 58], ['t', 96], ['u', 108], ['g', 134], ['p', 166], ['h', 45]],
     build(b) {
       b.ground(0, 38).set(3, 11, '@');
       b.coins(8, 9, 4);
@@ -51,6 +52,7 @@ const LEVELS = [
   },
   {
     name: 'CAVERN COMMUTE', theme: 'cave', music: 'cave', time: 300, width: 190,
+    extras: [['b', 20], ['b', 56], ['t', 98], ['c', 136], ['b', 148], ['b', 172], ['g', 86]],
     build(b) {
       b.fill(0, 0, 189, 1, '#');
       b.ground(0, 30).set(2, 11, '@');
@@ -75,6 +77,7 @@ const LEVELS = [
   },
   {
     name: 'CLOUDTOP CLIMB', theme: 'sky', music: 'sky', time: 300, width: 200,
+    extras: [['u', 36], ['t', 96], ['c', 128], ['u', 146], ['c', 182], ['h', 70]],
     build(b) {
       b.ground(0, 20).set(2, 11, '@');
       b.coins(6, 9, 3).row(10, 8, 'WPW');
@@ -93,6 +96,7 @@ const LEVELS = [
   },
   {
     name: 'STATIC FORTRESS', theme: 'castle', music: 'castle', time: 400, width: 190, boss: true, bossHp: 3,
+    extras: [['b', 28], ['t', 66], ['c', 84], ['b', 112], ['t', 130], ['b', 152], ['g', 74]],
     build(b) {
       b.fill(0, 0, 189, 1, '#');
       b.ground(0, 20).set(2, 11, '@');
@@ -115,6 +119,7 @@ const LEVELS = [
   },
   {
     name: 'SUNNY SHORELINE', theme: 'beach', music: 'beach', time: 300, width: 200,
+    extras: [['u', 56], ['c', 98], ['t', 148], ['g', 176], ['h', 120], ['u', 150]],
     build(b) {
       b.ground(0, 30).set(2, 11, '@');
       b.coins(6, 9, 4).row(12, 8, 'WPW').set(20, 11, 'g').set(26, 11, 'h');
@@ -134,6 +139,7 @@ const LEVELS = [
   },
   {
     name: 'FROSTY PEAKS', theme: 'snow', music: 'snow', time: 300, width: 200, ice: true,
+    extras: [['u', 28], ['c', 68], ['t', 112], ['u', 148], ['h', 182], ['c', 130]],
     build(b) {
       b.ground(0, 25).set(2, 11, '@');
       b.coins(5, 9, 4).row(10, 8, 'BPB').set(16, 11, 'g').set(22, 11, 'p');
@@ -151,6 +157,7 @@ const LEVELS = [
   },
   {
     name: 'DEEP DARK MINE', theme: 'cave', music: 'cave', time: 320, width: 210,
+    extras: [['b', 18], ['b', 44], ['t', 88], ['c', 102], ['b', 128], ['t', 168], ['c', 192], ['b', 150]],
     build(b) {
       b.fill(0, 0, 209, 1, '#');
       b.ground(0, 22).set(2, 11, '@').row(8, 8, 'BWB').set(14, 11, 'g').set(19, 11, 'p');
@@ -167,6 +174,7 @@ const LEVELS = [
   },
   {
     name: 'STATIC TOWER', theme: 'castle', music: 'castle', time: 400, width: 220, boss: true, bossHp: 5,
+    extras: [['b', 28], ['t', 68], ['c', 110], ['b', 124], ['t', 158], ['c', 174], ['b', 90], ['g', 186]],
     build(b) {
       b.fill(0, 0, 219, 1, '#');
       b.ground(0, 18).set(2, 11, '@');
@@ -199,7 +207,36 @@ function buildLevel(i) {
     }
   }
   for (let x = 60; x < b.w; x++) { const y = b.g.findIndex((r) => r[x] === 'W'); if (y >= 0) { b.g[y][x] = 'A'; break; } }
-  const ENT = 'gpzhmnCGKa';
+  // Extra enemies, placed on the nearest safe spot: ground walkers on solid ground,
+  // bats under a ceiling, UFOs in open sky.
+  const SOLIDS = '#BXUWPSOAJ';
+  const ground = (x0) => {
+    for (let x = x0; x < Math.min(b.w - 18, x0 + 14); x++) {
+      for (let y = 3; y < 14; y++) {
+        if (SOLIDS.includes(b.g[y][x]) && b.g[y - 1][x] === '.' && b.g[y - 2][x] === '.') return [x, y - 1];
+      }
+    }
+    return null;
+  };
+  const ceiling = (x0) => {
+    for (let x = x0; x < Math.min(b.w - 18, x0 + 14); x++) for (let y = 1; y < 8; y++) if (b.g[y][x] === '.' && b.g[y - 1][x] === '#') return [x, y];
+    return null;
+  };
+  const sky = (x0) => { for (let x = x0; x < Math.min(b.w - 18, x0 + 14); x++) if (b.g[2][x] === '.' && b.g[1][x] === '.') return [x, 2]; return null; };
+  for (const [c, x] of def.extras || []) {
+    const spot = c === 'b' ? ceiling(x) : c === 'u' ? sky(x) : ground(x);
+    if (spot) b.g[spot[1]][spot[0]] = c;
+  }
+  // New power-up blocks: Super Charge battery and Jet Boots
+  const swap = (from, to) => {
+    for (let x = from; x < b.w; x++) { const y = b.g.findIndex((r) => r[x] === 'W'); if (y >= 0) { b.g[y][x] = to; return; } }
+    for (let x = from; x < b.w - 20; x += 3) { // no bonus block left: float a new one above solid ground
+      const spot = ground(x);
+      if (spot && spot[1] >= 5 && b.g[spot[1] - 3][spot[0]] === '.' && b.g[spot[1] - 4][spot[0]] === '.') { b.g[spot[1] - 3][spot[0]] = to; return; }
+    }
+  };
+  swap(105, 'V'); swap(20, 'Q');
+  const ENT = 'gpzhmnCGKabctu';
   for (let y = 0; y < 14; y++) for (let x = 0; x < b.w; x++) {
     const c = b.g[y][x];
     if (c === '@') { start = { x, y }; b.g[y][x] = '.'; } else if (ENT.includes(c)) {
