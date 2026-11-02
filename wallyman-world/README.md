@@ -30,7 +30,8 @@ Open `index.html` in any modern browser — or enable **GitHub Pages** for this 
 index.html          page + touch controls
 js/font.js          5x7 pixel font
 js/audio.js         music sequencer, songs and sound effects
-js/sprites.js       all pixel art (characters, tiles, backgrounds)
+js/sprites.js       pixel art for enemies, items, tiles and backgrounds
+js/wally.js         WallyMan's animation rig: poses, cape physics, auto-outline
 js/levels.js        level layouts (easy to edit – see the legend at the top)
 js/game.js          engine: input, physics, enemies, scenes, HUD
 assets/             pixelated WallyMan portrait used on the title/ending screens

@@ -24,55 +24,6 @@ const Sprites = (() => {
   }
   function rng(seed) { let s = seed >>> 0; return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296); }
 
-  // ---------------- WallyMan ----------------
-  const WPAL = {
-    K: '#1a1020', S: '#f2b48a', s: '#c97c58', B: '#2f62d0', b: '#1d3f94', O: '#f2702a', o: '#b4461a',
-    W: '#d8f0ff', g: '#1f9a3a', P: '#2a3038',
-  };
-  const head = [
-    '.....KKKKK......',
-    '....KSSSSSK.....',
-    '...KSSSSSSSK....',
-    '..KbbbbbbbbbK...',
-    '..KbWWWbWWWbK...',
-    '..KbbbbbbbbbK...',
-    '...KSSSSSsSK....',
-    '....KSsssSK.....',
-  ];
-  const torso = [
-    '...OKBBBBBBK....',
-    '..OKBBOOOOBBK...',
-    '..OKBOgggOOBK...',
-    '.OOKBBOOOOBBSK..',
-    '.OOKBBBBBBBPPK..',
-    '.OKOOOOOOOOOK...',
-    '.OKSBBBBBBBK....',
-    '..KBBBBBBBBK....',
-  ];
-  const legs = {
-    idle: ['...KBBBKBBBK....', '...KBBBKBBBK....', '...KBBBKBBBK....', '...KOOOKOOOK....', '...KOOOKOOOK....', '...KOOOKOOOK....', '..KOOOOKOOOOK...', '..KKKKKKKKKKK...'],
-    walk1: ['...KBBBBBBBK....', '..KBBBK.KBBBK...', '..KBBK...KBBK...', '.KOOOK...KOOOK..', '.KOOOK...KOOOK..', '.KOOOK...KOOOOK.', 'KOOOOK...KKKKKK.', 'KKKKK...........'],
-    walk2: ['...KBBBBBBBK....', '....KBBBBBK.....', '....KBBKBBK.....', '....KOOKOOK.....', '....KOOKOOK.....', '....KOOKOOOK....', '...KOOOKKKKK....', '...KKKK.........'],
-    jump: ['...KBBBBBBBK....', '..KBBBBKBBBBK...', '.KOOOK..KBBK....', '.KOOOK..KOOOK...', '.KOOOOK.KOOOK...', '..KKKKK.KOOOOK..', '........KKKKKK..', '................'],
-  };
-  const torsoJump = torso.slice(); // arm up for jump
-  torsoJump[3] = '.OOKBBOOOOBBKSK.';
-  torsoJump[4] = '.OOKBBBBBBBBKPK.';
-  function buildWally(pal) {
-    const f = {};
-    for (const k of Object.keys(legs)) {
-      const rows = head.concat(k === 'jump' ? torsoJump : torso, legs[k]);
-      f[k] = fromRows(rows, pal);
-    }
-    const out = { r: f, l: {} };
-    for (const k in f) out.l[k] = flip(f[k]);
-    out.white = { r: {}, l: {} };
-    for (const k in f) { out.white.r[k] = silhouette(f[k], '#fff'); out.white.l[k] = silhouette(out.l[k], '#fff'); }
-    return out;
-  }
-  S.wally = buildWally(WPAL);
-  S.wallySignal = buildWally(Object.assign({}, WPAL, { P: '#5ff0ff' }));
-
   // ---------------- enemies ----------------
   const grumbleRows = [
     '................', '......KKKK......', '....KKMMMMKK....', '...KMMMMMMMMK...', '..KMMMMMMMMMMK..', '..KMKKMMMMKKMK..',

@@ -95,11 +95,8 @@ function drawParallax(theme, camx, groundY) {
     ctx.drawImage(L.c, L.c.width - off, groundY || 0);
   }
 }
-function drawWally(x, y, pose, face, signal, white) {
-  const set = signal ? Sprites.wallySignal : Sprites.wally;
-  const src = white ? set.white : set;
-  ctx.drawImage(src[face > 0 ? 'r' : 'l'][pose], Math.round(x), Math.round(y));
-}
+// draw WallyMan with his feet centred at (cx, feetY)
+function drawWally(cx, feetY, pose, face, o = {}) { Wally.draw(ctx, cx, feetY, pose, face, Object.assign({ t: frame }, o)); }
 
 // ---------- title logo (built once) ----------
 const Logo = (() => {
@@ -135,6 +132,7 @@ function drawLogo(y) {
 function TitleScene() {
   let mode = 'press', sel = 0, eraseMode = false, t = 0;
   const walkers = [{ x: -20, k: 'grumble', v: 0.4 }, { x: -120, k: 'prickle', v: 0.35 }];
+  const hero = { x: -60, y: 192, vy: 0, anim: 0 };
   const items = () => [0, 1, 2].map((i) => {
     const s = Save.slots[i];
     if (!s) return `FILE ${'ABC'[i]}   NEW GAME`;
@@ -146,6 +144,11 @@ function TitleScene() {
     update() {
       t++;
       walkers.forEach((w) => { w.x += w.v; if (w.x > 280) w.x = -40; });
+      hero.x += 1.6; hero.anim += 0.35;
+      if (hero.y >= 192 && walkers.some((w) => w.x + 8 - hero.x > 10 && w.x + 8 - hero.x < 30)) hero.vy = -4.6;
+      hero.vy += 0.25; hero.y = Math.min(192, hero.y + hero.vy);
+      if (hero.y >= 192) hero.vy = 0;
+      if (hero.x > 300) hero.x = -40;
       if (mode === 'press') {
         if (Input.confirm()) { Audio8.unlock(); Audio8.play('title'); Audio8.sfx('confirm'); mode = 'menu'; }
         return;
@@ -175,6 +178,7 @@ function TitleScene() {
         const img = w.k === 'grumble' ? Sprites.grumble[f] : Sprites.prickle.r[f];
         ctx.drawImage(img, Math.round(w.x), 176);
       });
+      drawWally(hero.x, hero.y, hero.y < 192 ? (hero.vy < 0 ? 'jump' : 'fall') : 'run' + (Math.floor(hero.anim) % 8), 1);
       if (Sprites.portrait.complete && Sprites.portrait.naturalWidth) ctx.drawImage(Sprites.portrait, 200, 192 - Sprites.portrait.naturalHeight + 4);
       drawLogo(14);
       if (mode === 'press') {
@@ -273,8 +277,8 @@ function MapScene() {
       NODES.forEach(drawNode);
       const walking = target !== null;
       const face = target !== null ? Math.sign(NODES[target].x - pos.x) || 1 : 1;
-      const pose = walking ? ((t >> 3) & 1 ? 'walk1' : 'walk2') : 'idle';
-      drawWally(pos.x - 8, pos.y - 22 - (walking ? 0 : ((t >> 4) & 1)), pose, face, false);
+      const pose = walking ? 'walk' + ((t >> 2) % 8) : 'idle' + ((t >> 4) % 4);
+      drawWally(pos.x, pos.y + 2, pose, face);
       drawWindow(4, 4, 248, 20);
       txt('WALLY ISLAND', 10, 10, '#ffe040');
       ctx.drawImage(Sprites.heart, 112, 10); txt('*' + pad(game.lives, 2), 121, 10);
@@ -302,7 +306,7 @@ function IntroScene(li, fromCheckpoint) {
       ctx.fillStyle = '#000'; ctx.fillRect(0, 0, VW, VH);
       txt(`LEVEL ${li + 1}`, 128, 60, '#ffe040', { scale: 2, align: 'center' });
       txt(LEVELS[li].name, 128, 88, '#fff', { align: 'center' });
-      drawWally(100, 116, 'idle', 1, false);
+      drawWally(110, 142, 'idle' + ((t >> 4) % 4), 1);
       txt('*  ' + game.lives, 124, 126, '#fff');
     },
   };
@@ -346,7 +350,7 @@ class Play {
     this.state = 'play'; this.stateT = 0; this.paused = false; this.time = this.def.time; this.timeTick = 0;
     this.cpHit = !!fromCheckpoint && !!this.lv.checkpoint; this.bossLock = false; this.camMin = 0; this.shake = 0;
     const s = this.cpHit ? this.lv.checkpoint : this.lv.start;
-    this.p = { x: s.x * TS + 3, y: (s.y + 1) * TS - 22, w: 10, h: 22, vx: 0, vy: 0, face: 1, onGround: false, hearts: 2, power: 'none', inv: 0, anim: 0, jumpBuf: 0, coyote: 0, prevBottom: 0, platform: null };
+    this.p = { x: s.x * TS + 3, y: (s.y + 1) * TS - 22, w: 10, h: 22, vx: 0, vy: 0, face: 1, onGround: false, hearts: 2, power: 'none', inv: 0, anim: 0, jumpBuf: 0, coyote: 0, prevBottom: 0, platform: null, sx: 1, sy: 1, hurtT: 0, trail: [] };
     this.cam = { x: clamp(this.p.x - 100, 0, this.lv.w * TS - VW) };
     this.spawnIdx = 0;
     while (this.spawnIdx < this.lv.spawns.length && this.lv.spawns[this.spawnIdx].x * TS < this.p.x - 140) {
@@ -432,6 +436,20 @@ class Play {
       for (const [dx, dy, vx, vy] of [[0, 0, -1.2, -5], [8, 0, 1.2, -5], [0, 8, -1, -3.5], [8, 8, 1, -3.5]]) this.parts.push({ k: 'frag', x: bx + dx, y: by + dy, vx, vy, g: 0.3, life: 70 });
     } else { Audio8.sfx('bump'); }
   }
+  dust(x, y, n) {
+    for (let i = 0; i < n; i++) this.parts.push({ k: 'dust', x: x + (i - (n - 1) / 2) * 5, y: y - 2, vx: (i - (n - 1) / 2) * 0.35, vy: -0.25, life: 18 });
+  }
+  playerPose() {
+    const p = this.p;
+    if (p.hurtT > 0) return 'hurt';
+    if (this.state === 'clear' && Math.abs(p.vx) < 0.2 && p.onGround) return 'win' + ((frame >> 4) & 1);
+    if (this.state === 'bossdead' && p.onGround && Math.abs(p.vx) < 0.2) return 'win' + ((frame >> 4) & 1);
+    if (!p.onGround) return p.vy < 0 ? 'jump' : 'fall';
+    if (p.crouch) return 'crouch';
+    if (p.skid) return 'skid';
+    if (Math.abs(p.vx) > 0.15) return (Math.abs(p.vx) > 2.2 ? 'run' : 'walk') + (Math.floor(p.anim) % 8);
+    return 'idle' + ((frame >> 4) % 4);
+  }
   flipKill(e) { e.dying = 'flip'; e.vy = -3.5; e.vx = this.p.x < e.x ? 0.8 : -0.8; Audio8.sfx('kick'); this.addScore(200, e.x, e.y); }
   stomp(e) {
     const p = this.p;
@@ -445,7 +463,7 @@ class Play {
     if (p.inv > 0 || this.state !== 'play') return;
     p.hearts--;
     if (p.hearts <= 0) { this.die(); return; }
-    p.inv = 120; p.power = 'none'; Audio8.sfx('hurt');
+    p.inv = 120; p.hurtT = 24; p.power = 'none'; Audio8.sfx('hurt');
     if (spike) p.vy = -5;
   }
   die() {
@@ -533,7 +551,10 @@ class Play {
 
     if (!auto && Input.pressed('jump')) p.jumpBuf = 6; else if (p.jumpBuf > 0) p.jumpBuf--;
     if (p.onGround) p.coyote = 6; else if (p.coyote > 0) p.coyote--;
-    if (p.jumpBuf > 0 && p.coyote > 0) { p.vy = -(5.4 + Math.abs(p.vx) * 0.25); p.jumpBuf = 0; p.coyote = 0; Audio8.sfx('jump'); }
+    if (p.jumpBuf > 0 && p.coyote > 0) {
+      p.vy = -(5.4 + Math.abs(p.vx) * 0.25); p.jumpBuf = 0; p.coyote = 0; Audio8.sfx('jump');
+      p.sx = 0.8; p.sy = 1.2; this.dust(p.x + p.w / 2, p.y + p.h, 2);
+    }
     const hold = !auto && Input.down('jump') && p.vy < 0;
     p.vy = Math.min(5.5, p.vy + (hold ? 0.19 : 0.5));
 
@@ -544,7 +565,14 @@ class Play {
     if (p.fire > 0) p.fire--;
 
     p.prevBottom = p.y + p.h;
+    const wasGround = p.onGround, fallV = p.vy;
     this.move(p, true);
+    if (p.onGround && !wasGround && fallV > 2) { p.sx = 1.25; p.sy = 0.8; this.dust(p.x + p.w / 2, p.y + p.h, 3); }
+    if (p.onGround && p.skid && frame % 4 === 0) this.dust(p.x + p.w / 2 + p.face * 4, p.y + p.h, 1);
+    if (p.onGround && Math.abs(p.vx) > 2.4 && frame % 9 === 0) this.dust(p.x + p.w / 2 - Math.sign(p.vx) * 5, p.y + p.h, 1);
+    p.sx += (1 - p.sx) * 0.22; p.sy += (1 - p.sy) * 0.22;
+    if (p.hurtT > 0) p.hurtT--;
+    if (Math.abs(p.vx) > 2.5 && frame % 3 === 0) { p.trail.unshift({ x: p.x, y: p.y, pose: this.playerPose(), face: p.face }); p.trail.length = Math.min(p.trail.length, 3); } else if (frame % 3 === 0) p.trail.pop();
     if (p.ceil) this.hitBlock(p.ceil.tx, p.ceil.ty);
     if (p.x < this.camMin) { p.x = this.camMin; if (p.vx < 0) p.vx = 0; }
     if (this.bossLock && p.x + p.w > this.lv.w * TS) p.x = this.lv.w * TS - p.w;
@@ -558,7 +586,7 @@ class Play {
       }
     }
     if (p.y > VH + 24) this.die();
-    if (p.onGround && Math.abs(p.vx) > 0.1) p.anim += Math.abs(p.vx) * 0.08;
+    if (p.onGround && Math.abs(p.vx) > 0.1) p.anim += Math.abs(p.vx) * 0.12;
     if (!p.onGround) p.anim = 0;
   }
   updateDying() {
@@ -720,6 +748,11 @@ class Play {
         }
       }
       if (img) ctx.drawImage(img, tx * TS - cx, ty * TS + dy);
+      if (c === '#') {
+        ctx.fillStyle = 'rgba(0,0,0,0.22)';
+        if (this.tile(tx - 1, ty) !== '#' && tx > 0) ctx.fillRect(tx * TS - cx, ty * TS, 2, 16);
+        if (this.tile(tx + 1, ty) !== '#' && tx < this.lv.w - 1) ctx.fillRect(tx * TS - cx + 14, ty * TS, 2, 16);
+      }
     }
   }
   drawPlatform(pl, cx) {
@@ -729,14 +762,28 @@ class Play {
     ctx.fillRect(x + 2, y + 1, 2, 2); ctx.fillRect(x + 44, y + 1, 2, 2);
   }
   drawPlayer(cx) {
-    const p = this.p;
-    if (this.state === 'dying') { drawWally(p.x - 3 - cx, p.y - 2, 'jump', p.face, false); return; }
-    if (p.inv > 0 && (frame >> 2) % 2) return;
-    let pose = 'idle';
-    if (!p.onGround) pose = 'jump';
-    else if (p.crouch) pose = 'walk2';
-    else if (Math.abs(p.vx) > 0.1) pose = (Math.floor(p.anim) % 2) ? 'walk1' : 'walk2';
-    drawWally(p.x - 3 - cx, p.y - 2, pose, p.skid ? -p.face : p.face, p.power === 'signal', p.fire > 4);
+    const p = this.p, fx = p.x + p.w / 2 - cx, fy = p.y + p.h;
+    const signal = p.power === 'signal';
+    if (this.state === 'dying') {
+      const t = this.stateT;
+      ctx.save(); ctx.translate(Math.round(fx), Math.round(fy - 11));
+      if (t > 30) ctx.rotate(Math.floor((t - 30) / 6) * (Math.PI / 2) * p.face);
+      Wally.draw(ctx, 0, 11, 'hurt', p.face, { t: frame });
+      ctx.restore(); return;
+    }
+    // speed trail
+    p.trail.forEach((g, i) => {
+      ctx.save(); ctx.globalAlpha = 0.35 - i * 0.1;
+      Wally.draw(ctx, g.x + p.w / 2 - cx, g.y + p.h, g.pose, g.face, { t: frame, signal, ghost: true });
+      ctx.restore();
+    });
+    if (p.inv > 0 && p.hurtT <= 0 && (frame >> 2) % 2) return;
+    const pose = this.playerPose();
+    const face = p.skid ? -p.face : p.face;
+    Wally.draw(ctx, fx, fy, pose, face, {
+      t: frame, sx: p.sx, sy: p.sy, signal, white: p.fire > 4 || p.hurtT > 18,
+      glow: signal ? 0.25 + 0.2 * Math.sin(frame * 0.15) : 0,
+    });
   }
   drawPing(g, cx) {
     const x = Math.round(g.x - cx), y = Math.round(g.y);
@@ -837,6 +884,13 @@ class Play {
       case 'frag': ctx.drawImage(this.T.brick, 0, 0, 6, 6, x, y, 6, 6); break;
       case 'star': ctx.fillStyle = '#fff'; { const r = 12 - q.life; [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([a, b]) => ctx.fillRect(x + a * r, y + b * r, 2, 2)); } break;
       case 'spark': ctx.fillStyle = q.life & 2 ? '#fff' : '#ffe040'; ctx.fillRect(x + 3, y, 2, 8); ctx.fillRect(x, y + 3, 8, 2); break;
+      case 'dust': {
+        const r = Math.round(2 + (18 - q.life) / 5);
+        ctx.save(); ctx.globalAlpha = Math.min(1, q.life / 10) * 0.85;
+        ctx.fillStyle = this.def.theme === 'cave' || this.def.theme === 'castle' ? '#c8c0d8' : '#ffffff';
+        ctx.fillRect(x - r, y - r + 1, r * 2, r * 2 - 2); ctx.fillRect(x - r + 1, y - r, r * 2 - 2, r * 2);
+        ctx.restore(); break;
+      }
       case 'boom': { const r = 20 - q.life; ctx.fillStyle = q.life & 2 ? '#ffe040' : '#ff6020'; ctx.fillRect(x - r / 2, y - r / 2, r, r); ctx.fillStyle = '#fff'; ctx.fillRect(x - 2, y - 2, 4, 4); break; }
     }
   }
