@@ -150,12 +150,12 @@ function TitleScene() {
       if (hero.y >= 192) hero.vy = 0;
       if (hero.x > 300) hero.x = -40;
       if (mode === 'press') {
-        if (Input.confirm()) { Audio8.unlock(); Audio8.play('title'); Audio8.sfx('confirm'); mode = 'menu'; }
+        if (Input.confirm()) { Audio8.unlock(); Audio8.play('menu'); Audio8.sfx('confirm'); mode = 'menu'; }
         return;
       }
       if (Input.pressed('down')) { sel = (sel + 1) % 5; Audio8.sfx('select'); }
       if (Input.pressed('up')) { sel = (sel + 4) % 5; Audio8.sfx('select'); }
-      if (Input.pressed('back')) { if (eraseMode) eraseMode = false; else mode = 'press'; }
+      if (Input.pressed('back')) { if (eraseMode) eraseMode = false; else { mode = 'press'; Audio8.play('title'); } }
       if (Input.confirm()) {
         if (sel < 3) {
           if (eraseMode) {
