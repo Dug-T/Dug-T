@@ -4,7 +4,7 @@ const cv = document.getElementById('screen');
 const ctx = cv.getContext('2d');
 ctx.imageSmoothingEnabled = false;
 let frame = 0;
-const SOLID = new Set(['#', 'B', 'W', 'P', 'S', 'O', 'A', 'V', 'Q', 'D', 'U', 'X', '^', 'J', 'R']);
+const SOLID = new Set(['#', 'B', 'W', 'P', 'S', 'O', 'A', 'V', 'Q', 'D', 'U', 'X', '^', 'J', 'R', '<', '>']);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const approach = (v, t, d) => (v < t ? Math.min(t, v + d) : Math.max(t, v - d));
 const overlap = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
@@ -90,10 +90,10 @@ const Save = (() => {
   const KEY = 'wallyman-world-save-v1';
   let slots = [null, null, null];
   try { const d = JSON.parse(localStorage.getItem(KEY)); if (Array.isArray(d)) slots = [d[0] || null, d[1] || null, d[2] || null]; } catch (e) { /* ignore */ }
-  slots.forEach((s) => { if (s) { s.cleared = Array.from({ length: 11 }, (_, i) => !!(s.cleared && s.cleared[i])); s.medals = Array.from({ length: 11 }, (_, i) => (s.medals && s.medals[i]) | 0); s.secrets = s.secrets || {}; s.stars = Array.from({ length: 11 }, (_, i) => (s.stars && s.stars[i]) | 0); s.costume = s.costume || 'classic'; s.players = s.players || 1; s.turn = s.turn || 0; } });
+  slots.forEach((s) => { if (s) { s.cleared = Array.from({ length: 15 }, (_, i) => !!(s.cleared && s.cleared[i])); s.medals = Array.from({ length: 15 }, (_, i) => (s.medals && s.medals[i]) | 0); s.secrets = s.secrets || {}; s.stars = Array.from({ length: 15 }, (_, i) => (s.stars && s.stars[i]) | 0); s.bars = Array.from({ length: 15 }, (_, i) => (s.bars && s.bars[i]) | 0); s.costume = s.costume || 'classic'; s.players = s.players || 1; s.turn = s.turn || 0; } });
   return {
     slots,
-    fresh: () => ({ players: 1, turn: 0, other: null, hero: 'wally', costume: 'classic', cleared: Array(11).fill(false), medals: Array(11).fill(0), stars: Array(11).fill(0), secrets: {}, lives: 5, score: 0, coins: 0, node: 0, bonusAmmo: 0, startHearts: 0, startBoots: false }),
+    fresh: () => ({ players: 1, turn: 0, other: null, hero: 'wally', costume: 'classic', cleared: Array(15).fill(false), medals: Array(15).fill(0), stars: Array(15).fill(0), bars: Array(15).fill(0), secrets: {}, lives: 5, score: 0, coins: 0, node: 0, bonusAmmo: 0, startHearts: 0, startBoots: false }),
     persist() { try { localStorage.setItem(KEY, JSON.stringify(slots)); } catch (e) { /* ignore */ } },
   };
 })();
@@ -202,7 +202,7 @@ const ACH_LIST = [
   ['dino', 'DINO RIDER', 'RIDE DINO'], ['coins', 'COIN MAGNATE', 'COLLECT 100 COINS'], ['bats', 'BAT QUEEN', 'DEFEAT 25 ENEMIES WITH BATS'],
   ['shock', 'SHOCK JOCK', '3 ENEMIES WITH 1 SHOCKWAVE'], ['ufo', 'UFO HUNTER', 'SHOOT DOWN 5 UFOS'], ['ghost', 'GHOSTBUSTER', 'DEFEAT A GHOST'],
   ['secretblock', 'HIDDEN TREASURE', 'FIND AN INVISIBLE BLOCK'], ['cracker', 'WALL BREAKER', 'SMASH A CRACKED WALL'], ['two', "TWO'S COMPANY", 'PLAY A 2-PLAYER GAME'],
-  ['fashion', 'FASHIONISTA', 'WEAR 3 DIFFERENT COSTUMES'], ['timelord', 'TIME LORD', 'SET A TIME ATTACK RECORD'],
+  ['fashion', 'FASHIONISTA', 'WEAR 3 DIFFERENT COSTUMES'], ['starisle', 'STAR LEGEND', 'BEAT THE MOTHERSHIP MK II'], ['fullsignal', 'FULL SIGNAL', 'ALL 3 SIGNAL BARS IN A LEVEL'], ['timelord', 'TIME LORD', 'SET A TIME ATTACK RECORD'],
 ];
 const Ach = (() => {
   const load = (k) => { try { return JSON.parse(localStorage.getItem(k)) || {}; } catch (e) { return {}; } };
@@ -235,7 +235,7 @@ const CRT = (() => {
 
 // ---------------- Extras: trophies, jukebox, gallery, options ----------------
 function ExtrasScene() {
-  const items = ['TROPHY ROOM', 'JUKEBOX', 'GALLERY', 'OPTIONS', 'BACK'];
+  const items = ['LEVEL MAKER', 'TROPHY ROOM', 'JUKEBOX', 'GALLERY', 'OPTIONS', 'BACK'];
   let sel = 0, t = 0;
   return {
     enter() { Audio8.play('menu'); },
@@ -243,15 +243,15 @@ function ExtrasScene() {
       t++;
       if (Input.pressed('down')) { sel = (sel + 1) % items.length; Audio8.sfx('select'); }
       if (Input.pressed('up')) { sel = (sel + items.length - 1) % items.length; Audio8.sfx('select'); }
-      if (Input.pressed('back') || (Input.confirm() && sel === 4)) { go(() => TitleScene()); return; }
-      if (Input.confirm()) { Audio8.sfx('confirm'); go([TrophyScene, JukeboxScene, GalleryScene, OptionsScene][sel]); }
+      if (Input.pressed('back') || (Input.confirm() && sel === 5)) { go(() => TitleScene()); return; }
+      if (Input.confirm()) { Audio8.sfx('confirm'); go([() => LevelMakerScene(null), TrophyScene, JukeboxScene, GalleryScene, OptionsScene][sel]); }
     },
     draw() {
       drawParallax('sky', t * 0.3);
       drawLogo(8);
-      drawWindow(64, 110, 128, 86);
+      drawWindow(64, 108, 128, 92);
       txt('EXTRAS', 128, 116, '#ffe040', { align: 'center' });
-      items.forEach((s, i) => { const y = 132 + i * 12; txt(s, 88, y, i === sel ? '#ffe040' : '#fff'); if (i === sel) txt('>', 76 + ((t >> 3) & 1), y, '#ffe040'); });
+      items.forEach((s, i) => { const y = 128 + i * 12; txt(s, 88, y, i === sel ? '#ffe040' : '#fff'); if (i === sel) txt('>', 76 + ((t >> 3) & 1), y, '#ffe040'); });
       txt(`TROPHIES ${Ach.count()}/${ACH_LIST.length}`, 128, 206, '#fff', { align: 'center', outline: '#101848' });
     },
   };
@@ -286,7 +286,7 @@ function TrophyScene() {
     },
   };
 }
-const SONG_NAMES = { title: 'TITLE THEME', menu: 'FILE SELECT', map: 'WALLY ISLAND', grass: "WALLY'S BACKYARD", cave: 'CAVERN COMMUTE', sky: 'CLOUDTOP WALTZ', castle: 'STATIC FORTRESS', boss: 'BOSS BATTLE', beach: 'SUNNY SHORELINE', snow: 'FROSTY PEAKS', haunted: 'HAUNTED MANOR', water: 'CORAL DEPTHS', airship: 'SKY ARMADA', charge: 'SUPER CHARGE', clear: 'COURSE CLEAR', victory: 'THE ENDING', gameover: 'GAME OVER', die: 'OOPS!' };
+const SONG_NAMES = { volcano: 'MOLTEN PEAK', factory: 'GEAR WORKS', candy: 'CANDY COVE', moon: 'MOON BASE', title: 'TITLE THEME', menu: 'FILE SELECT', map: 'WALLY ISLAND', grass: "WALLY'S BACKYARD", cave: 'CAVERN COMMUTE', sky: 'CLOUDTOP WALTZ', castle: 'STATIC FORTRESS', boss: 'BOSS BATTLE', beach: 'SUNNY SHORELINE', snow: 'FROSTY PEAKS', haunted: 'HAUNTED MANOR', water: 'CORAL DEPTHS', airship: 'SKY ARMADA', charge: 'SUPER CHARGE', clear: 'COURSE CLEAR', victory: 'THE ENDING', gameover: 'GAME OVER', die: 'OOPS!' };
 function JukeboxScene() {
   const songs = Audio8.songs().filter((k) => SONG_NAMES[k]);
   let sel = 0, t = 0, playing = null;
@@ -535,6 +535,10 @@ function WardrobeScene() {
 const TA_KEY = 'wallyman-ta-best';
 const taLoad = () => { try { return JSON.parse(localStorage.getItem(TA_KEY)) || {}; } catch (e) { return {}; } };
 const taSave = (b) => { try { localStorage.setItem(TA_KEY, JSON.stringify(b)); } catch (e) { /* ignore */ } };
+// Ghost of the best Time Attack run: [x, y, pose, face] every 2 frames
+const GHOST_KEY = 'wallyman-world-ghosts-v1';
+const ghostLoad = (li) => { try { const g = JSON.parse(localStorage.getItem(GHOST_KEY)) || {}; return Array.isArray(g[li]) ? g[li] : null; } catch (e) { return null; } };
+const ghostSave = (li, rec) => { try { const g = JSON.parse(localStorage.getItem(GHOST_KEY)) || {}; g[li] = rec; localStorage.setItem(GHOST_KEY, JSON.stringify(g)); } catch (e) { /* ignore */ } };
 const fmtTime = (f) => { const cs = Math.floor((f * 100) / 60); return `${Math.floor(cs / 6000)}:${pad(Math.floor(cs / 100) % 60, 2)}.${pad(cs % 100, 2)}`; };
 function TimeAttackSelect(start) {
   const avail = (li) => Save.slots.some((s) => s && s.cleared && s.cleared[li]);
@@ -560,9 +564,9 @@ function TimeAttackSelect(start) {
       txt('TIME ATTACK', 128, 16, '#ffe040', { align: 'center' });
       const best = taLoad();
       LEVELS.forEach((d, i) => {
-        const y = 32 + i * 14, on = i === sel, ok = avail(i);
+        const y = 26 + i * 11, on = i === sel, ok = avail(i);
         if (on) txt('>', 20 + ((t >> 3) & 1), y, '#ffe040');
-        txt((d.bonus ? 'B' + (i - 7) : String(i + 1)) + '. ' + (ok ? d.name : '???'), 30, y, on ? '#ffe040' : ok ? '#fff' : '#6870a0');
+        txt((d.bonus ? 'B' + (i - 7) : i >= 11 ? 'S' + (i - 10) : String(i + 1)) + '. ' + (ok ? d.name : '???'), 30, y, on ? '#ffe040' : ok ? '#fff' : '#6870a0');
         txt(best[i] ? fmtTime(best[i]) : '-:--.--', 236, y, best[i] ? '#5ff0ff' : '#6870a0', { align: 'right' });
       });
       txt('BEAT A LEVEL IN ANY FILE TO UNLOCK IT', 128, 200, '#fff', { align: 'center', outline: '#101848' });
@@ -570,9 +574,9 @@ function TimeAttackSelect(start) {
     },
   };
 }
-function TAResultScene(li, frames) {
+function TAResultScene(li, frames, rec) {
   const best = taLoad(), old = best[li], record = !old || frames < old;
-  if (record) { best[li] = frames; taSave(best); if (old) Ach.unlock('timelord'); }
+  if (record) { best[li] = frames; taSave(best); if (rec && rec.length) ghostSave(li, rec); if (old) Ach.unlock('timelord'); }
   let t = 0;
   return {
     enter() { Audio8.play(record ? 'victory' : 'clear'); },
@@ -765,13 +769,14 @@ const NODES = [
   { x: 24, y: 64, kind: 'bonus', li: 8, icon: 'haunted' },
   { x: 236, y: 180, kind: 'bonus', li: 9, icon: 'water' },
   { x: 182, y: 40, kind: 'bonus', li: 10, icon: 'airship' },
+  { x: 246, y: 40, kind: 'portal', name: 'ROCKET TO STAR ISLE' },
 ]
 // Paths between map stops; the last three are revealed by secret exits.
-const EDGES = [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 7], [7, 8], [2, 9], [5, 10], [6, 11]];
+const EDGES = [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 7], [7, 8], [2, 9], [5, 10], [6, 11], [8, 12]];
 const nodeOf = (li) => NODES.findIndex((n) => n.li === li);
 const Island = (() => {
   const c = Sprites.canvas(VW, VH), x = c.getContext('2d'), r = Sprites.rng(42);
-  const blobs = NODES.filter((n) => n.kind !== 'bonus').map((n) => [n.x, n.y + 4, 30]).concat([[74, 122, 28], [160, 112, 30], [200, 108, 26], [168, 152, 24], [60, 178, 24], [150, 172, 22], [118, 100, 24]]);
+  const blobs = NODES.filter((n) => n.kind !== 'bonus' && n.kind !== 'portal').map((n) => [n.x, n.y + 4, 30]).concat([[74, 122, 28], [160, 112, 30], [200, 108, 26], [168, 152, 24], [60, 178, 24], [150, 172, 22], [118, 100, 24]]);
   const img = x.createImageData(VW, VH);
   for (let yy = 0; yy < VH; yy++) for (let xx = 0; xx < VW; xx++) {
     let f = 0;
@@ -803,15 +808,69 @@ const Island = (() => {
   [[18, 150], [74, 158], [118, 154], [150, 120], [70, 124], [186, 152], [214, 106], [44, 132], [160, 158]].forEach(([a, b]) => x.drawImage(tree, a, b));
   return c;
 })();
+
+// ---------------- Star Isle: the second island map ----------------
+const NODES2 = [
+  { x: 28, y: 178, kind: 'portal', name: 'ROCKET TO WALLY ISLAND' },
+  { x: 70, y: 140, kind: 'level', li: 11 },
+  { x: 120, y: 166, kind: 'level', li: 12 },
+  { x: 168, y: 122, kind: 'level', li: 13 },
+  { x: 218, y: 72, kind: 'castle', li: 14 },
+];
+const EDGES2 = [[0, 1], [1, 2], [2, 3], [3, 4]];
+const Island2 = (() => {
+  const c = Sprites.canvas(VW, VH), x = c.getContext('2d'), r = Sprites.rng(77);
+  const blobs = NODES2.map((n) => [n.x, n.y + 4, 30]).concat([[96, 150, 28], [144, 146, 28], [196, 98, 26], [52, 160, 24]]);
+  const img = x.createImageData(VW, VH);
+  for (let yy = 0; yy < VH; yy++) for (let xx = 0; xx < VW; xx++) {
+    let f = 0;
+    for (const [bx, by, br] of blobs) f += (br * br) / ((xx - bx) ** 2 + ((yy - by) * 1.25) ** 2 + 1);
+    const near = (n, rr) => (xx - NODES2[n].x) ** 2 + (yy - NODES2[n].y) ** 2 < rr * rr, ch = (xx + yy) % 2 === 0;
+    let col = null;
+    if (f > 1.9) {
+      col = ch ? [110, 170, 110] : [128, 190, 120];
+      if (near(1, 32)) col = ch ? [90, 50, 44] : [120, 60, 50];
+      if (near(2, 28)) col = ch ? [120, 126, 140] : [140, 146, 160];
+      if (near(3, 30)) col = ch ? [255, 160, 210] : [255, 190, 225];
+      if (near(4, 30)) col = ch ? [190, 190, 200] : [215, 215, 225];
+      if (near(1, 10)) col = [255, 110, 30];
+    } else if (f > 1.45) col = [220, 200, 160];
+    else if (f > 1.25) col = [150, 140, 230];
+    if (f > 6 && r() < 0.03) col = [70, 70, 90];
+    if (col) { const i = (yy * VW + xx) * 4; img.data[i] = col[0]; img.data[i + 1] = col[1]; img.data[i + 2] = col[2]; img.data[i + 3] = 255; }
+  }
+  x.putImageData(img, 0, 0);
+  return c;
+})();
+function setNode(li) {
+  const i2 = NODES2.findIndex((n) => n.li === li);
+  if (i2 >= 0) { game.world = 1; game.node2 = i2; } else { game.world = 0; game.node = nodeOf(li); }
+}
+function drawRocket(x, y, t) {
+  ctx.fillStyle = '#1a1020'; ctx.fillRect(x - 4, y - 16, 8, 16); ctx.fillRect(x - 7, y - 6, 14, 6);
+  ctx.fillStyle = '#f0f0f8'; ctx.fillRect(x - 3, y - 15, 6, 14); ctx.fillStyle = '#e83850'; ctx.fillRect(x - 2, y - 18, 4, 4); ctx.fillRect(x - 6, y - 5, 3, 4); ctx.fillRect(x + 3, y - 5, 3, 4);
+  ctx.fillStyle = '#5ff0ff'; ctx.fillRect(x - 1, y - 11, 2, 2);
+  ctx.fillStyle = (t >> 2) & 1 ? '#ffe040' : '#ff7020'; ctx.fillRect(x - 2, y, 4, 2 + ((t >> 2) & 1));
+}
 function MapScene() {
-  let node = game.node || 0, pos = { x: NODES[node].x, y: NODES[node].y }, target = null, t = 0;
-  const unlocked = (n) => n >= 0 && n < NODES.length && (NODES[n].kind === 'bonus' ? !!(game.secrets[NODES[n].li] || game.cleared[7]) : (n <= 1 || game.cleared[n - 2]));
+  const w2 = game.world === 1, NODES_ = w2 ? NODES2 : NODES, EDGES_ = w2 ? EDGES2 : EDGES, ISL_ = w2 ? Island2 : Island;
+  let node = Math.min(NODES_.length - 1, (w2 ? game.node2 : game.node) || 0), pos = { x: NODES_[node].x, y: NODES_[node].y }, target = null, t = 0;
+  const unlocked = (n) => {
+    if (n < 0 || n >= NODES_.length) return false;
+    const nd = NODES_[n];
+    if (w2) return n <= 1 || !!game.cleared[NODES2[n - 1].li];
+    if (nd.kind === 'portal') return !!game.cleared[7];
+    return nd.kind === 'bonus' ? !!(game.secrets[nd.li] || game.cleared[7]) : (n <= 1 || game.cleared[n - 2]);
+  };
   function drawNode(n, i) {
     const cleared = n.li !== undefined && game.cleared[n.li];
     if (n.kind === 'home') {
       ctx.fillStyle = '#c03030'; for (let k = 0; k < 6; k++) ctx.fillRect(n.x - 7 + k, n.y - 12 + 5 - k, 14 - k * 2, 1);
       ctx.fillStyle = '#f8f0d8'; ctx.fillRect(n.x - 6, n.y - 6, 12, 8); ctx.fillStyle = '#6a3a1a'; ctx.fillRect(n.x - 1, n.y - 3, 3, 5);
       ctx.fillStyle = '#5ff0ff'; ctx.fillRect(n.x - 5, n.y - 4, 3, 2);
+    } else if (n.kind === 'portal') {
+      if (!unlocked(i)) { txt('?', n.x - 2, n.y - 4, (t >> 4) & 1 ? '#c8d8f0' : '#8090b0'); return; }
+      drawRocket(n.x, n.y + 2, t);
     } else if (n.kind === 'bonus') {
       if (!unlocked(i)) { txt('?', n.x - 2, n.y - 4, (t >> 4) & 1 ? '#c8d8f0' : '#8090b0'); return; }
       if (n.icon === 'haunted') {
@@ -837,7 +896,7 @@ function MapScene() {
       ctx.fillStyle = '#1a1020'; ctx.fillRect(n.x - 6, n.y - 3, 12, 7); ctx.fillRect(n.x - 5, n.y - 4, 10, 9);
       ctx.fillStyle = cleared ? '#ffd040' : '#e83850'; ctx.fillRect(n.x - 5, n.y - 2, 10, 5); ctx.fillRect(n.x - 4, n.y - 3, 8, 7);
       ctx.fillStyle = cleared ? '#fff8c0' : '#ff98a8'; ctx.fillRect(n.x - 3, n.y - 2, 4, 1);
-      txt(String(n.li + 1), n.x - 2, n.y - 14, '#fff');
+      txt(String(n.li >= 11 ? n.li - 10 : n.li + 1), n.x - 2, n.y - 14, '#fff');
     }
   }
   return {
@@ -845,8 +904,8 @@ function MapScene() {
     update() {
       t++;
       if (target !== null) {
-        const tn = NODES[target], dx = tn.x - pos.x, dy = tn.y - pos.y, d = Math.hypot(dx, dy);
-        if (d < 1.5) { pos = { x: tn.x, y: tn.y }; node = target; target = null; game.node = node; Save.persist(); } else { pos.x += (dx / d) * 1.5; pos.y += (dy / d) * 1.5; }
+        const tn = NODES_[target], dx = tn.x - pos.x, dy = tn.y - pos.y, d = Math.hypot(dx, dy);
+        if (d < 1.5) { pos = { x: tn.x, y: tn.y }; node = target; target = null; if (w2) game.node2 = node; else game.node = node; Save.persist(); } else { pos.x += (dx / d) * 1.5; pos.y += (dy / d) * 1.5; }
         return;
       }
       // walk along a path in the pressed direction (any open path from this stop)
@@ -854,45 +913,45 @@ function MapScene() {
       for (const [k, dx0, dy0] of dirs) {
         if (!Input.pressed(k)) continue;
         let best = null, bd = 0.3;
-        for (const [a, b2] of EDGES) {
+        for (const [a, b2] of EDGES_) {
           const o = a === node ? b2 : b2 === node ? a : null;
           if (o === null || !unlocked(o) || !unlocked(a === node ? a : b2)) continue;
-          const vx = NODES[o].x - NODES[node].x, vy = NODES[o].y - NODES[node].y, dot = (vx * dx0 + vy * dy0) / Math.hypot(vx, vy);
+          const vx = NODES_[o].x - NODES_[node].x, vy = NODES_[o].y - NODES_[node].y, dot = (vx * dx0 + vy * dy0) / Math.hypot(vx, vy);
           if (dot > bd) { bd = dot; best = o; }
         }
         if (best !== null) { target = best; Audio8.sfx('map'); } else Audio8.sfx('bump');
         break;
       }
-      if (Input.confirm() && NODES[node].li !== undefined) { Audio8.sfx('confirm'); const li = NODES[node].li; go(() => IntroScene(li, false)); } else if (Input.confirm() && NODES[node].kind === 'home') { Audio8.sfx('confirm'); go(() => ShopScene()); }
+      if (Input.confirm() && NODES_[node].li !== undefined) { Audio8.sfx('confirm'); const li = NODES_[node].li; go(() => IntroScene(li, false)); } else if (Input.confirm() && NODES_[node].kind === 'home') { Audio8.sfx('confirm'); go(() => ShopScene()); } else if (Input.confirm() && NODES_[node].kind === 'portal') { Audio8.sfx('secret'); if (w2) { game.world = 0; game.node = 12; } else { game.world = 1; game.node2 = 0; } Save.persist(); go(() => MapScene()); }
       if (Input.pressed('back')) go(() => TitleScene());
     },
     draw() {
-      ctx.fillStyle = '#2858c8'; ctx.fillRect(0, 0, VW, VH);
-      ctx.fillStyle = '#4c80e8';
+      ctx.fillStyle = w2 ? '#2a2060' : '#2858c8'; ctx.fillRect(0, 0, VW, VH);
+      ctx.fillStyle = w2 ? '#4a40a0' : '#4c80e8';
       for (let yy = 4; yy < VH; yy += 10) for (let xx = ((yy * 7) % 24) - 24; xx < VW; xx += 24) ctx.fillRect(xx + ((t >> 4) + (yy >> 1)) % 6, yy, 5, 1);
-      ctx.drawImage(Island, 0, 0);
-      for (const [ia, ib] of EDGES) {
+      ctx.drawImage(ISL_, 0, 0);
+      for (const [ia, ib] of EDGES_) {
         if (!unlocked(ib) || !unlocked(ia)) continue;
-        const a = NODES[ia], b = NODES[ib], d = Math.hypot(b.x - a.x, b.y - a.y), secret = NODES[ib].kind === 'bonus';
+        const a = NODES_[ia], b = NODES_[ib], d = Math.hypot(b.x - a.x, b.y - a.y), secret = NODES_[ib].kind === 'bonus';
         for (let s = 0; s < d; s += 4) { ctx.fillStyle = secret ? ((s >> 2) + (t >> 3)) % 3 ? '#c070ff' : '#ffe8ff' : '#7a5a2a'; ctx.fillRect(Math.round(a.x + ((b.x - a.x) * s) / d) - 1, Math.round(a.y + ((b.y - a.y) * s) / d), 3, 2); }
       }
-      NODES.forEach(drawNode);
-      NODES.forEach((n) => { if (n.li === undefined || !unlocked(NODES.indexOf(n))) return; for (let i = 0; i < 5; i++) { ctx.fillStyle = '#1a1020'; ctx.fillRect(n.x - 8 + i * 3, n.y + 7, 3, 3); ctx.fillStyle = game.medals[n.li] & (1 << i) ? '#ffd040' : '#4a4a60'; ctx.fillRect(n.x - 7 + i * 3, n.y + 8, 2, 1); } });
+      NODES_.forEach(drawNode);
+      NODES_.forEach((n) => { if (n.li === undefined || !unlocked(NODES_.indexOf(n))) return; for (let i = 0; i < 5; i++) { ctx.fillStyle = '#1a1020'; ctx.fillRect(n.x - 8 + i * 3, n.y + 7, 3, 3); ctx.fillStyle = game.medals[n.li] & (1 << i) ? '#ffd040' : '#4a4a60'; ctx.fillRect(n.x - 7 + i * 3, n.y + 8, 2, 1); } });
       const walking = target !== null;
-      const face = target !== null ? Math.sign(NODES[target].x - pos.x) || 1 : 1;
+      const face = target !== null ? Math.sign(NODES_[target].x - pos.x) || 1 : 1;
       const pose = walking ? 'walk' + ((t >> 2) % 8) : 'idle' + ((t >> 4) % 4);
       drawWally(pos.x, pos.y + 2, pose, face);
       drawWindow(4, 4, 248, 20);
-      txt(game.players === 2 ? (HEROES[heroOf()].short || pname()) + "'S TURN" : 'WALLY ISLAND', 10, 10, '#ffe040');
+      txt(game.players === 2 ? (HEROES[heroOf()].short || pname()) + "'S TURN" : (w2 ? 'STAR ISLE' : 'WALLY ISLAND'), 10, 10, '#ffe040');
       ctx.drawImage(Sprites.heart, 112, 10); txt('*' + pad(game.lives, 2), 121, 10);
       ctx.drawImage(Sprites.coinIcon, 150, 10); txt('*' + pad(game.coins, 2), 157, 10);
       txt(pad(game.score, 7), 206, 10);
       drawWindow(4, 196, 248, 24);
-      const n = NODES[node];
-      const label = n.li !== undefined ? (n.kind === 'bonus' ? `B${n.li - 7}. ${LEVELS[n.li].name}` : `${n.li + 1}. ${LEVELS[n.li].name}`) : n.name;
+      const n = NODES_[node];
+      const label = n.li !== undefined ? (n.kind === 'bonus' ? `B${n.li - 7}. ${LEVELS[n.li].name}` : n.li >= 11 ? `S${n.li - 10}. ${LEVELS[n.li].name}` : `${n.li + 1}. ${LEVELS[n.li].name}`) : n.name;
       txt(label, 12, 205, '#fff');
       if (n.li !== undefined) { const mc = medalCount(n.li); ctx.drawImage(Sprites.miniMedal, 186, 206); txt(mc + '/5', 193, 205, mc === 5 ? '#ffe040' : '#fff'); const st = game.stars[n.li] | 0; for (let k = 0; k < 3; k++) txt('#', 222 + k * 8, 205, st & (1 << k) ? '#ffe040' : game.cleared[n.li] ? '#6a6a90' : '#30305a'); }
-      if (target === null && (t >> 5) % 2 === 0) txt(n.li !== undefined ? 'PRESS START' : 'START: SHOP', 160, 186, '#fff', { outline: '#101848' });
+      if (target === null && (t >> 5) % 2 === 0) txt(n.li !== undefined ? 'PRESS START' : n.kind === 'portal' ? 'START: FLY!' : 'START: SHOP', 160, 186, '#fff', { outline: '#101848' });
     },
   };
 }
@@ -907,7 +966,7 @@ function IntroScene(li, fromCheckpoint) {
     update() { t++; if (t > 130 || (t > 20 && Input.confirm())) go(() => new Play(li, fromCheckpoint)); },
     draw() {
       ctx.fillStyle = '#000'; ctx.fillRect(0, 0, VW, VH);
-      txt(LEVELS[li].bonus ? 'BONUS LEVEL' : `LEVEL ${li + 1}`, 128, 60, LEVELS[li].bonus ? '#c070ff' : '#ffe040', { scale: 2, align: 'center' });
+      txt(LEVELS[li].bonus ? 'BONUS LEVEL' : li >= 11 ? `STAR ISLE ${li - 10}` : `LEVEL ${li + 1}`, 128, 60, LEVELS[li].bonus ? '#c070ff' : '#ffe040', { scale: 2, align: 'center' });
       txt(LEVELS[li].name, 128, 88, '#fff', { align: 'center' });
       drawWally(110, 142, 'idle' + ((t >> 4) % 4), 1);
       if (game.players === 2 || heroOf() !== 'wally') txt(pname(), 128, 104, HEROES[heroOf()].color, { align: 'center' });
@@ -1149,12 +1208,12 @@ function NameEntryScene(score, level, done, then) {
 // end of the level, plus extra for the boss arena.
 function levelTime(def) {
   if (def.autoscroll) return Math.ceil(((def.width * TS - VW) / def.autoscroll / 60 + 15) / 5) * 5 + (def.boss ? 60 : 0);
-  return Math.ceil(((def.width * TS) / 1.6 / 60) * 1.8 / 5) * 5 + (def.boss ? 45 : 0) + (def.yetiArena || def.miniArena ? 35 : 0) + (def.water ? 20 : 0);
+  return Math.ceil(((def.width * TS) / 1.6 / 60) * 1.8 / 5) * 5 + (def.boss ? 45 : 0) + (def.yetiArena || def.miniArena ? 35 : 0) + (def.lowGrav ? 20 : 0) + (def.water ? 20 : 0) + (def.custom ? 30 : 0);
 }
 
 class Play {
   constructor(li, fromCheckpoint, opts = {}) {
-    this.ta = !!opts.ta; this.taT = 0; this.taReady = this.ta ? 80 : 0;
+    this.ta = !!opts.ta; this.taT = 0; this.ghostRec = []; this.ghost = this.ta ? ghostLoad(li) : null; this.taReady = this.ta ? 80 : 0;
     this.li = li; this.lv = buildLevel(li); this.def = this.lv.def;
     this.T = Sprites.tiles[this.def.theme];
     this.ents = []; this.parts = []; this.pings = []; this.balls = []; this.bats = []; this.fires = []; this.platforms = []; this.bumps = [];
@@ -1163,7 +1222,7 @@ class Play {
     const s = this.cpHit ? this.lv.checkpoint : this.lv.start;
     this.p = { x: s.x * TS + 3, y: (s.y + 1) * TS - 22, w: 10, h: 22, vx: 0, vy: 0, face: 1, onGround: false, hearts: 2, power: 'none', inv: 0, anim: 0, jumpBuf: 0, coyote: 0, prevBottom: 0, platform: null, sx: 1, sy: 1, hurtT: 0, trail: [], ammo: 3, special: 3, spCool: 0, charge: 0, boots: false, dj: false, riding: false, chompT: 0, pound: 0, flutter: 0 };
     this.p.hearts = DIFF[this.diff].hearts;
-    this.medalsGot = 0; this.pauseSel = 0;
+    this.medalsGot = 0; this.barsGot = 0; this.pauseSel = 0; if (!game.bars) game.bars = Array(15).fill(0);
     if (game.bonusAmmo) { this.p.ammo = Math.min(9, 3 + game.bonusAmmo); game.bonusAmmo = 0; }
     if (game.startHearts) { this.p.hearts = 3; game.startHearts = 0; }
     if (game.startBoots) { this.p.boots = true; game.startBoots = false; }
@@ -1240,6 +1299,7 @@ class Play {
       case 't': E({ type: 'turret', x: x + 1, y: y + 2, w: 14, h: 14, enemy: true, stomp: true, cool: 90, face: toward }); break;
       case 'u': E({ type: 'ufo', x, y: -24, w: 28, h: 12, enemy: true, stomp: true, state: 'enter', shots: 0, timer: 0, beamX: 0, beamEnd: 0 }); break;
       case 'M': E({ type: 'medal', item: true, x: x + 2, y: y + 1, w: 12, h: 14, rise: 0, id: sp.id, got: !!(game.medals[this.li] & (1 << sp.id)) }); break;
+      case 'x': E({ type: 'sigbar', item: true, x: x + 2, y: y + 1, w: 12, h: 14, rise: 0, id: sp.id, got: !!((game.bars[this.li] | 0) & (1 << sp.id)) }); break;
       case 's': E({ type: 'orb', item: true, x: x + 2, y: y + 1, w: 12, h: 14, rise: 0, oy: y + 1 }); break;
       case 'a': E({ type: 'ammo', item: true, x: x + 2, y: y + 2, w: 12, h: 14, rise: 0 }); break;
       case 'f': E({ type: 'fish', x: x + 1, y: y + 3, w: 14, h: 10, vx: 0.8 * toward, oy: y + 3, ox: x, enemy: true, stomp: true }); break;
@@ -1251,6 +1311,7 @@ class Play {
       case 'y': E({ type: 'yeti', x, y: y - 14, w: 28, h: 30, hp: 3, maxHp: 3, inv: 0, enemy: true, yeti: true, state: 'walk', act: 90 }); break;
       case 'k': E({ type: 'boss', kind: 'mother', x: x - 24, y: 30, oy: 30, w: 56, h: 18, hp: this.def.bossHp || 6, maxHp: this.def.bossHp || 6, inv: 0, enemy: true, boss: true, act: 120, beamX: 0, beamEnd: 0 }); break;
       case 'Z': E({ type: 'secret', x, y: y - 8, w: 16, h: 24, to: this.def.secret.to }); break;
+      case 'l': E({ type: 'blob', hazard: true, x: x + 3, y: y + 4, oy: y + 4, w: 10, h: 10, act: 40 + ((x * 7) % 60) }); break;
       case 'G': E({ type: 'goal', x: x + 2, y: y - 80, w: 12, h: 96 }); break;
       case 'K': E({ type: 'boss', x, y: y - 14, w: 28, h: 30, hp: this.def.bossHp || 3, maxHp: this.def.bossHp || 3, inv: 0, jumpT: 120, enemy: true, boss: true }); break;
     }
@@ -1373,7 +1434,7 @@ class Play {
 
   // Stars: finish with 40% of the time left, have all 5 medals, take no hits
   awardStars() {
-    if (this.ta) return;
+    if (this.ta || this.def.custom) return;
     const full = levelTime(this.def) * this.timeMul, li = this.li;
     let bits = 0;
     if ((this.clearTime || 0) >= full * 0.4) bits |= 1;
@@ -1411,11 +1472,14 @@ class Play {
         if (d) { Audio8.setVolume(kind, Audio8.getVolume(kind) + d); Audio8.sfx('coin'); }
       }
       if (Input.pressed('back') || (Input.pressed('jump') && this.pauseSel === 0)) { this.paused = false; Audio8.sfx('pause'); }
-      if (Input.pressed('jump') && this.pauseSel === 3) { this.paused = false; Save.persist(); const li = this.li; go(() => (this.ta ? TimeAttackSelect(li) : nextTurn(() => MapScene()))); }
+      if (Input.pressed('jump') && this.pauseSel === 3) { this.paused = false; Save.persist(); const li = this.li; go(() => (this.def.custom ? LevelMakerScene(Maker.state) : this.ta ? TimeAttackSelect(li) : nextTurn(() => MapScene()))); }
       return;
     }
     if (this.taReady > 0) { this.taReady--; if (this.taReady === 70 || this.taReady === 0) Audio8.sfx(this.taReady ? 'select' : 'confirm'); return; }
-    if (this.ta && this.state === 'play') this.taT++;
+    if (this.ta && this.state === 'play') {
+      if ((this.taT & 1) === 0 && this.ghostRec.length < 20000) { const p = this.p; this.ghostRec.push([Math.round(p.x), Math.round(p.y), p.riding ? 'ride' : this.playerPose(), p.skid ? -p.face : p.face]); }
+      this.taT++;
+    }
     this.stateT++;
     if (this.freezeT > 0 && this.state === 'play') this.freezeT--;
     if (this.shake > 0) this.shake--;
@@ -1479,8 +1543,8 @@ class Play {
     if (this.state === 'bossdead') {
       if (this.stateT % 8 === 0 && this.stateT < 100) { Audio8.sfx('boom'); this.parts.push({ k: 'boom', x: this.bossX + Math.random() * 32, y: this.bossY + Math.random() * 32, life: 20 }); }
       if (this.stateT === 110) Audio8.play('clear');
-      if (this.stateT > 300 && this.ta) { this.state = 'done'; const li = this.li, f = this.taT; go(() => TAResultScene(li, f)); } else if (this.stateT > 300) {
-        game.cleared[this.li] = true; game.medals[this.li] |= this.medalsGot; game.node = nodeOf(this.li); Save.persist(); this.state = 'done';
+      if (this.stateT > 300 && this.ta) { this.state = 'done'; const li = this.li, f = this.taT; const rec = this.ghostRec; go(() => TAResultScene(li, f, rec)); } else if (this.stateT > 300) {
+        game.cleared[this.li] = true; game.medals[this.li] |= this.medalsGot; game.bars[this.li] |= this.barsGot; setNode(this.li); Save.persist(); this.state = 'done';
         if (this.def.final) go(() => EndingScene());
         else if (this.def.bossMsg) go(() => MessageScene(this.def.bossMsg, () => nextTurn(() => MapScene())));
         else go(() => MessageScene(['BARON STATIC IS BEATEN...', 'BUT HE ESCAPED!', '', 'HE FLED NORTH ACROSS', 'WALLY ISLAND TO HIS', 'STATIC TOWER.', '', 'AFTER HIM, WALLYMAN!'], () => nextTurn(() => MapScene())));
@@ -1517,7 +1581,7 @@ class Play {
       p.vy = -5.6; p.vx = -p.wallTouch * 2.6; p.face = -p.wallTouch; p.jumpBuf = 0; p.wallTouch = 0; Audio8.sfx('jump');
       this.dust(p.x + p.w / 2 - p.face * 6, p.y + p.h / 2, 2);
     } else if (p.jumpBuf > 0 && p.coyote > 0) {
-      p.vy = -((p.riding ? 6.1 : goth ? 5.9 : doug ? 5.25 : 5.4) + Math.abs(p.vx) * 0.25); p.jumpBuf = 0; p.coyote = 0; Audio8.sfx('jump');
+      p.vy = -((p.riding ? 6.1 : goth ? 5.9 : doug ? 5.25 : 5.4) + Math.abs(p.vx) * 0.25) * (this.def.lowGrav ? 0.78 : 1); p.jumpBuf = 0; p.coyote = 0; Audio8.sfx('jump');
       p.sx = 0.8; p.sy = 1.2; this.dust(p.x + p.w / 2, p.y + p.h, 2);
     }
     if (p.onGround) p.dj = false;
@@ -1532,8 +1596,9 @@ class Play {
     }
     if (p.vy >= 0) p.boost = false;
     const hold = (p.boost || (!auto && Input.down('jump'))) && p.vy < 0 && !p.flutter;
-    p.windPush = auto ? 0 : this.windNow() * (p.onGround ? 0.55 : 0.8); // gusts shove you along (without building up speed)
-    p.vy = water ? Math.min(1.4, p.vy + 0.09) : Math.min(5.5, p.vy + (hold ? 0.19 : 0.5));
+    p.windPush = (auto ? 0 : this.windNow() * (p.onGround ? 0.55 : 0.8)) + (p.onGround ? (p.groundTile === '>' ? 1.1 : p.groundTile === '<' ? -1.1 : 0) : 0); // gusts shove you along (without building up speed)
+    const lowG = this.def.lowGrav ? 0.45 : 1;
+    p.vy = water ? Math.min(1.4, p.vy + 0.09) : Math.min(this.def.lowGrav ? 3 : 5.5, p.vy + (hold ? 0.19 : 0.5) * lowG);
     // GothChick's glide: hold Jump while falling to drift down gently
     p.gliding = goth && !water && !p.riding && !p.pound && !auto && !p.onGround && p.vy > 1.1 && Input.down('jump');
     // Doug: pushing into a wall in mid-air slides down it slowly
@@ -1622,6 +1687,7 @@ class Play {
     if (t === 30) p.vy = -5.5;
     if (t > 30) { p.vy += 0.25; p.y += p.vy; }
     if (this.ta && t === 110) { const li = this.li; go(() => new Play(li, false, { ta: true })); return; }
+    if (this.def.custom) { if (t === 110) go(() => LevelMakerScene(Maker.state)); return; }
     if (t === 200 && !this.ta) {
       game.lives--; Save.persist();
       if (game.lives < 0) go(() => GameOverScene());
@@ -1631,13 +1697,14 @@ class Play {
   }
   updateClear() {
     const t = this.stateT;
-    if (this.ta) { if (t === 90) { const li = this.li, f = this.taT; go(() => TAResultScene(li, f)); } return; }
+    if (this.def.custom) { if (t === 150) go(() => LevelMakerScene(Maker.state)); return; }
+    if (this.ta) { if (t === 90) { const li = this.li, f = this.taT; const rec = this.ghostRec; go(() => TAResultScene(li, f, rec)); } return; }
     if (t > 120 && this.time > 0) {
       if (t % 3 === 0) { const d = Math.min(this.time, 1); this.time -= d; game.score += d * 100; }
       if (t % 4 === 0) Audio8.sfx('tick');
     }
     if (t === 420) {
-      game.cleared[this.li] = true; game.medals[this.li] |= this.medalsGot; game.node = nodeOf(this.li);
+      game.cleared[this.li] = true; game.medals[this.li] |= this.medalsGot; game.bars[this.li] |= this.barsGot; setNode(this.li);
       if (this.secretTo !== undefined) game.secrets[this.secretTo] = true;
       Save.persist();
       go(() => nextTurn(() => MapScene()));
@@ -1735,6 +1802,10 @@ class Play {
         e.x += clamp(p.x - e.x, -sp, sp); e.y += clamp(p.y - e.y, -sp * 0.6, sp * 0.6) + Math.sin(e.t * 0.08) * 0.3;
         break;
       }
+      case 'blob':
+        if (e.vy === 0 && --e.act <= 0) { e.vy = -7.2; Audio8.sfx('fireball'); }
+        if (e.vy !== 0 || e.y < e.oy) { e.vy += 0.25; e.y += e.vy; if (e.y >= e.oy) { e.y = e.oy; e.vy = 0; e.act = 90; } }
+        break;
       case 'snowball': case 'rock':
         e.vy += 0.15; e.x += e.vx; e.y += e.vy; e.life--;
         if (e.life <= 0 || SOLID.has(this.tile(Math.floor((e.x + 4) / TS), Math.floor((e.y + 6) / TS)))) { e.alive = false; for (let k = 0; k < 4; k++) this.parts.push({ k: 'dust', x: e.x + 4, y: e.y + 4, vx: (k - 1.5) * 0.6, vy: -0.8, life: 14 }); }
@@ -1759,7 +1830,7 @@ class Play {
         if (e.cool > 0) e.cool--;
         if (!p.riding && e.cool <= 0 && this.state === 'play' && overlap(p, e)) this.mount(e);
         return;
-      case 'medal': case 'orb': break;
+      case 'medal': case 'orb': case 'sigbar': break;
       case 'drink': case 'phone': case 'badge': case 'ammo': case 'battery': case 'boots':
         if (e.rise > 0) { e.y -= 0.5; e.rise -= 0.5; if (e.rise <= 0) e.vx = { phone: 0, ammo: 0, badge: 1.2, battery: 1.3, boots: 0.8 }[e.type] ?? 1; break; }
         e.vy = Math.min(5, e.vy + 0.3);
@@ -1790,6 +1861,17 @@ class Play {
       }
       if (e.type === 'battery') { p.charge = 600; Audio8.sfx('power'); Audio8.play('charge'); this.parts.push({ k: 'text', s: 'SUPER CHARGE!', x: e.x - 30, y: e.y - 8, vy: -0.5, life: 60 }); }
       if (e.type === 'boots') { p.boots = true; Audio8.sfx('power'); this.parts.push({ k: 'text', s: 'JET BOOTS!', x: e.x - 20, y: e.y - 8, vy: -0.5, life: 60 }); }
+      if (e.type === 'sigbar') {
+        this.barsGot |= 1 << e.id; Audio8.sfx('signal');
+        const all = this.barsGot | (game.bars[this.li] | 0), n = [0, 1, 2].filter((i) => all & (1 << i)).length;
+        this.addScore(e.got ? 200 : 2000, e.x, e.y - 8);
+        this.parts.push({ k: 'text', s: `SIGNAL ${n}/3`, x: e.x - 18, y: e.y - 18, vy: -0.4, life: 70 });
+        if (n === 3 && !this.fullSig) {
+          this.fullSig = true; Ach.unlock('fullsignal'); p.special = Math.min(9, p.special + 3);
+          if (!e.got) { game.lives++; Audio8.sfx('oneup'); }
+          this.parts.push({ k: 'text', s: 'FULL SIGNAL!', x: e.x - 30, y: e.y - 30, vy: -0.4, life: 90 });
+        }
+      }
       if (e.type === 'orb') { p.special = Math.min(9, p.special + 3); Audio8.sfx('power'); this.parts.push({ k: 'text', s: 'SPECIAL +3', x: e.x - 24, y: e.y - 8, vy: -0.5, life: 60 }); }
       if (e.type === 'ammo') { p.ammo = Math.min(9, p.ammo + 3); Audio8.sfx('reload'); this.parts.push({ k: 'text', s: '+3', x: e.x, y: e.y - 8, vy: -0.5, life: 50 }); }
       if (e.type === 'badge') { game.lives++; Audio8.sfx('oneup'); this.parts.push({ k: 'text', s: '1UP', x: e.x, y: e.y - 8, vy: -0.5, life: 60 }); }
@@ -2133,7 +2215,7 @@ class Play {
     e.hp--; e.inv = 90; this.shake = 16; Audio8.sfx('bosshit'); this.addScore(1000, e.x, e.y - 8);
     if (e.hp <= 0) {
       e.alive = false; this.state = 'bossdead'; this.stateT = 0; this.bossX = e.x; this.bossY = e.y; Audio8.stop();
-      this.clearTime = this.time; Ach.unlock('boss'); if (!this.bossHit) Ach.unlock('flawless'); if (this.def.final) Ach.unlock('savior');
+      this.clearTime = this.time; Ach.unlock('boss'); if (this.li === 14) Ach.unlock('starisle'); if (!this.bossHit) Ach.unlock('flawless'); if (this.def.final) Ach.unlock('savior');
       this.awardStars();
       this.ents.forEach((s) => { if (s.type === 'spark') s.alive = false; });
       this.balls.length = 0;
@@ -2292,6 +2374,10 @@ class Play {
       ctx.fillStyle = 'rgba(140,190,255,0.12)'; ctx.fillRect(0, 0, VW, VH);
       if (this.freezeT > 60 || (frame >> 2) & 1) for (const e of this.ents) if (e.enemy && !e.dying) { const x = Math.round(e.x + e.w / 2 - cx); ctx.fillStyle = '#1a1020'; ctx.fillRect(x - 4, e.y - 10, 9, 8); ctx.fillStyle = '#ffffff'; ctx.fillRect(x - 3, e.y - 9, 2, 6); ctx.fillRect(x + 1, e.y - 9, 2, 6); }
     }
+    if (this.ghost && this.ta) {
+      const g = this.ghost[Math.min(this.ghost.length - 1, this.taT >> 1)];
+      if (g) { ctx.save(); ctx.globalAlpha = 0.4; Wally.draw(ctx, g[0] + this.p.w / 2 - cx, g[1] + this.p.h, g[2], g[3], { t: frame, ghost: true }); ctx.restore(); if (this.taT < 120) txt('GHOST', Math.round(g[0] + this.p.w / 2 - cx), Math.round(g[1]) - 12, '#a0c8ff', { align: 'center', outline: '#101848' }); }
+    }
     this.drawPlayer(cx);
     if (this.def.theme === 'snow') drawSnow(cx);
     this.drawWeather(cx);
@@ -2350,6 +2436,13 @@ class Play {
         case 'X': img = T.solid; break;
         case '=': img = T.oneway; break;
         case '^': img = T.spikes; break;
+        case '<': case '>': {
+          const X = tx * TS - cx, Y = ty * TS, d = c === '>' ? 1 : -1, off = ((((frame >> 1) * d) % 8) + 8) % 8;
+          ctx.fillStyle = '#1a1020'; ctx.fillRect(X, Y, 16, 16); ctx.fillStyle = '#5a6070'; ctx.fillRect(X, Y + 1, 16, 14); ctx.fillStyle = '#2a3040'; ctx.fillRect(X, Y + 4, 16, 8);
+          ctx.fillStyle = '#ffd040'; for (let k = -1; k < 2; k++) for (let j = 0; j < 3; j++) { const ax = X + k * 8 + off + (d > 0 ? j : 2 - j); if (ax >= X && ax < X + 16) { ctx.fillRect(ax, Y + 5 + j, 1, 1); ctx.fillRect(ax, Y + 10 - j, 1, 1); } }
+          ctx.fillStyle = '#b0b8c8'; ctx.fillRect(X, Y + 1, 16, 1); ctx.fillStyle = '#3a4050'; ctx.fillRect(X + 2, Y + 13, 3, 3); ctx.fillRect(X + 11, Y + 13, 3, 3);
+          continue;
+        }
         case 'J': img = T.spring[bump && bump.t < 6 ? 1 : 0]; dy = 0; break;
         case 'L': img = this.tile(tx, ty - 1) === 'L' ? T.lavaFill : T.lava[lavaF]; break;
         case 'o': {
@@ -2459,6 +2552,9 @@ class Play {
         if (e.state === 'wait' && e.rise <= 0 && (e.t >> 5) % 2 === 0) txt('!', x + 6, y - 12, '#ffe040', { outline: '#1a1020' });
         break;
       }
+      case 'sigbar': { const bob = Math.round(Math.sin(e.t * 0.1) * 1.5), on = e.got ? ['#5a6a80', '#7a8aa0'] : ['#20c070', '#80ffb0'];
+        for (let i = 0; i < 4; i++) { const h = 4 + i * 3; ctx.fillStyle = '#10182a'; ctx.fillRect(x + i * 3 - 1, y + 13 - h + bob - 1, 4, h + 2); ctx.fillStyle = on[0]; ctx.fillRect(x + i * 3, y + 13 - h + bob, 2, h); ctx.fillStyle = on[1]; ctx.fillRect(x + i * 3, y + 13 - h + bob, 1, h); }
+        if (!e.got && (frame >> 2) % 8 === 0) { ctx.fillStyle = '#fff'; ctx.fillRect(x + 10, y + bob, 1, 3); ctx.fillRect(x + 9, y + 1 + bob, 3, 1); } break; }
       case 'medal': ctx.drawImage(e.got ? Sprites.medalGhost : Sprites.medal, x - 2, y - 1 + Math.round(Math.sin(e.t * 0.08) * 1.5)); if (!e.got && (frame >> 3) % 6 === 0) { ctx.fillStyle = '#fff'; ctx.fillRect(x + 8, y + 3, 1, 3); ctx.fillRect(x + 7, y + 4, 3, 1); } break;
       case 'fish': put(Sprites.fish[e.vx > 0 ? 'r' : 'l'][(e.t >> 3) & 1], -1, -3); break;
       case 'jelly': put(Sprites.jelly[(e.t >> 4) & 1], -1, -1); break;
@@ -2466,6 +2562,7 @@ class Play {
       case 'crab': if (e.dying) { ctx.save(); ctx.translate(x + 17, y + 10); ctx.scale(1, -1); this.drawCrab(e, -17, -10); ctx.restore(); } else this.drawCrab(e, x, y); break;
       case 'mole': this.drawMole(e, x, y); break;
       case 'dragon': if (!e.dying) this.drawDragon(e, x, y, cx); else { ctx.fillStyle = '#f4f0ff'; ctx.fillRect(x, y, 28, 12); } break;
+      case 'blob': if (e.y < e.oy - 2) { ctx.fillStyle = '#a02010'; ctx.fillRect(x - 1, y - 1, 12, 12); ctx.fillStyle = (e.t >> 2) & 1 ? '#ff7020' : '#ffa030'; ctx.fillRect(x, y, 10, 10); ctx.fillStyle = '#ffe060'; ctx.fillRect(x + 2, y + 1, 6, 3); ctx.fillStyle = '#1a1020'; ctx.fillRect(x + 2, y + 5, 2, 2); ctx.fillRect(x + 6, y + 5, 2, 2); } break;
       case 'zap': ctx.fillStyle = (e.t >> 1) & 1 ? '#ffffff' : '#ffe040'; ctx.fillRect(x + 2, y, 2, 3); ctx.fillRect(x, y + 3, 4, 2); ctx.fillRect(x + 2, y + 5, 3, 2); ctx.fillRect(x + 1, y + 7, 2, 2); break;
       case 'rock': ctx.fillStyle = '#1a1020'; ctx.fillRect(x - 1, y, 10, 8); ctx.fillRect(x, y - 1, 8, 10); ctx.fillStyle = '#8a7a6a'; ctx.fillRect(x, y, 8, 8); ctx.fillStyle = '#b8a890'; ctx.fillRect(x + 1, y + 1, 3, 3); break;
       case 'yeti': if (e.dying) { ctx.save(); ctx.translate(x + 14, y + 15); ctx.scale(1, -1); this.drawYeti(e, -14, -15); ctx.restore(); } else this.drawYeti(e, x, y); break;
@@ -2606,13 +2703,14 @@ class Play {
     txt(pad(this.time, 3), 117, 15, this.time <= 20 && (frame >> 4) & 1 ? '#ff6060' : '#fff'); }
     ctx.drawImage(Sprites.coinIcon, 176, 6); txt('*' + pad(game.coins, 2), 183, 6, '#fff');
     txt(pad(game.score, 7), 206, 15, '#fff');
+    if (!this.ta && !this.def.custom) for (let i = 0; i < 3; i++) { const got = (this.barsGot | (game.bars[this.li] | 0)) & (1 << i); ctx.fillStyle = got ? '#40e090' : '#3a4458'; ctx.fillRect(179 + i * 3, 21 - 2 - i * 2, 2, 2 + i * 2); }
     if (!this.ta) for (let i = 0; i < 5; i++) ctx.drawImage((this.medalsGot | game.medals[this.li]) & (1 << i) ? Sprites.miniMedal : Sprites.miniMedalOff, 146 + i * 6, 16);
     if (this.taReady > 0) txt(this.taReady > 20 ? 'READY...' : 'GO!', 128, 96, this.taReady > 20 ? '#fff' : '#ffe040', { scale: 3, align: 'center', outline: '#101848' });
     const yeti = this.arena && this.ents.find((e) => e.yeti && !e.dying);
     if (yeti) { const nm = yeti.mini || 'ICE YETI', bx = 14 + Font.width(nm); txt(nm, 8, 26, '#a0d8ff'); for (let i = 0; i < yeti.maxHp; i++) { ctx.fillStyle = i < yeti.hp ? '#5ff0ff' : '#203040'; ctx.fillRect(bx + i * 8, 27, 6, 5); } }
     if (this.def.boss && this.bossLock) {
       const b = this.ents.find((e) => e.boss);
-      if (b) { txt(this.def.bossName || 'BARON STATIC', 8, 26, '#ff8080'); for (let i = 0; i < b.maxHp; i++) { ctx.fillStyle = i < b.hp ? '#ff3040' : '#402028'; ctx.fillRect(84 + i * 8, 27, 6, 5); } }
+      if (b) { const bn = this.def.bossName || 'BARON STATIC', bx = Math.max(84, 14 + Font.width(bn)); txt(bn, 8, 26, '#ff8080'); for (let i = 0; i < b.maxHp; i++) { ctx.fillStyle = i < b.hp ? '#ff3040' : '#402028'; ctx.fillRect(bx + i * 8, 27, 6, 5); } }
     }
   }
 }

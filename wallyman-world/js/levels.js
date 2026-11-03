@@ -250,16 +250,79 @@ const LEVELS = [
       b.set(191, 3, 'k');
     },
   },
+  // ---------------- Star Isle (reached by rocket after beating Baron Static) ----------------
+  {
+    name: 'MOLTEN PEAK', theme: 'volcano', music: 'volcano', width: 200, dino: 'red',
+    extras: [['c', 40], ['t', 75], ['h', 110], ['g', 130], ['t', 160], ['c', 180], ['u', 88]],
+    build(b) {
+      b.ground(0, 22).set(2, 11, '@').row(8, 8, 'BWB');
+      b.fill(23, 13, 28, 13, 'L').set(25, 12, 'l');
+      b.ground(29, 55).stairsUp(34, 3).fill(37, 9, 40, 11, 'X').stairsDown(41, 3);
+      b.fill(56, 13, 64, 13, 'L').row(58, 9, '===').set(62, 12, 'l');
+      b.ground(65, 95, 10).set(68, 9, 'C');
+      b.fill(96, 13, 104, 13, 'L').set(98, 9, 'm').set(101, 12, 'l');
+      b.ground(105, 140).row(112, 8, 'WSW').fill(120, 10, 121, 11, 'X');
+      b.fill(141, 13, 150, 13, 'L').row(143, 9, '==').row(147, 8, '==').set(145, 12, 'l');
+      b.ground(151, 199).stairsUp(170, 5);
+      b.set(190, 11, 'G');
+    },
+  },
+  {
+    name: 'GEAR WORKS', theme: 'factory', music: 'factory', width: 200,
+    extras: [['t', 30], ['c', 60], ['t', 100], ['g', 140], ['t', 150], ['c', 175]],
+    build(b) {
+      b.ground(0, 40).set(2, 11, '@').row(12, 12, '>>>>>>>>>>').row(26, 8, 'BWB');
+      b.ground(45, 80).row(50, 12, '<<<<<<<<<<<<').row(64, 8, '>>>>');
+      b.set(42, 9, 'm');
+      b.ground(85, 120).set(86, 11, 'C').row(90, 12, '>>>>>>>>>>>>>>>>').fill(108, 11, 109, 11, '^');
+      b.set(123, 9, 'm');
+      b.ground(127, 160).row(130, 8, 'BWB').row(135, 8, '<<<<').row(141, 6, '>>>>');
+      b.row(162, 10, '==');
+      b.ground(165, 199).row(168, 12, '<<<<<<').stairsUp(180, 4);
+      b.set(190, 11, 'G');
+    },
+  },
+  {
+    name: 'CANDY COVE', theme: 'candy', music: 'candy', width: 200,
+    extras: [['g', 25], ['h', 65], ['p', 100], ['g', 120], ['h', 155], ['z', 140]],
+    build(b) {
+      b.ground(0, 30).set(2, 11, '@').coins(6, 9, 4).set(20, 11, 'J').row(24, 7, '=====').coins(24, 5, 5);
+      b.row(33, 9, '==');
+      b.ground(37, 70).set(45, 11, 'J').fill(48, 6, 52, 7, 'B').row(62, 8, 'WPW');
+      b.set(73, 10, 'm');
+      b.ground(77, 110, 10).set(80, 9, 'C').set(95, 9, 'J').coins(93, 2, 6);
+      b.row(113, 9, '==');
+      b.ground(116, 160).set(125, 11, 'J').set(140, 11, 'J').row(145, 7, 'BWBOB');
+      b.row(162, 10, '==');
+      b.ground(165, 199).stairsUp(175, 4);
+      b.set(190, 11, 'G');
+    },
+  },
+  {
+    name: 'MOON BASE', theme: 'moon', music: 'moon', width: 200, lowGrav: true, boss: true, bossHp: 8, bossName: 'MOTHERSHIP MK II',
+    bossMsg: ['THE MK II IS DOWN!', '', 'STAR ISLE IS SAFE AND', 'THE WHOLE GALAXY HAS', 'FULL SIGNAL AGAIN!', '', 'YOU ARE A LEGEND!'],
+    extras: [['u', 40], ['t', 80], ['u', 120], ['c', 150], ['t', 160]],
+    build(b) {
+      b.ground(0, 25).set(2, 11, '@');
+      b.ground(34, 60, 11).row(44, 6, 'BWB');
+      b.ground(69, 95).set(72, 11, 'C').fill(80, 8, 82, 11, 'X');
+      b.row(100, 8, '==');
+      b.ground(105, 135, 10).row(115, 5, 'WSW');
+      b.ground(144, 199).row(186, 8, '====').row(194, 8, '====').row(190, 5, '===');
+      b.set(191, 3, 'k');
+    },
+  },
 ];
 
 function buildLevel(i) {
-  const def = LEVELS[i], b = new LevelBuilder(def.width);
+  const def = i === 99 ? window.CUSTOM_LEVEL : LEVELS[i], b = new LevelBuilder(def.width);
   def.build(b);
   if (def.secret) { if (def.secret.prep) def.secret.prep(b); b.set(def.secret.x, def.secret.y, 'Z'); }
   if (def.yeti) b.set(def.yeti[0], def.yeti[1], 'y');
   if (def.mini) b.set(def.mini[1], def.mini[2], def.mini[0]);
   const spawns = [];
   let start = { x: 2, y: 11 }, goal = null, checkpoint = null;
+  if (!def.custom) { // auto-placed goodies (not in Level Maker courses)
   // Cannonball ammo: a few crates on the ground through each level, plus one bonus block turned into an ammo block.
   for (const want of [24, 70, 115, 160]) {
     for (let d = 0; d < 20; d++) {
@@ -334,7 +397,22 @@ function buildLevel(i) {
     }
     if (best) b.g[best[1]][best[0]] = 'M';
   }
-  const ENT = 'gpzhmnCGKabctuMfjeykZsqwv';
+  // Three Signal Bars per level, hidden in the highest reachable nook of each third
+  if (!def.custom) {
+    const seg3 = (b.w - 30) / 3;
+    for (let k = 0; k < 3; k++) {
+      const x0 = 8 + Math.floor(k * seg3 + seg3 * 0.15), x1 = 8 + Math.floor((k + 1) * seg3);
+      let best = null;
+      for (let x = x0; x < x1; x++) for (let y = 2; y <= 8; y++) {
+        if (b.g[y][x] !== '.' || b.g[y - 1][x] !== '.' || !firm.includes(b.g[y + 1][x])) continue;
+        if (!best || y < best[1] || (y === best[1] && Math.abs(x - (x0 + x1) / 2) < Math.abs(best[0] - (x0 + x1) / 2))) best = [x, y];
+      }
+      if (!best) for (let x = Math.floor((x0 + x1) / 2) + 3; x < x1 && !best; x++) { const spot = ground(x); if (spot && spot[1] >= 7 && b.g[spot[1] - 5][spot[0]] === '.' && b.g[spot[1] - 4][spot[0]] === '.') best = [spot[0], spot[1] - 5]; }
+      if (best) b.g[best[1]][best[0]] = 'x';
+    }
+  }
+  }
+  const ENT = 'gpzhmnCGKabctuMfjeykZsqwvlx';
   for (let y = 0; y < 14; y++) for (let x = 0; x < b.w; x++) {
     const c = b.g[y][x];
     if (c === '@') { start = { x, y }; b.g[y][x] = '.'; } else if (ENT.includes(c)) {
@@ -350,5 +428,7 @@ function buildLevel(i) {
   }
   let medalId = 0;
   for (const sp of spawns) if (sp.t === 'M') sp.id = medalId++;
+  let barId = 0;
+  for (const sp of spawns) if (sp.t === 'x') sp.id = barId++;
   return { def, w: b.w, h: 14, grid: b.g, spawns, start, goal, checkpoint };
 }

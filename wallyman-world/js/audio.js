@@ -149,6 +149,29 @@ const Audio8 = (() => {
       mel: 'G4/2 Bb4/2 D5/2 G5/4 F5/2 D5/4 | Eb5/4 G5/2 Bb5/2 G5/4 Eb5/4 | F5/2 F5/2 A5/2 C6/2 Bb5/2 A5/2 F5/4 | F#5/6 A5/2 D6/8 |' +
         'G5/2 D5/2 G5/2 Bb5/4 A5/2 G5/4 | G5/4 Bb5/2 Eb6/2 D6/4 Bb5/4 | A5/2 C6/2 A5/2 F5/2 D5/2 F#5/2 A5/4 | G5/12 r/4',
     },
+    volcano: {
+      bpm: 150, swing: 0, bass: 'drive', harm: 'stab', drums: 'k.hsk.hsk.hsk.ss', lead: 'p25',
+      chords: 'Em Em C D Em Em C B',
+      mel: 'E5/2 E5/2 G5/2 E5/2 B5/4 A5/2 G5/2 | F#5/2 G5/2 A5/2 G5/2 E5/8 | C5/2 E5/2 G5/2 C6/4 B5/2 A5/2 G5/2 | F#5/4 A5/4 D6/4 C6/2 A5/2 |' +
+        'E5/2 G5/2 B5/2 E6/4 D6/2 B5/4 | G5/2 F#5/2 E5/2 D5/2 E5/8 | C6/4 B5/2 A5/2 G5/4 E5/4 | D#5/4 F#5/4 B5/8',
+    },
+    factory: {
+      bpm: 140, swing: 0, bass: 'drive', harm: 'arp', drums: 'k.h.k.h.k.hhk.h.', lead: 'p12',
+      chords: 'Am Am Dm Dm E E Am Am',
+      mel: 'A4/2 A4/1 A4/1 C5/2 E5/2 A5/2 G5/2 E5/2 C5/2 | A4/2 A4/1 A4/1 C5/2 E5/2 G5/4 E5/4 | D5/2 D5/1 D5/1 F5/2 A5/2 D6/2 C6/2 A5/2 F5/2 | D5/2 D5/1 D5/1 F5/2 A5/2 C6/4 A5/4 |' +
+        'E5/2 E5/1 E5/1 G#5/2 B5/2 E6/2 D6/2 B5/2 G#5/2 | E5/2 F5/2 E5/2 D5/2 C5/2 B4/2 G#4/4 | A4/2 C5/2 E5/2 A5/2 G5/2 E5/2 C5/2 E5/2 | A5/8 r/8',
+    },
+    candy: {
+      bpm: 160, swing: 0.35, bass: 'bounce', harm: 'stab', drums: 'k.h.s.h.k.h.s.hh', lead: 'p25',
+      chords: 'F Bb C F Dm Bb C F',
+      mel: 'C5/2 F5/2 A5/2 F5/2 C6/4 A5/4 | Bb5/2 A5/2 G5/2 F5/2 D5/4 F5/4 | E5/2 G5/2 C6/2 G5/2 E5/4 C5/4 | F5/6 A5/2 F5/8 |' +
+        'D5/2 F5/2 A5/2 D6/2 C6/2 A5/2 F5/4 | Bb4/2 D5/2 F5/2 Bb5/2 A5/4 G5/4 | G5/2 A5/2 Bb5/2 G5/2 E5/2 C5/2 E5/2 G5/2 | F5/12 r/4',
+    },
+    moon: {
+      bpm: 100, swing: 0, bass: 'sparse', harm: 'pad', drums: 'k.......h.......', lead: 'p50',
+      chords: 'C Am F G C Am F C',
+      mel: 'E5/4 G5/4 C6/4 B5/4 | A5/6 G5/2 E5/8 | F5/4 A5/4 C6/4 E6/4 | D6/12 r/4 | E5/4 G5/4 C6/4 D6/4 | E6/6 D6/2 C6/8 | A5/4 G5/4 F5/4 A5/4 | G5/16',
+    },
     beach: {
       bpm: 152, swing: 0.32, bass: 'bounce', harm: 'stab', drums: 'k.hsh.hsk.hsh.hh', lead: 'p25',
       chords: 'G C D G G C D G Em C A D',

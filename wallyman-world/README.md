@@ -29,6 +29,14 @@ Open `index.html` in any modern browser — or enable **GitHub Pages** for this 
   - **Haunted Manor** – pitch dark except for a pool of light around WallyMan, lightning flashes and ghosts that fade in and out.
   - **Coral Depths** – underwater: press Jump to swim, with fish, jellyfish and coral walls.
   - **Sky Armada** – an auto-scrolling airship level (don't get squashed by the screen edge) ending in a fight with the **UFO Mothership**, which sweeps a pink laser, drops bombs and launches mini UFOs.
+- **Star Isle** – once you've cleared Haunted Manor, a rocket on the Wally Island map blasts you to a second island with four new worlds:
+  - **Molten Peak** – a volcano with lava pools and lava blobs that leap out of them.
+  - **Gear Works** – a factory full of **conveyor belts** that carry you left and right.
+  - **Candy Cove** – lollipops, candy-cane peaks and plenty of springboards.
+  - **Moon Base** – **low gravity** (floaty, extra-high jumps) and a final showdown with the **Mothership MK II**.
+- **Signal Bars** – three per level, tucked away in the highest nooks. They're saved when you clear the level and shown in the HUD; collect all three for **FULL SIGNAL**: +3 specials, a 1-UP and a trophy.
+- **Time Attack ghost** – your best run in each level is recorded, and a see-through ghost of it races you next time.
+- **Level Maker** (Extras → Level Maker) – build your own 120-tile course in any of the 13 themes, with every block, hazard, enemy and item. D-pad moves the cursor, A places (hold to paint), B erases, S picks the next item (B+S the previous one), START opens the menu (Play Test, Save, Theme, Clear All, Save and Exit). Three courses are kept on your device, and play-testing drops you straight back into the editor.
 - **Three heroes** – after choosing a file, pick your hero on the **CHOOSE YOUR HERO** screen: **Doug Thomson** (bald, blue glasses, black tee and jeans) – the fastest runner, who can **slide down and jump off walls** and whose special, the **Pause Button**, freezes every enemy for 5 seconds so they are harmless and can all be stomped; **WallyMan**, the caped all-rounder, or **GothChick** (pink and purple pigtails, black halter dress, black boots) who jumps higher, runs a little slower, can **glide** by holding Jump in the air, and has her own special attack: the **Bat Swarm**, three homing bats that seek out enemies, UFOs and bosses. Both get every move, Dino rides and costume.
 - **Special attacks** – on their own button (S / C key). WallyMan's **Signal Shockwave** blasts a ring of signal from his phone that knocks out every enemy around him, destroys incoming bolts, snowballs and bombs, and hurts bosses; GothChick's **Bat Swarm** sends three homing bats. Each hero starts every level or life with **3 specials**; glowing **Special Orbs** (two per level) give +3, up to 9.
 - **2-player mode** – pick "2 PLAYER GAME" after choosing a file. Players take turns on the same device: **WallyMan** and **Wally Jr** (green suit) share the island map and progress but have their own lives, score and coins. The turn passes after each level and each lost life; if one player runs out of lives the other carries on.
@@ -36,7 +44,7 @@ Open `index.html` in any modern browser — or enable **GitHub Pages** for this 
 - **Costumes** – visit the **Wardrobe** in Dino's Shop at Wally's House. Seven outfits: Classic, Wally Jr, Golden (find 20 Wally Medals), Ice (clear Frosty Peaks), Dino Suit (clear Coral Depths), Shadow (clear Haunted Manor) and Fire (beat Baron Static).
 - **Difficulty** (Extras → Options): Easy (3 hearts, 50% more time, slower enemies, weaker bosses), Normal, or Hard (1 heart, less time, faster enemies, tougher bosses).
 - **Star rankings** – up to 3 stars per level: finish with 40% of the time left, have all 5 medals, and take no hits. Stars show on the clear screen, the map and the level intro.
-- **Trophies** – 23 achievements (first clear, flawless boss, Dino rider, UFO hunter, secret exits, three stars and more) with pop-up notifications and a **Trophy Room**.
+- **Trophies** – 24 achievements (first clear, flawless boss, Dino rider, UFO hunter, secret exits, three stars and more) with pop-up notifications and a **Trophy Room**.
 - **Extras menu** – Trophy Room, **Jukebox** (play every song), **Gallery** (heroes, enemies, bosses and items) and **Options** (difficulty, music/sound volume, sound on/off, **CRT retro-TV filter**, screen shake).
 - **Hidden secrets** – an invisible block in most levels (jump into empty air to find a 1-UP) and cracked walls that crumble into coins when blasted, chomped, shocked or ground-pounded.
 - **High score table** – when a run ends (game over or beating the game) a top-10 score lets you enter your name arcade-style (D-pad + A, or just type). Scores are kept in the browser; when the game runs as a claude.ai artifact they are also shared through its database for players allowed to save there.
@@ -79,5 +87,6 @@ js/levels.js        level layouts (easy to edit – see the legend at the top)
 js/online-config.js Firebase settings for the worldwide high-score table
 firestore.rules     security rules to paste into Firebase
 js/game.js          engine: input, physics, enemies, scenes, HUD
+js/maker.js         the Level Maker editor
 assets/             pixelated WallyMan, GothChick and Doug Thomson portraits (title, character select, ending)
 ```

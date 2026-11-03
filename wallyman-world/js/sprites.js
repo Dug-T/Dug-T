@@ -173,6 +173,10 @@ const Sprites = (() => {
     haunted: { top: ['#7a6a8a', '#3a2a4a', '#a89ac0'], dirt: ['#3a2a48', '#24182e', '#4a3a5a'], brick: ['#5a3a5a', '#2a1a2a', '#8a6a8a'], solid: ['#6a6a7a', '#3a3a48', '#9a9aaa'], plank: ['#5a4030', '#2a1a10', '#8a6a50'] },
     water: { top: ['#f0d890', '#c0a050', '#fff0c0'], dirt: ['#d8b870', '#b09050', '#e8d090'], brick: ['#f07080', '#a03848', '#ffb0b8'], solid: ['#80a0b8', '#4a6a80', '#b0d0e0'], plank: ['#a07850', '#604028', '#c8a070'] },
     airship: { top: ['#c08848', '#6a4020', '#e8b878'], dirt: ['#8a5a30', '#5a3418', '#a87040'], brick: ['#a06030', '#5a3010', '#d09050'], solid: ['#8890a8', '#4a5068', '#c0c8e0'], plank: ['#c08848', '#6a4020', '#e8b878'] },
+    volcano: { top: ['#6a5050', '#2a1c1c', '#a07a6a'], dirt: ['#3a2828', '#1a1010', '#503838'], brick: ['#7a3a2a', '#3a1810', '#a85a40'], solid: ['#5a5050', '#2a2424', '#8a8080'], plank: ['#6a4030', '#3a2018', '#9a6048'] },
+    factory: { top: ['#9aa0b0', '#5a6070', '#d0d4e0'], dirt: ['#5a6070', '#3a4050', '#7a8090'], brick: ['#c08030', '#6a4010', '#f0b050'], solid: ['#7a8090', '#3a4050', '#b0b8c8'], plank: ['#e0b030', '#6a5010', '#fff070'] },
+    candy: { top: ['#ff90c8', '#d04890', '#ffd8ec'], dirt: ['#b06838', '#7a4018', '#d89058'], brick: ['#ff6080', '#c02850', '#ffb0c0'], solid: ['#80d8ff', '#3a90c8', '#d0f0ff'], plank: ['#ffffff', '#ff70a0', '#ffffff'] },
+    moon: { top: ['#d0d0d8', '#80808e', '#f4f4fa'], dirt: ['#9a9aa8', '#6a6a78', '#b8b8c4'], brick: ['#7a7a90', '#4a4a5a', '#a8a8c0'], solid: ['#a0a8c0', '#5a6078', '#d0d8f0'], plank: ['#8890a8', '#4a5068', '#c0c8e0'] },
     castle: { top: ['#8a8a9a', '#4a4a5a', '#b8b8c8'], dirt: ['#5a5a6a', '#3a3a48', '#7a7a8a'], brick: ['#8a4a5a', '#4a2030', '#b87a8a'], solid: ['#7a7a8a', '#3a3a4a', '#aaaabb'], plank: ['#6a4a30', '#3a2818', '#9a7050'] },
   };
   function tileSet(theme) {
@@ -547,6 +551,39 @@ const Sprites = (() => {
     ],
   };
   for (const k of Object.keys(more)) { S.bg[k].layers.push(...more[k]); S.bg[k].layers.sort((a, b) => a.f - b.f); }
+
+  // ---- Star Isle worlds: volcano, factory, candy, moon ----
+  S.bg.volcano = { sky: gradient('#2a0808', '#b03810'), layers: [
+    { c: layer(512, 224, (x) => { for (let i = 0; i < 512; i++) { const d = Math.abs(i - 300), h = Math.max(0, 150 - d * 0.9); if (h > 0) { x.fillStyle = '#3a1410'; x.fillRect(i, 210 - h, 1, h + 14); } } x.fillStyle = '#ff7020'; x.fillRect(288, 60, 24, 4); x.fillStyle = 'rgba(255,140,40,0.35)'; for (let k = 0; k < 40; k++) x.fillRect(296 + Math.round(Math.sin(k * 0.7) * 6), 64 + k * 3, 3, 3); }), f: 0.04 },
+    { c: layer(512, 224, (x) => { for (let k = 0; k < 12; k++) disc(x, 300 + Math.sin(k) * 10 + k * 4, 50 - k * 4, 8 + k, 'rgba(60,40,40,0.35)'); }), f: 0.06, drift: 0.04 },
+    { c: layer(512, 224, (x) => peaks(x, 150, 60, 80, '#2a1010', null, 161)), f: 0.15 },
+    { c: layer(512, 224, (x) => { for (let k = 0; k < 6; k++) { const lx = k * 90 + 20; x.fillStyle = '#ff5010'; for (let y = 160; y < 224; y++) x.fillRect(lx + Math.round(Math.sin(y * 0.1 + k) * 4), y, 4, 1); x.fillStyle = 'rgba(255,160,40,0.25)'; x.fillRect(lx - 6, 160, 16, 64); } }), f: 0.25 },
+    { c: layer(512, 224, (x) => { const r = rng(165); for (let k = 0; k < 14; k++) tri(x, (k * 37 + r() * 20) | 0, 224, 18 + ((r() * 14) | 0), 20 + ((r() * 40) | 0), '#1a0c0c'); }), f: 0.5 },
+    { c: layer(512, 224, (x) => motes(x, 50, ['#ff9030', '#ffd060', '#ff5020'], 20, 220, 1, 166)), f: 0.8, drift: 0.15 },
+  ] };
+  S.bg.factory = { sky: gradient('#3a3a4a', '#8a7060'), layers: [
+    { c: layer(512, 224, (x) => { for (const sx of [60, 180, 330, 450]) { x.fillStyle = '#2a2a34'; x.fillRect(sx, 60, 16, 164); x.fillStyle = '#c03030'; x.fillRect(sx, 66, 16, 4); x.fillRect(sx, 80, 16, 4); for (let k = 0; k < 8; k++) disc(x, sx + 8 + k * 6, 54 - k * 5, 5 + k, 'rgba(120,120,130,0.4)'); } }), f: 0.06, drift: 0.03 },
+    { c: layer(512, 224, (x) => { const gear = (gx, gy, r) => { for (let a = 0; a < 16; a++) { const t2 = (a / 16) * Math.PI * 2; x.fillStyle = '#4a4a58'; x.fillRect(Math.round(gx + Math.cos(t2) * (r + 3)) - 3, Math.round(gy + Math.sin(t2) * (r + 3)) - 3, 6, 6); } disc(x, gx, gy, r, '#4a4a58'); disc(x, gx, gy, r * 0.35, '#3a3a44'); }; gear(90, 120, 30); gear(140, 80, 18); gear(300, 140, 40); gear(440, 90, 24); }), f: 0.2 },
+    { c: layer(512, 224, (x) => { for (const [py, h] of [[100, 8], [150, 6]]) { x.fillStyle = '#6a6070'; x.fillRect(0, py, 512, h); x.fillStyle = '#8a8090'; x.fillRect(0, py, 512, 1); for (let k = 0; k < 512; k += 40) { x.fillStyle = '#3a3440'; x.fillRect(k, py - 1, 4, h + 2); } } }), f: 0.35 },
+    { c: layer(512, 224, (x) => { x.fillStyle = '#2a2a30'; for (let k = 0; k < 512; k += 64) { x.fillRect(k, 40, 4, 184); x.fillRect(k + 30, 40, 4, 184); for (let y = 40; y < 224; y += 30) for (let j = 0; j < 30; j++) { x.fillRect(k + j, y + j, 2, 1); x.fillRect(k + 30 - j, y + j, 2, 1); } } }), f: 0.55 },
+    { c: layer(512, 224, (x) => { for (let k = 0; k < 8; k++) { const lx = k * 64 + 20; x.fillStyle = '#1a1a20'; x.fillRect(lx, 30, 2, 20); x.fillStyle = '#ffe080'; x.fillRect(lx - 4, 50, 10, 4); x.fillStyle = 'rgba(255,230,140,0.12)'; for (let y = 0; y < 60; y++) x.fillRect(lx - 4 - y / 3, 54 + y, 10 + (y * 2) / 3, 1); } }), f: 0.7 },
+    { c: layer(512, 224, (x) => motes(x, 30, ['#ffe060', '#ffffff'], 40, 210, 1, 176)), f: 0.85 },
+  ] };
+  S.bg.candy = { sky: gradient('#ffc0e4', '#c0ecff'), layers: [
+    { c: layer(512, 224, (x) => { for (let i = 0; i < 6; i++) cloud(x, i * 90 + 20, 40 + (i % 2) * 20, 1, '#ffffff', '#ffd8f0'); }), f: 0.05, drift: 0.08 },
+    { c: layer(512, 224, (x) => { for (let i = 0; i < 512; i++) { const h = Math.round(120 + Math.abs(((i % 128) - 64)) * 0.9); x.fillStyle = ((i + h) >> 3) % 2 ? '#ffb0d8' : '#ffffff'; x.fillRect(i, h, 1, 224 - h); } }), f: 0.15 },
+    { c: layer(512, 224, (x) => { for (let k = 0; k < 7; k++) { const lx = k * 75 + 20; x.fillStyle = '#ffffff'; x.fillRect(lx, 130, 3, 70); for (let a = 0; a < 3; a++) disc(x, lx + 1, 124, 14 - a * 4, ['#ff4080', '#ffd040', '#40c0ff'][(a + k) % 3]); } }), f: 0.35 },
+    { c: layer(512, 224, (x) => { for (let k = 0; k < 12; k++) { const gx = k * 44 + 10; for (let yy = -12; yy <= 0; yy++) { const h = Math.round(Math.sqrt(144 - yy * yy)); x.fillStyle = ['#40d080', '#ff6080', '#ffb030', '#a060ff'][k % 4]; x.fillRect(gx - h, 200 + yy, h * 2, 1); } x.fillStyle = 'rgba(255,255,255,0.6)'; x.fillRect(gx - 5, 191, 3, 2); } }), f: 0.5 },
+    { c: layer(512, 224, (x) => motes(x, 70, ['#ff4080', '#40c0ff', '#ffd040', '#40d080'], 0, 224, 2, 186)), f: 0.8 },
+  ] };
+  S.bg.moon = { sky: gradient('#000010', '#141838'), layers: [
+    { c: layer(512, 224, (x) => motes(x, 120, ['#ffffff', '#c8d0ff', '#fff0c0'], 0, 200, 1, 191)), f: 0.01 },
+    { c: layer(512, 224, (x) => { disc(x, 380, 60, 26, '#2a6ad8'); for (const [ax, ay, r] of [[372, 52, 9], [392, 66, 7], [370, 72, 5]]) disc(x, ax, ay, r, '#3cb050'); disc(x, 386, 46, 5, '#ffffff'); }), f: 0.02 },
+    { c: layer(512, 224, (x) => { for (let i = 0; i < 512; i++) { const h = Math.round(150 + Math.sin(i * 0.02) * 10 + Math.sin(i * 0.07) * 4); x.fillStyle = '#4a4a5a'; x.fillRect(i, h, 1, 224 - h); } for (let k = 0; k < 8; k++) { const cx2 = k * 64 + 20; for (let yy = -3; yy <= 3; yy++) { const h = Math.round(Math.sqrt(9 - yy * yy) * 4); x.fillStyle = '#3a3a48'; x.fillRect(cx2 - h, 168 + yy, h * 2, 1); } } }), f: 0.12 },
+    { c: layer(512, 224, (x) => { for (const dx of [80, 300]) { for (let yy = -16; yy <= 0; yy++) { const h = Math.round(Math.sqrt(256 - yy * yy) * 1.4); x.fillStyle = yy < -12 ? '#d0e0ff' : '#90a8d0'; x.fillRect(dx - h, 180 + yy, h * 2, 1); } x.fillStyle = '#5ff0ff'; x.fillRect(dx - 8, 172, 4, 3); x.fillRect(dx + 4, 172, 4, 3); x.fillStyle = '#6a7090'; x.fillRect(dx - 24, 180, 48, 6); } }), f: 0.3 },
+    { c: layer(512, 224, (x) => { for (const ax of [40, 230, 420]) { x.fillStyle = '#5a6078'; x.fillRect(ax, 120, 2, 80); for (let k = 0; k < 6; k++) x.fillRect(ax - 4 + k, 130 + k * 10, 10 - k * 2, 1); x.fillStyle = '#ff3040'; x.fillRect(ax - 1, 116, 4, 4); } }), f: 0.5 },
+    { c: layer(512, 224, (x) => motes(x, 30, ['#a0a0b8'], 150, 220, 1, 196)), f: 0.8 },
+  ] };
 
   S.portrait = new Image();
   S.portrait.src = 'assets/wallyman-portrait.png';
