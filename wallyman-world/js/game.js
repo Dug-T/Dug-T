@@ -776,6 +776,7 @@ function TitleScene() {
     return `FILE ${'ABC'[i]}   #${n}/8  *${pad(s.lives, 2)}`;
   }).concat(['CHALLENGES', 'HIGH SCORES', 'EXTRAS', eraseMode ? 'CANCEL ERASE' : 'ERASE FILE']);
   return {
+    isTitle: true,
     enter() { Audio8.play('title'); },
     update() {
       t++;
@@ -853,6 +854,7 @@ function TitleScene() {
         if (eraseMode) txt('PICK A FILE TO ERASE', 30, 199, '#ff8080', { outline: '#000' });
       }
       txt('@2026 DUG-T', 4, 214, '#fff');
+      if (typeof drawTipJar === 'function') drawTipJar(t);
     },
   };
 }

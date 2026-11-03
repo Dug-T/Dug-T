@@ -17,6 +17,31 @@ function wrapText(s, n) {
   return out;
 }
 
+// ---------------- Ko-fi tip jar button on the title screen ----------------
+const KOFI_RECT = { x: 186, y: 204, w: 68, h: 18 };
+const kofiName = () => String(window.WALLYMAN_KOFI || '').trim().replace(/^https?:\/\/(www\.)?ko-fi\.com\//i, '').replace(/[^A-Za-z0-9_-]/g, '');
+function drawTipJar(t) {
+  if (!kofiName()) return;
+  const { x, y, w, h } = KOFI_RECT, hover = (t >> 4) & 1;
+  ctx.fillStyle = '#1a1020'; ctx.fillRect(x - 1, y - 1, w + 2, h + 2);
+  ctx.fillStyle = hover ? '#ff6a6a' : '#ff5e5b'; ctx.fillRect(x, y, w, h); ctx.fillStyle = '#ffffff'; ctx.fillRect(x, y, w, 1);
+  // coffee cup with a heart
+  ctx.fillStyle = '#ffffff'; ctx.fillRect(x + 4, y + 5, 10, 9); ctx.fillRect(x + 14, y + 7, 3, 1); ctx.fillRect(x + 16, y + 7, 1, 4); ctx.fillRect(x + 14, y + 10, 3, 1);
+  ctx.fillStyle = '#ff5e5b'; ctx.fillRect(x + 6, y + 7, 2, 2); ctx.fillRect(x + 9, y + 7, 2, 2); ctx.fillRect(x + 6, y + 9, 5, 1); ctx.fillRect(x + 7, y + 10, 3, 1); ctx.fillRect(x + 8, y + 11, 1, 1);
+  if ((t >> 3) % 4 === 0) { ctx.fillStyle = '#ffffff'; ctx.fillRect(x + 7, y + 2, 1, 2); ctx.fillRect(x + 10, y + 1, 1, 2); }
+  txt('TIP JAR', x + 21, y + 6, '#fff', { shadow: '#a02020' });
+}
+function openTipJar() {
+  const name = kofiName(); if (!name) return;
+  const a = document.createElement('a'); a.href = 'https://ko-fi.com/' + name; a.target = '_blank'; a.rel = 'noopener noreferrer';
+  document.body.appendChild(a); a.click(); a.remove();
+}
+cv.addEventListener('pointerup', (e) => {
+  if (!kofiName() || typeof scene === 'undefined' || !scene || !scene.isTitle) return;
+  const r = cv.getBoundingClientRect(), x = ((e.clientX - r.left) / r.width) * VW, y = ((e.clientY - r.top) / r.height) * VH, k = KOFI_RECT;
+  if (x >= k.x - 4 && x <= k.x + k.w + 4 && y >= k.y - 4 && y <= k.y + k.h + 4) openTipJar();
+});
+
 // ---------------- Challenges menu ----------------
 function ChallengeScene(start = 0) {
   const items = ['TIME ATTACK', 'BOSS RUSH', 'DAILY CHALLENGE', 'BACK'];

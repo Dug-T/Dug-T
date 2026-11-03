@@ -87,6 +87,10 @@ The GitHub Pages version can share one high-score table with everyone through a 
 
 With those set the table title reads **WORLD HIGH SCORES**. Without them (or offline) scores are kept on each device. The claude.ai artifact version cannot reach outside services, so it keeps its own table.
 
+## Tip jar (Ko-fi)
+
+Put your Ko-fi page name in `js/online-config.js` (`window.WALLYMAN_KOFI = 'yourname';`) and a **TIP JAR** button appears in the corner of the title screen. Clicking or tapping it opens `https://ko-fi.com/yourname` in a new tab. Leave it empty to hide the button.
+
 ## Code layout
 
 ```

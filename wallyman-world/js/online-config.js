@@ -8,3 +8,6 @@ window.WALLYMAN_ONLINE = {
   projectId: '',
   apiKey: '',
 };
+// Ko-fi tip jar: put your Ko-fi page name here (the part after ko-fi.com/)
+// and a "TIP JAR" button appears on the title screen. Leave it empty to hide it.
+window.WALLYMAN_KOFI = '';
