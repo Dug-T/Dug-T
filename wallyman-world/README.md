@@ -30,6 +30,17 @@ Open `index.html` in any modern browser — or enable **GitHub Pages** for this 
 - Checkpoint flags, Signal Tower goal posts, time bonus tally, moving platforms, lava, spikes.
 - **Original chiptune soundtrack** synthesised live with the Web Audio API (pulse-wave lead, triangle bass, noise drums and an SNES-style echo) – separate themes for title, map, each world, the boss, plus jingles.
 
+## Worldwide high scores (Firebase)
+
+The GitHub Pages version can share one high-score table with everyone through a free Firebase project:
+
+1. At [console.firebase.google.com](https://console.firebase.google.com) create a project (Analytics not needed).
+2. **Build → Firestore Database → Create database** (production mode, any location).
+3. In Firestore's **Rules** tab, paste the contents of [`firestore.rules`](firestore.rules) and **Publish**. Anyone can read and add scores; nobody can edit or delete them, and only valid-looking scores are accepted.
+4. **Project settings → Your apps → Web (`</>`)**, register an app, then copy `projectId` and `apiKey` into [`js/online-config.js`](js/online-config.js).
+
+With those set the table title reads **WORLD HIGH SCORES**. Without them (or offline) scores are kept on each device. The claude.ai artifact version cannot reach outside services, so it keeps its own table.
+
 ## Code layout
 
 ```
@@ -39,6 +50,8 @@ js/audio.js         music sequencer, songs and sound effects
 js/sprites.js       pixel art for enemies, items, tiles and backgrounds
 js/wally.js         WallyMan's animation rig: poses, cape physics, auto-outline
 js/levels.js        level layouts (easy to edit – see the legend at the top)
+js/online-config.js Firebase settings for the worldwide high-score table
+firestore.rules     security rules to paste into Firebase
 js/game.js          engine: input, physics, enemies, scenes, HUD
 assets/             pixelated WallyMan portrait used on the title/ending screens
 ```

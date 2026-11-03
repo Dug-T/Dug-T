@@ -80,7 +80,7 @@ let game = null; // active save slot
 // =====================================================================
 const Scores = (() => {
   const KEY = 'wallyman-world-scores-v1', NAME_KEY = 'wallyman-world-lastname';
-  let local = [], shared = [], db = null, online = false;
+  let local = [], shared = [], world = [], db = null, online = false, worldOn = false, lastFetch = 0;
   try { const d = JSON.parse(localStorage.getItem(KEY)); if (Array.isArray(d)) local = d; } catch (e) { /* ignore */ }
   const clean = (e) => ({
     id: String(e.id || ''), name: String(e.name || '').toUpperCase().replace(/[^A-Z0-9 .!-]/g, '').slice(0, 8).trim() || 'WALLY',
@@ -98,9 +98,43 @@ const Scores = (() => {
       }, () => { online = false; });
     } catch (e) { db = null; }
   })();
+  // ---- worldwide table through Firebase Firestore's REST API (no SDK needed) ----
+  const cfg = window.WALLYMAN_ONLINE || {};
+  const hasWorld = !!(cfg.projectId && cfg.apiKey && window.fetch);
+  const base = hasWorld ? `https://firestore.googleapis.com/v1/projects/${encodeURIComponent(cfg.projectId)}/databases/(default)/documents` : '';
+  const val = (f) => (!f ? undefined : 'stringValue' in f ? f.stringValue : 'integerValue' in f ? Number(f.integerValue) : 'doubleValue' in f ? f.doubleValue : 'booleanValue' in f ? f.booleanValue : undefined);
+  async function refresh() {
+    if (!hasWorld || Date.now() - lastFetch < 5000) return;
+    lastFetch = Date.now();
+    try {
+      const res = await fetch(`${base}:runQuery?key=${encodeURIComponent(cfg.apiKey)}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ structuredQuery: { from: [{ collectionId: 'scores' }], orderBy: [{ field: { fieldPath: 'score' }, direction: 'DESCENDING' }], limit: 50 } }),
+      });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const rows = await res.json();
+      world = rows.filter((r) => r.document).map((r) => {
+        const f = r.document.fields || {};
+        return clean({ id: r.document.name.split('/').pop(), name: val(f.name), score: val(f.score), level: val(f.level), ts: val(f.ts), done: val(f.done) });
+      });
+      worldOn = true;
+    } catch (e) { worldOn = false; }
+  }
+  async function postWorld(e) {
+    if (!hasWorld) return;
+    try {
+      await fetch(`${base}/scores?documentId=${encodeURIComponent(e.id)}&key=${encodeURIComponent(cfg.apiKey)}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fields: { name: { stringValue: e.name }, score: { integerValue: String(e.score) }, level: { integerValue: String(e.level) }, ts: { integerValue: String(e.ts) }, done: { booleanValue: e.done } } }),
+      });
+    } catch (err) { /* offline: the score is still kept on this device */ }
+    lastFetch = 0; refresh();
+  }
+  refresh();
+  setInterval(refresh, 60000);
   function list() {
     const byId = new Map();
-    for (const e of local.concat(shared)) { const c = clean(e); if (c.id && c.score > 0) byId.set(c.id, c); }
+    for (const e of local.concat(shared, world)) { const c = clean(e); if (c.id && c.score > 0) byId.set(c.id, c); }
     return [...byId.values()].sort((a, b) => b.score - a.score || a.ts - b.ts).slice(0, 10);
   }
   function qualifies(score) { const l = list(); return score > 0 && (l.length < 10 || score > l[l.length - 1].score); }
@@ -109,10 +143,11 @@ const Scores = (() => {
     local.push(e); local.sort((a, b) => b.score - a.score); local = local.slice(0, 20);
     try { localStorage.setItem(KEY, JSON.stringify(local)); localStorage.setItem(NAME_KEY, e.name); } catch (err) { /* ignore */ }
     if (db) db.collection('scores').doc(e.id).set({ name: e.name, score: e.score, level: e.level, ts: e.ts, done: e.done }).catch(() => {});
+    postWorld(e);
     return e.id;
   }
   function lastName() { try { return localStorage.getItem(NAME_KEY) || ''; } catch (e) { return ''; } }
-  return { list, qualifies, add, lastName, isShared: () => online };
+  return { list, qualifies, add, lastName, refresh, isShared: () => online, isWorld: () => worldOn };
 })();
 function bestLevel() { return Math.max(1, Math.min(8, game.cleared.filter(Boolean).length + 1)); }
 // After a run ends: name entry if the score made the table, then the table.
@@ -429,7 +464,7 @@ function MessageScene(lines, next) {
 function drawScoreTable(x, y, w, rows, highlight) {
   const list = Scores.list();
   drawWindow(x, y, w, 22 + rows * 11);
-  txt(Scores.isShared() ? 'HIGH SCORES' : 'HIGH SCORES', x + w / 2, y + 6, '#ffe040', { align: 'center' });
+  txt(Scores.isWorld() ? 'WORLD HIGH SCORES' : 'HIGH SCORES', x + w / 2, y + 6, '#ffe040', { align: 'center' });
   for (let i = 0; i < rows; i++) {
     const e = list[i], yy = y + 18 + i * 11;
     const hl = e && e.id === highlight && (frame >> 3) % 2 === 0;
@@ -444,7 +479,7 @@ function drawScoreTable(x, y, w, rows, highlight) {
 function HighScoreScene(highlight, next) {
   let t = 0;
   return {
-    enter() { Audio8.play('menu'); },
+    enter() { Audio8.play('menu'); Scores.refresh(); },
     update() { t++; if (t > 20 && (Input.confirm() || Input.pressed('back'))) { Audio8.sfx('confirm'); go(next); } },
     draw() {
       drawParallax('grass', t * 0.4);
@@ -469,12 +504,12 @@ function NameEntryScene(score, level, done, then) {
     update() {
       t++;
       const typedKeys = Input.takeTyped();
-      if (typedKeys.length) {
+      if (Input.pressed('start')) { for (const ch of typedKeys) if (name.length < 8) name += ch; finish(); return; }
+      if (typedKeys.length) { // typing on a keyboard: letter keys also map to game buttons, so skip the grid this frame
         for (const ch of typedKeys) if (name.length < 8) { name += ch; Audio8.sfx('letter'); }
         return;
       }
       if (Input.pressed('back')) { name = name.slice(0, -1); Audio8.sfx('select'); return; }
-      if (Input.pressed('start')) { finish(); return; }
       if (Input.pressed('right')) { cx = (cx + 1) % 10; Audio8.sfx('select'); }
       if (Input.pressed('left')) { cx = (cx + 9) % 10; Audio8.sfx('select'); }
       if (Input.pressed('down')) { cy = (cy + 1) % 5; Audio8.sfx('select'); }
