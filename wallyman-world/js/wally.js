@@ -153,6 +153,107 @@ const Wally = (() => {
     if (P.fist) blob(hand[0], hand[1], 3, C.skin);
     return c;
   }
+  // ================= GothChick: second playable hero =================
+  // Pink and purple pigtails with black bangs, black halter dress with a keyhole and a
+  // silver brooch, bare arms, dark stockings and boots. Uses the same poses as WallyMan;
+  // her back pigtail swings with the cape physics.
+  const GOTH = {
+    skin: '#f6d8cc', skinD: '#d4a89c', skinL: '#fff0ea', hair: '#1a1424', hairP: '#ff4aa8', hairV: '#9a4ae8',
+    dress: '#1c1426', dressL: '#3a2c48', dressD: '#0c0810', leg: '#2a2034', legD: '#18121e',
+    boot: '#2a1838', bootD: '#1a0e24', bootL: '#6a4a90', silver: '#d8dce8', lips: '#e02848', eye: '#3a6aa0',
+  };
+  const GOTH_COSTUMES = {
+    classic: {},
+    junior: { hairP: '#4ab0ff', hairV: '#2a60d0' },
+    gold: { hairP: '#ffd040', hairV: '#e09020', dress: '#3a2a10', dressL: '#7a5a20', bootL: '#c8a030' },
+    ice: { hairP: '#ffffff', hairV: '#a0d8ff', dress: '#7aa8d8', dressL: '#d0ecff', dressD: '#4a70a0', eye: '#5ff0ff' },
+    dino: { hairP: '#2ec4b6', hairV: '#ff8c42', dress: '#1a4a44', dressL: '#2e8a80' },
+    shadow: { hairP: '#8a3ac8', hairV: '#5a1a8a', eye: '#ff3040', lips: '#8a1a5a' },
+    fire: { hairP: '#ff3020', hairV: '#ffa020', dress: '#6a0c10', dressL: '#a02028', bootL: '#ff7020' },
+  };
+  function rigGoth(P, capeF, signal, costume) {
+    const G = Object.assign({}, GOTH, GOTH_COSTUMES[costume] || {});
+    const c = Sprites.canvas(W, H), x = c.getContext('2d');
+    const px = (X, Y, col, w = 1, h = 1) => { x.fillStyle = col; x.fillRect(Math.round(X), Math.round(Y), w, h); };
+    const blob = (X, Y, w, col) => { const o = Math.floor(w / 2); px(X - o, Y - o, col, w, w); };
+    const line = (x0, y0, x1, y1, w, col) => {
+      const n = Math.max(1, Math.ceil(Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0))));
+      for (let i = 0; i <= n; i++) blob(x0 + ((x1 - x0) * i) / n, y0 + ((y1 - y0) * i) / n, w, col);
+    };
+    const dir = (a, L) => [Math.sin(a) * L, Math.cos(a) * L];
+    const bob = P.bob, lean = P.lean, hipX = 12, hipY = 21 + bob, shX = hipX + lean, shY = 13 + bob, t = capeF * (Math.PI / 2);
+    const hx = shX + 0.5, hy = 8 + bob;
+    // back pigtail (flows like a cape)
+    {
+      const [ang, amp] = P.cape;
+      let cx = hx - 3, cy = hy - 1;
+      for (let i = 0; i <= 8; i++) {
+        const s = i / 8, a = ang * 0.85 + Math.sin(t + s * 3) * amp * 0.3 * s;
+        blob(cx, cy + 1, Math.round(2 + s * 1.6), G.hairV);
+        blob(cx, cy, Math.max(1, Math.round(1.5 + s * 1.4)), i % 3 === 1 ? G.hairV : G.hairP);
+        cx -= Math.sin(a) * 0.9; cy += Math.cos(a) * 0.9;
+      }
+    }
+    const leg = ([th, bend], back) => {
+      const [kx, ky] = dir(th, 4), [fx, fy] = dir(th - bend, 4);
+      const k = [hipX + (back ? -1 : 1) + kx, hipY + ky], f = [k[0] + fx, k[1] + fy];
+      line(hipX + (back ? -1 : 1), hipY, k[0], k[1], 3, back ? G.legD : G.leg);
+      line(k[0], k[1], f[0], f[1], 3, back ? G.bootD : G.boot);
+      px(k[0] - 1, k[1], back ? G.boot : G.bootL, 3, 1);
+      const sole = Math.max(f[1] + 1, 0);
+      px(f[0] - 1, sole - 1, back ? G.bootD : G.boot, 4, 2);
+      px(f[0] - 1, sole + 1, '#000000', 4, 1);
+    };
+    const arm = ([ua, fa], back) => {
+      const sx = shX + (back ? -2 : 2), sy = shY + 1;
+      const [ex, ey] = dir(ua, 4), [hx2, hy2] = dir(fa, 4);
+      const e = [sx + ex, sy + ey], h = [e[0] + hx2, e[1] + hy2];
+      line(sx, sy, e[0], e[1], 2, back ? G.skinD : G.skin);
+      line(e[0], e[1], h[0], h[1], 2, back ? G.skinD : G.skin);
+      blob(h[0], h[1], 2, back ? G.skinD : G.skinL);
+      return h;
+    };
+    leg(P.back, true);
+    arm(P.armB, true);
+    // bodice
+    for (let y = 12; y <= 20; y++) {
+      const off = Math.round((lean * (21 - y)) / 9), yy = y + bob;
+      const l = (y <= 13 ? 10 : 9) + off, r = (y <= 13 ? 13 : 14) + off;
+      px(l, yy, G.dressD); px(l + 1, yy, G.dress, r - l - 1); px(r, yy, G.dressL);
+    }
+    {
+      const o = Math.round((lean * 6) / 9);
+      px(12 + o, 14 + bob, G.skin, 2, 2); px(12 + o, 16 + bob, G.skin, 1, 1); // keyhole
+      px(11 + o, 11 + bob, G.dress, 3, 1); px(12 + o, 12 + bob, G.silver); // halter + brooch
+      for (let k = 0; k < 3; k++) px(12 + o, 17 + bob + k * 1, G.dressL); // lacing
+    }
+    leg(P.front, false);
+    // A-line skirt to the knee, swaying with the stride
+    {
+      const sway = Math.round((P.front[0] - P.back[0]) * 1.1);
+      for (let k = 0; k < 6; k++) {
+        const yy = hipY - 2 + k, half = 3 + Math.floor(k * 0.6), cx2 = hipX + Math.round((sway * k) / 6);
+        px(cx2 - half, yy, G.dressD); px(cx2 - half + 1, yy, G.dress, half * 2 - 1); px(cx2 + half, yy, G.dressL);
+        if (k === 5) px(cx2 - half, yy, G.dressL, half * 2 + 1, 1);
+      }
+    }
+    // head
+    {
+      const R = [2, 3, 4, 4, 4, 4, 3, 2];
+      for (let i = 0; i < 8; i++) px(hx - R[i], hy - 4 + i, i >= 6 ? G.skinD : G.skin, R[i] * 2);
+      px(hx - 2, hy - 5, G.hair, 5); px(hx - 3, hy - 4, G.hair, 7); px(hx - 4, hy - 3, G.hair, 8); px(hx - 4, hy - 2, G.hair, 5);
+      px(hx - 4, hy - 1, G.hair, 3, 5); // hair over the back of the head
+      px(hx + 1, hy - 2, G.hair, 3, 1); // bangs
+      px(hx - 1, hy - 4, G.hairP, 2, 1); px(hx - 3, hy - 3, G.hairP, 1, 2); px(hx + 2, hy - 3, G.hairV); // streaks
+      px(hx + 2, hy - 1, P.ouch ? '#1a1020' : G.eye); px(hx + 3, hy - 1, '#1a1020'); // eye + lashes
+      px(hx + 3, hy + 2, P.ouch ? '#1a1020' : G.lips);
+      px(hx - 3, hy + 1, G.hairP, 2, 3); px(hx - 3, hy + 4, G.hairV, 2, 1); px(hx - 2, hy, G.silver); // side pigtail + clip by the ear
+    }
+    const hand = arm(P.armF, false);
+    if (P.phone) { px(hand[0], hand[1] - 3, '#2a3038', 2, 3); px(hand[0], hand[1] - 3, signal ? '#5ff0ff' : '#4a6070'); if (signal) px(hand[0] + 1, hand[1] - 4, '#5ff0ff'); }
+    if (P.fist) blob(hand[0], hand[1], 3, G.skin);
+    return c;
+  }
   function outline(src, col) {
     const x = src.getContext('2d'), img = x.getImageData(0, 0, W, H), d = img.data;
     const a = (X, Y) => (X >= 0 && Y >= 0 && X < W && Y < H ? d[(Y * W + X) * 4 + 3] : 0);
@@ -170,15 +271,15 @@ const Wally = (() => {
   }
   const cache = new Map();
   // variant: 'n' normal, 'w' white flash, 'g' glow silhouette
-  function frame(pose, capeF, signal, face, variant = 'n', costume = 'classic') {
+  function frame(pose, capeF, signal, face, variant = 'n', costume = 'classic', hero = 'wally') {
     if (!POSES[pose]) pose = 'idle0';
-    const key = `${pose}|${capeF}|${signal ? 1 : 0}|${face > 0 ? 1 : 0}|${variant}|${costume}`;
+    const key = `${pose}|${capeF}|${signal ? 1 : 0}|${face > 0 ? 1 : 0}|${variant}|${costume}|${hero}`;
     let c = cache.get(key);
     if (c) return c;
     if (variant === 'n') {
-      if (face > 0) c = outline(rig(POSES[pose], capeF, signal, costume), PAL0.ink);
-      else c = Sprites.flip(frame(pose, capeF, signal, 1, 'n', costume));
-    } else c = tint(frame(pose, capeF, signal, face, 'n', costume), variant === 'w' ? '#ffffff' : variant === 'k' ? '#1a1020' : '#5ff0ff');
+      if (face > 0) c = outline(hero === 'goth' ? rigGoth(POSES[pose], capeF, signal, costume) : rig(POSES[pose], capeF, signal, costume), PAL0.ink);
+      else c = Sprites.flip(frame(pose, capeF, signal, 1, 'n', costume, hero));
+    } else c = tint(frame(pose, capeF, signal, face, 'n', costume, hero), variant === 'w' ? '#ffffff' : variant === 'k' ? '#1a1020' : '#5ff0ff');
     cache.set(key, c);
     return c;
   }
@@ -189,13 +290,13 @@ const Wally = (() => {
     const w = Math.round(W * sx), h = Math.round(H * sy);
     const X = Math.round(cx - w / 2), Y = Math.round(feetY - h + (BASE + 1 - H) * sy);
     if (o.glow) {
-      const g = frame(pose, capeF, o.signal, face, 'g', o.costume || api.current);
+      const g = frame(pose, capeF, o.signal, face, 'g', o.costume || api.current, o.hero || api.hero);
       ctx.save(); ctx.globalAlpha = o.glow;
       for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) ctx.drawImage(g, X + dx, Y + dy, w, h);
       ctx.restore();
     }
-    ctx.drawImage(frame(pose, capeF, o.signal, face, o.white ? 'w' : o.ghost ? 'g' : o.black ? 'k' : 'n', o.costume || api.current), X, Y, w, h);
+    ctx.drawImage(frame(pose, capeF, o.signal, face, o.white ? 'w' : o.ghost ? 'g' : o.black ? 'k' : 'n', o.costume || api.current, o.hero || api.hero), X, Y, w, h);
   }
-  const api = { draw, frame, POSES, W, H, COSTUMES, current: 'classic' };
+  const api = { draw, frame, POSES, W, H, COSTUMES, current: 'classic', hero: 'wally' };
   return api;
 })();

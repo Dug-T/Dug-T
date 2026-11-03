@@ -461,6 +461,8 @@ const Sprites = (() => {
 
   S.portrait = new Image();
   S.portrait.src = 'assets/wallyman-portrait.png';
+  S.gothPortrait = new Image();
+  S.gothPortrait.src = 'assets/gothchick-portrait.png';
 
   S.canvas = canvas; S.fromRows = fromRows; S.flip = flip; S.rng = rng;
   return S;

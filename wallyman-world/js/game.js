@@ -93,7 +93,7 @@ const Save = (() => {
   slots.forEach((s) => { if (s) { s.cleared = Array.from({ length: 11 }, (_, i) => !!(s.cleared && s.cleared[i])); s.medals = Array.from({ length: 11 }, (_, i) => (s.medals && s.medals[i]) | 0); s.secrets = s.secrets || {}; s.costume = s.costume || 'classic'; s.players = s.players || 1; s.turn = s.turn || 0; } });
   return {
     slots,
-    fresh: () => ({ players: 1, turn: 0, other: null, costume: 'classic', cleared: Array(11).fill(false), medals: Array(11).fill(0), secrets: {}, lives: 5, score: 0, coins: 0, node: 0, bonusAmmo: 0, startHearts: 0, startBoots: false }),
+    fresh: () => ({ players: 1, turn: 0, other: null, hero: 'wally', costume: 'classic', cleared: Array(11).fill(false), medals: Array(11).fill(0), secrets: {}, lives: 5, score: 0, coins: 0, node: 0, bonusAmmo: 0, startHearts: 0, startBoots: false }),
     persist() { try { localStorage.setItem(KEY, JSON.stringify(slots)); } catch (e) { /* ignore */ } },
   };
 })();
@@ -185,13 +185,71 @@ function finishRun(done, after) {
 }
 
 // ---------------- 2-player (taking turns) ----------------
-const PNAME = ['WALLYMAN', 'WALLY JR'];
-const pname = () => PNAME[(game && game.turn) || 0];
+const HEROES = {
+  wally: { name: 'WALLYMAN', alt: 'WALLY JR', color: '#f2702a', lines: ['THE CAPED HERO OF WALLY', 'ISLAND. FAST ON HIS FEET', 'AND ALWAYS ON THE PHONE.'] },
+  goth: { name: 'GOTHCHICK', alt: 'GOTHCHICK', color: '#ff4aa8', lines: ['JUMPS HIGHER AND RUNS A', 'LITTLE SLOWER. HOLD JUMP', 'IN THE AIR TO GLIDE DOWN.'] },
+};
+const heroOf = () => (game && game.hero) || 'wally';
+function pname() {
+  const h = HEROES[heroOf()];
+  const twin = game && game.players === 2 && game.other && game.other.hero === heroOf();
+  return twin && game.turn === 1 ? h.alt : h.name;
+}
+const lastHero = () => { try { return localStorage.getItem('wallyman-last-hero') || 'wally'; } catch (e) { return 'wally'; } };
+
+// Character select: shown after picking a file (and again for player 2 in a 2-player game).
+function HeroSelect(isNew, two, who = 0) {
+  const ids = ['wally', 'goth'];
+  let sel = Math.max(0, ids.indexOf(who === 0 ? game.hero || 'wally' : (game.other && game.other.hero) || 'wally')), t = 0;
+  const done = () => go(() => (isNew ? StoryScene(() => MapScene()) : MapScene()));
+  return {
+    enter() { Audio8.play('menu'); },
+    update() {
+      t++;
+      if (Input.pressed('left') || Input.pressed('right')) { sel ^= 1; Audio8.sfx('select'); }
+      if (Input.pressed('back')) { go(() => TitleScene()); return; }
+      if (t > 10 && Input.confirm()) {
+        const hero = ids[sel];
+        Audio8.sfx(hero === 'goth' ? 'secret' : 'confirm');
+        if (who === 0) {
+          game.hero = hero;
+          try { localStorage.setItem('wallyman-last-hero', hero); } catch (e) { /* ignore */ }
+          if (game.turn === 0 && game.costume === 'junior') game.costume = 'classic';
+        } else {
+          game.other.hero = hero;
+          game.other.costume = hero === game.hero ? 'junior' : 'classic'; // a twin wears the other colours
+        }
+        Save.persist();
+        if (who === 0 && two) go(() => HeroSelect(isNew, two, 1)); else done();
+      }
+    },
+    draw() {
+      drawParallax('grass', t * 0.4);
+      txt(two ? `PLAYER ${who + 1}: CHOOSE YOUR HERO` : 'CHOOSE YOUR HERO', 128, 8, '#ffe040', { align: 'center', outline: '#101848' });
+      ids.forEach((id, i) => {
+        const cx = i ? 172 : 84, on = i === sel, x = cx - 40, y = 22;
+        ctx.fillStyle = on ? ((t >> 3) & 1 ? '#ffe040' : '#ffa020') : '#101848'; ctx.fillRect(x - 3, y - 3, 86, 118);
+        ctx.fillStyle = '#1a1020'; ctx.fillRect(x - 1, y - 1, 82, 114);
+        const gr = ctx.createLinearGradient(0, y, 0, y + 112);
+        gr.addColorStop(0, id === 'goth' ? '#3a1848' : '#5cb0f8'); gr.addColorStop(1, id === 'goth' ? '#120818' : '#c8ecff');
+        ctx.fillStyle = gr; ctx.fillRect(x, y, 80, 112);
+        const img = id === 'goth' ? Sprites.gothPortrait : Sprites.portrait;
+        if (img.complete && img.naturalWidth) ctx.drawImage(img, Math.round(cx - img.naturalWidth / 2), y + 112 - img.naturalHeight - (id === 'goth' ? 6 : 2));
+        if (!on) { ctx.fillStyle = 'rgba(16,24,72,0.45)'; ctx.fillRect(x, y, 80, 112); }
+        txt(HEROES[id].name, cx, y + 116, on ? HEROES[id].color : '#c8d0f0', { align: 'center', outline: '#101848' });
+        Wally.draw(ctx, cx, 182, on ? 'walk' + ((t >> 2) % 8) : 'idle' + ((t >> 4) % 4), 1, { t, hero: id, costume: 'classic' });
+        if (on) txt('>', x - 12 + ((t >> 3) & 1), y + 50, '#ffe040', { scale: 2, outline: '#101848' });
+      });
+      drawWindow(16, 184, 224, 38);
+      HEROES[ids[sel]].lines.forEach((l, k) => txt(l, 128, 190 + k * 10, '#fff', { align: 'center' }));
+    },
+  };
+}
 function swapPlayers(markOut) {
   const o = game.other;
   if (!o) return false;
-  const cur = { lives: game.lives, score: game.score, coins: game.coins, costume: game.costume, out: !!markOut };
-  game.lives = o.lives; game.score = o.score; game.coins = o.coins; game.costume = o.costume;
+  const cur = { lives: game.lives, score: game.score, coins: game.coins, costume: game.costume, hero: game.hero, out: !!markOut };
+  game.lives = o.lives; game.score = o.score; game.coins = o.coins; game.costume = o.costume; game.hero = o.hero || 'wally';
   game.other = cur; game.turn = (game.turn || 0) ^ 1; Save.persist();
   return true;
 }
@@ -223,7 +281,7 @@ function afterGameOver() {
 // ---------------- costumes ----------------
 const COSTUME_LIST = [
   { id: 'classic', name: 'CLASSIC', hint: '', ok: () => true },
-  { id: 'junior', name: 'WALLY JR', hint: '', ok: () => true },
+  { id: 'junior', name: 'JUNIOR', hint: '', ok: () => true },
   { id: 'gold', name: 'GOLDEN', hint: 'FIND 20 WALLY MEDALS', ok: () => game.medals.reduce((n, m) => n + [0, 1, 2, 3, 4].filter((i) => m & (1 << i)).length, 0) >= 20 },
   { id: 'ice', name: 'ICE', hint: 'CLEAR FROSTY PEAKS', ok: () => game.cleared[5] },
   { id: 'dino', name: 'DINO SUIT', hint: 'CLEAR CORAL DEPTHS', ok: () => game.cleared[9] },
@@ -252,7 +310,7 @@ function WardrobeScene() {
       drawWindow(8, 6, 120, 22); txt('WARDROBE', 68, 14, '#ffe040', { align: 'center' });
       const c = COSTUME_LIST[sel], open = c.ok();
       // big preview
-      const f = Wally.frame('walk' + ((t >> 2) % 8), (t >> 3) & 3, false, 1, open ? 'n' : 'k', c.id);
+      const f = Wally.frame('walk' + ((t >> 2) % 8), (t >> 3) & 3, false, 1, open ? 'n' : 'k', c.id, heroOf());
       ctx.drawImage(f, 128 - 36, 30, 72, 96);
       drawWindow(160, 40, 90, 50);
       txt(c.name, 205, 48, open ? '#ffe040' : '#8890b0', { align: 'center' });
@@ -264,7 +322,7 @@ function WardrobeScene() {
         const x = 12 + i * 34, y = 140, ok = k.ok();
         ctx.fillStyle = i === sel ? '#ffe040' : '#6a4020'; ctx.fillRect(x - 2, y - 2, 32, 40);
         ctx.fillStyle = '#f0d8a8'; ctx.fillRect(x, y, 28, 36);
-        ctx.drawImage(Wally.frame('idle0', 0, false, 1, ok ? 'n' : 'k', k.id), x + 2, y + 2);
+        ctx.drawImage(Wally.frame('idle0', 0, false, 1, ok ? 'n' : 'k', k.id, heroOf()), x + 2, y + 2);
         if (game.costume === k.id) txt('#', x + 22, y + 26, '#e83850');
       });
       if (!open) txt('TO UNLOCK: ' + c.hint, 128, 186, '#fff', { align: 'center', outline: '#3a2010' });
@@ -292,7 +350,7 @@ function TimeAttackSelect(start) {
         if (!avail(sel)) { Audio8.sfx('bump'); return; }
         Audio8.sfx('confirm');
         const li = sel;
-        game = Object.assign(Save.fresh(), { lives: 99 });
+        game = Object.assign(Save.fresh(), { lives: 99, hero: lastHero() });
         go(() => new Play(li, false, { ta: true }));
       }
     },
@@ -433,7 +491,7 @@ function TitleScene() {
           game = Save.slots[slot];
           if (two) { if (!game.other) game.other = { lives: 5, score: 0, coins: 0, costume: 'junior', out: false }; game.other.out = false; game.players = 2; } else { if (game.turn === 1 && game.other) swapPlayers(false); game.players = 1; game.other = null; game.turn = 0; }
           Save.persist(); Audio8.sfx('confirm');
-          go(() => (isNew ? StoryScene(() => MapScene()) : MapScene()));
+          go(() => HeroSelect(isNew, two));
         }
         return;
       }
@@ -651,7 +709,7 @@ function IntroScene(li, fromCheckpoint) {
       txt(LEVELS[li].bonus ? 'BONUS LEVEL' : `LEVEL ${li + 1}`, 128, 60, LEVELS[li].bonus ? '#c070ff' : '#ffe040', { scale: 2, align: 'center' });
       txt(LEVELS[li].name, 128, 88, '#fff', { align: 'center' });
       drawWally(110, 142, 'idle' + ((t >> 4) % 4), 1);
-      if (game.players === 2) txt(pname(), 128, 104, game.turn === 1 ? '#5ad070' : '#f2702a', { align: 'center' });
+      if (game.players === 2 || heroOf() !== 'wally') txt(pname(), 128, 104, HEROES[heroOf()].color, { align: 'center' });
       txt('*  ' + game.lives, 124, 126, '#fff');
       for (let i = 0; i < 5; i++) ctx.drawImage(game.medals[li] & (1 << i) ? Sprites.miniMedal : Sprites.miniMedalOff, 113 + i * 7, 160);
     },
@@ -1173,7 +1231,8 @@ class Play {
     const ice = this.def.ice && p.onGround;
     const water = !!this.def.water, frozen = p.frozen > 0;
     if (frozen) p.frozen--;
-    const max = water ? (run ? 1.9 : 1.3) : run ? 2.8 : 1.6, acc = (run ? 0.11 : 0.08) * (ice ? 0.45 : 1) * (water ? 0.7 : 1);
+    const goth = heroOf() === 'goth';
+    const max = water ? (run ? 1.9 : 1.3) : run ? (goth ? 2.5 : 2.8) : goth ? 1.5 : 1.6, acc = (run ? 0.11 : 0.08) * (ice ? 0.45 : 1) * (water ? 0.7 : 1);
     let dir = auto ? (this.stateT > 30 ? 1 : 0) : frozen ? 0 : (Input.down('right') ? 1 : 0) - (Input.down('left') ? 1 : 0);
     if (!auto && !water && !frozen && !p.onGround && !p.pound && Input.pressed('down')) { p.pound = 12; p.vx = 0; p.boost = false; Audio8.sfx('swoop'); }
     if (p.pound) dir = 0;
@@ -1192,7 +1251,7 @@ class Play {
     if (water) { // swimming: every press is a stroke
       if (p.jumpBuf === 6) { p.vy = -2.7; p.jumpBuf = 0; Audio8.sfx('swim'); this.parts.push({ k: 'bubble', x: p.x + p.w / 2, y: p.y + 4, vy: -0.6, life: 50 }); }
     } else if (p.jumpBuf > 0 && p.coyote > 0) {
-      p.vy = -((p.riding ? 6.1 : 5.4) + Math.abs(p.vx) * 0.25); p.jumpBuf = 0; p.coyote = 0; Audio8.sfx('jump');
+      p.vy = -((p.riding ? 6.1 : goth ? 5.9 : 5.4) + Math.abs(p.vx) * 0.25); p.jumpBuf = 0; p.coyote = 0; Audio8.sfx('jump');
       p.sx = 0.8; p.sy = 1.2; this.dust(p.x + p.w / 2, p.y + p.h, 2);
     }
     if (p.onGround) p.dj = false;
@@ -1208,6 +1267,9 @@ class Play {
     if (p.vy >= 0) p.boost = false;
     const hold = (p.boost || (!auto && Input.down('jump'))) && p.vy < 0 && !p.flutter;
     p.vy = water ? Math.min(1.4, p.vy + 0.09) : Math.min(5.5, p.vy + (hold ? 0.19 : 0.5));
+    // GothChick's glide: hold Jump while falling to drift down gently
+    p.gliding = goth && !water && !p.riding && !p.pound && !auto && !p.onGround && p.vy > 1.1 && Input.down('jump');
+    if (p.gliding) { p.vy = 1.1; if (frame % 7 === 0) this.parts.push({ k: 'spark', x: p.x + p.w / 2 - p.face * 6, y: p.y + 6, life: 10 }); }
     if (water && frame % 50 === 0) this.parts.push({ k: 'bubble', x: p.x + p.w / 2 + p.face * 3, y: p.y + 4, vy: -0.5, life: 60 });
     if (p.onGround) p.flutter = 0;
     // Dino's flutter: hold jump while falling to hover for a moment
@@ -1959,9 +2021,9 @@ class Play {
   }
   drawHUD() {
     const p = this.p;
-    txt(pname(), 8, 6, game.turn === 1 ? '#5ad070' : '#f2702a');
+    txt(pname(), 8, 6, pname() === 'WALLY JR' ? '#5ad070' : HEROES[heroOf()].color);
     txt('*' + pad(Math.max(0, game.lives), 2), 14, 15, '#fff');
-    for (let i = 0; i < 3; i++) ctx.drawImage(i < p.hearts ? Sprites.heart : Sprites.heartEmpty, 62 + i * 9, 6);
+    for (let i = 0; i < 3; i++) ctx.drawImage(i < p.hearts ? Sprites.heart : Sprites.heartEmpty, 65 + i * 9, 6);
     { let ix = 86; if (p.power === 'signal') { ctx.drawImage(Sprites.miniPhone, ix, 15); ix += 6; } if (p.boots) { ctx.drawImage(Sprites.miniBoots, ix, 16); ix += 7; } if (p.charge > 0 && (p.charge > 120 || (frame >> 2) & 1)) ctx.drawImage(Sprites.miniBattery, ix, 15); }
     ctx.drawImage(Sprites.ballIcon, 62, 15); txt('*' + p.ammo, 70, 15, p.ammo ? '#fff' : '#ff6060');
     if (this.ta) { txt('TIME ATTACK', 98, 6, '#5ff0ff'); txt(fmtTime(this.taT), 104, 15, '#fff'); } else {
@@ -2008,6 +2070,7 @@ function loop(now) {
     frame++;
   }
   Wally.current = (game && game.costume) || 'classic';
+  Wally.hero = heroOf();
   scene.draw();
   if (fade > 0) {
     // SNES-style "iris" fade: a shrinking/growing circle mask
