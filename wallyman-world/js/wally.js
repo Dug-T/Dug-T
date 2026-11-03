@@ -4,7 +4,7 @@
 // Every frame is rendered once, outlined automatically, and cached.
 const Wally = (() => {
   const W = 24, H = 32, BASE = 31; // canvas size, feet baseline
-  const C = {
+  const PAL0 = {
     ink: '#1a1020',
     blue: '#2f62d0', blueD: '#1d3f94', blueL: '#5a8af0', blueLL: '#86aaff',
     org: '#f2702a', orgD: '#b4461a', orgL: '#ffa060',
@@ -12,6 +12,17 @@ const Wally = (() => {
     lens: '#d8f0ff', glint: '#ffffff', green: '#1f9a3a', greenD: '#0e5a1e',
     phone: '#2a3038', screen: '#4a6070', screenOn: '#5ff0ff', sole: '#5a2a10',
   };
+  // Costumes recolour the suit (blue*) and the boots, belt and cape (org*).
+  const COSTUMES = {
+    classic: {},
+    junior: { blue: '#2ea84a', blueD: '#1a7030', blueL: '#5ad070', blueLL: '#90f0a0', org: '#f8d030', orgD: '#c09018', orgL: '#fff080' },
+    gold: { blue: '#d8a820', blueD: '#a07810', blueL: '#ffd860', blueLL: '#fff0a0', org: '#e83850', orgD: '#a01830', orgL: '#ff8090' },
+    ice: { blue: '#90c8f8', blueD: '#5888c0', blueL: '#d0ecff', blueLL: '#ffffff', org: '#f0f8ff', orgD: '#a8c0e0', orgL: '#ffffff', lens: '#5ff0ff' },
+    dino: { blue: '#2ec4b6', blueD: '#1a8a80', blueL: '#6ae8d8', blueLL: '#a0fff0', org: '#ff8c42', orgD: '#c0602a', orgL: '#ffb880' },
+    shadow: { blue: '#3a2a5a', blueD: '#20142e', blueL: '#5a4a8a', blueLL: '#8a7ab8', org: '#8a3ac8', orgD: '#5a1a8a', orgL: '#c070ff', lens: '#ff3040' },
+    fire: { blue: '#e83030', blueD: '#a01818', blueL: '#ff7060', blueLL: '#ffb0a0', org: '#ffd040', orgD: '#c09010', orgL: '#fff0a0' },
+  };
+  let C = PAL0;
 
   // ---------- poses ----------
   // angles are radians from straight down; positive points toward the facing direction.
@@ -50,7 +61,8 @@ const Wally = (() => {
   });
 
   // ---------- pixel drawing helpers ----------
-  function rig(pose, capeF, signal) {
+  function rig(pose, capeF, signal, costume) {
+    C = Object.assign({}, PAL0, COSTUMES[costume] || {});
     const c = Sprites.canvas(W, H), x = c.getContext('2d');
     const px = (X, Y, col, w = 1, h = 1) => { x.fillStyle = col; x.fillRect(Math.round(X), Math.round(Y), w, h); };
     const blob = (X, Y, w, col) => { const o = Math.floor(w / 2); px(X - o, Y - o, col, w, w); };
@@ -158,15 +170,15 @@ const Wally = (() => {
   }
   const cache = new Map();
   // variant: 'n' normal, 'w' white flash, 'g' glow silhouette
-  function frame(pose, capeF, signal, face, variant = 'n') {
+  function frame(pose, capeF, signal, face, variant = 'n', costume = 'classic') {
     if (!POSES[pose]) pose = 'idle0';
-    const key = `${pose}|${capeF}|${signal ? 1 : 0}|${face > 0 ? 1 : 0}|${variant}`;
+    const key = `${pose}|${capeF}|${signal ? 1 : 0}|${face > 0 ? 1 : 0}|${variant}|${costume}`;
     let c = cache.get(key);
     if (c) return c;
     if (variant === 'n') {
-      if (face > 0) c = outline(rig(POSES[pose], capeF, signal), C.ink);
-      else c = Sprites.flip(frame(pose, capeF, signal, 1, 'n'));
-    } else c = tint(frame(pose, capeF, signal, face, 'n'), variant === 'w' ? '#ffffff' : '#5ff0ff');
+      if (face > 0) c = outline(rig(POSES[pose], capeF, signal, costume), PAL0.ink);
+      else c = Sprites.flip(frame(pose, capeF, signal, 1, 'n', costume));
+    } else c = tint(frame(pose, capeF, signal, face, 'n', costume), variant === 'w' ? '#ffffff' : variant === 'k' ? '#1a1020' : '#5ff0ff');
     cache.set(key, c);
     return c;
   }
@@ -177,12 +189,13 @@ const Wally = (() => {
     const w = Math.round(W * sx), h = Math.round(H * sy);
     const X = Math.round(cx - w / 2), Y = Math.round(feetY - h + (BASE + 1 - H) * sy);
     if (o.glow) {
-      const g = frame(pose, capeF, o.signal, face, 'g');
+      const g = frame(pose, capeF, o.signal, face, 'g', o.costume || api.current);
       ctx.save(); ctx.globalAlpha = o.glow;
       for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) ctx.drawImage(g, X + dx, Y + dy, w, h);
       ctx.restore();
     }
-    ctx.drawImage(frame(pose, capeF, o.signal, face, o.white ? 'w' : o.ghost ? 'g' : 'n'), X, Y, w, h);
+    ctx.drawImage(frame(pose, capeF, o.signal, face, o.white ? 'w' : o.ghost ? 'g' : o.black ? 'k' : 'n', o.costume || api.current), X, Y, w, h);
   }
-  return { draw, frame, POSES, W, H };
+  const api = { draw, frame, POSES, W, H, COSTUMES, current: 'classic' };
+  return api;
 })();

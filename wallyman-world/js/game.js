@@ -90,10 +90,10 @@ const Save = (() => {
   const KEY = 'wallyman-world-save-v1';
   let slots = [null, null, null];
   try { const d = JSON.parse(localStorage.getItem(KEY)); if (Array.isArray(d)) slots = [d[0] || null, d[1] || null, d[2] || null]; } catch (e) { /* ignore */ }
-  slots.forEach((s) => { if (s) { s.cleared = Array.from({ length: 11 }, (_, i) => !!(s.cleared && s.cleared[i])); s.medals = Array.from({ length: 11 }, (_, i) => (s.medals && s.medals[i]) | 0); s.secrets = s.secrets || {}; } });
+  slots.forEach((s) => { if (s) { s.cleared = Array.from({ length: 11 }, (_, i) => !!(s.cleared && s.cleared[i])); s.medals = Array.from({ length: 11 }, (_, i) => (s.medals && s.medals[i]) | 0); s.secrets = s.secrets || {}; s.costume = s.costume || 'classic'; s.players = s.players || 1; s.turn = s.turn || 0; } });
   return {
     slots,
-    fresh: () => ({ cleared: Array(11).fill(false), medals: Array(11).fill(0), secrets: {}, lives: 5, score: 0, coins: 0, node: 0, bonusAmmo: 0, startHearts: 0, startBoots: false }),
+    fresh: () => ({ players: 1, turn: 0, other: null, costume: 'classic', cleared: Array(11).fill(false), medals: Array(11).fill(0), secrets: {}, lives: 5, score: 0, coins: 0, node: 0, bonusAmmo: 0, startHearts: 0, startBoots: false }),
     persist() { try { localStorage.setItem(KEY, JSON.stringify(slots)); } catch (e) { /* ignore */ } },
   };
 })();
@@ -177,11 +177,159 @@ const Scores = (() => {
 })();
 function bestLevel() { return Math.max(1, Math.min(8, game.cleared.slice(0, 8).filter(Boolean).length + 1)); }
 // After a run ends: name entry if the score made the table, then the table.
-function finishRun(done, then) {
+function finishRun(done, after) {
   const score = game.score, level = done ? 8 : bestLevel();
   game.score = 0; game.coins = 0; game.lives = 5; Save.persist();
-  if (Scores.qualifies(score)) return NameEntryScene(score, level, done, then);
+  if (Scores.qualifies(score)) return NameEntryScene(score, level, done, after);
+  return HighScoreScene(null, after);
+}
+
+// ---------------- 2-player (taking turns) ----------------
+const PNAME = ['WALLYMAN', 'WALLY JR'];
+const pname = () => PNAME[(game && game.turn) || 0];
+function swapPlayers(markOut) {
+  const o = game.other;
+  if (!o) return false;
+  const cur = { lives: game.lives, score: game.score, coins: game.coins, costume: game.costume, out: !!markOut };
+  game.lives = o.lives; game.score = o.score; game.coins = o.coins; game.costume = o.costume;
+  game.other = cur; game.turn = (game.turn || 0) ^ 1; Save.persist();
+  return true;
+}
+// After a level ends, hand over to the other player if they are still in the game.
+function nextTurn(then) {
+  if (game.players === 2 && game.other && !game.other.out) { swapPlayers(false); return TurnScene(then); }
   return then();
+}
+function TurnScene(next) {
+  let t = 0;
+  return {
+    enter() { Audio8.sfx('confirm'); },
+    update() { t++; if (t > 110 || (t > 20 && Input.confirm())) go(next); },
+    draw() {
+      ctx.fillStyle = '#101848'; ctx.fillRect(0, 0, VW, VH);
+      txt(pname() + "'S TURN!", 128, 70, '#ffe040', { scale: 2, align: 'center', outline: '#000' });
+      drawWally(128, 150, 'win' + ((t >> 4) & 1), 1);
+      txt('*' + pad(game.lives, 2) + '   ' + pad(game.score, 7), 128, 168, '#fff', { align: 'center' });
+    },
+  };
+}
+function afterGameOver() {
+  if (game.players === 2 && game.other && !game.other.out) { swapPlayers(true); return TurnScene(() => MapScene()); }
+  if (game.turn === 1) { game.costume = 'classic'; }
+  game.players = 1; game.other = null; game.turn = 0; Save.persist();
+  return TitleScene();
+}
+
+// ---------------- costumes ----------------
+const COSTUME_LIST = [
+  { id: 'classic', name: 'CLASSIC', hint: '', ok: () => true },
+  { id: 'junior', name: 'WALLY JR', hint: '', ok: () => true },
+  { id: 'gold', name: 'GOLDEN', hint: 'FIND 20 WALLY MEDALS', ok: () => game.medals.reduce((n, m) => n + [0, 1, 2, 3, 4].filter((i) => m & (1 << i)).length, 0) >= 20 },
+  { id: 'ice', name: 'ICE', hint: 'CLEAR FROSTY PEAKS', ok: () => game.cleared[5] },
+  { id: 'dino', name: 'DINO SUIT', hint: 'CLEAR CORAL DEPTHS', ok: () => game.cleared[9] },
+  { id: 'shadow', name: 'SHADOW', hint: 'CLEAR HAUNTED MANOR', ok: () => game.cleared[8] },
+  { id: 'fire', name: 'FIRE', hint: 'BEAT BARON STATIC', ok: () => game.cleared[7] },
+];
+function WardrobeScene() {
+  let sel = Math.max(0, COSTUME_LIST.findIndex((c) => c.id === game.costume)), t = 0, msg = '', msgT = 0;
+  return {
+    enter() { Audio8.play('menu'); },
+    update() {
+      t++; if (msgT > 0) msgT--;
+      if (Input.pressed('right')) { sel = (sel + 1) % COSTUME_LIST.length; Audio8.sfx('select'); msgT = 0; }
+      if (Input.pressed('left')) { sel = (sel + COSTUME_LIST.length - 1) % COSTUME_LIST.length; Audio8.sfx('select'); msgT = 0; }
+      if (Input.pressed('back') || Input.pressed('start') || Input.pressed('run')) { go(() => MapScene()); return; }
+      if (Input.pressed('jump')) {
+        const c = COSTUME_LIST[sel];
+        if (c.ok()) { game.costume = c.id; Save.persist(); Audio8.sfx('power'); msg = 'LOOKING GOOD!'; } else { Audio8.sfx('bump'); msg = 'LOCKED!'; }
+        msgT = 90;
+      }
+    },
+    draw() {
+      ctx.fillStyle = '#d8a868'; ctx.fillRect(0, 0, VW, VH);
+      ctx.fillStyle = '#c89858'; for (let x = 0; x < VW; x += 16) ctx.fillRect(x, 0, 1, VH);
+      ctx.fillStyle = '#8a5a2a'; ctx.fillRect(0, 128, VW, 4);
+      drawWindow(8, 6, 120, 22); txt('WARDROBE', 68, 14, '#ffe040', { align: 'center' });
+      const c = COSTUME_LIST[sel], open = c.ok();
+      // big preview
+      const f = Wally.frame('walk' + ((t >> 2) % 8), (t >> 3) & 3, false, 1, open ? 'n' : 'k', c.id);
+      ctx.drawImage(f, 128 - 36, 30, 72, 96);
+      drawWindow(160, 40, 90, 50);
+      txt(c.name, 205, 48, open ? '#ffe040' : '#8890b0', { align: 'center' });
+      if (!open) { txt('LOCKED', 205, 62, '#ff8080', { align: 'center' }); } else if (game.costume === c.id) txt('WEARING', 205, 62, '#5ae060', { align: 'center' });
+      else txt('A: WEAR', 205, 62, '#fff', { align: 'center' });
+      if (msgT) txt(msg, 205, 76, '#5ff0ff', { align: 'center' });
+      // all costumes
+      COSTUME_LIST.forEach((k, i) => {
+        const x = 12 + i * 34, y = 140, ok = k.ok();
+        ctx.fillStyle = i === sel ? '#ffe040' : '#6a4020'; ctx.fillRect(x - 2, y - 2, 32, 40);
+        ctx.fillStyle = '#f0d8a8'; ctx.fillRect(x, y, 28, 36);
+        ctx.drawImage(Wally.frame('idle0', 0, false, 1, ok ? 'n' : 'k', k.id), x + 2, y + 2);
+        if (game.costume === k.id) txt('#', x + 22, y + 26, '#e83850');
+      });
+      if (!open) txt('TO UNLOCK: ' + c.hint, 128, 186, '#fff', { align: 'center', outline: '#3a2010' });
+      txt('< > CHOOSE   A: WEAR   B: BACK', 128, 204, '#3a2010', { align: 'center' });
+    },
+  };
+}
+
+// ---------------- time attack ----------------
+const TA_KEY = 'wallyman-ta-best';
+const taLoad = () => { try { return JSON.parse(localStorage.getItem(TA_KEY)) || {}; } catch (e) { return {}; } };
+const taSave = (b) => { try { localStorage.setItem(TA_KEY, JSON.stringify(b)); } catch (e) { /* ignore */ } };
+const fmtTime = (f) => { const cs = Math.floor((f * 100) / 60); return `${Math.floor(cs / 6000)}:${pad(Math.floor(cs / 100) % 60, 2)}.${pad(cs % 100, 2)}`; };
+function TimeAttackSelect(start) {
+  const avail = (li) => Save.slots.some((s) => s && s.cleared && s.cleared[li]);
+  let sel = start || 0, t = 0;
+  return {
+    enter() { Audio8.play('menu'); },
+    update() {
+      t++;
+      if (Input.pressed('down')) { sel = (sel + 1) % LEVELS.length; Audio8.sfx('select'); }
+      if (Input.pressed('up')) { sel = (sel + LEVELS.length - 1) % LEVELS.length; Audio8.sfx('select'); }
+      if (Input.pressed('back')) { go(() => TitleScene()); return; }
+      if (Input.confirm()) {
+        if (!avail(sel)) { Audio8.sfx('bump'); return; }
+        Audio8.sfx('confirm');
+        const li = sel;
+        game = Object.assign(Save.fresh(), { lives: 99 });
+        go(() => new Play(li, false, { ta: true }));
+      }
+    },
+    draw() {
+      drawParallax('sky', t * 0.3);
+      drawWindow(12, 8, 232, 184);
+      txt('TIME ATTACK', 128, 16, '#ffe040', { align: 'center' });
+      const best = taLoad();
+      LEVELS.forEach((d, i) => {
+        const y = 32 + i * 14, on = i === sel, ok = avail(i);
+        if (on) txt('>', 20 + ((t >> 3) & 1), y, '#ffe040');
+        txt((d.bonus ? 'B' + (i - 7) : String(i + 1)) + '. ' + (ok ? d.name : '???'), 30, y, on ? '#ffe040' : ok ? '#fff' : '#6870a0');
+        txt(best[i] ? fmtTime(best[i]) : '-:--.--', 236, y, best[i] ? '#5ff0ff' : '#6870a0', { align: 'right' });
+      });
+      txt('BEAT A LEVEL IN ANY FILE TO UNLOCK IT', 128, 200, '#fff', { align: 'center', outline: '#101848' });
+      txt('START: GO   ESC: BACK', 128, 212, '#fff', { align: 'center', outline: '#101848' });
+    },
+  };
+}
+function TAResultScene(li, frames) {
+  const best = taLoad(), old = best[li], record = !old || frames < old;
+  if (record) { best[li] = frames; taSave(best); }
+  let t = 0;
+  return {
+    enter() { Audio8.play(record ? 'victory' : 'clear'); },
+    update() { t++; if (t > 40 && Input.confirm()) go(() => TimeAttackSelect(li)); if (t > 40 && Input.pressed('back')) go(() => TimeAttackSelect(li)); },
+    draw() {
+      drawParallax('sky', t * 0.3);
+      drawWindow(28, 40, 200, 120);
+      txt(LEVELS[li].name, 128, 52, '#ffe040', { align: 'center' });
+      txt('YOUR TIME', 128, 74, '#fff', { align: 'center' });
+      txt(fmtTime(frames), 128, 86, '#5ff0ff', { scale: 2, align: 'center', outline: '#101848' });
+      txt('BEST  ' + fmtTime(record ? frames : old), 128, 112, '#fff', { align: 'center' });
+      if (record && (t >> 4) % 2 === 0) txt('NEW RECORD!', 128, 130, '#ffe040', { scale: 2, align: 'center', outline: '#7a2a08' });
+      if (t > 40) txt('PRESS START', 128, 176, '#fff', { align: 'center', outline: '#101848' });
+    },
+  };
 }
 
 // =====================================================================
@@ -253,7 +401,7 @@ function drawLogo(y) {
 // Title screen + file select
 // =====================================================================
 function TitleScene() {
-  let mode = 'press', sel = 0, eraseMode = false, t = 0;
+  let mode = 'press', sel = 0, eraseMode = false, t = 0, psel = 0, pick = null;
   const walkers = [{ x: -20, k: 'grumble', v: 0.4 }, { x: -120, k: 'prickle', v: 0.35 }];
   const hero = { x: -60, y: 192, vy: 0, anim: 0 };
   const items = () => [0, 1, 2].map((i) => {
@@ -261,7 +409,7 @@ function TitleScene() {
     if (!s) return `FILE ${'ABC'[i]}   NEW GAME`;
     const n = s.cleared.slice(0, 8).filter(Boolean).length;
     return `FILE ${'ABC'[i]}   #${n}/8  *${pad(s.lives, 2)}`;
-  }).concat(['HIGH SCORES', `SOUND: ${Audio8.isEnabled() ? 'ON' : 'OFF'}`, eraseMode ? 'CANCEL ERASE' : 'ERASE FILE']);
+  }).concat(['TIME ATTACK', 'HIGH SCORES', `SOUND: ${Audio8.isEnabled() ? 'ON' : 'OFF'}`, eraseMode ? 'CANCEL ERASE' : 'ERASE FILE']);
   return {
     enter() { Audio8.play('title'); },
     update() {
@@ -276,21 +424,31 @@ function TitleScene() {
         if (Input.confirm()) { Audio8.unlock(); Audio8.play('menu'); Audio8.sfx('confirm'); mode = 'menu'; }
         return;
       }
-      if (Input.pressed('down')) { sel = (sel + 1) % 6; Audio8.sfx('select'); }
-      if (Input.pressed('up')) { sel = (sel + 5) % 6; Audio8.sfx('select'); }
+      if (mode === 'players') {
+        if (Input.pressed('down') || Input.pressed('up')) { psel ^= 1; Audio8.sfx('select'); }
+        if (Input.pressed('back')) { mode = 'menu'; return; }
+        if (Input.confirm()) {
+          const { slot, isNew } = pick, two = psel === 1;
+          if (isNew) Save.slots[slot] = Save.fresh();
+          game = Save.slots[slot];
+          if (two) { if (!game.other) game.other = { lives: 5, score: 0, coins: 0, costume: 'junior', out: false }; game.other.out = false; game.players = 2; } else { if (game.turn === 1 && game.other) swapPlayers(false); game.players = 1; game.other = null; game.turn = 0; }
+          Save.persist(); Audio8.sfx('confirm');
+          go(() => (isNew ? StoryScene(() => MapScene()) : MapScene()));
+        }
+        return;
+      }
+      if (Input.pressed('down')) { sel = (sel + 1) % 7; Audio8.sfx('select'); }
+      if (Input.pressed('up')) { sel = (sel + 6) % 7; Audio8.sfx('select'); }
       if (Input.pressed('back')) { if (eraseMode) eraseMode = false; else { mode = 'press'; Audio8.play('title'); } }
       if (Input.confirm()) {
         if (sel < 3) {
           if (eraseMode) {
             Save.slots[sel] = null; Save.persist(); eraseMode = false; Audio8.sfx('brick');
           } else {
-            const isNew = !Save.slots[sel];
-            if (isNew) Save.slots[sel] = Save.fresh();
-            game = Save.slots[sel]; Save.persist();
-            Audio8.sfx('confirm');
-            go(() => (isNew ? StoryScene(() => MapScene()) : MapScene()));
+            pick = { slot: sel, isNew: !Save.slots[sel] }; psel = Save.slots[sel] && Save.slots[sel].players === 2 ? 1 : 0;
+            mode = 'players'; Audio8.sfx('confirm');
           }
-        } else if (sel === 3) { Audio8.sfx('confirm'); go(() => HighScoreScene(null, () => TitleScene())); } else if (sel === 4) { Audio8.setEnabled(!Audio8.isEnabled()); Audio8.sfx('confirm'); } else { eraseMode = !eraseMode; Audio8.sfx('select'); }
+        } else if (sel === 3) { Audio8.sfx('confirm'); go(() => TimeAttackSelect()); } else if (sel === 4) { Audio8.sfx('confirm'); go(() => HighScoreScene(null, () => TitleScene())); } else if (sel === 5) { Audio8.setEnabled(!Audio8.isEnabled()); Audio8.sfx('confirm'); } else { eraseMode = !eraseMode; Audio8.sfx('select'); }
       }
     },
     draw() {
@@ -311,10 +469,17 @@ function TitleScene() {
         if ((t >> 5) % 2 === 0) txt('PRESS START', 92, 132, '#fff', { outline: '#101848' });
         txt('Z/SPACE: JUMP   X/SHIFT: RUN+FIRE', 12, 152, '#d8f0ff');
         txt('ENTER: START/PAUSE', 12, 162, '#d8f0ff');
+      } else if (mode === 'players') {
+        drawWindow(16, 108, 172, 88);
+        txt(`FILE ${'ABC'[pick.slot]}${pick.isNew ? ' - NEW GAME' : ''}`, 102, 116, '#a8b0d8', { align: 'center' });
+        ['1 PLAYER GAME', '2 PLAYER GAME'].forEach((l, i) => { txt(l, 40, 134 + i * 16, i === psel ? '#ffe040' : '#fff'); if (i === psel) txt('>', 30 + ((t >> 3) & 1), 134 + i * 16, '#ffe040'); });
+        drawWally(142, 188, 'idle' + ((t >> 4) % 4), 1, { costume: 'classic' });
+        if (psel === 1) drawWally(166, 188, 'idle' + ((t >> 4) % 4), -1, { costume: 'junior' });
+        txt(psel === 1 ? 'TAKE TURNS' : 'WALLYMAN', 40, 172, '#a8b0d8');
       } else {
         drawWindow(16, 108, 172, 88);
         items().forEach((s, i) => {
-          const y = 116 + i * 12 + (i >= 3 ? 4 : 0);
+          const y = 114 + i * 11 + (i >= 3 ? 3 : 0);
           txt(s, 34, y, i === sel ? (eraseMode && i < 3 ? '#ff8080' : '#ffe040') : '#fff');
           if (i === sel) txt('>', 24 + ((t >> 3) & 1), y, '#ffe040');
         });
@@ -459,7 +624,7 @@ function MapScene() {
       const pose = walking ? 'walk' + ((t >> 2) % 8) : 'idle' + ((t >> 4) % 4);
       drawWally(pos.x, pos.y + 2, pose, face);
       drawWindow(4, 4, 248, 20);
-      txt('WALLY ISLAND', 10, 10, '#ffe040');
+      txt(game.players === 2 ? pname() + "'S TURN" : 'WALLY ISLAND', 10, 10, '#ffe040');
       ctx.drawImage(Sprites.heart, 112, 10); txt('*' + pad(game.lives, 2), 121, 10);
       ctx.drawImage(Sprites.coinIcon, 150, 10); txt('*' + pad(game.coins, 2), 157, 10);
       txt(pad(game.score, 7), 206, 10);
@@ -486,6 +651,7 @@ function IntroScene(li, fromCheckpoint) {
       txt(LEVELS[li].bonus ? 'BONUS LEVEL' : `LEVEL ${li + 1}`, 128, 60, LEVELS[li].bonus ? '#c070ff' : '#ffe040', { scale: 2, align: 'center' });
       txt(LEVELS[li].name, 128, 88, '#fff', { align: 'center' });
       drawWally(110, 142, 'idle' + ((t >> 4) % 4), 1);
+      if (game.players === 2) txt(pname(), 128, 104, game.turn === 1 ? '#5ad070' : '#f2702a', { align: 'center' });
       txt('*  ' + game.lives, 124, 126, '#fff');
       for (let i = 0; i < 5; i++) ctx.drawImage(game.medals[li] & (1 << i) ? Sprites.miniMedal : Sprites.miniMedalOff, 113 + i * 7, 160);
     },
@@ -495,7 +661,7 @@ function GameOverScene() {
   let t = 0;
   return {
     enter() { Audio8.play('gameover'); },
-    update() { t++; if (t > 300 || (t > 60 && Input.confirm())) go(() => finishRun(false, () => HighScoreScene(null, () => TitleScene()))); },
+    update() { t++; if (t > 300 || (t > 60 && Input.confirm())) go(() => finishRun(false, afterGameOver)); },
     draw() {
       ctx.fillStyle = '#000'; ctx.fillRect(0, 0, VW, VH);
       txt('GAME OVER', 128, 96, '#f04040', { scale: 3, align: 'center', outline: '#400' });
@@ -507,7 +673,7 @@ function EndingScene() {
   const lines = ['THE STATIC IS GONE!', '', 'BARON STATIC HAS BEEN', 'UNPLUGGED FOR GOOD AND', 'WALLY ISLAND HAS FULL', 'SIGNAL ONCE AGAIN.', '', 'THANKS FOR PLAYING', 'WALLYMAN WORLD!', '', 'STARRING WALLYMAN', 'CREATED BY DUG-T'];
   return {
     enter() { Audio8.play('victory'); },
-    update() { t++; if (t > 240 && Input.confirm()) go(() => finishRun(true, () => HighScoreScene(null, () => TitleScene()))); },
+    update() { t++; if (t > 240 && Input.confirm()) go(() => finishRun(true, () => TitleScene())); },
     draw() {
       drawParallax('sky', t * 0.4);
       if (Sprites.portrait.complete && Sprites.portrait.naturalWidth) ctx.drawImage(Sprites.portrait, 196, 112 + Math.round(Math.sin(t * 0.05) * 3));
@@ -571,6 +737,7 @@ function ShopScene() {
     { name: '+3 CANNONBALLS', price: 20, can: () => (game.bonusAmmo || 0) < 6, buy: () => { game.bonusAmmo = (game.bonusAmmo || 0) + 3; }, owned: () => (game.bonusAmmo || 0) >= 6 },
     { name: 'FULL HEARTS', price: 30, can: () => !game.startHearts, buy: () => { game.startHearts = 3; }, owned: () => !!game.startHearts },
     { name: 'JET BOOTS', price: 60, can: () => !game.startBoots, buy: () => { game.startBoots = true; }, owned: () => !!game.startBoots },
+    { name: 'WARDROBE', price: 0, wardrobe: true },
     { name: 'LEAVE SHOP', price: 0 },
   ];
   let sel = 0, t = 0, say = "HI! WHAT'LL IT BE?", sayT = 0;
@@ -583,6 +750,7 @@ function ShopScene() {
       if (Input.pressed('back') || Input.pressed('start')) { go(() => MapScene()); return; }
       if (Input.pressed('jump')) {
         const it = items[sel];
+        if (it.wardrobe) { go(() => WardrobeScene()); return; }
         if (!it.buy) { go(() => MapScene()); return; }
         if (!it.can()) { say = 'YOU ALREADY HAVE THAT!'; Audio8.sfx('bump'); } else if (game.coins < it.price) { say = 'NOT ENOUGH COINS!'; Audio8.sfx('bump'); } else {
           game.coins -= it.price; it.buy(); Save.persist(); say = 'THANKS! ROAR!'; Audio8.sfx('power');
@@ -603,7 +771,7 @@ function ShopScene() {
       drawWindow(8, 40, 140, 22); txt(say.slice(0, 22), 14, 48, sayT ? '#5ff0ff' : '#fff');
       drawWindow(8, 126, 240, 92);
       items.forEach((it, i) => {
-        const y = 134 + i * 14, on = i === sel;
+        const y = 133 + i * 12, on = i === sel;
         if (on) txt('>', 16 + ((t >> 3) & 1), y, '#ffe040');
         txt(it.name, 26, y, on ? '#ffe040' : '#fff');
         if (it.buy) {
@@ -667,7 +835,7 @@ function NameEntryScene(score, level, done, then) {
     const n = name.trim() || 'WALLY';
     const id = Scores.add(n, score, level, done);
     Audio8.sfx('oneup');
-    go(() => HighScoreScene(id, () => TitleScene()));
+    go(() => HighScoreScene(id, then));
   };
   return {
     enter() { Audio8.play('menu'); Input.clearTyped(); },
@@ -724,7 +892,8 @@ function levelTime(def) {
 }
 
 class Play {
-  constructor(li, fromCheckpoint) {
+  constructor(li, fromCheckpoint, opts = {}) {
+    this.ta = !!opts.ta; this.taT = 0; this.taReady = this.ta ? 80 : 0;
     this.li = li; this.lv = buildLevel(li); this.def = this.lv.def;
     this.T = Sprites.tiles[this.def.theme];
     this.ents = []; this.parts = []; this.pings = []; this.balls = []; this.platforms = []; this.bumps = [];
@@ -924,9 +1093,11 @@ class Play {
         if (d) { Audio8.setVolume(kind, Audio8.getVolume(kind) + d); Audio8.sfx('coin'); }
       }
       if (Input.pressed('back') || (Input.pressed('jump') && this.pauseSel === 0)) { this.paused = false; Audio8.sfx('pause'); }
-      if (Input.pressed('jump') && this.pauseSel === 3) { this.paused = false; Save.persist(); go(() => MapScene()); }
+      if (Input.pressed('jump') && this.pauseSel === 3) { this.paused = false; Save.persist(); const li = this.li; go(() => (this.ta ? TimeAttackSelect(li) : nextTurn(() => MapScene()))); }
       return;
     }
+    if (this.taReady > 0) { this.taReady--; if (this.taReady === 70 || this.taReady === 0) Audio8.sfx(this.taReady ? 'select' : 'confirm'); return; }
+    if (this.ta && this.state === 'play') this.taT++;
     this.stateT++;
     if (this.shake > 0) this.shake--;
     if (this.state === 'dying') return this.updateDying();
@@ -977,7 +1148,7 @@ class Play {
     }
 
     // timer
-    if (this.state === 'play' && ++this.timeTick >= 60) {
+    if (!this.ta && this.state === 'play' && ++this.timeTick >= 60) {
       this.timeTick = 0; this.time--;
       if (this.time === 20) { this.parts.push({ k: 'text', s: 'HURRY UP!', x: this.cam.x + 100, y: 100, vy: 0, life: 120, fixed: true }); Audio8.sfx('pause'); }
       if (this.time <= 10 && this.time > 0) Audio8.sfx('tick');
@@ -987,11 +1158,11 @@ class Play {
     if (this.state === 'bossdead') {
       if (this.stateT % 8 === 0 && this.stateT < 100) { Audio8.sfx('boom'); this.parts.push({ k: 'boom', x: this.bossX + Math.random() * 32, y: this.bossY + Math.random() * 32, life: 20 }); }
       if (this.stateT === 110) Audio8.play('clear');
-      if (this.stateT > 300) {
+      if (this.stateT > 300 && this.ta) { this.state = 'done'; const li = this.li, f = this.taT; go(() => TAResultScene(li, f)); } else if (this.stateT > 300) {
         game.cleared[this.li] = true; game.medals[this.li] |= this.medalsGot; game.node = nodeOf(this.li); Save.persist(); this.state = 'done';
         if (this.def.final) go(() => EndingScene());
-        else if (this.def.bossMsg) go(() => MessageScene(this.def.bossMsg, () => MapScene()));
-        else go(() => MessageScene(['BARON STATIC IS BEATEN...', 'BUT HE ESCAPED!', '', 'HE FLED NORTH ACROSS', 'WALLY ISLAND TO HIS', 'STATIC TOWER.', '', 'AFTER HIM, WALLYMAN!'], () => MapScene()));
+        else if (this.def.bossMsg) go(() => MessageScene(this.def.bossMsg, () => nextTurn(() => MapScene())));
+        else go(() => MessageScene(['BARON STATIC IS BEATEN...', 'BUT HE ESCAPED!', '', 'HE FLED NORTH ACROSS', 'WALLY ISLAND TO HIS', 'STATIC TOWER.', '', 'AFTER HIM, WALLYMAN!'], () => nextTurn(() => MapScene())));
       }
     }
   }
@@ -1106,13 +1277,17 @@ class Play {
     const p = this.p, t = this.stateT;
     if (t === 30) p.vy = -5.5;
     if (t > 30) { p.vy += 0.25; p.y += p.vy; }
-    if (t === 200) {
+    if (this.ta && t === 110) { const li = this.li; go(() => new Play(li, false, { ta: true })); return; }
+    if (t === 200 && !this.ta) {
       game.lives--; Save.persist();
-      if (game.lives < 0) go(() => GameOverScene()); else { const li = this.li, cp = this.cpHit; go(() => IntroScene(li, cp)); }
+      if (game.lives < 0) go(() => GameOverScene());
+      else if (game.players === 2 && game.other && !game.other.out) go(() => nextTurn(() => MapScene()));
+      else { const li = this.li, cp = this.cpHit; go(() => IntroScene(li, cp)); }
     }
   }
   updateClear() {
     const t = this.stateT;
+    if (this.ta) { if (t === 90) { const li = this.li, f = this.taT; go(() => TAResultScene(li, f)); } return; }
     if (t > 120 && this.time > 0) {
       if (t % 3 === 0) { const d = Math.min(this.time, 1); this.time -= d; game.score += d * 100; }
       if (t % 4 === 0) Audio8.sfx('tick');
@@ -1121,7 +1296,7 @@ class Play {
       game.cleared[this.li] = true; game.medals[this.li] |= this.medalsGot; game.node = nodeOf(this.li);
       if (this.secretTo !== undefined) game.secrets[this.secretTo] = true;
       Save.persist();
-      go(() => MapScene());
+      go(() => nextTurn(() => MapScene()));
     }
   }
   updatePings() {
@@ -1784,16 +1959,18 @@ class Play {
   }
   drawHUD() {
     const p = this.p;
-    txt('WALLYMAN', 8, 6, '#f2702a');
+    txt(pname(), 8, 6, game.turn === 1 ? '#5ad070' : '#f2702a');
     txt('*' + pad(Math.max(0, game.lives), 2), 14, 15, '#fff');
     for (let i = 0; i < 3; i++) ctx.drawImage(i < p.hearts ? Sprites.heart : Sprites.heartEmpty, 62 + i * 9, 6);
     { let ix = 86; if (p.power === 'signal') { ctx.drawImage(Sprites.miniPhone, ix, 15); ix += 6; } if (p.boots) { ctx.drawImage(Sprites.miniBoots, ix, 16); ix += 7; } if (p.charge > 0 && (p.charge > 120 || (frame >> 2) & 1)) ctx.drawImage(Sprites.miniBattery, ix, 15); }
     ctx.drawImage(Sprites.ballIcon, 62, 15); txt('*' + p.ammo, 70, 15, p.ammo ? '#fff' : '#ff6060');
+    if (this.ta) { txt('TIME ATTACK', 98, 6, '#5ff0ff'); txt(fmtTime(this.taT), 104, 15, '#fff'); } else {
     txt('TIME', 112, 6, '#ffe040');
-    txt(pad(this.time, 3), 117, 15, this.time <= 20 && (frame >> 4) & 1 ? '#ff6060' : '#fff');
+    txt(pad(this.time, 3), 117, 15, this.time <= 20 && (frame >> 4) & 1 ? '#ff6060' : '#fff'); }
     ctx.drawImage(Sprites.coinIcon, 176, 6); txt('*' + pad(game.coins, 2), 183, 6, '#fff');
     txt(pad(game.score, 7), 206, 15, '#fff');
-    for (let i = 0; i < 5; i++) ctx.drawImage((this.medalsGot | game.medals[this.li]) & (1 << i) ? Sprites.miniMedal : Sprites.miniMedalOff, 146 + i * 6, 16);
+    if (!this.ta) for (let i = 0; i < 5; i++) ctx.drawImage((this.medalsGot | game.medals[this.li]) & (1 << i) ? Sprites.miniMedal : Sprites.miniMedalOff, 146 + i * 6, 16);
+    if (this.taReady > 0) txt(this.taReady > 20 ? 'READY...' : 'GO!', 128, 96, this.taReady > 20 ? '#fff' : '#ffe040', { scale: 3, align: 'center', outline: '#101848' });
     const yeti = this.arena && this.ents.find((e) => e.yeti && !e.dying);
     if (yeti) { txt('ICE YETI', 8, 26, '#a0d8ff'); for (let i = 0; i < yeti.maxHp; i++) { ctx.fillStyle = i < yeti.hp ? '#5ff0ff' : '#203040'; ctx.fillRect(60 + i * 8, 27, 6, 5); } }
     if (this.def.boss && this.bossLock) {
@@ -1830,6 +2007,7 @@ function loop(now) {
     if (fadeDir !== 1) scene.update();
     frame++;
   }
+  Wally.current = (game && game.costume) || 'classic';
   scene.draw();
   if (fade > 0) {
     // SNES-style "iris" fade: a shrinking/growing circle mask
