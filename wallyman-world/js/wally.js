@@ -159,8 +159,8 @@ const Wally = (() => {
   // her back pigtail swings with the cape physics.
   const GOTH = {
     skin: '#f6d8cc', skinD: '#d4a89c', skinL: '#fff0ea', hair: '#1a1424', hairP: '#ff4aa8', hairV: '#9a4ae8',
-    dress: '#1c1426', dressL: '#3a2c48', dressD: '#0c0810', leg: '#2a2034', legD: '#18121e',
-    boot: '#2a1838', bootD: '#1a0e24', bootL: '#6a4a90', silver: '#d8dce8', lips: '#e02848', eye: '#3a6aa0',
+    dress: '#1c1426', dressL: '#3a2c48', dressD: '#0c0810',
+    boot: '#16121c', bootD: '#0a080e', bootL: '#5a4e6a', silver: '#d8dce8', lips: '#e02848', eye: '#3a6aa0',
   };
   const GOTH_COSTUMES = {
     classic: {},
@@ -197,9 +197,13 @@ const Wally = (() => {
     const leg = ([th, bend], back) => {
       const [kx, ky] = dir(th, 4), [fx, fy] = dir(th - bend, 4);
       const k = [hipX + (back ? -1 : 1) + kx, hipY + ky], f = [k[0] + fx, k[1] + fy];
-      line(hipX + (back ? -1 : 1), hipY, k[0], k[1], 3, back ? G.legD : G.leg);
-      line(k[0], k[1], f[0], f[1], 3, back ? G.bootD : G.boot);
-      px(k[0] - 1, k[1], back ? G.boot : G.bootL, 3, 1);
+      // bare legs: skin from the hem down past the knee, then black boots
+      line(hipX + (back ? -1 : 1), hipY, k[0], k[1], 3, back ? G.skinD : G.skin);
+      const m = [k[0] + fx * 0.62, k[1] + fy * 0.62];
+      line(k[0], k[1], m[0], m[1], 3, back ? G.skinD : G.skin);
+      if (!back) px(k[0], k[1], G.skinL);
+      line(m[0], m[1], f[0], f[1], 3, back ? G.bootD : G.boot);
+      px(m[0] - 1, m[1], back ? G.boot : G.bootL, 3, 1); // boot cuff
       const sole = Math.max(f[1] + 1, 0);
       px(f[0] - 1, sole - 1, back ? G.bootD : G.boot, 4, 2);
       px(f[0] - 1, sole + 1, '#000000', 4, 1);
@@ -231,10 +235,10 @@ const Wally = (() => {
     // A-line skirt to the knee, swaying with the stride
     {
       const sway = Math.round((P.front[0] - P.back[0]) * 1.1);
-      for (let k = 0; k < 6; k++) {
+      for (let k = 0; k < 5; k++) {
         const yy = hipY - 2 + k, half = 3 + Math.floor(k * 0.6), cx2 = hipX + Math.round((sway * k) / 6);
         px(cx2 - half, yy, G.dressD); px(cx2 - half + 1, yy, G.dress, half * 2 - 1); px(cx2 + half, yy, G.dressL);
-        if (k === 5) px(cx2 - half, yy, G.dressL, half * 2 + 1, 1);
+        if (k === 4) px(cx2 - half, yy, G.dressL, half * 2 + 1, 1);
       }
     }
     // head

@@ -187,7 +187,7 @@ function finishRun(done, after) {
 // ---------------- 2-player (taking turns) ----------------
 const HEROES = {
   wally: { name: 'WALLYMAN', alt: 'WALLY JR', color: '#f2702a', lines: ['THE CAPED HERO OF WALLY', 'ISLAND. FAST ON HIS FEET', 'AND ALWAYS ON THE PHONE.'] },
-  goth: { name: 'GOTHCHICK', alt: 'GOTHCHICK', color: '#ff4aa8', lines: ['JUMPS HIGHER AND RUNS A', 'LITTLE SLOWER. HOLD JUMP', 'IN THE AIR TO GLIDE DOWN.'] },
+  goth: { name: 'GOTHCHICK', alt: 'GOTHCHICK', color: '#ff4aa8', lines: ['JUMPS HIGHER, AND GLIDES IF', 'YOU HOLD JUMP IN THE AIR.', 'B SENDS A HOMING BAT SWARM!'] },
 };
 const heroOf = () => (game && game.hero) || 'wally';
 function pname() {
@@ -954,7 +954,7 @@ class Play {
     this.ta = !!opts.ta; this.taT = 0; this.taReady = this.ta ? 80 : 0;
     this.li = li; this.lv = buildLevel(li); this.def = this.lv.def;
     this.T = Sprites.tiles[this.def.theme];
-    this.ents = []; this.parts = []; this.pings = []; this.balls = []; this.platforms = []; this.bumps = [];
+    this.ents = []; this.parts = []; this.pings = []; this.balls = []; this.bats = []; this.platforms = []; this.bumps = [];
     this.state = 'play'; this.stateT = 0; this.paused = false; this.time = levelTime(this.def); this.timeTick = 0;
     this.cpHit = !!fromCheckpoint && !!this.lv.checkpoint; this.bossLock = false; this.camMin = 0; this.shake = 0;
     const s = this.cpHit ? this.lv.checkpoint : this.lv.start;
@@ -1179,6 +1179,7 @@ class Play {
     this.ents = this.ents.filter((e) => e.alive);
     this.updatePings();
     this.updateBalls();
+    this.updateBats();
     for (const q of this.parts) { q.life--; if (q.vx) q.x += q.vx; if (q.vy) q.y += q.vy; if (q.g) q.vy += q.g; if (q.k === 'coinpop') q.vy += 0.3; }
     this.parts = this.parts.filter((q) => q.life > 0);
     for (const b of this.bumps) b.t++;
@@ -1279,7 +1280,16 @@ class Play {
 
     // B: throw a rolling cannonball (or a Signal ping once the cannonballs run out)
     if (p.chompT > 0) p.chompT--;
-    if (p.riding) { if (!auto && Input.pressed('run') && p.chompT === 0) this.chomp(); } else if (!auto && Input.pressed('run') && !p.crouch) {
+    if (p.batCool > 0) p.batCool--;
+    if (p.riding) { if (!auto && Input.pressed('run') && p.chompT === 0) this.chomp(); } else if (goth) {
+      // GothChick's special: a swarm of three homing bats (no ammo, short recharge)
+      if (!auto && Input.pressed('run') && !p.crouch) {
+        if (!p.batCool) {
+          p.batCool = 50; p.fire = 10; Audio8.sfx('bats');
+          for (let i = 0; i < 3; i++) this.bats.push({ x: p.x + p.w / 2 - 3 + p.face * 6, y: p.y + 6, w: 6, h: 6, vx: p.face * 2.6, vy: (i - 1) * 0.9, life: 120, t: i * 3, slot: i });
+        } else Audio8.sfx('tick');
+      }
+    } else if (!auto && Input.pressed('run') && !p.crouch) {
       if (p.ammo > 0 && this.balls.length < 2) {
         p.ammo--; p.fire = 10; Audio8.sfx('cannon');
         const lob = Input.down('up');
@@ -1492,7 +1502,7 @@ class Play {
       }
       if (e.type === 'battery') { p.charge = 600; Audio8.sfx('power'); Audio8.play('charge'); this.parts.push({ k: 'text', s: 'SUPER CHARGE!', x: e.x - 30, y: e.y - 8, vy: -0.5, life: 60 }); }
       if (e.type === 'boots') { p.boots = true; Audio8.sfx('power'); this.parts.push({ k: 'text', s: 'JET BOOTS!', x: e.x - 20, y: e.y - 8, vy: -0.5, life: 60 }); }
-      if (e.type === 'ammo') { p.ammo = Math.min(9, p.ammo + 3); Audio8.sfx('reload'); this.parts.push({ k: 'text', s: '+3', x: e.x, y: e.y - 8, vy: -0.5, life: 50 }); }
+      if (e.type === 'ammo' && heroOf() === 'goth') { this.addScore(300, e.x, e.y - 8); Audio8.sfx('coin'); } else if (e.type === 'ammo') { p.ammo = Math.min(9, p.ammo + 3); Audio8.sfx('reload'); this.parts.push({ k: 'text', s: '+3', x: e.x, y: e.y - 8, vy: -0.5, life: 50 }); }
       if (e.type === 'badge') { game.lives++; Audio8.sfx('oneup'); this.parts.push({ k: 'text', s: '1UP', x: e.x, y: e.y - 8, vy: -0.5, life: 60 }); }
     }
     if ((e.enemy || e.hazard) && !e.ghostOff && overlap(p, e)) {
@@ -1691,6 +1701,41 @@ class Play {
     }
   }
   // ---------- cannonballs ----------
+  updateBats() {
+    for (const bt of this.bats) {
+      bt.life--; bt.t++;
+      // home in on an enemy: each bat of a swarm picks a different one of the nearest targets
+      const near = [];
+      for (const e of this.ents) {
+        if (!e.enemy || !e.alive || e.dying || e.ghostOff) continue;
+        const dx = e.x + e.w / 2 - bt.x, dy = e.y + e.h / 2 - bt.y, d = Math.hypot(dx, dy);
+        if (d < 170) near.push({ dx, dy, d: d || 1, e });
+      }
+      near.sort((a2, b2) => a2.d - b2.d);
+      const best = near.length ? near[Math.min(bt.slot || 0, near.length - 1)] : null;
+      if (best && bt.t > 6) { bt.vx += (best.dx / best.d) * 0.45; bt.vy += (best.dy / best.d) * 0.45; }
+      bt.vy += Math.sin(bt.t * 0.5) * 0.08;
+      const sp = Math.hypot(bt.vx, bt.vy), max = 3.2;
+      if (sp > max) { bt.vx = (bt.vx / sp) * max; bt.vy = (bt.vy / sp) * max; }
+      bt.x += bt.vx; bt.y += bt.vy;
+      for (const e of this.ents) {
+        if (!e.enemy || !e.alive || e.dying || e.ghostOff || !overlap(bt, e)) continue;
+        if (e.boss) this.damageBoss(e); else this.flipKill(e);
+        bt.life = 0; break;
+      }
+      if (bt.life <= 0) for (let k = 0; k < 3; k++) this.parts.push({ k: 'spark', x: bt.x - 2 + k * 2, y: bt.y - 2, life: 8 });
+    }
+    this.bats = this.bats.filter((bt) => bt.life > 0 && bt.x > this.cam.x - 40 && bt.x < this.cam.x + VW + 40 && bt.y > -40 && bt.y < VH + 20);
+  }
+  drawBat(bt, cx) {
+    const x = Math.round(bt.x - cx), y = Math.round(bt.y), up = (bt.t >> 2) & 1, f = bt.vx < 0 ? -1 : 1;
+    ctx.fillStyle = '#1a1020'; ctx.fillRect(x + 1, y + 1, 5, 4);
+    ctx.fillStyle = '#9a4ae8';
+    if (up) { ctx.fillRect(x - 3, y - 1, 4, 2); ctx.fillRect(x + 6, y - 1, 4, 2); ctx.fillRect(x - 4, y - 3, 2, 2); ctx.fillRect(x + 9, y - 3, 2, 2); } else { ctx.fillRect(x - 3, y + 3, 4, 2); ctx.fillRect(x + 6, y + 3, 4, 2); ctx.fillRect(x - 4, y + 5, 2, 1); ctx.fillRect(x + 9, y + 5, 2, 1); }
+    ctx.fillStyle = '#6a2ab8'; ctx.fillRect(x + 2, y + 2, 3, 2);
+    ctx.fillStyle = '#ff4aa8'; ctx.fillRect(x + (f > 0 ? 4 : 2), y + 2, 1, 1);
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(x + 1, y, 1, 1); ctx.fillRect(x + 5, y, 1, 1);
+  }
   updateBalls() {
     for (const bl of this.balls) {
       bl.fuse--; bl.spin += bl.vx * 0.25;
@@ -1769,6 +1814,7 @@ class Play {
     }
     for (const g of this.pings) this.drawPing(g, cx);
     for (const bl of this.balls) this.drawBall(bl, cx);
+    for (const bt of this.bats) this.drawBat(bt, cx);
     for (const q of this.parts) this.drawPart(q, cx);
     this.drawHUD();
     if (this.paused) {
@@ -2025,7 +2071,10 @@ class Play {
     txt('*' + pad(Math.max(0, game.lives), 2), 14, 15, '#fff');
     for (let i = 0; i < 3; i++) ctx.drawImage(i < p.hearts ? Sprites.heart : Sprites.heartEmpty, 65 + i * 9, 6);
     { let ix = 86; if (p.power === 'signal') { ctx.drawImage(Sprites.miniPhone, ix, 15); ix += 6; } if (p.boots) { ctx.drawImage(Sprites.miniBoots, ix, 16); ix += 7; } if (p.charge > 0 && (p.charge > 120 || (frame >> 2) & 1)) ctx.drawImage(Sprites.miniBattery, ix, 15); }
-    ctx.drawImage(Sprites.ballIcon, 62, 15); txt('*' + p.ammo, 70, 15, p.ammo ? '#fff' : '#ff6060');
+    if (heroOf() === 'goth') { // bat swarm recharge meter
+      ctx.fillStyle = '#9a4ae8'; ctx.fillRect(62, 17, 2, 2); ctx.fillRect(67, 17, 2, 2); ctx.fillStyle = '#1a1020'; ctx.fillRect(64, 17, 3, 3);
+      ctx.fillStyle = '#1a1020'; ctx.fillRect(71, 16, 14, 5); ctx.fillStyle = p.batCool ? '#5a3a78' : (frame >> 3) & 1 ? '#ff4aa8' : '#c070ff'; ctx.fillRect(72, 17, Math.round(12 * (1 - (p.batCool || 0) / 50)), 3);
+    } else { ctx.drawImage(Sprites.ballIcon, 62, 15); txt('*' + p.ammo, 70, 15, p.ammo ? '#fff' : '#ff6060'); }
     if (this.ta) { txt('TIME ATTACK', 98, 6, '#5ff0ff'); txt(fmtTime(this.taT), 104, 15, '#fff'); } else {
     txt('TIME', 112, 6, '#ffe040');
     txt(pad(this.time, 3), 117, 15, this.time <= 20 && (frame >> 4) & 1 ? '#ff6060' : '#fff'); }

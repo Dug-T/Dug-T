@@ -300,6 +300,7 @@ const Audio8 = (() => {
     swim: (t) => { tone('sine', 380, t, 0.12, 0.08, sfxBus, { slide: 620 }); noise(t, 0.08, 0.05, sfxBus, 'bandpass', 900, 2); },
     secret: (t) => [67, 71, 74, 78, 79, 83, 86, 91].forEach((m, i) => tone('p25', freq(m), t + i * 0.06, 0.1, 0.1, sfxBus, { echo: true })),
     roar: (t) => { noise(t, 0.6, 0.35, sfxBus, 'lowpass', 500); tone('square', 110, t, 0.55, 0.12, sfxBus, { slide: 60 }); },
+    bats: (t) => [93, 98, 95, 100].forEach((m, i) => tone('p12', freq(m), t + i * 0.04, 0.04, 0.07, sfxBus, { slide: freq(m) * 1.3 })),
     spring: (t) => tone('p25', 180, t, 0.3, 0.14, sfxBus, { slide: 1100, slideT: 0.25 }),
     letter: (t) => tone('p50', 1500, t, 0.03, 0.07, sfxBus),
     map: (t) => tone('triangle', 600, t, 0.05, 0.2, sfxBus, { slide: 900 }),
