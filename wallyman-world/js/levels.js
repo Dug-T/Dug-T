@@ -20,7 +20,7 @@ LevelBuilder.prototype = {
 
 const LEVELS = [
   {
-    name: "WALLY'S BACKYARD", theme: 'grass', music: 'grass', time: 300, width: 200, warp: { x: 118, to: 2 }, squad: { x: 60, rows: 2, cols: 5 },
+    name: "WALLY'S BACKYARD", theme: 'grass', music: 'grass', time: 300, width: 200, warp: { x: 118, to: 2 }, squad: { x: 5, rows: 2, cols: 5 },
     extras: [['u', 12], ['c', 58], ['t', 96], ['u', 108], ['g', 134], ['p', 166], ['h', 45]],
     build(b) {
       b.ground(0, 38).set(3, 11, '@');
