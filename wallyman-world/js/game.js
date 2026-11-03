@@ -64,10 +64,10 @@ const Save = (() => {
   const KEY = 'wallyman-world-save-v1';
   let slots = [null, null, null];
   try { const d = JSON.parse(localStorage.getItem(KEY)); if (Array.isArray(d)) slots = [d[0] || null, d[1] || null, d[2] || null]; } catch (e) { /* ignore */ }
-  slots.forEach((s) => { if (s) { s.cleared = Array.from({ length: 8 }, (_, i) => !!(s.cleared && s.cleared[i])); s.medals = Array.from({ length: 8 }, (_, i) => (s.medals && s.medals[i]) | 0); } });
+  slots.forEach((s) => { if (s) { s.cleared = Array.from({ length: 11 }, (_, i) => !!(s.cleared && s.cleared[i])); s.medals = Array.from({ length: 11 }, (_, i) => (s.medals && s.medals[i]) | 0); s.secrets = s.secrets || {}; } });
   return {
     slots,
-    fresh: () => ({ cleared: Array(8).fill(false), medals: Array(8).fill(0), lives: 5, score: 0, coins: 0, node: 0, bonusAmmo: 0, startHearts: 0, startBoots: false }),
+    fresh: () => ({ cleared: Array(11).fill(false), medals: Array(11).fill(0), secrets: {}, lives: 5, score: 0, coins: 0, node: 0, bonusAmmo: 0, startHearts: 0, startBoots: false }),
     persist() { try { localStorage.setItem(KEY, JSON.stringify(slots)); } catch (e) { /* ignore */ } },
   };
 })();
@@ -149,7 +149,7 @@ const Scores = (() => {
   function lastName() { try { return localStorage.getItem(NAME_KEY) || ''; } catch (e) { return ''; } }
   return { list, qualifies, add, lastName, refresh, isShared: () => online, isWorld: () => worldOn };
 })();
-function bestLevel() { return Math.max(1, Math.min(8, game.cleared.filter(Boolean).length + 1)); }
+function bestLevel() { return Math.max(1, Math.min(8, game.cleared.slice(0, 8).filter(Boolean).length + 1)); }
 // After a run ends: name entry if the score made the table, then the table.
 function finishRun(done, then) {
   const score = game.score, level = done ? 8 : bestLevel();
@@ -233,7 +233,7 @@ function TitleScene() {
   const items = () => [0, 1, 2].map((i) => {
     const s = Save.slots[i];
     if (!s) return `FILE ${'ABC'[i]}   NEW GAME`;
-    const n = s.cleared.filter(Boolean).length;
+    const n = s.cleared.slice(0, 8).filter(Boolean).length;
     return `FILE ${'ABC'[i]}   #${n}/8  *${pad(s.lives, 2)}`;
   }).concat(['HIGH SCORES', `SOUND: ${Audio8.isEnabled() ? 'ON' : 'OFF'}`, eraseMode ? 'CANCEL ERASE' : 'ERASE FILE']);
   return {
@@ -312,10 +312,16 @@ const NODES = [
   { x: 176, y: 90, kind: 'level', li: 5 },
   { x: 204, y: 134, kind: 'level', li: 6 },
   { x: 230, y: 74, kind: 'castle', li: 7 },
+  { x: 24, y: 64, kind: 'bonus', li: 8, icon: 'haunted' },
+  { x: 236, y: 180, kind: 'bonus', li: 9, icon: 'water' },
+  { x: 182, y: 40, kind: 'bonus', li: 10, icon: 'airship' },
 ]
+// Paths between map stops; the last three are revealed by secret exits.
+const EDGES = [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 7], [7, 8], [2, 9], [5, 10], [6, 11]];
+const nodeOf = (li) => NODES.findIndex((n) => n.li === li);
 const Island = (() => {
   const c = Sprites.canvas(VW, VH), x = c.getContext('2d'), r = Sprites.rng(42);
-  const blobs = NODES.map((n) => [n.x, n.y + 4, 30]).concat([[74, 122, 28], [160, 112, 30], [200, 108, 26], [168, 152, 24], [60, 178, 24], [150, 172, 22], [118, 100, 24]]);
+  const blobs = NODES.filter((n) => n.kind !== 'bonus').map((n) => [n.x, n.y + 4, 30]).concat([[74, 122, 28], [160, 112, 30], [200, 108, 26], [168, 152, 24], [60, 178, 24], [150, 172, 22], [118, 100, 24]]);
   const img = x.createImageData(VW, VH);
   for (let yy = 0; yy < VH; yy++) for (let xx = 0; xx < VW; xx++) {
     let f = 0;
@@ -333,6 +339,15 @@ const Island = (() => {
     if (col) { const i = (yy * VW + xx) * 4; img.data[i] = col[0]; img.data[i + 1] = col[1]; img.data[i + 2] = col[2]; img.data[i + 3] = 255; }
   }
   x.putImageData(img, 0, 0);
+  for (const n of NODES) { // little islets for the bonus levels
+    if (n.kind !== 'bonus') continue;
+    for (let yy = -12; yy <= 12; yy++) for (let xx = -14; xx <= 14; xx++) {
+      const d = (xx / 14) ** 2 + (yy / 10) ** 2;
+      if (d > 1) continue;
+      x.fillStyle = d > 0.8 ? '#8cc8f8' : d > 0.55 ? '#f0d88c' : n.icon === 'haunted' ? '#5a4a6a' : n.icon === 'water' ? '#f0d88c' : '#5acc58';
+      x.fillRect(n.x + xx, n.y + 3 + yy, 1, 1);
+    }
+  }
   // little trees & rocks
   const tree = Sprites.fromRows(['..KKK..', '.KGGGK.', 'KGgGGGK', 'KGGGgGK', '.KGGGK.', '..KTK..', '..KTK..'], { K: '#14401a', G: '#30a040', g: '#68d870', T: '#8a5a2a' });
   [[18, 150], [74, 158], [118, 154], [150, 120], [70, 124], [186, 152], [214, 106], [44, 132], [160, 158]].forEach(([a, b]) => x.drawImage(tree, a, b));
@@ -340,13 +355,29 @@ const Island = (() => {
 })();
 function MapScene() {
   let node = game.node || 0, pos = { x: NODES[node].x, y: NODES[node].y }, target = null, t = 0;
-  const unlocked = (n) => n >= 0 && n < NODES.length && (n <= 1 || game.cleared[n - 2]);
+  const unlocked = (n) => n >= 0 && n < NODES.length && (NODES[n].kind === 'bonus' ? !!(game.secrets[NODES[n].li] || game.cleared[7]) : (n <= 1 || game.cleared[n - 2]));
   function drawNode(n, i) {
     const cleared = n.li !== undefined && game.cleared[n.li];
     if (n.kind === 'home') {
       ctx.fillStyle = '#c03030'; for (let k = 0; k < 6; k++) ctx.fillRect(n.x - 7 + k, n.y - 12 + 5 - k, 14 - k * 2, 1);
       ctx.fillStyle = '#f8f0d8'; ctx.fillRect(n.x - 6, n.y - 6, 12, 8); ctx.fillStyle = '#6a3a1a'; ctx.fillRect(n.x - 1, n.y - 3, 3, 5);
       ctx.fillStyle = '#5ff0ff'; ctx.fillRect(n.x - 5, n.y - 4, 3, 2);
+    } else if (n.kind === 'bonus') {
+      if (!unlocked(i)) { txt('?', n.x - 2, n.y - 4, (t >> 4) & 1 ? '#c8d8f0' : '#8090b0'); return; }
+      if (n.icon === 'haunted') {
+        ctx.fillStyle = '#1a1020'; ctx.fillRect(n.x - 7, n.y - 8, 14, 11); ctx.fillStyle = '#6a4a8a'; ctx.fillRect(n.x - 6, n.y - 7, 12, 9);
+        ctx.fillStyle = '#2a1a3a'; for (let k = 0; k < 6; k++) ctx.fillRect(n.x - 6 + k, n.y - 13 + k, 12 - k * 2, 1);
+        ctx.fillStyle = (t >> 3) & 1 ? '#ffd860' : '#a08030'; ctx.fillRect(n.x - 4, n.y - 4, 3, 3); ctx.fillRect(n.x + 1, n.y - 4, 3, 3);
+      } else if (n.icon === 'water') {
+        ctx.fillStyle = '#1a1020'; ctx.fillRect(n.x - 7, n.y - 6, 14, 12); ctx.fillStyle = '#3a9ae8'; ctx.fillRect(n.x - 6, n.y - 5, 12, 10);
+        ctx.fillStyle = '#ff9020'; ctx.fillRect(n.x - 3, n.y - 1, 6, 3); ctx.fillRect(n.x + 3, n.y - 2, 2, 5);
+        ctx.fillStyle = '#ffffff'; ctx.fillRect(n.x - 4, n.y - 4 - ((t >> 3) % 3), 2, 2);
+      } else {
+        ctx.fillStyle = '#1a1020'; ctx.fillRect(n.x - 9, n.y - 14, 18, 10); ctx.fillStyle = '#b0b8d0'; ctx.fillRect(n.x - 8, n.y - 13, 16, 8);
+        ctx.fillStyle = '#1a1020'; ctx.fillRect(n.x - 6, n.y - 3, 12, 5); ctx.fillStyle = '#a06030'; ctx.fillRect(n.x - 5, n.y - 2, 10, 3);
+        ctx.fillStyle = '#1a1020'; ctx.fillRect(n.x - 4, n.y - 5, 1, 3); ctx.fillRect(n.x + 3, n.y - 5, 1, 3);
+      }
+      if (game.cleared[n.li]) txt('#', n.x + 6, n.y - 16, '#ffe040');
     } else if (n.kind === 'castle') {
       ctx.fillStyle = '#1a1020'; ctx.fillRect(n.x - 11, n.y - 17, 22, 20);
       ctx.fillStyle = cleared ? '#a0a8c0' : '#6a6a80'; ctx.fillRect(n.x - 10, n.y - 10, 20, 12); ctx.fillRect(n.x - 10, n.y - 16, 5, 6); ctx.fillRect(n.x + 5, n.y - 16, 5, 6); ctx.fillRect(n.x - 3, n.y - 14, 6, 4);
@@ -368,8 +399,20 @@ function MapScene() {
         if (d < 1.5) { pos = { x: tn.x, y: tn.y }; node = target; target = null; game.node = node; Save.persist(); } else { pos.x += (dx / d) * 1.5; pos.y += (dy / d) * 1.5; }
         return;
       }
-      const fwd = Input.pressed('right') || Input.pressed('up'), back = Input.pressed('left') || Input.pressed('down');
-      if (fwd && unlocked(node + 1)) { target = node + 1; Audio8.sfx('map'); } else if (back && node > 0) { target = node - 1; Audio8.sfx('map'); } else if (fwd) Audio8.sfx('bump');
+      // walk along a path in the pressed direction (any open path from this stop)
+      const dirs = [['right', 1, 0], ['left', -1, 0], ['up', 0, -1], ['down', 0, 1]];
+      for (const [k, dx0, dy0] of dirs) {
+        if (!Input.pressed(k)) continue;
+        let best = null, bd = 0.3;
+        for (const [a, b2] of EDGES) {
+          const o = a === node ? b2 : b2 === node ? a : null;
+          if (o === null || !unlocked(o) || !unlocked(a === node ? a : b2)) continue;
+          const vx = NODES[o].x - NODES[node].x, vy = NODES[o].y - NODES[node].y, dot = (vx * dx0 + vy * dy0) / Math.hypot(vx, vy);
+          if (dot > bd) { bd = dot; best = o; }
+        }
+        if (best !== null) { target = best; Audio8.sfx('map'); } else Audio8.sfx('bump');
+        break;
+      }
       if (Input.confirm() && NODES[node].li !== undefined) { Audio8.sfx('confirm'); const li = NODES[node].li; go(() => IntroScene(li, false)); } else if (Input.confirm() && NODES[node].kind === 'home') { Audio8.sfx('confirm'); go(() => ShopScene()); }
       if (Input.pressed('back')) go(() => TitleScene());
     },
@@ -378,10 +421,10 @@ function MapScene() {
       ctx.fillStyle = '#4c80e8';
       for (let yy = 4; yy < VH; yy += 10) for (let xx = ((yy * 7) % 24) - 24; xx < VW; xx += 24) ctx.fillRect(xx + ((t >> 4) + (yy >> 1)) % 6, yy, 5, 1);
       ctx.drawImage(Island, 0, 0);
-      for (let i = 0; i < NODES.length - 1; i++) {
-        if (!unlocked(i + 1)) continue;
-        const a = NODES[i], b = NODES[i + 1], d = Math.hypot(b.x - a.x, b.y - a.y);
-        for (let s = 0; s < d; s += 4) { ctx.fillStyle = '#7a5a2a'; ctx.fillRect(Math.round(a.x + ((b.x - a.x) * s) / d) - 1, Math.round(a.y + ((b.y - a.y) * s) / d), 3, 2); }
+      for (const [ia, ib] of EDGES) {
+        if (!unlocked(ib) || !unlocked(ia)) continue;
+        const a = NODES[ia], b = NODES[ib], d = Math.hypot(b.x - a.x, b.y - a.y), secret = NODES[ib].kind === 'bonus';
+        for (let s = 0; s < d; s += 4) { ctx.fillStyle = secret ? ((s >> 2) + (t >> 3)) % 3 ? '#c070ff' : '#ffe8ff' : '#7a5a2a'; ctx.fillRect(Math.round(a.x + ((b.x - a.x) * s) / d) - 1, Math.round(a.y + ((b.y - a.y) * s) / d), 3, 2); }
       }
       NODES.forEach(drawNode);
       NODES.forEach((n) => { if (n.li === undefined || !unlocked(NODES.indexOf(n))) return; for (let i = 0; i < 5; i++) { ctx.fillStyle = '#1a1020'; ctx.fillRect(n.x - 8 + i * 3, n.y + 7, 3, 3); ctx.fillStyle = game.medals[n.li] & (1 << i) ? '#ffd040' : '#4a4a60'; ctx.fillRect(n.x - 7 + i * 3, n.y + 8, 2, 1); } });
@@ -396,7 +439,7 @@ function MapScene() {
       txt(pad(game.score, 7), 206, 10);
       drawWindow(4, 196, 248, 24);
       const n = NODES[node];
-      const label = n.li !== undefined ? `${n.li + 1}. ${LEVELS[n.li].name}` : n.name;
+      const label = n.li !== undefined ? (n.kind === 'bonus' ? `B${n.li - 7}. ${LEVELS[n.li].name}` : `${n.li + 1}. ${LEVELS[n.li].name}`) : n.name;
       txt(label, 12, 205, '#fff');
       if (n.li !== undefined) { const mc = medalCount(n.li); ctx.drawImage(Sprites.miniMedal, 186, 206); txt(mc + '/5', 193, 205, mc === 5 ? '#ffe040' : '#fff'); if (game.cleared[n.li]) txt('#', 236, 205, '#ffe040'); }
       if (target === null && (t >> 5) % 2 === 0) txt(n.li !== undefined ? 'PRESS START' : 'START: SHOP', 160, 186, '#fff', { outline: '#101848' });
@@ -414,7 +457,7 @@ function IntroScene(li, fromCheckpoint) {
     update() { t++; if (t > 130 || (t > 20 && Input.confirm())) go(() => new Play(li, fromCheckpoint)); },
     draw() {
       ctx.fillStyle = '#000'; ctx.fillRect(0, 0, VW, VH);
-      txt(`LEVEL ${li + 1}`, 128, 60, '#ffe040', { scale: 2, align: 'center' });
+      txt(LEVELS[li].bonus ? 'BONUS LEVEL' : `LEVEL ${li + 1}`, 128, 60, LEVELS[li].bonus ? '#c070ff' : '#ffe040', { scale: 2, align: 'center' });
       txt(LEVELS[li].name, 128, 88, '#fff', { align: 'center' });
       drawWally(110, 142, 'idle' + ((t >> 4) % 4), 1);
       txt('*  ' + game.lives, 124, 126, '#fff');
@@ -649,7 +692,10 @@ function NameEntryScene(score, level, done, then) {
 // =====================================================================
 // Tight timer, in real seconds: about 1.8x the time it takes to simply walk to the
 // end of the level, plus extra for the boss arena.
-function levelTime(def) { return Math.ceil(((def.width * TS) / 1.6 / 60) * 1.8 / 5) * 5 + (def.boss ? 45 : 0); }
+function levelTime(def) {
+  if (def.autoscroll) return Math.ceil(((def.width * TS - VW) / def.autoscroll / 60 + 15) / 5) * 5 + (def.boss ? 60 : 0);
+  return Math.ceil(((def.width * TS) / 1.6 / 60) * 1.8 / 5) * 5 + (def.boss ? 45 : 0) + (def.yetiArena ? 35 : 0) + (def.water ? 20 : 0);
+}
 
 class Play {
   constructor(li, fromCheckpoint) {
@@ -732,6 +778,12 @@ class Play {
       case 'u': E({ type: 'ufo', x, y: -24, w: 28, h: 12, enemy: true, stomp: true, state: 'enter', shots: 0, timer: 0, beamX: 0, beamEnd: 0 }); break;
       case 'M': E({ type: 'medal', item: true, x: x + 2, y: y + 1, w: 12, h: 14, rise: 0, id: sp.id, got: !!(game.medals[this.li] & (1 << sp.id)) }); break;
       case 'a': E({ type: 'ammo', item: true, x: x + 2, y: y + 2, w: 12, h: 14, rise: 0 }); break;
+      case 'f': E({ type: 'fish', x: x + 1, y: y + 3, w: 14, h: 10, vx: 0.8 * toward, oy: y + 3, ox: x, enemy: true, stomp: true }); break;
+      case 'j': E({ type: 'jelly', x: x + 1, y, w: 14, h: 12, oy: y, enemy: true, stomp: false }); break;
+      case 'e': E({ type: 'ghost', x: x + 1, y, w: 14, h: 12, enemy: true, stomp: true, oy: y, ghostOff: false }); break;
+      case 'y': E({ type: 'yeti', x, y: y - 14, w: 28, h: 30, hp: 3, maxHp: 3, inv: 0, enemy: true, yeti: true, state: 'walk', act: 90 }); break;
+      case 'k': E({ type: 'boss', kind: 'mother', x: x - 24, y: 30, oy: 30, w: 56, h: 18, hp: this.def.bossHp || 6, maxHp: this.def.bossHp || 6, inv: 0, enemy: true, boss: true, act: 120, beamX: 0, beamEnd: 0 }); break;
+      case 'Z': E({ type: 'secret', x, y: y - 8, w: 16, h: 24, to: this.def.secret.to }); break;
       case 'G': E({ type: 'goal', x: x + 2, y: y - 80, w: 12, h: 96 }); break;
       case 'K': E({ type: 'boss', x, y: y - 14, w: 28, h: 30, hp: this.def.bossHp || 3, maxHp: this.def.bossHp || 3, inv: 0, jumpT: 120, enemy: true, boss: true }); break;
     }
@@ -802,6 +854,8 @@ class Play {
     return 'idle' + ((frame >> 4) % 4);
   }
   flipKill(e) {
+    if (e.ghostOff) return;
+    if (e.yeti) { this.damageYeti(e); return; }
     e.dying = 'flip'; e.vy = -3.5; e.vx = this.p.x < e.x ? 0.8 : -0.8;
     if (e.type === 'ufo') { Audio8.sfx('boom'); this.parts.push({ k: 'blast', x: e.x + 14, y: e.y + 6, life: 24 }); this.addScore(1000, e.x, e.y); } else { Audio8.sfx('kick'); this.addScore(200, e.x, e.y); }
   }
@@ -826,10 +880,11 @@ class Play {
     this.state = 'dying'; this.stateT = 0; this.p.hearts = 0;
     Audio8.play('die');
   }
-  clear() {
+  clear(secretTo) {
     if (this.state !== 'play') return;
-    this.state = 'clear'; this.stateT = 0; Audio8.play('clear');
-    this.parts.push({ k: 'text', s: 'COURSE CLEAR!', x: this.p.x - 30, y: this.p.y - 30, vy: -0.2, life: 100 });
+    this.state = 'clear'; this.stateT = 0; Audio8.play('clear'); this.secretTo = secretTo;
+    if (secretTo !== undefined) Audio8.sfx('secret');
+    this.parts.push({ k: 'text', s: secretTo !== undefined ? 'SECRET EXIT!' : 'COURSE CLEAR!', x: this.p.x - 30, y: this.p.y - 30, vy: -0.2, life: 100 });
   }
 
   // ---------- update ----------
@@ -875,9 +930,20 @@ class Play {
     this.bumps = this.bumps.filter((b) => b.t < 10);
 
     // camera
-    const target = p.x + p.w / 2 - VW / 2 + p.face * 16;
-    this.cam.x += (target - this.cam.x) * 0.1;
-    this.cam.x = clamp(this.cam.x, this.camMin, this.lv.w * TS - VW);
+    const camMax = this.camMax !== undefined && this.camMax !== null ? this.camMax : this.lv.w * TS - VW;
+    if (this.def.autoscroll && !this.bossLock && (this.state === 'play' || this.state === 'clear')) {
+      this.cam.x = Math.min(this.cam.x + this.def.autoscroll, camMax);
+      if (p.x < this.cam.x) { // pushed along by the screen edge; squashed against a wall = lose a life
+        p.x = this.cam.x; if (p.vx < 0) p.vx = 0;
+        if (this.state === 'play' && this.solidOverlap(p)) this.die();
+      }
+      if (p.x + p.w > this.cam.x + VW) p.x = this.cam.x + VW - p.w;
+    } else {
+      const target = p.x + p.w / 2 - VW / 2 + p.face * 16;
+      this.cam.x += (target - this.cam.x) * 0.1;
+      this.cam.x = clamp(this.cam.x, this.camMin, camMax);
+    }
+    if (this.arena) { if (p.x < this.arena.min) { p.x = this.arena.min; if (p.vx < 0) p.vx = 0; } if (p.x + p.w > this.arena.max) { p.x = this.arena.max - p.w; if (p.vx > 0) p.vx = 0; } }
 
     // boss arena lock
     if (this.def.boss && !this.bossLock && p.x > (this.lv.w - 16) * TS + 24) {
@@ -896,8 +962,9 @@ class Play {
       if (this.stateT % 8 === 0 && this.stateT < 100) { Audio8.sfx('boom'); this.parts.push({ k: 'boom', x: this.bossX + Math.random() * 32, y: this.bossY + Math.random() * 32, life: 20 }); }
       if (this.stateT === 110) Audio8.play('clear');
       if (this.stateT > 300) {
-        game.cleared[this.li] = true; game.medals[this.li] |= this.medalsGot; game.node = Math.max(game.node, this.li + 1); Save.persist(); this.state = 'done';
-        if (this.li === LEVELS.length - 1) go(() => EndingScene());
+        game.cleared[this.li] = true; game.medals[this.li] |= this.medalsGot; game.node = nodeOf(this.li); Save.persist(); this.state = 'done';
+        if (this.def.final) go(() => EndingScene());
+        else if (this.def.bossMsg) go(() => MessageScene(this.def.bossMsg, () => MapScene()));
         else go(() => MessageScene(['BARON STATIC IS BEATEN...', 'BUT HE ESCAPED!', '', 'HE FLED NORTH ACROSS', 'WALLY ISLAND TO HIS', 'STATIC TOWER.', '', 'AFTER HIM, WALLYMAN!'], () => MapScene()));
       }
     }
@@ -907,9 +974,11 @@ class Play {
     if (p.inv > 0) p.inv--;
     const run = !auto && Input.down('run');
     const ice = this.def.ice && p.onGround;
-    const max = run ? 2.8 : 1.6, acc = (run ? 0.11 : 0.08) * (ice ? 0.45 : 1);
-    let dir = auto ? (this.stateT > 30 ? 1 : 0) : (Input.down('right') ? 1 : 0) - (Input.down('left') ? 1 : 0);
-    if (!auto && !p.onGround && !p.pound && Input.pressed('down')) { p.pound = 12; p.vx = 0; p.boost = false; Audio8.sfx('swoop'); }
+    const water = !!this.def.water, frozen = p.frozen > 0;
+    if (frozen) p.frozen--;
+    const max = water ? (run ? 1.9 : 1.3) : run ? 2.8 : 1.6, acc = (run ? 0.11 : 0.08) * (ice ? 0.45 : 1) * (water ? 0.7 : 1);
+    let dir = auto ? (this.stateT > 30 ? 1 : 0) : frozen ? 0 : (Input.down('right') ? 1 : 0) - (Input.down('left') ? 1 : 0);
+    if (!auto && !water && !frozen && !p.onGround && !p.pound && Input.pressed('down')) { p.pound = 12; p.vx = 0; p.boost = false; Audio8.sfx('swoop'); }
     if (p.pound) dir = 0;
     p.crouch = !auto && p.onGround && Input.down('down') && !dir;
     if (p.crouch) dir = 0;
@@ -920,10 +989,12 @@ class Play {
     } else { p.vx = approach(p.vx, 0, p.onGround ? (ice ? 0.015 : 0.09) : 0.03); p.skid = false; }
     if (auto) p.vx = Math.min(p.vx, 1.2);
 
-    if (!auto && Input.pressed('jump')) p.jumpBuf = 6; else if (p.jumpBuf > 0) p.jumpBuf--;
+    if (!auto && !frozen && Input.pressed('jump')) p.jumpBuf = 6; else if (p.jumpBuf > 0) p.jumpBuf--;
     if (p.onGround) p.coyote = 6; else if (p.coyote > 0) p.coyote--;
     if (p.riding && p.onGround && !auto && Input.down('down') && Input.pressed('jump')) { this.dismount(false); p.jumpBuf = 0; p.coyote = 0; }
-    if (p.jumpBuf > 0 && p.coyote > 0) {
+    if (water) { // swimming: every press is a stroke
+      if (p.jumpBuf === 6) { p.vy = -2.7; p.jumpBuf = 0; Audio8.sfx('swim'); this.parts.push({ k: 'bubble', x: p.x + p.w / 2, y: p.y + 4, vy: -0.6, life: 50 }); }
+    } else if (p.jumpBuf > 0 && p.coyote > 0) {
       p.vy = -((p.riding ? 6.1 : 5.4) + Math.abs(p.vx) * 0.25); p.jumpBuf = 0; p.coyote = 0; Audio8.sfx('jump');
       p.sx = 0.8; p.sy = 1.2; this.dust(p.x + p.w / 2, p.y + p.h, 2);
     }
@@ -939,7 +1010,8 @@ class Play {
     }
     if (p.vy >= 0) p.boost = false;
     const hold = (p.boost || (!auto && Input.down('jump'))) && p.vy < 0 && !p.flutter;
-    p.vy = Math.min(5.5, p.vy + (hold ? 0.19 : 0.5));
+    p.vy = water ? Math.min(1.4, p.vy + 0.09) : Math.min(5.5, p.vy + (hold ? 0.19 : 0.5));
+    if (water && frame % 50 === 0) this.parts.push({ k: 'bubble', x: p.x + p.w / 2 + p.face * 3, y: p.y + 4, vy: -0.5, life: 60 });
     if (p.onGround) p.flutter = 0;
     // Dino's flutter: hold jump while falling to hover for a moment
     p.fluttering = p.riding && !p.pound && !auto && !p.onGround && Input.down('jump') && p.flutter < 50 && (p.flutter > 0 || p.vy > 0);
@@ -973,7 +1045,7 @@ class Play {
       if (broke) { Audio8.sfx('brick'); p.onGround = false; } else {
         p.pound = 0; p.sx = 1.4; p.sy = 0.7; this.shake = 8; Audio8.sfx('bump'); Audio8.sfx('stomp'); this.dust(p.x + p.w / 2, p.y + p.h, 4);
         for (const e of this.ents) {
-          if (!e.enemy || !e.alive || e.dying || e.boss || e.type === 'ufo') continue;
+          if (!e.enemy || !e.alive || e.dying || e.boss || e.yeti || e.type === 'ufo') continue;
           if (Math.abs(e.y + e.h - (p.y + p.h)) < 6 && Math.abs(e.x + e.w / 2 - (p.x + p.w / 2)) < 36) this.flipKill(e);
         }
       }
@@ -989,6 +1061,7 @@ class Play {
       this.bumps.push({ tx: Math.floor((p.x + p.w / 2) / TS), ty: Math.floor((p.y + p.h + 1) / TS), t: 0, spring: true });
     }
     if (p.x < this.camMin) { p.x = this.camMin; if (p.vx < 0) p.vx = 0; }
+    if (water && p.y < 0) { p.y = 0; if (p.vy < 0) p.vy = 0; }
     if (this.bossLock && p.x + p.w > this.lv.w * TS) p.x = this.lv.w * TS - p.w;
     if (p.onGround && p.groundTile === '^') this.hurt(true);
 
@@ -1019,7 +1092,9 @@ class Play {
       if (t % 4 === 0) Audio8.sfx('tick');
     }
     if (t === 420) {
-      game.cleared[this.li] = true; game.medals[this.li] |= this.medalsGot; game.node = Math.max(game.node, this.li + 1); Save.persist();
+      game.cleared[this.li] = true; game.medals[this.li] |= this.medalsGot; game.node = nodeOf(this.li);
+      if (this.secretTo !== undefined) game.secrets[this.secretTo] = true;
+      Save.persist();
       go(() => MapScene());
     }
   }
@@ -1083,6 +1158,32 @@ class Play {
         }
         break;
       case 'ufo': this.updateUfo(e); return;
+      case 'yeti': this.updateYeti(e); return;
+      case 'secret':
+        if (this.state === 'play' && overlap(p, e)) this.clear(e.to);
+        return;
+      case 'fish':
+        e.x += e.vx; e.y = e.oy + Math.sin(e.t * 0.05) * 6;
+        if (Math.abs(e.x - e.ox) > 110 || SOLID.has(this.tile(Math.floor((e.x + (e.vx > 0 ? e.w + 1 : -1)) / TS), Math.floor((e.y + 5) / TS)))) e.vx = -e.vx;
+        break;
+      case 'jelly':
+        e.y = e.oy + Math.sin(e.t * 0.03) * 22; e.x += clamp(p.x - e.x, -0.25, 0.25);
+        break;
+      case 'ghost': {
+        const ph = e.t % 300;
+        e.ghostOff = ph >= 215; e.fade = ph < 200 ? 1 : ph < 215 ? ((e.t >> 1) & 1 ? 0.6 : 0.2) : 0.12;
+        const sp = e.ghostOff ? 0.2 : 0.45;
+        e.x += clamp(p.x - e.x, -sp, sp); e.y += clamp(p.y - e.y, -sp * 0.6, sp * 0.6) + Math.sin(e.t * 0.08) * 0.3;
+        break;
+      }
+      case 'snowball':
+        e.vy += 0.15; e.x += e.vx; e.y += e.vy; e.life--;
+        if (e.life <= 0 || SOLID.has(this.tile(Math.floor((e.x + 4) / TS), Math.floor((e.y + 6) / TS)))) { e.alive = false; for (let k = 0; k < 4; k++) this.parts.push({ k: 'dust', x: e.x + 4, y: e.y + 4, vx: (k - 1.5) * 0.6, vy: -0.8, life: 14 }); }
+        break;
+      case 'bomb':
+        e.vy = Math.min(4, e.vy + 0.15); e.y += e.vy; e.life--;
+        if (e.life <= 0 || SOLID.has(this.tile(Math.floor((e.x + 4) / TS), Math.floor((e.y + 8) / TS)))) { e.alive = false; this.parts.push({ k: 'blast', x: e.x + 4, y: e.y + 4, life: 16 }); Audio8.sfx('stomp'); }
+        break;
       case 'bolt':
       case 'spark':
         e.x += e.vx; e.life--;
@@ -1131,12 +1232,13 @@ class Play {
       if (e.type === 'ammo') { p.ammo = Math.min(9, p.ammo + 3); Audio8.sfx('reload'); this.parts.push({ k: 'text', s: '+3', x: e.x, y: e.y - 8, vy: -0.5, life: 50 }); }
       if (e.type === 'badge') { game.lives++; Audio8.sfx('oneup'); this.parts.push({ k: 'text', s: '1UP', x: e.x, y: e.y - 8, vy: -0.5, life: 60 }); }
     }
-    if ((e.enemy || e.hazard) && overlap(p, e)) {
+    if ((e.enemy || e.hazard) && !e.ghostOff && overlap(p, e)) {
       if (p.charge > 0 && e.enemy) this.flipKill(e);
       else if ((e.stomp || ((p.riding || p.pound === -1) && e.enemy)) && p.vy > 0 && p.prevBottom <= e.y + 7) { this.stomp(e); if (p.pound === -1) p.vy = 7; } else this.hurt();
     }
   }
   updateBoss(e) {
+    if (e.kind === 'mother') return this.updateMother(e);
     const p = this.p;
     if (e.inv > 0) e.inv--;
     e.vy = Math.min(6, e.vy + 0.3);
@@ -1195,6 +1297,125 @@ class Play {
     ctx.fillStyle = '#e8ecf8'; ctx.fillRect(x + 1, y + 5, 26, 1);
     for (let i = 0; i < 5; i++) { const k = ((frame >> 3) + i) % 3; ctx.fillStyle = k === 0 ? '#ffe040' : k === 1 ? '#ff3040' : '#5ff0ff'; ctx.fillRect(x + 2 + i * 6, y + 8, 2, 2); }
     if (e.state === 'charge') { ctx.fillStyle = (frame >> 1) & 1 ? '#ff3040' : '#ffffff'; ctx.fillRect(x + 11, y + 11, 6, 2); }
+  }
+  solidOverlap(b) {
+    for (let ty = Math.floor(b.y / TS); ty <= Math.floor((b.y + b.h - 1) / TS); ty++) for (let tx = Math.floor(b.x / TS); tx <= Math.floor((b.x + b.w - 1) / TS); tx++) if (SOLID.has(this.tile(tx, ty))) return true;
+    return false;
+  }
+  // ---------- Ice Yeti (Frosty Peaks mid-boss) ----------
+  updateYeti(e) {
+    const p = this.p;
+    if (e.inv > 0) e.inv--;
+    e.vy = Math.min(6, e.vy + 0.3);
+    if (!e.active) {
+      this.move(e, false);
+      if (Math.abs(p.x - e.x) < 140 && this.state === 'play') {
+        e.active = true; const [a0, a1] = this.def.yetiArena;
+        this.arena = { min: a0 * TS, max: (a1 + 1) * TS }; this.camMin = a0 * TS; this.camMax = (a1 + 1) * TS - VW;
+        Audio8.play('boss'); Audio8.sfx('roar'); this.shake = 20;
+        this.parts.push({ k: 'text', s: 'ICE YETI!', x: 128, y: 70, vy: 0, life: 100, fixed: true });
+      }
+      return;
+    }
+    const toward = p.x < e.x ? -1 : 1, rage = e.maxHp - e.hp;
+    e.act--;
+    if (e.state === 'walk') {
+      e.vx = toward * (0.6 + rage * 0.25);
+      if (e.act <= 0) {
+        e.cycle = (e.cycle || 0) + 1;
+        if (e.cycle % 3 === 0) { e.state = 'leap'; e.vy = -6.5; e.vx = toward * 1.5; e.air = false; Audio8.sfx('roar'); } else { e.state = 'throw'; e.act = 40; e.vx = 0; }
+      }
+    } else if (e.state === 'throw') {
+      e.vx = 0;
+      if (e.act === 20 || (rage > 0 && e.act === 8)) { Audio8.sfx('swoop'); this.ents.push({ type: 'snowball', hazard: true, alive: true, x: e.x + 10, y: e.y, w: 8, h: 8, vx: toward * (1.4 + Math.random() * 1.4), vy: -4.2, t: 0, life: 300 }); }
+      if (e.act <= 0) { e.state = 'walk'; e.act = 100 - rage * 15; }
+    } else if (e.state === 'leap' && e.onGround && e.air) {
+      this.shake = 16; Audio8.sfx('boom'); this.dust(e.x + 14, e.y + e.h, 4);
+      if (p.onGround && this.state === 'play' && p.charge <= 0) { p.frozen = 50; this.parts.push({ k: 'text', s: 'BRRR!', x: p.x - 6, y: p.y - 12, vy: -0.4, life: 40 }); }
+      e.state = 'walk'; e.act = 100 - rage * 15;
+    }
+    this.move(e, false);
+    e.air = !e.onGround;
+    if (e.hitWall) e.vx = 0;
+    if (this.state === 'play' && e.inv === 0 && overlap(p, e)) {
+      if (p.vy > 0 && p.prevBottom <= e.y + 10) { p.vy = -6.5; this.damageYeti(e); } else this.hurt();
+    }
+  }
+  damageYeti(e) {
+    if (e.inv > 0 || e.dying) return;
+    e.hp--; e.inv = 80; this.shake = 14; Audio8.sfx('bosshit'); this.addScore(1000, e.x, e.y - 8);
+    if (e.hp <= 0) {
+      e.dying = 'flip'; e.vy = -4; e.vx = this.p.x < e.x ? 1 : -1;
+      this.arena = null; this.camMin = 0; this.camMax = null; this.addScore(3000);
+      this.ents.forEach((s2) => { if (s2.type === 'snowball') s2.alive = false; });
+      Audio8.play(this.def.music);
+      this.parts.push({ k: 'text', s: 'YETI DEFEATED!', x: 128, y: 70, vy: 0, life: 120, fixed: true });
+    }
+  }
+  drawYeti(e, x, y) {
+    if (e.inv > 0 && (frame >> 2) % 2) return;
+    const step = e.state === 'walk' ? ((e.t >> 3) & 1) : 0, face = this.p.x < e.x ? -1 : 1;
+    ctx.fillStyle = '#1a1020'; ctx.fillRect(x + 1, y + 3, 28, 25); ctx.fillRect(x + 4, y, 22, 4);
+    ctx.fillStyle = '#f0f4ff'; ctx.fillRect(x + 2, y + 4, 26, 23); ctx.fillRect(x + 5, y + 1, 20, 4);
+    ctx.fillStyle = '#c8d8f0'; for (let k = 0; k < 6; k++) ctx.fillRect(x + 3 + k * 4, y + 24 - (k % 2) * 2, 2, 3);
+    ctx.fillStyle = '#5a7ab8'; ctx.fillRect(x + 8 + face * 2, y + 5, 14, 10);
+    ctx.fillStyle = e.hp < e.maxHp ? '#ff3040' : '#ffffff'; ctx.fillRect(x + 10 + face * 2, y + 7, 3, 3); ctx.fillRect(x + 17 + face * 2, y + 7, 3, 3);
+    ctx.fillStyle = '#1a1020'; ctx.fillRect(x + 11 + face * 2, y + 8, 1, 1); ctx.fillRect(x + 18 + face * 2, y + 8, 1, 1); ctx.fillRect(x + 11 + face * 2, y + 12, 8, 2);
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(x + 12 + face * 2, y + 12, 2, 2); ctx.fillRect(x + 16 + face * 2, y + 12, 2, 2);
+    ctx.fillStyle = '#d8c8a0'; ctx.fillRect(x + 3, y - 3, 3, 5); ctx.fillRect(x + 24, y - 3, 3, 5);
+    const armUp = e.state === 'throw' ? -8 : e.state === 'leap' ? -10 : 0;
+    ctx.fillStyle = '#1a1020'; ctx.fillRect(x - 3, y + 10 + armUp, 7, 12); ctx.fillRect(x + 26, y + 10 + armUp, 7, 12);
+    ctx.fillStyle = '#e0e8ff'; ctx.fillRect(x - 2, y + 11 + armUp, 5, 10); ctx.fillRect(x + 27, y + 11 + armUp, 5, 10);
+    ctx.fillStyle = '#1a1020'; ctx.fillRect(x + 4 + step * 2, y + 27, 8, 5); ctx.fillRect(x + 18 - step * 2, y + 27, 8, 5);
+    ctx.fillStyle = '#5a7ab8'; ctx.fillRect(x + 5 + step * 2, y + 28, 6, 3); ctx.fillRect(x + 19 - step * 2, y + 28, 6, 3);
+    if (e.state === 'throw' && e.act > 20) { ctx.fillStyle = '#ffffff'; ctx.fillRect(x + 12, y - 12, 7, 7); }
+  }
+  // ---------- UFO Mothership (Sky Armada boss) ----------
+  updateMother(e) {
+    const p = this.p;
+    if (e.inv > 0) e.inv--;
+    if (!this.bossLock) { e.y = e.oy + Math.sin(e.t * 0.04) * 3; return; }
+    e.t2 = (e.t2 || 0) + 1;
+    const ax = this.camMin + 24, aw = VW - 48 - e.w;
+    e.x = ax + ((Math.sin(e.t2 * 0.012) + 1) / 2) * aw; e.y = 26 + Math.sin(e.t2 * 0.05) * 5;
+    e.act--;
+    if (e.mode === 'charge') {
+      e.beamX = e.x + e.w / 2; e.beamEnd = this.beamEnd(e.beamX, e.y + e.h);
+      if (e.act <= 0) { e.mode = 'fire'; e.act = 34; Audio8.sfx('laser'); this.shake = 8; }
+    } else if (e.mode === 'fire') {
+      e.beamX = e.x + e.w / 2; e.beamEnd = this.beamEnd(e.beamX, e.y + e.h);
+      if (this.state === 'play' && p.x + p.w > e.beamX - 10 && p.x < e.beamX + 10 && p.y < e.beamEnd) this.hurt();
+      if (e.act <= 0) { e.mode = null; e.act = Math.max(60, 130 - (e.maxHp - e.hp) * 12); }
+    } else if (e.act <= 0) {
+      const r = (e.cycle = (e.cycle || 0) + 1) % 3;
+      if (r === 0) { e.mode = 'charge'; e.act = 50; Audio8.sfx('lasercharge'); } else if (r === 1) {
+        for (const ox of [8, 26, 44]) this.ents.push({ type: 'bomb', hazard: true, alive: true, x: e.x + ox, y: e.y + 14, w: 8, h: 8, vx: 0, vy: 0.5, t: 0, life: 300 });
+        e.act = 100; Audio8.sfx('swoop');
+      } else {
+        if (!this.ents.some((u) => u.type === 'ufo' && !u.dying)) this.ents.push({ type: 'ufo', alive: true, t: 0, x: e.x + 14, y: e.y + 10, w: 28, h: 12, vx: 0, vy: 0, enemy: true, stomp: true, state: 'hover', shots: 2, timer: 80, beamX: 0, beamEnd: 0 });
+        e.act = 100;
+      }
+    }
+    if (this.state === 'play' && overlap(p, e)) {
+      if (e.inv === 0 && p.vy > 0 && p.prevBottom <= e.y + 8) { p.vy = -6.5; this.damageBoss(e); } else if (e.inv === 0) this.hurt();
+    }
+  }
+  drawMother(e, x, y) {
+    const bx = Math.round(e.beamX - (e.x - x)), top = y + 16;
+    if (e.mode === 'charge' && (frame >> 1) & 1) { ctx.fillStyle = 'rgba(255,80,80,0.8)'; ctx.fillRect(bx - 1, top, 2, e.beamEnd - top); }
+    if (e.mode === 'fire') {
+      ctx.fillStyle = 'rgba(255,90,200,0.5)'; ctx.fillRect(bx - 12, top, 24, e.beamEnd - top);
+      ctx.fillStyle = '#ff70e0'; ctx.fillRect(bx - 9, top, 18, e.beamEnd - top); ctx.fillStyle = '#ffffff'; ctx.fillRect(bx - 3, top, 6, e.beamEnd - top);
+    }
+    if (e.inv > 0 && (frame >> 2) % 2) return;
+    for (let yy = -10; yy <= 0; yy++) { const h = Math.round(Math.sqrt(100 - yy * yy) * 1.3); ctx.fillStyle = '#1a1020'; ctx.fillRect(x + 28 - h - 1, y + 6 + yy, h * 2 + 2, 1); ctx.fillStyle = yy < -6 ? '#e0f8ff' : '#8ad8f0'; ctx.fillRect(x + 28 - h, y + 6 + yy, h * 2, 1); }
+    ctx.fillStyle = '#8a5a3a'; ctx.fillRect(x + 22, y - 2, 12, 8); ctx.fillStyle = '#2a2a3a'; ctx.fillRect(x + 24, y, 8, 5);
+    ctx.fillStyle = (frame >> 2) & 1 ? '#ff3040' : '#ff8030'; ctx.fillRect(x + 25, y + 1, 2, 2); ctx.fillRect(x + 29, y + 1, 2, 2);
+    ctx.fillStyle = '#1a1020'; ctx.fillRect(x - 4, y + 5, 64, 11); ctx.fillRect(x + 4, y + 15, 48, 4);
+    ctx.fillStyle = '#b8c0d8'; ctx.fillRect(x - 3, y + 6, 62, 4); ctx.fillStyle = '#7880a0'; ctx.fillRect(x - 3, y + 10, 62, 5); ctx.fillRect(x + 5, y + 15, 46, 3);
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(x - 1, y + 6, 58, 1);
+    for (let i = 0; i < 9; i++) { const k = ((frame >> 3) + i) % 3; ctx.fillStyle = k === 0 ? '#ffe040' : k === 1 ? '#ff3040' : '#5ff0ff'; ctx.fillRect(x + 1 + i * 7, y + 11, 3, 2); }
+    if (e.mode === 'charge') { ctx.fillStyle = (frame >> 1) & 1 ? '#ff3040' : '#ffffff'; ctx.fillRect(x + 22, y + 16, 12, 3); }
   }
   damageBoss(e) {
     if (e.inv > 0 || !e.alive || this.state !== 'play') return;
@@ -1268,6 +1489,21 @@ class Play {
     for (const e of this.ents) if (!e.item) this.drawEnt(e, cx);
     this.drawPlayer(cx);
     if (this.def.theme === 'snow') drawSnow(cx);
+    if (this.def.water) {
+      ctx.fillStyle = 'rgba(40,120,220,0.13)'; ctx.fillRect(0, 0, VW, VH);
+      ctx.fillStyle = 'rgba(220,245,255,0.7)';
+      for (let i = 0; i < 24; i++) { const bx = (((i * 61 - cx * 0.3 + Math.sin(frame * 0.03 + i) * 4) % VW) + VW) % VW, by = VH - ((i * 47 + frame * (0.4 + (i % 3) * 0.2)) % VH); ctx.fillRect(Math.round(bx), Math.round(by), 2, 2); }
+    }
+    if (this.def.dark) { // spooky: only a pool of light around WallyMan, with the odd lightning flash
+      const lf = frame % 420, flash = lf < 5 || (lf > 10 && lf < 14);
+      if (lf === 0) Audio8.sfx('boom');
+      if (!flash) {
+        const px = this.p.x + this.p.w / 2 - cx, py = this.p.y + this.p.h / 2;
+        const gr = ctx.createRadialGradient(px, py, 34, px, py, 118);
+        gr.addColorStop(0, 'rgba(10,0,24,0)'); gr.addColorStop(1, 'rgba(10,0,24,0.8)');
+        ctx.fillStyle = gr; ctx.fillRect(0, 0, VW, VH);
+      } else { ctx.fillStyle = 'rgba(255,255,255,0.25)'; ctx.fillRect(0, 0, VW, VH); }
+    }
     for (const g of this.pings) this.drawPing(g, cx);
     for (const bl of this.balls) this.drawBall(bl, cx);
     for (const q of this.parts) this.drawPart(q, cx);
@@ -1366,7 +1602,7 @@ class Play {
     const face = p.skid ? -p.face : p.face;
     Wally.draw(ctx, fx, fy, pose, face, {
       t: frame, sx: p.sx, sy: p.sy, signal, white: p.hurtT > 18 || (p.charge > 0 && (frame >> 2) % 2 === 0),
-      glow: p.charge > 0 ? 0.7 : signal ? 0.25 + 0.2 * Math.sin(frame * 0.15) : 0,
+      glow: p.frozen > 0 ? 0.9 : p.charge > 0 ? 0.7 : signal ? 0.25 + 0.2 * Math.sin(frame * 0.15) : 0,
     });
   }
   drawPing(g, cx) {
@@ -1413,6 +1649,21 @@ class Play {
         break;
       }
       case 'medal': ctx.drawImage(e.got ? Sprites.medalGhost : Sprites.medal, x - 2, y - 1 + Math.round(Math.sin(e.t * 0.08) * 1.5)); if (!e.got && (frame >> 3) % 6 === 0) { ctx.fillStyle = '#fff'; ctx.fillRect(x + 8, y + 3, 1, 3); ctx.fillRect(x + 7, y + 4, 3, 1); } break;
+      case 'fish': put(Sprites.fish[e.vx > 0 ? 'r' : 'l'][(e.t >> 3) & 1], -1, -3); break;
+      case 'jelly': put(Sprites.jelly[(e.t >> 4) & 1], -1, -1); break;
+      case 'ghost': ctx.save(); ctx.globalAlpha = e.dying ? 1 : e.fade ?? 1; put(Sprites.ghost[this.p.x < e.x ? 'l' : 'r'][(e.t >> 4) & 1], -1, -1); ctx.restore(); break;
+      case 'yeti': if (e.dying) { ctx.save(); ctx.translate(x + 14, y + 15); ctx.scale(1, -1); this.drawYeti(e, -14, -15); ctx.restore(); } else this.drawYeti(e, x, y); break;
+      case 'snowball': ctx.fillStyle = '#1a1020'; ctx.fillRect(x - 1, y, 10, 8); ctx.fillRect(x, y - 1, 8, 10); ctx.fillStyle = '#ffffff'; ctx.fillRect(x, y, 8, 8); ctx.fillStyle = '#c8d8f0'; ctx.fillRect(x + 4, y + 4, 4, 4); break;
+      case 'bomb': ctx.fillStyle = '#1a1020'; ctx.fillRect(x, y + 1, 8, 7); ctx.fillRect(x + 1, y, 6, 9); ctx.fillStyle = '#4a4a5a'; ctx.fillRect(x + 1, y + 2, 6, 5); ctx.fillStyle = (frame >> 1) & 1 ? '#ffe040' : '#ff6020'; ctx.fillRect(x + 3, y - 2, 2, 2); break;
+      case 'secret': {
+        const glow = (frame >> 3) % 4;
+        ctx.fillStyle = '#1a1020'; ctx.fillRect(x - 1, y - 1, 18, 26);
+        ctx.fillStyle = '#8a3ac8'; ctx.fillRect(x, y, 16, 24); ctx.fillStyle = '#c070ff'; ctx.fillRect(x + 2, y + 2, 12, 22);
+        ctx.fillStyle = '#ffd040'; ctx.fillRect(x + 2, y + 2, 12, 2); ctx.fillRect(x + 10, y + 12, 2, 3);
+        ctx.fillStyle = '#ffffff'; ctx.fillRect(x - 3 + glow * 6, y - 4 - (glow & 1) * 2, 1, 3); ctx.fillRect(x - 4 + glow * 6, y - 3 - (glow & 1) * 2, 3, 1);
+        txt('?', x + 5, y + 6, '#ffffff');
+        break;
+      }
       case 'battery': ctx.drawImage(Sprites.battery, x - 2, y - 1); break;
       case 'boots': ctx.drawImage(Sprites.boots, x - 2, y - 1); break;
       case 'spark': {
@@ -1453,6 +1704,7 @@ class Play {
     for (let r = 0; r <= k; r++) { ctx.fillRect(x + 13 + r * 4, y - 9 - r, 1, 6 + r * 2); ctx.fillRect(x + 2 - r * 4, y - 9 - r, 1, 6 + r * 2); }
   }
   drawBoss(e, x, y) {
+    if (e.kind === 'mother') return this.drawMother(e, x + 2, y + 2);
     if (e.inv > 0 && (frame >> 2) % 2) return;
     // antenna
     ctx.fillStyle = '#1a1020'; ctx.fillRect(x + 8, y - 6, 1, 7); ctx.fillRect(x + 23, y - 6, 1, 7);
@@ -1484,6 +1736,7 @@ class Play {
       case 'frag': ctx.drawImage(this.T.brick, 0, 0, 6, 6, x, y, 6, 6); break;
       case 'star': ctx.fillStyle = '#fff'; { const r = 12 - q.life; [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([a, b]) => ctx.fillRect(x + a * r, y + b * r, 2, 2)); } break;
       case 'spark': ctx.fillStyle = q.life & 2 ? '#fff' : '#ffe040'; ctx.fillRect(x + 3, y, 2, 8); ctx.fillRect(x, y + 3, 8, 2); break;
+      case 'bubble': { const bx = x + Math.round(Math.sin((q.life + q.x) * 0.2) * 2); ctx.fillStyle = '#d8f4ff'; ctx.fillRect(bx, y, 3, 1); ctx.fillRect(bx, y + 2, 3, 1); ctx.fillRect(bx - 1, y + 1, 1, 1); ctx.fillRect(bx + 3, y + 1, 1, 1); break; }
       case 'flame': ctx.fillStyle = q.life > 8 ? '#ffe040' : '#ff7020'; ctx.fillRect(x - 1, y, 3, 3); break;
       case 'blast': {
         const k = 24 - q.life, r = Math.min(30, 6 + k * 3);
@@ -1515,9 +1768,11 @@ class Play {
     ctx.drawImage(Sprites.coinIcon, 176, 6); txt('*' + pad(game.coins, 2), 183, 6, '#fff');
     txt(pad(game.score, 7), 206, 15, '#fff');
     for (let i = 0; i < 5; i++) ctx.drawImage((this.medalsGot | game.medals[this.li]) & (1 << i) ? Sprites.miniMedal : Sprites.miniMedalOff, 146 + i * 6, 16);
+    const yeti = this.arena && this.ents.find((e) => e.yeti && !e.dying);
+    if (yeti) { txt('ICE YETI', 8, 26, '#a0d8ff'); for (let i = 0; i < yeti.maxHp; i++) { ctx.fillStyle = i < yeti.hp ? '#5ff0ff' : '#203040'; ctx.fillRect(60 + i * 8, 27, 6, 5); } }
     if (this.def.boss && this.bossLock) {
       const b = this.ents.find((e) => e.boss);
-      if (b) { txt('BARON STATIC', 8, 26, '#ff8080'); for (let i = 0; i < b.maxHp; i++) { ctx.fillStyle = i < b.hp ? '#ff3040' : '#402028'; ctx.fillRect(84 + i * 8, 27, 6, 5); } }
+      if (b) { txt(this.def.bossName || 'BARON STATIC', 8, 26, '#ff8080'); for (let i = 0; i < b.maxHp; i++) { ctx.fillStyle = i < b.hp ? '#ff3040' : '#402028'; ctx.fillRect(84 + i * 8, 27, 6, 5); } }
     }
   }
 }

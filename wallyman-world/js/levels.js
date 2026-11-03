@@ -52,6 +52,7 @@ const LEVELS = [
   },
   {
     name: 'CAVERN COMMUTE', theme: 'cave', music: 'cave', time: 300, width: 190,
+    secret: { to: 8, x: 176, y: 5, prep: (b) => b.fill(176, 6, 176, 11, 'X').fill(174, 10, 174, 11, 'X') },
     extras: [['b', 20], ['b', 56], ['t', 98], ['c', 136], ['b', 148], ['b', 172], ['g', 86]],
     build(b) {
       b.fill(0, 0, 189, 1, '#');
@@ -119,6 +120,7 @@ const LEVELS = [
   },
   {
     name: 'SUNNY SHORELINE', theme: 'beach', music: 'beach', time: 300, width: 200,
+    secret: { to: 9, x: 95, y: 2 },
     extras: [['u', 56], ['c', 98], ['t', 148], ['g', 176], ['h', 120], ['u', 150]],
     build(b) {
       b.ground(0, 30).set(2, 11, '@');
@@ -139,6 +141,8 @@ const LEVELS = [
   },
   {
     name: 'FROSTY PEAKS', theme: 'snow', music: 'snow', time: 300, width: 200, ice: true,
+    yetiArena: [118, 133], yeti: [129, 9],
+    secret: { to: 10, x: 160, y: 4, prep: (b) => b.row(156, 8, '==') },
     extras: [['u', 28], ['c', 68], ['t', 112], ['u', 148], ['h', 182], ['c', 130]],
     build(b) {
       b.ground(0, 25).set(2, 11, '@');
@@ -173,7 +177,7 @@ const LEVELS = [
     },
   },
   {
-    name: 'STATIC TOWER', theme: 'castle', music: 'castle', time: 400, width: 220, boss: true, bossHp: 5,
+    name: 'STATIC TOWER', theme: 'castle', music: 'castle', time: 400, width: 220, boss: true, bossHp: 5, final: true,
     extras: [['b', 28], ['t', 68], ['c', 110], ['b', 124], ['t', 158], ['c', 174], ['b', 90], ['g', 186]],
     build(b) {
       b.fill(0, 0, 219, 1, '#');
@@ -190,11 +194,66 @@ const LEVELS = [
       b.set(214, 10, 'K');
     },
   },
+  // ---------------- bonus levels (unlocked by secret exits) ----------------
+  {
+    name: 'HAUNTED MANOR', theme: 'haunted', music: 'haunted', width: 180, dark: true, bonus: true,
+    extras: [['b', 30], ['b', 100], ['t', 120], ['c', 150], ['e', 44], ['e', 128]],
+    build(b) {
+      b.fill(0, 0, 179, 1, '#');
+      b.ground(0, 20).set(2, 11, '@').row(8, 8, 'BWB').set(14, 11, 'g').set(18, 6, 'e');
+      b.row(21, 9, '===');
+      b.ground(24, 45).coins(32, 9, 5).set(36, 5, 'e');
+      b.fill(46, 13, 52, 13, '^').row(47, 10, '===').row(51, 9, '==');
+      b.ground(53, 90).set(56, 11, 'C').fill(60, 2, 72, 7, '#').coins(61, 10, 10).set(66, 9, 'e').set(64, 11, 'g').set(70, 11, 'g');
+      b.row(76, 8, 'BWBWB').set(80, 5, 'e').set(84, 11, 'p');
+      b.row(92, 9, '===');
+      b.ground(96, 140).stairsUp(100, 4).fill(104, 8, 108, 11, 'X').stairsDown(109, 4).set(106, 4, 'e').set(118, 6, 'e').set(122, 11, 'g').set(126, 11, 'h').row(130, 8, 'WOW');
+      b.fill(141, 13, 144, 13, '^').row(142, 10, '==');
+      b.ground(145, 179).set(150, 5, 'e').set(158, 7, 'e').stairsUp(164, 4);
+      b.set(172, 11, 'G');
+    },
+  },
+  {
+    name: 'CORAL DEPTHS', theme: 'water', music: 'water', width: 180, water: true, bonus: true,
+    extras: [['g', 60], ['p', 120]],
+    build(b) {
+      b.ground(0, 30).set(2, 11, '@').coins(8, 6, 4).set(14, 8, 'f').set(26, 5, 'f').set(20, 7, 'j');
+      b.fill(31, 12, 40, 13, '^');
+      b.ground(41, 70).fill(48, 5, 49, 11, 'B').coins(47, 2, 4).set(55, 6, 'j').set(60, 9, 'f').set(58, 11, 'C');
+      b.fill(66, 0, 68, 7, 'X');
+      b.ground(71, 110).fill(78, 12, 84, 12, '^').set(80, 6, 'f').set(90, 9, 'f').set(86, 4, 'j').row(96, 7, 'BWB');
+      b.fill(104, 3, 105, 11, 'B').coins(103, 1, 4);
+      b.ground(111, 179).set(118, 5, 'j').set(126, 8, 'j').set(122, 7, 'f').set(134, 4, 'f');
+      b.fill(140, 0, 142, 8, 'X').fill(146, 6, 148, 11, 'B').row(152, 6, 'WSW').set(158, 8, 'f');
+      b.set(172, 11, 'G');
+    },
+  },
+  {
+    name: 'SKY ARMADA', theme: 'airship', music: 'airship', width: 200, autoscroll: 0.55, bonus: true,
+    boss: true, bossHp: 6, bossName: 'MOTHERSHIP',
+    bossMsg: ['THE MOTHERSHIP IS DOWN!', '', "BARON STATIC'S FLEET", 'WILL NEVER SCRAMBLE', 'WALLY ISLAND AGAIN.', '', 'BONUS WORLD COMPLETE!'],
+    extras: [['t', 14], ['c', 44], ['u', 60], ['t', 90], ['c', 120], ['u', 140], ['t', 160]],
+    build(b) {
+      b.ground(0, 24).set(4, 11, '@').row(8, 8, 'BWB');
+      b.ground(29, 50, 10).fill(36, 7, 37, 9, 'X');
+      b.set(52, 9, 'm');
+      b.ground(55, 80).set(58, 11, 'C').fill(62, 9, 63, 11, 'X').fill(70, 6, 72, 7, 'X');
+      b.row(82, 9, '==');
+      b.ground(85, 110, 11).stairsUp(92, 3, 11).fill(95, 8, 99, 10, 'X').stairsDown(100, 3, 11);
+      b.set(113, 9, 'm');
+      b.ground(116, 150).row(122, 8, 'BOB').fill(130, 9, 131, 11, 'X');
+      b.row(152, 10, '==');
+      b.ground(154, 199).row(186, 8, '====').row(194, 8, '====').row(190, 5, '===');
+      b.set(191, 3, 'k');
+    },
+  },
 ];
 
 function buildLevel(i) {
   const def = LEVELS[i], b = new LevelBuilder(def.width);
   def.build(b);
+  if (def.secret) { if (def.secret.prep) def.secret.prep(b); b.set(def.secret.x, def.secret.y, 'Z'); }
+  if (def.yeti) b.set(def.yeti[0], def.yeti[1], 'y');
   const spawns = [];
   let start = { x: 2, y: 11 }, goal = null, checkpoint = null;
   // Cannonball ammo: a few crates on the ground through each level, plus one bonus block turned into an ammo block.
@@ -255,7 +314,7 @@ function buildLevel(i) {
     }
     if (best) b.g[best[1]][best[0]] = 'M';
   }
-  const ENT = 'gpzhmnCGKabctuM';
+  const ENT = 'gpzhmnCGKabctuMfjeykZ';
   for (let y = 0; y < 14; y++) for (let x = 0; x < b.w; x++) {
     const c = b.g[y][x];
     if (c === '@') { start = { x, y }; b.g[y][x] = '.'; } else if (ENT.includes(c)) {
@@ -265,6 +324,10 @@ function buildLevel(i) {
     }
   }
   spawns.sort((a, b2) => a.x - b2.x);
+  if (def.yetiArena) { // clear the yeti's arena of other enemies
+    const [a0, a1] = def.yetiArena;
+    for (let k = spawns.length - 1; k >= 0; k--) if (spawns[k].x >= a0 && spawns[k].x <= a1 && 'gpzhbctu'.includes(spawns[k].t)) spawns.splice(k, 1);
+  }
   let medalId = 0;
   for (const sp of spawns) if (sp.t === 'M') sp.id = medalId++;
   return { def, w: b.w, h: 14, grid: b.g, spawns, start, goal, checkpoint };

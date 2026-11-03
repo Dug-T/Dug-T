@@ -164,6 +164,9 @@ const Sprites = (() => {
     sky: { top: ['#ffffff', '#c8d8f0', '#ffffff'], dirt: ['#f0f4ff', '#c8d4f0', '#ffffff'], brick: ['#f0a0b8', '#b05878', '#ffd0e0'], solid: ['#c8c8e0', '#8888a8', '#f0f0ff'], plank: ['#ffffff', '#b8c8e8', '#ffffff'] },
     beach: { top: ['#f8e0a0', '#d8b060', '#fff4d0'], dirt: ['#e8c078', '#c89850', '#f8dca0'], brick: ['#e08850', '#a05028', '#ffb880'], solid: ['#d8c8a8', '#988060', '#f8f0d8'], plank: ['#b07848', '#704828', '#d8a070'] },
     snow: { top: ['#ffffff', '#a8c8e8', '#ffffff'], dirt: ['#88b0d8', '#6890c0', '#b8d8f8'], brick: ['#a8c8f0', '#5878b0', '#e0f0ff'], solid: ['#c0d8f0', '#7898c0', '#ffffff'], plank: ['#8a6a50', '#4a3428', '#b08a68'] },
+    haunted: { top: ['#7a6a8a', '#3a2a4a', '#a89ac0'], dirt: ['#3a2a48', '#24182e', '#4a3a5a'], brick: ['#5a3a5a', '#2a1a2a', '#8a6a8a'], solid: ['#6a6a7a', '#3a3a48', '#9a9aaa'], plank: ['#5a4030', '#2a1a10', '#8a6a50'] },
+    water: { top: ['#f0d890', '#c0a050', '#fff0c0'], dirt: ['#d8b870', '#b09050', '#e8d090'], brick: ['#f07080', '#a03848', '#ffb0b8'], solid: ['#80a0b8', '#4a6a80', '#b0d0e0'], plank: ['#a07850', '#604028', '#c8a070'] },
+    airship: { top: ['#c08848', '#6a4020', '#e8b878'], dirt: ['#8a5a30', '#5a3418', '#a87040'], brick: ['#a06030', '#5a3010', '#d09050'], solid: ['#8890a8', '#4a5068', '#c0c8e0'], plank: ['#c08848', '#6a4020', '#e8b878'] },
     castle: { top: ['#8a8a9a', '#4a4a5a', '#b8b8c8'], dirt: ['#5a5a6a', '#3a3a48', '#7a7a8a'], brick: ['#8a4a5a', '#4a2030', '#b87a8a'], solid: ['#7a7a8a', '#3a3a4a', '#aaaabb'], plank: ['#6a4a30', '#3a2818', '#9a7050'] },
   };
   function tileSet(theme) {
@@ -406,6 +409,55 @@ const Sprites = (() => {
     ],
   };
   for (const k of Object.keys(extra)) { S.bg[k].layers.push(...extra[k]); S.bg[k].layers.sort((a, b) => a.f - b.f); }
+
+  // ---- bonus worlds: haunted manor, coral depths, sky armada ----
+  S.bg.haunted = {
+    sky: gradient('#0a0618', '#2a1838'),
+    layers: [
+      { c: layer(512, 224, (x) => { disc(x, 380, 50, 22, '#f0e8c8'); disc(x, 372, 44, 5, '#d8d0b0'); disc(x, 388, 58, 4, '#d8d0b0'); x.fillStyle = '#1a1020'; for (const [bx, by] of [[330, 40], [350, 60], [420, 30]]) { x.fillRect(bx, by, 6, 2); x.fillRect(bx - 2, by - 1, 2, 2); x.fillRect(bx + 6, by - 1, 2, 2); } }), f: 0.03 },
+      { c: layer(512, 224, (x) => { x.fillStyle = '#1c1028'; x.fillRect(150, 90, 120, 134); x.fillRect(170, 60, 20, 40); x.fillRect(230, 50, 24, 50); for (let k = 0; k < 12; k++) { const w = 30 - k * 2.5; x.fillRect(Math.round(180 - w / 2), 48 + k, Math.round(w), 1); x.fillRect(Math.round(242 - w / 2), 38 + k, Math.round(w), 1); } x.fillStyle = '#ffd860'; [[170, 110], [200, 110], [230, 110], [185, 140], [245, 140]].forEach(([wx, wy], i) => { if (i !== 2) x.fillRect(wx, wy, 6, 8); }); }), f: 0.15 },
+      { c: layer(512, 224, (x) => { const tree = (tx, h) => { x.fillStyle = '#140a1c'; x.fillRect(tx, 224 - h, 6, h); for (const [dx, dy, len, dir] of [[3, h * 0.6, 20, -1], [3, h * 0.75, 18, 1], [3, h * 0.9, 12, -1]]) for (let k = 0; k < len; k++) x.fillRect(Math.round(tx + dx + dir * k), Math.round(224 - dy - k * 0.6), 2, 2); }; tree(40, 120); tree(200, 100); tree(330, 130); tree(460, 110); }), f: 0.4 },
+      { c: layer(512, 224, (x) => { for (let k = 0; k < 10; k++) { const gx = k * 52 + 10; x.fillStyle = '#4a4058'; x.fillRect(gx, 180, 12, 18); x.fillRect(gx + 2, 176, 8, 4); x.fillStyle = '#2a2238'; x.fillRect(gx + 4, 184, 4, 1); x.fillRect(gx + 5, 182, 2, 6); } x.fillStyle = '#1a1424'; for (let i = 0; i < 512; i += 6) x.fillRect(i, 170, 2, 30); x.fillRect(0, 174, 512, 2); }), f: 0.7 },
+    ],
+  };
+  S.bg.water = {
+    sky: gradient('#2a8ad8', '#0a2a60'),
+    layers: [
+      { c: layer(512, 224, (x) => { x.fillStyle = 'rgba(200,240,255,0.10)'; for (let k = 0; k < 8; k++) for (let y = 0; y < 224; y++) x.fillRect(k * 64 + Math.round(y * 0.35), y, 14, 1); }), f: 0.05, drift: 0.08 },
+      { c: layer(512, 224, (x) => { for (let k = 0; k < 4; k++) { const cx = 60 + k * 128; x.fillStyle = '#1a4a80'; x.fillRect(cx - 30, 110, 16, 114); x.fillRect(cx + 14, 110, 16, 114); for (let a = 0; a <= 20; a++) { const t = (a / 20) * Math.PI; x.fillRect(Math.round(cx - 22 * Math.cos(t)) - 8, Math.round(110 - 30 * Math.sin(t)), 16, 8); } } }), f: 0.2 },
+      { c: layer(512, 224, (x) => { for (let k = 0; k < 18; k++) { const cx = k * 29 + (k % 3) * 7, h = 40 + (k % 4) * 15; for (let y = 0; y < h; y++) { x.fillStyle = y % 6 < 3 ? '#1f8a5a' : '#2aa86a'; x.fillRect(Math.round(cx + Math.sin(y * 0.2 + k) * 3), 224 - y, 3, 1); } } }), f: 0.5 },
+      { c: layer(512, 224, (x) => { const r = rng(61); for (let k = 0; k < 10; k++) { const cx = k * 50 + r() * 20, col = ['#ff7090', '#ffa040', '#c070ff'][k % 3]; for (let b = 0; b < 5; b++) { x.fillStyle = col; const bx = cx + (b - 2) * 5, bh = 8 + ((r() * 14) | 0); x.fillRect(Math.round(bx), 214 - bh, 3, bh); disc(x, bx + 1, 214 - bh, 2, col); } } }), f: 0.75 },
+    ],
+  };
+  S.bg.airship = {
+    sky: gradient('#ff9a60', '#5a3a8a'),
+    layers: [
+      { c: layer(512, 224, (x) => { disc(x, 100, 150, 26, '#ffd890'); cloud(x, 300, 60, 1, '#ffc0a0', '#e8a090'); cloud(x, 450, 100, 0.8, '#ffc0a0', '#e8a090'); }), f: 0.05, drift: 0.1 },
+      { c: layer(512, 224, (x) => { const ship = (sx, sy, s2) => { x.fillStyle = '#3a2a5a'; for (let yy = -8; yy <= 8; yy++) { const h = Math.round(Math.sqrt(64 - yy * yy) * 3 * s2); x.fillRect(sx - h, sy + yy * s2, h * 2, Math.ceil(s2)); } x.fillRect(sx - 14 * s2, sy + 10 * s2, 28 * s2, 6 * s2); x.fillRect(sx - 1, sy + 8 * s2, 2, 3 * s2); }; ship(80, 80, 1); ship(300, 60, 0.7); ship(440, 110, 1.2); }), f: 0.2 },
+      { c: layer(512, 224, (x) => { cloud(x, 40, 190, 2, '#ffd0c0', '#e0a8b0'); cloud(x, 260, 200, 2.4, '#ffd0c0', '#e0a8b0'); cloud(x, 420, 185, 1.8, '#ffd0c0', '#e0a8b0'); }), f: 0.5 },
+    ],
+  };
+  // ---- bonus-world enemies ----
+  const FPAL = { K: '#1a1020', O: '#ff9020', o: '#c05010', W: '#ffffff', E: '#1a1020' };
+  const fishMid = ['KOOKOOoOOOOWKK..', 'KOOOOOOoOOOOOOK.', 'KOOKOOoOOOOOKK..'];
+  const fi = [
+    fromRows(['................', '................', '................', '.......KKKK.....', '.K...KKOOOOKK...', 'KOK.KOOOOOOWEK..'].concat(fishMid, ['KOK.KOOOOOOOK...', '.K...KKOOOOKK...', '.......KKKK.....', '................', '................', '................', '................']), FPAL),
+    fromRows(['................', '................', '................', '.......KKKK.....', '.....KKOOOOKK...', '.KK.KOOOOOOWEK..'].concat(fishMid, ['.KK.KOOOOOOOK...', '.....KKOOOOKK...', '.......KKKK.....', '................', '................', '................', '................']), FPAL),
+  ];
+  S.fish = { r: fi, l: fi.map(flip) };
+  const JPAL = { K: '#5a1a7a', P: '#e080ff', p: '#ffc8ff', E: '#1a1020' };
+  const jTop = ['................', '.....KKKKKK.....', '....KKPPPPKK....', '...KPPpPPPPPK...', '..KPPpPPPPPPPK..', '..KPPPPPPPPPPK..', '..KPPEPPPPEPPK..', '..KKKKKKKKKKKK..'];
+  S.jelly = [
+    fromRows(jTop.concat(['...K.K.K.K.K....', '...K.K.K.K.K....', '..K.K.K.K.K.....', '..K.K.K.K.K.....', '...K.K.K.K.K....', '................', '................', '................']), JPAL),
+    fromRows(jTop.concat(['...K.K.K.K.K....', '....K.K.K.K.K...', '....K.K.K.K.K...', '...K.K.K.K.K....', '...K.K.K.K.K....', '................', '................', '................']), JPAL),
+  ];
+  const GPAL2 = { K: '#6a5a9a', W: '#e8e8ff', E: '#2a1a4a', O: '#2a1a4a' };
+  const gTop = ['................', '.....KKKKKK.....', '....KWWWWWWK....', '...KWWWWWWWWK...', '..KWWEEWWEEWWK..', '..KWWEEWWEEWWK..', '..KWWWWWWWWWWK..', '..KWWWWOOWWWWK..', '..KWWWWOOWWWWK..', '..KWWWWWWWWWWK..', '..KWWWWWWWWWWK..'];
+  const gh = [
+    fromRows(gTop.concat(['..KWKWWKWWKWWK..', '..KK.KK.KK.KKK..', '................', '................', '................']), GPAL2),
+    fromRows(gTop.concat(['..KWWKWWKWWKWK..', '..KK.KK.KK.KK...', '................', '................', '................']), GPAL2),
+  ];
+  S.ghost = { r: gh, l: gh.map(flip) };
 
   S.portrait = new Image();
   S.portrait.src = 'assets/wallyman-portrait.png';

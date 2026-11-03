@@ -10,6 +10,7 @@ Open `index.html` in any modern browser — or enable **GitHub Pages** for this 
 | --- | --- | --- | --- |
 | Move | Arrows / WASD | D-pad / stick | ◀ ▶ |
 | Climb off Dino | Down + Jump | Down + A | ▼ + A |
+| Swim (underwater) | Jump, repeatedly | A | A |
 | Ground-pound | Down in mid-air | Down in mid-air | ▼ in mid-air |
 | Dino flutter | Hold Jump while falling on Dino | Hold A | Hold A |
 | Jump (hold for higher) | Z / Space | A | A |
@@ -22,6 +23,11 @@ Open `index.html` in any modern browser — or enable **GitHub Pages** for this 
 - **Title screen & file select** – animated logo, 3 save slots (saved in your browser), high scores, sound toggle, erase file.
 - **Wally Island overworld map** – walk between levels; clearing a level unlocks the next path.
 - **8 levels**: Wally's Backyard (grassland), Cavern Commute (cave), Cloudtop Climb (sky), Static Fortress (castle + boss fight against **Baron Static**), Sunny Shoreline (beach with springboards), Frosty Peaks (slippery ice), Deep Dark Mine (cave), and Static Tower (the final rematch with a tougher Baron Static).
+- **Ice Yeti mid-boss** halfway through Frosty Peaks: the screen locks while it stomps around, throws snowballs and freezes you with ground-shaking leaps. Three hits (stomps, cannonball blasts or Dino chomps).
+- **Secret exits and bonus worlds** – hidden purple doors in Cavern Commute, Sunny Shoreline and Frosty Peaks open paths across the sea to three bonus levels (all three also open after you beat the game):
+  - **Haunted Manor** – pitch dark except for a pool of light around WallyMan, lightning flashes and ghosts that fade in and out.
+  - **Coral Depths** – underwater: press Jump to swim, with fish, jellyfish and coral walls.
+  - **Sky Armada** – an auto-scrolling airship level (don't get squashed by the screen edge) ending in a fight with the **UFO Mothership**, which sweeps a pink laser, drops bombs and launches mini UFOs.
 - **High score table** – when a run ends (game over or beating the game) a top-10 score lets you enter your name arcade-style (D-pad + A, or just type). Scores are kept in the browser; when the game runs as a claude.ai artifact they are also shared through its database for players allowed to save there.
 - **Cannonballs** – tap B to throw a rolling cannonball that explodes on enemies, walls or when its fuse runs out, blasting nearby enemies and bricks (it can hurt the boss too). You start each life with 3; ammo crates (+3, max 9) sit along every level and in one bonus block per level. With the Signal Phone you fire sonic pings once the cannonballs run out.
 - **Power-ups** from bonus `W` blocks: Energy Drink (+1 heart), Signal Phone (fire sonic pings), WallyMan Badge (1-UP), Super Charge battery (10 seconds of invincibility – touch enemies to flatten them, with its own music) and Jet Boots (double jump until you get hit).

@@ -132,6 +132,23 @@ const Audio8 = (() => {
       chords: 'C F G C',
       mel: 'C5/2 E5/2 G5/2 C6/2 G5/2 E5/2 C6/4 | A5/2 F5/2 C6/2 A5/2 F5/4 C6/4 | B5/2 G5/2 D6/2 B5/2 G5/4 D6/4 | C6/4 G5/2 E5/2 C5/8',
     },
+    haunted: {
+      bpm: 96, swing: 0, bass: 'sparse', harm: 'arp', drums: 'k.......h.......', lead: 'p50',
+      chords: 'Em C Am B Em C B Em',
+      mel: 'E5/4 G5/2 F#5/2 E5/4 B4/4 | C5/4 E5/2 D#5/2 E5/8 | A4/2 C5/2 E5/4 D5/2 C5/2 B4/4 | D#5/6 F#5/2 B5/8 |' +
+        'E5/4 G5/2 B5/2 A#5/4 B5/4 | C6/4 B5/2 A5/2 G5/4 E5/4 | F#5/2 G5/2 A5/2 G5/2 F#5/4 D#5/4 | E5/12 r/4',
+    },
+    water: {
+      bpm: 132, swing: 0, bar: 12, bass: 'waltz', harm: 'waltz', drums: 'k.....h.....', lead: 'p12',
+      chords: 'E A B E E A F#m B',
+      mel: 'G#5/4 B5/4 E6/4 | C#6/6 B5/2 A5/4 | F#5/4 A5/4 D#6/4 | E6/12 | G#5/4 E5/4 B4/4 | A4/4 C#5/4 E5/4 | F#5/4 A5/4 C#6/4 | B5/8 r/4',
+    },
+    airship: {
+      bpm: 138, swing: 0, bass: 'drive', harm: 'stab', drums: 'k.s.k.s.k.s.kss.', lead: 'p25',
+      chords: 'Gm Eb F D Gm Eb F Gm',
+      mel: 'G4/2 Bb4/2 D5/2 G5/4 F5/2 D5/4 | Eb5/4 G5/2 Bb5/2 G5/4 Eb5/4 | F5/2 F5/2 A5/2 C6/2 Bb5/2 A5/2 F5/4 | F#5/6 A5/2 D6/8 |' +
+        'G5/2 D5/2 G5/2 Bb5/4 A5/2 G5/4 | G5/4 Bb5/2 Eb6/2 D6/4 Bb5/4 | A5/2 C6/2 A5/2 F5/2 D5/2 F#5/2 A5/4 | G5/12 r/4',
+    },
     beach: {
       bpm: 152, swing: 0.32, bass: 'bounce', harm: 'stab', drums: 'k.hsh.hsk.hsh.hh', lead: 'p25',
       chords: 'G C D G G C D G Em C A D',
@@ -280,6 +297,9 @@ const Audio8 = (() => {
     dino: (t) => [72, 79, 76, 84].forEach((m, i) => tone('p25', freq(m), t + i * 0.07, 0.07, 0.11, sfxBus, { echo: true })),
     chomp: (t) => { noise(t, 0.08, 0.25, sfxBus, 'lowpass', 1400); tone('square', 260, t, 0.08, 0.08, sfxBus, { slide: 120 }); },
     dinocry: (t) => tone('p25', 900, t, 0.35, 0.1, sfxBus, { slide: 300 }),
+    swim: (t) => { tone('sine', 380, t, 0.12, 0.08, sfxBus, { slide: 620 }); noise(t, 0.08, 0.05, sfxBus, 'bandpass', 900, 2); },
+    secret: (t) => [67, 71, 74, 78, 79, 83, 86, 91].forEach((m, i) => tone('p25', freq(m), t + i * 0.06, 0.1, 0.1, sfxBus, { echo: true })),
+    roar: (t) => { noise(t, 0.6, 0.35, sfxBus, 'lowpass', 500); tone('square', 110, t, 0.55, 0.12, sfxBus, { slide: 60 }); },
     spring: (t) => tone('p25', 180, t, 0.3, 0.14, sfxBus, { slide: 1100, slideT: 0.25 }),
     letter: (t) => tone('p50', 1500, t, 0.03, 0.07, sfxBus),
     map: (t) => tone('triangle', 600, t, 0.05, 0.2, sfxBus, { slide: 900 }),
