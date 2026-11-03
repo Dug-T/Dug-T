@@ -419,3 +419,99 @@ Play.prototype.updateP2 = function () {
     else for (let i = 0; i < 3; i++) ctx.drawImage(i < q.hearts ? Sprites.heart : Sprites.heartEmpty, 214 + i * 9, 28);
   };
 }
+
+// ---------------- Zappling Squadron: an alien formation that marches, steps down and fires ----------------
+{
+  const S = Sprites;
+  const rowsA = ['....K..K....', '...KgK.KgK..', '..KKKKKKKK..', '.KggggggggK.', 'KgwwKggwwKgK', 'KgwKKggwKKgK', 'KggggggggggK', '.KgGGGGGGgK.', '..KK.KK.KK..', '.K...K..K...'];
+  const rowsB = ['....K..K....', '...KgK.KgK..', '..KKKKKKKK..', '.KggggggggK.', 'KgwwKggwwKgK', 'KgwKKggwKKgK', 'KggggggggggK', '.KgGGGGGGgK.', '..KK.KK.KK..', '...K..K...K.'];
+  const cols = [['#40d860', '#1a8a30'], ['#ff60c0', '#a02880'], ['#50d8ff', '#2080b0']];
+  S.zappling = cols.map(([g, G]) => [rowsA, rowsB].map((r) => S.fromRows(r, { K: '#1a1020', g, G, w: '#ffffff' })));
+}
+const SQ_DX = 18, SQ_DY = 15;
+{
+  const _spawn = Play.prototype.spawn;
+  Play.prototype.spawn = function (sp) {
+    if (sp.t !== 'i') return _spawn.call(this, sp);
+    const cfg = this.def.squad || { rows: 3, cols: 5 }, rows = cfg.rows, colsN = cfg.cols;
+    const x = sp.x * TS;
+    this.ents.push({ type: 'squad', alive: true, t: 0, x, y: 24, w: colsN * SQ_DX, h: rows * SQ_DY, ox: x, rows, cols: colsN, dir: 1, step: 0, cool: 90,
+      grid: Array.from({ length: rows }, () => Array(colsN).fill(true)), bolts: [], vx: 0, vy: 0, entered: false });
+  };
+  const aliens = (e) => { const out = []; e.grid.forEach((r, j) => r.forEach((on, i) => { if (on) out.push({ i, j, x: e.x + i * SQ_DX, y: e.y + j * SQ_DY, w: 12, h: 10 }); })); return out; };
+  Play.prototype.zapAlien = function (e, a, by) {
+    e.grid[a.j][a.i] = false; this.addScore(100 * (e.rows - a.j), a.x, a.y);
+    Audio8.sfx('kick'); this.parts.push({ k: 'star', x: a.x + 6, y: a.y + 5, life: 12 }); this.parts.push({ k: 'dust', x: a.x + 6, y: a.y + 5, vx: 0, vy: -0.5, life: 16 });
+    if (!e.grid.some((r) => r.some(Boolean))) {
+      e.alive = false; Sticker.add('squad'); this.addScore(2000); Audio8.sfx('oneup');
+      this.parts.push({ k: 'text', s: 'SQUADRON CLEARED! +2000', x: this.cam.x + 52, y: 60, vy: 0, life: 110 });
+      for (let k = 0; k < 5; k++) this.parts.push({ k: 'coinpop', x: a.x - 20 + k * 10, y: a.y, vy: -3 - k * 0.3, life: 26 });
+      for (let k = 0; k < 5; k++) this.addCoin();
+    }
+  };
+  Play.prototype.updateSquad = function (e) {
+    const p = this.p;
+    if (!e.entered) { if (e.x < this.cam.x + VW - 20) { e.entered = true; Audio8.sfx('lasercharge'); this.parts.push({ k: 'text', s: 'ALIEN SQUADRON!', x: this.cam.x + 80, y: 50, vy: 0, life: 90 }); } else return; }
+    e.t++;
+    const live = aliens(e), n = live.length, frozen = this.freezeT > 0 || this.state !== 'play';
+    if (!n) { e.alive = false; return; }
+    // march: the fewer that are left, the faster they go
+    if (!frozen && ++e.step >= Math.max(3, Math.round(4 + n * 1.4))) {
+      e.step = 0; e.frame = (e.frame || 0) ^ 1;
+      const minI = Math.min(...live.map((a) => a.i)), maxI = Math.max(...live.map((a) => a.i));
+      const left = e.x + minI * SQ_DX, right = e.x + maxI * SQ_DX + 12;
+      const lo = Math.max(e.ox - 56, this.cam.x + 4), hi = Math.min(e.ox + e.cols * SQ_DX + 56, this.cam.x + VW - 4);
+      if ((e.dir > 0 && right + 4 > hi) || (e.dir < 0 && left - 4 < lo)) { e.dir = -e.dir; if (e.y < 96) e.y += 6; } else e.x += e.dir * 4;
+      Audio8.sfx('tick');
+    }
+    // fire from the bottom alien of a random column
+    if (!frozen && --e.cool <= 0 && e.bolts.length < 3) {
+      const colsLive = [...new Set(live.map((a) => a.i))], ci = colsLive[(e.t * 7 + n) % colsLive.length];
+      const shooter = live.filter((a) => a.i === ci).sort((a, b) => b.j - a.j)[0];
+      e.bolts.push({ x: shooter.x + 5, y: shooter.y + 10, w: 3, h: 7, t: 0 });
+      e.cool = 50 + Math.round(n * 2.5) + ((e.t * 13) % 40); Audio8.sfx('zap');
+    }
+    for (const bl of e.bolts) {
+      if (!frozen) { bl.y += 2.2; bl.t++; }
+      if (SOLID.has(this.tile(Math.floor((bl.x + 1) / TS), Math.floor((bl.y + 6) / TS))) || bl.y > VH) bl.dead = true;
+      else if (this.state === 'play' && overlap(bl, p)) { bl.dead = true; this.hurt(); }
+      else if (this.p2 && !this.p2.down && overlap(bl, this.p2)) { bl.dead = true; this.withP2(() => this.hurt()); }
+    }
+    e.bolts = e.bolts.filter((bl) => !bl.dead);
+    // hits: stomps, cannonballs, pings, bats, Dino fire, touching from the side hurts
+    for (const a of live) {
+      if (!e.grid[a.j][a.i]) continue;
+      const hit = (arr, kill) => { for (const o of arr) if (!o.dead && overlap(o, a)) { kill(o); this.zapAlien(e, a); return true; } return false; };
+      if (hit(this.balls, (o) => { o.fuse = 0; })) continue;
+      if (hit(this.pings, (o) => { o.life = 0; })) continue;
+      if (hit(this.bats, (o) => { o.life = 0; })) continue;
+      if (hit(this.fires, (o) => { o.life = 0; })) continue;
+      for (const q of [p, this.p2]) {
+        if (!q || q.down || this.state !== 'play' || !overlap(q, a)) continue;
+        if (q.vy > 0 && q.prevBottom <= a.y + 6) { q.vy = Input.down('jump') ? -6 : -4; this.zapAlien(e, a); Audio8.sfx('stomp'); } else if (q === p) this.hurt(); else this.withP2(() => this.hurt());
+        break;
+      }
+    }
+    const l2 = aliens(e); if (l2.length) { e.w = (Math.max(...l2.map((a) => a.i)) + 1) * SQ_DX; }
+  };
+  const _ue = Play.prototype.updateEnt;
+  Play.prototype.updateEnt = function (e) { if (e.type === 'squad') { if (!this._p2ctx) this.updateSquad(e); return; } return _ue.call(this, e); };
+  const _de = Play.prototype.drawEnt;
+  Play.prototype.drawEnt = function (e, cx) {
+    if (e.type !== 'squad') return _de.call(this, e, cx);
+    if (!e.entered) return;
+    e.grid.forEach((r, j) => r.forEach((on, i) => { if (on) ctx.drawImage(Sprites.zappling[j % 3][e.frame || 0], Math.round(e.x + i * SQ_DX - cx), Math.round(e.y + j * SQ_DY)); }));
+    for (const bl of e.bolts) { const x = Math.round(bl.x - cx), y = Math.round(bl.y), z = (bl.t >> 2) & 1; ctx.fillStyle = '#ffffff'; ctx.fillRect(x + z, y, 1, 2); ctx.fillRect(x + 1 - z, y + 2, 1, 2); ctx.fillRect(x + z, y + 4, 1, 3); ctx.fillStyle = '#ff60c0'; ctx.fillRect(x + 2, y + 1, 1, 5); }
+  };
+  const _ex = Play.prototype.explode;
+  Play.prototype.explode = function (x, y) {
+    _ex.call(this, x, y);
+    for (const e of this.ents) if (e.type === 'squad' && e.alive && e.entered) for (const a of aliens(e)) if (e.alive && Math.hypot(a.x + 6 - x, a.y + 5 - y) < 34) this.zapAlien(e, a);
+  };
+  const _sw = Play.prototype.shockwave;
+  Play.prototype.shockwave = function () {
+    _sw.call(this);
+    const p = this.p, x = p.x + p.w / 2, y = p.y + p.h / 2;
+    for (const e of this.ents) if (e.type === 'squad' && e.alive && e.entered) for (const a of aliens(e)) if (e.alive && Math.hypot(a.x + 6 - x, a.y + 5 - y) < 96) this.zapAlien(e, a);
+  };
+}

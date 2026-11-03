@@ -20,7 +20,7 @@ LevelBuilder.prototype = {
 
 const LEVELS = [
   {
-    name: "WALLY'S BACKYARD", theme: 'grass', music: 'grass', time: 300, width: 200, warp: { x: 118, to: 2 },
+    name: "WALLY'S BACKYARD", theme: 'grass', music: 'grass', time: 300, width: 200, warp: { x: 118, to: 2 }, squad: { x: 60, rows: 2, cols: 5 },
     extras: [['u', 12], ['c', 58], ['t', 96], ['u', 108], ['g', 134], ['p', 166], ['h', 45]],
     build(b) {
       b.ground(0, 38).set(3, 11, '@');
@@ -77,7 +77,7 @@ const LEVELS = [
     },
   },
   {
-    name: 'CLOUDTOP CLIMB', theme: 'sky', music: 'sky', time: 300, width: 200, dino: 'blue', weather: 'wind',
+    squad: { x: 84, rows: 3, cols: 5 }, name: 'CLOUDTOP CLIMB', theme: 'sky', music: 'sky', time: 300, width: 200, dino: 'blue', weather: 'wind',
     mini: ['v', 138, 3], miniArena: [128, 143],
     extras: [['u', 36], ['t', 96], ['c', 128], ['u', 146], ['c', 182], ['h', 70]],
     build(b) {
@@ -232,7 +232,7 @@ const LEVELS = [
     },
   },
   {
-    name: 'SKY ARMADA', theme: 'airship', music: 'airship', width: 200, autoscroll: 0.55, bonus: true, dino: 'blue',
+    squad: { x: 110, rows: 3, cols: 6 }, name: 'SKY ARMADA', theme: 'airship', music: 'airship', width: 200, autoscroll: 0.55, bonus: true, dino: 'blue',
     boss: true, bossHp: 6, bossName: 'MOTHERSHIP',
     bossMsg: ['THE MOTHERSHIP IS DOWN!', '', "BARON STATIC'S FLEET", 'WILL NEVER SCRAMBLE', 'WALLY ISLAND AGAIN.', '', 'BONUS WORLD COMPLETE!'],
     extras: [['t', 14], ['c', 44], ['u', 60], ['t', 90], ['c', 120], ['u', 140], ['t', 160]],
@@ -299,7 +299,7 @@ const LEVELS = [
     },
   },
   {
-    name: 'MOON BASE', theme: 'moon', music: 'moon', width: 200, lowGrav: true, boss: true, bossHp: 8, bossName: 'MOTHERSHIP MK II',
+    squad: { x: 58, rows: 3, cols: 6 }, name: 'MOON BASE', theme: 'moon', music: 'moon', width: 200, lowGrav: true, boss: true, bossHp: 8, bossName: 'MOTHERSHIP MK II',
     bossMsg: ['THE MK II IS DOWN!', '', 'STAR ISLE IS SAFE AND', 'THE WHOLE GALAXY HAS', 'FULL SIGNAL AGAIN!', '', 'YOU ARE A LEGEND!'],
     extras: [['u', 40], ['t', 80], ['u', 120], ['c', 150], ['t', 160]],
     build(b) {
@@ -424,7 +424,8 @@ function buildLevel(i) {
     }
   }
   }
-  const ENT = 'gpzhmnCGKabctuMfjeykZsqwvlx';
+  if (def.squad) b.set(def.squad.x, 2, 'i');
+  const ENT = 'gpzhmnCGKabctuMfjeykZsqwvlxi';
   for (let y = 0; y < 14; y++) for (let x = 0; x < b.w; x++) {
     const c = b.g[y][x];
     if (c === '@') { start = { x, y }; b.g[y][x] = '.'; } else if (ENT.includes(c)) {

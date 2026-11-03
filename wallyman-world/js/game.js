@@ -245,7 +245,7 @@ const STICKERS = [
   ['grumble', 'GRUMBLE', 'e'], ['prickle', 'PRICKLE', 'e'], ['buzzer', 'BUZZER', 'e'], ['hopper', 'HOPPER', 'e'], ['bat', 'FLITTER BAT', 'e'], ['charger', 'RHINO-BOT', 'e'],
   ['turret', 'STATIC TURRET', 'e'], ['ufo', 'UFO', 'e'], ['fish', 'FISH', 'e'], ['jelly', 'JELLYFISH', 'e'], ['ghost', 'GHOST', 'e'], ['iced', 'ICE BLOCK', 's'],
   ['boss', 'BARON STATIC', 'b'], ['yeti', 'ICE YETI', 'b'], ['crab', 'KING KRABBY', 'b'], ['mole', 'DRILL MOLE', 'b'], ['dragon', 'NIMBUS', 'b'], ['mother', 'MOTHERSHIP', 'b'],
-  ['secretblock', 'HIDDEN BLOCK', 's'], ['shroom', '1-UP MUSHROOM', 's'], ['cracker', 'CRACKED WALL', 's'], ['secretexit', 'SECRET EXIT', 's'], ['warp', 'WARP PIPE', 's'], ['fullsignal', 'FULL SIGNAL', 's'],
+  ['squad', 'ZAPPLING SQUAD', 'e'], ['secretblock', 'HIDDEN BLOCK', 's'], ['shroom', '1-UP MUSHROOM', 's'], ['cracker', 'CRACKED WALL', 's'], ['secretexit', 'SECRET EXIT', 's'], ['warp', 'WARP PIPE', 's'], ['fullsignal', 'FULL SIGNAL', 's'],
 ];
 const Sticker = (() => {
   const KEY = 'wallyman-stickers';
@@ -269,6 +269,7 @@ function stickerArt(id, x, y, t) { // draws a sticker's picture centred at (x, y
   const D = (img) => ctx.drawImage(img, Math.round(x - img.width / 2), Math.round(y - img.height / 2));
   const m = { grumble: () => D(Sprites.grumble[(t >> 4) & 1]), prickle: () => D(Sprites.prickle.r[0]), buzzer: () => D(Sprites.buzzer.r[(t >> 3) & 1] || Sprites.buzzer.r[0]), hopper: () => D(Sprites.hopper[0]), bat: () => D(Sprites.bat[0]), charger: () => D(Sprites.charger.r[0]),
     turret: () => D(Sprites.turret.r), fish: () => D(Sprites.fish.r[0]), jelly: () => D(Sprites.jelly[0]), ghost: () => D(Sprites.ghost.r[0]), shroom: () => D(Sprites.shroom), fullsignal: () => { for (let i = 0; i < 4; i++) { ctx.fillStyle = '#40e090'; ctx.fillRect(x - 6 + i * 3, y + 6 - (4 + i * 3), 2, 4 + i * 3); } },
+    squad: () => { ctx.drawImage(Sprites.zappling[0][(t >> 4) & 1], x - 12, y - 10, 24, 20); },
     ufo: () => Play.prototype.drawUfo.call(null, { state: 'hover', beamX: 0, x: 0 }, x - 14, y - 8), iced: () => { ctx.fillStyle = '#a0dcff'; ctx.fillRect(x - 8, y - 8, 16, 16); ctx.globalAlpha = 0.6; D(Sprites.grumble[0]); ctx.globalAlpha = 1; ctx.fillStyle = '#ffffff'; ctx.fillRect(x - 6, y - 6, 3, 2); },
     boss: () => { ctx.save(); ctx.translate(x, y); ctx.scale(0.62, 0.62); Play.prototype.drawBoss.call(null, { inv: 0, hp: 3, maxHp: 3 }, -14, -16); ctx.restore(); }, yeti: () => { ctx.save(); ctx.translate(x, y); ctx.scale(0.62, 0.62); Play.prototype.drawYeti.call({ p: { x: 0 } }, { inv: 0, state: 'walk', t, hp: 3, maxHp: 3 }, -14, -16); ctx.restore(); },
     mother: () => { ctx.save(); ctx.translate(x, y); ctx.scale(0.5, 0.5); Play.prototype.drawMother.call(null, { inv: 0, beamX: 0, x: 0, mode: null }, -28, -10); ctx.restore(); },
@@ -302,11 +303,11 @@ function StickerScene() {
       txt('STICKER BOOK', 132, 6, '#c03040', { align: 'center', outline: '#fff' });
       txt(`${Sticker.total()}/${N}`, 246, 6, '#3a2010', { align: 'right' });
       STICKERS.forEach((s, i) => {
-        const cx = 34 + (i % COLS) * 38, cy = 34 + Math.floor(i / COLS) * 36, on = Sticker.has(s[0]);
-        ctx.fillStyle = i === sel ? '#ffe040' : '#c8b080'; ctx.fillRect(cx - 16, cy - 15, 32, 30);
-        ctx.fillStyle = on ? '#ffffff' : '#d8c8a0'; ctx.fillRect(cx - 14, cy - 13, 28, 26);
+        const cx = 34 + (i % COLS) * 38, cy = 31 + Math.floor(i / COLS) * 30, on = Sticker.has(s[0]);
+        ctx.fillStyle = i === sel ? '#ffe040' : '#c8b080'; ctx.fillRect(cx - 16, cy - 14, 32, 28);
+        ctx.fillStyle = on ? '#ffffff' : '#d8c8a0'; ctx.fillRect(cx - 14, cy - 12, 28, 24);
         if (on) { ctx.save(); stickerArt(s[0], cx, cy, t); ctx.restore(); } else txt('?', cx - 2, cy - 3, '#a89870');
-        if (on && s[2] === 'b') { ctx.fillStyle = '#ffd040'; ctx.fillRect(cx + 9, cy - 13, 5, 5); }
+        if (on && s[2] === 'b') { ctx.fillStyle = '#ffd040'; ctx.fillRect(cx + 9, cy - 12, 5, 5); }
       });
       const s = STICKERS[sel], on = Sticker.has(s[0]);
       drawWindow(16, 182, 224, 34);

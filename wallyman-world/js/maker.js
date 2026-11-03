@@ -12,10 +12,10 @@ const Maker = (() => {
     ['o', 'COIN'], ['g', 'GRUMBLE'], ['p', 'PRICKLE'], ['z', 'BUZZER'], ['h', 'HOPPER'], ['b', 'FLITTER BAT'], ['c', 'RHINO-BOT'],
     ['t', 'TURRET'], ['u', 'UFO'], ['e', 'GHOST'], ['l', 'LAVA BLOB'], ['m', 'LIFT SIDEWAYS'], ['n', 'LIFT UP-DOWN'], ['a', 'AMMO CRATE'],
     ['s', 'SPECIAL ORB'], ['M', 'MEDAL'], ['x', 'SIGNAL BAR'], ['C', 'CHECKPOINT'], ['@', 'START'], ['G', 'GOAL'],
-    ['N', 'MAGNET BLOCK'], ['T', 'SHRINK BLOCK'], ['E', 'SHIELD BLOCK'], ['Y', 'PIPE'], ['~', 'WATER ZONE'], [';', 'DARK ZONE'], ['f', 'FISH'], ['j', 'JELLYFISH'],
+    ['N', 'MAGNET BLOCK'], ['T', 'SHRINK BLOCK'], ['E', 'SHIELD BLOCK'], ['Y', 'PIPE'], ['~', 'WATER ZONE'], [';', 'DARK ZONE'], ['f', 'FISH'], ['j', 'JELLYFISH'], ['i', 'ALIEN SQUAD'],
   ];
   const BOSSES = [['', 'NONE'], ['K', 'BARON STATIC'], ['k', 'MOTHERSHIP'], ['y', 'ICE YETI'], ['q', 'KING KRABBY'], ['w', 'DRILL MOLE'], ['v', 'NIMBUS']];
-  const LIMITS = { M: 5, x: 3, C: 3, u: 6 };
+  const LIMITS = { M: 5, x: 3, C: 3, u: 6, i: 3 };
   const blank = (theme = 'grass') => {
     const rows = Array.from({ length: H }, (_, y) => (y >= 12 ? '#'.repeat(W) : '.'.repeat(W)).split(''));
     rows[11][2] = '@'; rows[11][W - 6] = 'G';
@@ -107,6 +107,7 @@ function makerIcon(c, X, Y, t = 0) {
     case '@': Wally.draw(ctx, X + 8, Y + 16, 'idle0', 1, { t }); return;
     case 'G': ctx.fillStyle = '#1a1020'; ctx.fillRect(X + 4, Y - 16, 8, 32); ctx.fillStyle = '#ffd040'; ctx.fillRect(X + 5, Y - 15, 6, 30); Font.draw(ctx, 'G', X + 8, Y - 6, { color: '#a02010', align: 'center' }); return;
     case 'f': return bottom(Sprites.fish.r[0]);
+    case 'i': return ctx.drawImage(Sprites.zappling[0][(t >> 4) & 1], X + 2, Y + 3);
     case 'j': return bottom(Sprites.jelly[0]);
     case ';': ctx.fillStyle = 'rgba(10,8,30,0.6)'; ctx.fillRect(X, Y, 16, 16); ctx.fillStyle = '#ffe8a0'; ctx.fillRect(X + 9, Y + 4, 3, 7); ctx.fillRect(X + 7, Y + 3, 2, 2); ctx.fillRect(X + 7, Y + 11, 2, 2); return;
     case 'I': ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.setLineDash([2, 2]); ctx.strokeRect(X + 0.5, Y + 0.5, 15, 15); ctx.setLineDash([]); return;
