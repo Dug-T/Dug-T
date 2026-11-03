@@ -132,6 +132,12 @@ const Sprites = (() => {
   ];
   const dino = dinoLegs.map((l) => fromRows(dinoTop.concat(l), DPAL));
   S.dino = { r: dino, l: dino.map(flip) };
+  const dinoOf = (pal) => { const fr = dinoLegs.map((l) => fromRows(dinoTop.concat(l), Object.assign({}, DPAL, pal))); return { r: fr, l: fr.map(flip) }; };
+  S.dinos = {
+    teal: S.dino,
+    red: dinoOf({ T: '#e84838', t: '#a02818', k: '#5a1008', Y: '#ffd060', O: '#ffe040', S: '#3a2a3a', s: '#6a5a6a' }),
+    blue: dinoOf({ T: '#5a9af0', t: '#2a5ab8', k: '#1a3a7a', Y: '#e0f0ff', O: '#ffffff', S: '#ffd040', s: '#fff0a0' }),
+  };
   // ---- Wally Medals (5 hidden in every level) ----
   const MPAL = { K: '#7a4a10', R: '#e83850', B: '#2f62d0', Y: '#ffd040', y: '#f0a020', w: '#fff8c0' };
   S.medal = fromRows(['.....KK..KK.....', '....KRRK.KBBK...', '....KRRKKKBBK...', '.....KRRKBBK....', '......KKKKK.....', '.....KYYYYYK....', '....KYyyyyyYK...', '...KYyYwYwYyYK..',

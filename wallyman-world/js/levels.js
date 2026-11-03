@@ -77,7 +77,8 @@ const LEVELS = [
     },
   },
   {
-    name: 'CLOUDTOP CLIMB', theme: 'sky', music: 'sky', time: 300, width: 200,
+    name: 'CLOUDTOP CLIMB', theme: 'sky', music: 'sky', time: 300, width: 200, dino: 'blue', weather: 'wind',
+    mini: ['v', 138, 3], miniArena: [128, 143],
     extras: [['u', 36], ['t', 96], ['c', 128], ['u', 146], ['c', 182], ['h', 70]],
     build(b) {
       b.ground(0, 20).set(2, 11, '@');
@@ -96,7 +97,7 @@ const LEVELS = [
     },
   },
   {
-    name: 'STATIC FORTRESS', theme: 'castle', music: 'castle', time: 400, width: 190, boss: true, bossHp: 3,
+    name: 'STATIC FORTRESS', theme: 'castle', music: 'castle', time: 400, width: 190, boss: true, bossHp: 3, dino: 'red',
     extras: [['b', 28], ['t', 66], ['c', 84], ['b', 112], ['t', 130], ['b', 152], ['g', 74]],
     build(b) {
       b.fill(0, 0, 189, 1, '#');
@@ -119,7 +120,8 @@ const LEVELS = [
     },
   },
   {
-    name: 'SUNNY SHORELINE', theme: 'beach', music: 'beach', time: 300, width: 200,
+    name: 'SUNNY SHORELINE', theme: 'beach', music: 'beach', time: 300, width: 200, weather: 'rain',
+    mini: ['q', 152, 10], miniArena: [142, 157],
     secret: { to: 9, x: 95, y: 2 },
     extras: [['u', 56], ['c', 98], ['t', 148], ['g', 176], ['h', 120], ['u', 150]],
     build(b) {
@@ -160,7 +162,8 @@ const LEVELS = [
     },
   },
   {
-    name: 'DEEP DARK MINE', theme: 'cave', music: 'cave', time: 320, width: 210,
+    name: 'DEEP DARK MINE', theme: 'cave', music: 'cave', time: 320, width: 210, dino: 'red',
+    mini: ['w', 176, 10], miniArena: [166, 181],
     extras: [['b', 18], ['b', 44], ['t', 88], ['c', 102], ['b', 128], ['t', 168], ['c', 192], ['b', 150]],
     build(b) {
       b.fill(0, 0, 209, 1, '#');
@@ -177,7 +180,7 @@ const LEVELS = [
     },
   },
   {
-    name: 'STATIC TOWER', theme: 'castle', music: 'castle', time: 400, width: 220, boss: true, bossHp: 5, final: true,
+    name: 'STATIC TOWER', theme: 'castle', music: 'castle', time: 400, width: 220, boss: true, bossHp: 5, final: true, dino: 'red',
     extras: [['b', 28], ['t', 68], ['c', 110], ['b', 124], ['t', 158], ['c', 174], ['b', 90], ['g', 186]],
     build(b) {
       b.fill(0, 0, 219, 1, '#');
@@ -196,7 +199,7 @@ const LEVELS = [
   },
   // ---------------- bonus levels (unlocked by secret exits) ----------------
   {
-    name: 'HAUNTED MANOR', theme: 'haunted', music: 'haunted', width: 180, dark: true, bonus: true,
+    name: 'HAUNTED MANOR', theme: 'haunted', music: 'haunted', width: 180, dark: true, bonus: true, weather: 'storm',
     extras: [['b', 30], ['b', 100], ['t', 120], ['c', 150], ['e', 44], ['e', 128]],
     build(b) {
       b.fill(0, 0, 179, 1, '#');
@@ -229,7 +232,7 @@ const LEVELS = [
     },
   },
   {
-    name: 'SKY ARMADA', theme: 'airship', music: 'airship', width: 200, autoscroll: 0.55, bonus: true,
+    name: 'SKY ARMADA', theme: 'airship', music: 'airship', width: 200, autoscroll: 0.55, bonus: true, dino: 'blue',
     boss: true, bossHp: 6, bossName: 'MOTHERSHIP',
     bossMsg: ['THE MOTHERSHIP IS DOWN!', '', "BARON STATIC'S FLEET", 'WILL NEVER SCRAMBLE', 'WALLY ISLAND AGAIN.', '', 'BONUS WORLD COMPLETE!'],
     extras: [['t', 14], ['c', 44], ['u', 60], ['t', 90], ['c', 120], ['u', 140], ['t', 160]],
@@ -254,6 +257,7 @@ function buildLevel(i) {
   def.build(b);
   if (def.secret) { if (def.secret.prep) def.secret.prep(b); b.set(def.secret.x, def.secret.y, 'Z'); }
   if (def.yeti) b.set(def.yeti[0], def.yeti[1], 'y');
+  if (def.mini) b.set(def.mini[1], def.mini[2], def.mini[0]);
   const spawns = [];
   let start = { x: 2, y: 11 }, goal = null, checkpoint = null;
   // Cannonball ammo: a few crates on the ground through each level, plus one bonus block turned into an ammo block.
@@ -330,7 +334,7 @@ function buildLevel(i) {
     }
     if (best) b.g[best[1]][best[0]] = 'M';
   }
-  const ENT = 'gpzhmnCGKabctuMfjeykZs';
+  const ENT = 'gpzhmnCGKabctuMfjeykZsqwv';
   for (let y = 0; y < 14; y++) for (let x = 0; x < b.w; x++) {
     const c = b.g[y][x];
     if (c === '@') { start = { x, y }; b.g[y][x] = '.'; } else if (ENT.includes(c)) {
@@ -340,8 +344,8 @@ function buildLevel(i) {
     }
   }
   spawns.sort((a, b2) => a.x - b2.x);
-  if (def.yetiArena) { // clear the yeti's arena of other enemies
-    const [a0, a1] = def.yetiArena;
+  if (def.yetiArena || def.miniArena) { // clear a mini-boss arena of other enemies
+    const [a0, a1] = def.yetiArena || def.miniArena;
     for (let k = spawns.length - 1; k >= 0; k--) if (spawns[k].x >= a0 && spawns[k].x <= a1 && 'gpzhbctu'.includes(spawns[k].t)) spawns.splice(k, 1);
   }
   let medalId = 0;

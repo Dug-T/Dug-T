@@ -319,9 +319,10 @@ function GalleryScene() {
   const D = (img, s = 2) => (x, y) => ctx.drawImage(img, Math.round(x - (img.width * s) / 2), Math.round(y - img.height * s), img.width * s, img.height * s);
   const pages = [
     ['HEROES', [['WALLYMAN', (x, y, t) => Wally.draw(ctx, x, y, 'walk' + ((t >> 2) % 8), 1, { t, hero: 'wally', costume: 'classic', sx: 2, sy: 2 })], ['GOTHCHICK', (x, y, t) => Wally.draw(ctx, x, y, 'walk' + ((t >> 2) % 8), 1, { t, hero: 'goth', costume: 'classic', sx: 2, sy: 2 })], ['DOUG THOMSON', (x, y, t) => Wally.draw(ctx, x, y, 'walk' + ((t >> 2) % 8), 1, { t, hero: 'doug', costume: 'classic', sx: 2, sy: 2 })], ['WALLY JR', (x, y, t) => Wally.draw(ctx, x, y, 'idle' + ((t >> 4) % 4), 1, { t, hero: 'wally', costume: 'junior', sx: 2, sy: 2 })], ['DINO', (x, y, t) => D(Sprites.dino.r[(t >> 3) % 3])(x, y)]]],
+    ['DINOS', [['DINO', (x, y, t) => D(Sprites.dinos.teal.r[(t >> 3) % 3])(x, y)], ['FIRE DINO', (x, y, t) => D(Sprites.dinos.red.r[(t >> 3) % 3])(x, y)], ['SKY DINO', (x, y, t) => D(Sprites.dinos.blue.r[(t >> 3) % 3])(x, y)]]],
     ['ENEMIES', [['GRUMBLE', D(Sprites.grumble[0])], ['PRICKLE', D(Sprites.prickle.r[0])], ['BUZZER', D(Sprites.buzzer.r[0])], ['HOPPER', D(Sprites.hopper[0])], ['FLITTER BAT', D(Sprites.bat[0])], ['RHINO-BOT', D(Sprites.charger.r[0])]]],
     ['MORE ENEMIES', [['TURRET', D(Sprites.turret.r)], ['UFO', (x, y) => Play.prototype.drawUfo.call(null, { state: 'hover', beamX: 0, x: 0 }, x - 14, y - 16)], ['FISH', D(Sprites.fish.r[0])], ['JELLYFISH', D(Sprites.jelly[0])], ['GHOST', D(Sprites.ghost.r[0])]]],
-    ['BOSSES', [['BARON STATIC', (x, y) => Play.prototype.drawBoss.call(null, { inv: 0, hp: 3, maxHp: 3 }, x - 16, y - 32)], ['ICE YETI', (x, y, t) => Play.prototype.drawYeti.call({ p: { x: 0 } }, { inv: 0, state: 'walk', t, hp: 3, maxHp: 3 }, x - 14, y - 32)], ['MOTHERSHIP', (x, y) => Play.prototype.drawMother.call(null, { inv: 0, beamX: 0, x: 0, mode: null }, x - 28, y - 20)]]],
+    ['BOSSES', [['BARON STATIC', (x, y) => Play.prototype.drawBoss.call(null, { inv: 0, hp: 3, maxHp: 3 }, x - 16, y - 32)], ['ICE YETI', (x, y, t) => Play.prototype.drawYeti.call({ p: { x: 0 } }, { inv: 0, state: 'walk', t, hp: 3, maxHp: 3 }, x - 14, y - 32)], ['MOTHERSHIP', (x, y) => Play.prototype.drawMother.call(null, { inv: 0, beamX: 0, x: 0, mode: null }, x - 28, y - 20)], ['KING KRABBY', (x, y, t) => Play.prototype.drawCrab.call(null, { inv: 0, state: 'walk', t, hp: 3, maxHp: 3 }, x - 17, y - 22)], ['DRILL MOLE', (x, y) => Play.prototype.drawMole.call(null, { inv: 0, state: 'up', t: 0, groundY: y - 20, h: 20 }, x - 12, y - 20)], ['NIMBUS', (x, y, t) => Play.prototype.drawDragon.call(null, { inv: 0, hp: 4, maxHp: 4, t, trail: Array.from({ length: 40 }, (_, k) => [x - 14 - k * 1.5, y - 30 + Math.sin(t * 0.1 + k * 0.3) * 4]) }, x - 14, y - 30, 0)]]],
     ['ITEMS', [['ENERGY DRINK', D(Sprites.drink)], ['SIGNAL PHONE', D(Sprites.phone)], ['1-UP BADGE', D(Sprites.badge)], ['SUPER CHARGE', D(Sprites.battery)], ['JET BOOTS', D(Sprites.boots)], ['WALLY MEDAL', D(Sprites.medal)]]],
   ];
   let page = 0, t = 0;
@@ -1148,7 +1149,7 @@ function NameEntryScene(score, level, done, then) {
 // end of the level, plus extra for the boss arena.
 function levelTime(def) {
   if (def.autoscroll) return Math.ceil(((def.width * TS - VW) / def.autoscroll / 60 + 15) / 5) * 5 + (def.boss ? 60 : 0);
-  return Math.ceil(((def.width * TS) / 1.6 / 60) * 1.8 / 5) * 5 + (def.boss ? 45 : 0) + (def.yetiArena ? 35 : 0) + (def.water ? 20 : 0);
+  return Math.ceil(((def.width * TS) / 1.6 / 60) * 1.8 / 5) * 5 + (def.boss ? 45 : 0) + (def.yetiArena || def.miniArena ? 35 : 0) + (def.water ? 20 : 0);
 }
 
 class Play {
@@ -1156,7 +1157,7 @@ class Play {
     this.ta = !!opts.ta; this.taT = 0; this.taReady = this.ta ? 80 : 0;
     this.li = li; this.lv = buildLevel(li); this.def = this.lv.def;
     this.T = Sprites.tiles[this.def.theme];
-    this.ents = []; this.parts = []; this.pings = []; this.balls = []; this.bats = []; this.platforms = []; this.bumps = [];
+    this.ents = []; this.parts = []; this.pings = []; this.balls = []; this.bats = []; this.fires = []; this.platforms = []; this.bumps = [];
     this.state = 'play'; this.stateT = 0; this.paused = false; this.diff = this.ta ? 'normal' : Settings.get('difficulty'); this.timeMul = DIFF[this.diff].time; this.time = Math.ceil((levelTime(this.def) * this.timeMul) / 5) * 5; this.timeTick = 0; this.tookHit = false; this.bossHit = false;
     this.cpHit = !!fromCheckpoint && !!this.lv.checkpoint; this.bossLock = false; this.camMin = 0; this.shake = 0;
     const s = this.cpHit ? this.lv.checkpoint : this.lv.start;
@@ -1244,6 +1245,9 @@ class Play {
       case 'f': E({ type: 'fish', x: x + 1, y: y + 3, w: 14, h: 10, vx: 0.8 * toward, oy: y + 3, ox: x, enemy: true, stomp: true }); break;
       case 'j': E({ type: 'jelly', x: x + 1, y, w: 14, h: 12, oy: y, enemy: true, stomp: false }); break;
       case 'e': E({ type: 'ghost', x: x + 1, y, w: 14, h: 12, enemy: true, stomp: true, oy: y, ghostOff: false }); break;
+      case 'q': E({ type: 'crab', x: x - 8, y: y - 6, w: 34, h: 20, hp: 3, maxHp: 3, inv: 0, enemy: true, yeti: true, mini: 'KING KRABBY', state: 'walk', act: 80 }); break;
+      case 'w': E({ type: 'mole', x, y: y - 4, w: 24, h: 20, hp: 3, maxHp: 3, inv: 0, enemy: true, yeti: true, mini: 'DRILL MOLE', state: 'idle', act: 60 }); break;
+      case 'v': E({ type: 'dragon', x, y, w: 28, h: 16, hp: 4, maxHp: 4, inv: 0, enemy: true, yeti: true, mini: 'NIMBUS', state: 'idle', act: 120, trail: [] }); break;
       case 'y': E({ type: 'yeti', x, y: y - 14, w: 28, h: 30, hp: 3, maxHp: 3, inv: 0, enemy: true, yeti: true, state: 'walk', act: 90 }); break;
       case 'k': E({ type: 'boss', kind: 'mother', x: x - 24, y: 30, oy: 30, w: 56, h: 18, hp: this.def.bossHp || 6, maxHp: this.def.bossHp || 6, inv: 0, enemy: true, boss: true, act: 120, beamX: 0, beamEnd: 0 }); break;
       case 'Z': E({ type: 'secret', x, y: y - 8, w: 16, h: 24, to: this.def.secret.to }); break;
@@ -1270,7 +1274,7 @@ class Play {
       if (c === 'W') { this.addCoin(); this.parts.push({ k: 'coinpop', x: bx + 4, y: by - 14, vy: -4, life: 26 }); } else {
         Audio8.sfx('sprout');
         const type = { P: 'drink', S: 'phone', A: 'ammo', V: 'battery', Q: 'boots', O: 'badge', D: 'dino' }[c];
-        if (type === 'dino') this.ents.push({ type, item: true, alive: true, x: bx, y: by, w: 16, h: 20, vx: 0, vy: 0, rise: 20, t: 0, cool: 0, state: 'wait' });
+        if (type === 'dino') this.ents.push({ type, item: true, alive: true, x: bx, y: by, w: 16, h: 20, vx: 0, vy: 0, rise: 20, t: 0, cool: 0, state: 'wait', kind: this.def.dino || 'teal' });
         else this.ents.push({ type, item: true, alive: true, x: bx + 2, y: by, w: 12, h: 14, vx: 0, vy: 0, rise: 16, t: 0 });
       }
     } else if (c === 'B') {
@@ -1282,14 +1286,14 @@ class Play {
     Ach.unlock('dino');
     const p = this, pl = this.p, bottom = pl.y + pl.h;
     e.alive = false;
-    pl.riding = true; pl.x += (pl.w - 12) / 2; pl.w = 12; pl.h = 32; pl.y = bottom - 32; pl.vy = Math.min(pl.vy, 0);
-    Audio8.sfx('dino'); p.parts.push({ k: 'text', s: 'DINO!', x: pl.x - 8, y: pl.y - 10, vy: -0.5, life: 50 });
+    pl.riding = true; pl.dinoKind = e.kind || 'teal'; pl.flyT = 0; pl.x += (pl.w - 12) / 2; pl.w = 12; pl.h = 32; pl.y = bottom - 32; pl.vy = Math.min(pl.vy, 0);
+    Audio8.sfx('dino'); p.parts.push({ k: 'text', s: { red: 'FIRE DINO!', blue: 'SKY DINO!' }[pl.dinoKind] || 'DINO!', x: pl.x - 16, y: pl.y - 10, vy: -0.5, life: 50 });
   }
   dismount(knocked) {
     const p = this.p, bottom = p.y + p.h, cx = p.x + p.w / 2;
     p.riding = false; p.w = 10; p.h = 22; p.x = cx - 5; p.y = bottom - 22;
     const flee = knocked ? (p.face > 0 ? -2.4 : 2.4) : 0;
-    this.ents.push({ type: 'dino', item: true, alive: true, x: cx - 8, y: bottom - 20, w: 16, h: 20, vx: flee, vy: knocked ? -3 : 0, rise: 0, t: 0, cool: knocked ? 70 : 40, state: knocked ? 'flee' : 'wait', face: p.face });
+    this.ents.push({ type: 'dino', item: true, alive: true, x: cx - 8, y: bottom - 20, w: 16, h: 20, vx: flee, vy: knocked ? -3 : 0, rise: 0, t: 0, cool: knocked ? 70 : 40, state: knocked ? 'flee' : 'wait', face: p.face, kind: p.dinoKind || 'teal' });
     if (knocked) { p.inv = 90; p.vy = -4; Audio8.sfx('dinocry'); } else { p.vy = -5.5; Audio8.sfx('jump'); }
   }
   chomp() {
@@ -1436,6 +1440,7 @@ class Play {
     this.ents = this.ents.filter((e) => e.alive);
     this.updatePings();
     this.updateBalls();
+    this.updateFires();
     this.updateBats();
     for (const q of this.parts) { q.life--; if (q.vx) q.x += q.vx; if (q.vy) q.y += q.vy; if (q.g) q.vy += q.g; if (q.k === 'coinpop') q.vy += 0.3; }
     this.parts = this.parts.filter((q) => q.life > 0);
@@ -1527,6 +1532,7 @@ class Play {
     }
     if (p.vy >= 0) p.boost = false;
     const hold = (p.boost || (!auto && Input.down('jump'))) && p.vy < 0 && !p.flutter;
+    p.windPush = auto ? 0 : this.windNow() * (p.onGround ? 0.55 : 0.8); // gusts shove you along (without building up speed)
     p.vy = water ? Math.min(1.4, p.vy + 0.09) : Math.min(5.5, p.vy + (hold ? 0.19 : 0.5));
     // GothChick's glide: hold Jump while falling to drift down gently
     p.gliding = goth && !water && !p.riding && !p.pound && !auto && !p.onGround && p.vy > 1.1 && Input.down('jump');
@@ -1537,7 +1543,10 @@ class Play {
     if (water && frame % 50 === 0) this.parts.push({ k: 'bubble', x: p.x + p.w / 2 + p.face * 3, y: p.y + 4, vy: -0.5, life: 60 });
     if (p.onGround) p.flutter = 0;
     // Dino's flutter: hold jump while falling to hover for a moment
-    p.fluttering = p.riding && !p.pound && !auto && !p.onGround && Input.down('jump') && p.flutter < 50 && (p.flutter > 0 || p.vy > 0);
+    p.fluttering = p.riding && p.dinoKind !== 'blue' && !p.pound && !auto && !p.onGround && Input.down('jump') && p.flutter < 50 && (p.flutter > 0 || p.vy > 0);
+    if (p.onGround) p.flyT = 0;
+    p.flying = p.riding && p.dinoKind === 'blue' && !p.pound && !auto && !p.onGround && Input.down('jump') && (p.flyT || 0) < 110 && p.vy > -1;
+    if (p.flying) { p.flyT++; p.vy = Math.max(p.vy - 0.85, -2.3); if (p.flyT % 12 === 1) Audio8.sfx('flap'); }
     if (p.fluttering) { p.flutter++; p.vy = Math.min(p.vy, 0.5) - 0.35; if (p.flutter % 6 === 0) this.parts.push({ k: 'dust', x: p.x + p.w / 2 - p.face * 8, y: p.y + p.h, vx: -p.face * 0.4, vy: 0.3, life: 14 }); }
     if (p.pound > 0) { p.pound--; p.vy = 0; p.vx = 0; if (p.pound === 0) p.pound = -1; } else if (p.pound === -1) { p.vy = 7; p.vx = 0; }
 
@@ -1549,7 +1558,7 @@ class Play {
     if (!auto && Input.pressed('special')) {
       if (p.special > 0 && !p.spCool) { p.special--; p.spCool = 30; if (goth) this.batSwarm(); else if (doug) this.pauseFreeze(); else this.shockwave(); } else Audio8.sfx('tick');
     }
-    if (p.riding) { if (!auto && Input.pressed('run') && p.chompT === 0) this.chomp(); } else if (!auto && Input.pressed('run') && !p.crouch) {
+    if (p.riding) { if (!auto && Input.pressed('run') && p.chompT === 0) { if (p.dinoKind === 'red') this.dinoFire(); else this.chomp(); } } else if (!auto && Input.pressed('run') && !p.crouch) {
       if (p.ammo > 0 && this.balls.length < 2) {
         p.ammo--; p.fire = 10; Audio8.sfx('cannon');
         const lob = Input.down('up');
@@ -1563,7 +1572,9 @@ class Play {
 
     p.prevBottom = p.y + p.h;
     const wasGround = p.onGround, fallV = p.vy;
+    p.vx += p.windPush || 0;
     this.move(p, true);
+    p.vx -= p.windPush || 0;
     if (p.pound === -1 && p.onGround) {
       const ty = Math.floor((p.y + p.h) / TS), x0 = Math.floor(p.x / TS), x1 = Math.floor((p.x + p.w - 1) / TS);
       let broke = false;
@@ -1700,6 +1711,13 @@ class Play {
         break;
       case 'ufo': this.updateUfo(e); return;
       case 'yeti': this.updateYeti(e); return;
+      case 'crab': this.updateCrab(e); return;
+      case 'mole': this.updateMole(e); return;
+      case 'dragon': this.updateDragon(e); return;
+      case 'zap':
+        e.x += e.vx; e.y += e.vy; e.life--;
+        if (e.life <= 0 || SOLID.has(this.tile(Math.floor((e.x + 3) / TS), Math.floor((e.y + 3) / TS)))) { e.alive = false; this.parts.push({ k: 'spark', x: e.x, y: e.y, life: 8 }); }
+        break;
       case 'secret':
         if (this.state === 'play' && overlap(p, e)) this.clear(e.to);
         return;
@@ -1717,7 +1735,7 @@ class Play {
         e.x += clamp(p.x - e.x, -sp, sp); e.y += clamp(p.y - e.y, -sp * 0.6, sp * 0.6) + Math.sin(e.t * 0.08) * 0.3;
         break;
       }
-      case 'snowball':
+      case 'snowball': case 'rock':
         e.vy += 0.15; e.x += e.vx; e.y += e.vy; e.life--;
         if (e.life <= 0 || SOLID.has(this.tile(Math.floor((e.x + 4) / TS), Math.floor((e.y + 6) / TS)))) { e.alive = false; for (let k = 0; k < 4; k++) this.parts.push({ k: 'dust', x: e.x + 4, y: e.y + 4, vx: (k - 1.5) * 0.6, vy: -0.8, life: 14 }); }
         break;
@@ -1847,6 +1865,127 @@ class Play {
     return false;
   }
   // ---------- Ice Yeti (Frosty Peaks mid-boss) ----------
+  // ---------- shared mini-boss arena ----------
+  activateMini(e) {
+    e.active = true; const [a0, a1] = this.def.yetiArena || this.def.miniArena;
+    this.arena = { min: a0 * TS, max: (a1 + 1) * TS }; this.camMin = a0 * TS; this.camMax = (a1 + 1) * TS - VW;
+    Audio8.play('boss'); Audio8.sfx('roar'); this.shake = 20;
+    this.parts.push({ k: 'text', s: (e.mini || 'ICE YETI') + '!', x: 128, y: 70, vy: 0, life: 100, fixed: true });
+  }
+  miniContact(e, top = 8) {
+    const p = this.p;
+    if (this.state !== 'play' || e.inv > 0 || e.dying || !overlap(p, e)) return;
+    if (p.vy > 0 && p.prevBottom <= e.y + top) { p.vy = -6.5; this.damageYeti(e); } else this.hurt();
+  }
+  // ---------- King Krabby (Sunny Shoreline) ----------
+  updateCrab(e) {
+    const p = this.p;
+    if (e.inv > 0) e.inv--;
+    e.vy = Math.min(6, e.vy + 0.3);
+    if (!e.active) { this.move(e, false); if (Math.abs(p.x - e.x) < 150 && this.state === 'play') this.activateMini(e); return; }
+    const toward = p.x < e.x ? -1 : 1, rage = e.maxHp - e.hp;
+    e.act--;
+    if (e.state === 'walk') {
+      e.vx = toward * (0.7 + rage * 0.25);
+      if (e.act <= 0) { e.cycle = (e.cycle || 0) + 1; if (e.cycle % 3 === 0) { e.state = 'leap'; e.vy = -6; e.vx = toward * 1.2; e.air = false; Audio8.sfx('roar'); } else { e.state = 'claw'; e.act = 30; e.vx = 0; e.dir = toward; } }
+    } else if (e.state === 'claw') {
+      e.vx = 0;
+      if (e.act <= 0) { e.state = 'dash'; e.act = 45; e.vx = e.dir * (3 + rage * 0.4); Audio8.sfx('snort'); }
+    } else if (e.state === 'dash') {
+      if (e.act % 5 === 0) this.dust(e.x + e.w / 2 - e.dir * 12, e.y + e.h, 1);
+      if (e.act <= 0) { e.state = 'walk'; e.act = 90 - rage * 15; }
+    } else if (e.state === 'leap' && e.onGround && e.air) {
+      this.shake = 14; Audio8.sfx('boom'); this.dust(e.x + e.w / 2, e.y + e.h, 4);
+      for (const d of [-1, 1]) this.ents.push({ type: 'spark', hazard: true, alive: true, x: e.x + e.w / 2, y: e.y + e.h - 10, w: 8, h: 10, vx: d * 1.8, vy: 0, t: 0, life: 200 });
+      e.state = 'walk'; e.act = 90 - rage * 15;
+    }
+    this.move(e, false);
+    e.air = !e.onGround;
+    if (e.hitWall) { if (e.state === 'dash') { e.state = 'walk'; e.act = 60; this.shake = 6; } e.vx = 0; }
+    this.miniContact(e);
+  }
+  drawCrab(e, x, y) {
+    if (e.inv > 0 && (frame >> 2) % 2) return;
+    const up = e.state === 'claw' ? -8 : e.state === 'leap' ? -5 : 0, step = (e.t >> 2) & 1;
+    ctx.fillStyle = '#1a1020'; for (let k = 0; k < 3; k++) { ctx.fillRect(x + 4 + k * 5, y + 15 + ((k + step) & 1), 2, 6); ctx.fillRect(x + 24 + k * 5, y + 15 + ((k + step + 1) & 1), 2, 6); }
+    for (let yy = -8; yy <= 8; yy++) { const h = Math.round(Math.sqrt(64 - yy * yy) * 2.2); ctx.fillStyle = '#1a1020'; ctx.fillRect(x + 17 - h - 1, y + 10 + yy, h * 2 + 2, 1); ctx.fillStyle = yy < -3 ? '#ff7060' : '#e83828'; ctx.fillRect(x + 17 - h, y + 10 + yy, h * 2, 1); }
+    ctx.fillStyle = '#a01810'; for (let k = 0; k < 4; k++) ctx.fillRect(x + 9 + k * 5, y + 7, 2, 2);
+    ctx.fillStyle = '#1a1020'; ctx.fillRect(x + 12, y - 3, 2, 7); ctx.fillRect(x + 20, y - 3, 2, 7);
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(x + 11, y - 6, 4, 4); ctx.fillRect(x + 19, y - 6, 4, 4);
+    ctx.fillStyle = e.hp < e.maxHp ? '#ff2020' : '#1a1020'; ctx.fillRect(x + 12, y - 5, 2, 2); ctx.fillRect(x + 20, y - 5, 2, 2);
+    for (const [cx2, d] of [[x - 4, -1], [x + 32, 1]]) { ctx.fillStyle = '#1a1020'; ctx.fillRect(cx2 - 2, y + 2 + up, 10, 9); ctx.fillStyle = '#ff6050'; ctx.fillRect(cx2 - 1, y + 3 + up, 8, 7); ctx.fillStyle = '#ffd0c0'; ctx.fillRect(cx2 + (d > 0 ? 4 : 0), y + 3 + up, 3, 2); ctx.fillStyle = '#1a1020'; ctx.fillRect(cx2 - 1, y + 6 + up, 8, 1); }
+  }
+  // ---------- Drill Mole (Deep Dark Mine) ----------
+  updateMole(e) {
+    const p = this.p;
+    if (e.inv > 0) e.inv--;
+    if (!e.active) { e.vy = Math.min(6, e.vy + 0.3); this.move(e, false); if (e.onGround) e.groundY = e.y; if (Math.abs(p.x - e.x) < 150 && this.state === 'play' && e.groundY !== undefined) { this.activateMini(e); e.state = 'dig'; e.act = 20; } return; }
+    const rage = e.maxHp - e.hp;
+    e.act--; e.ghostOff = e.state === 'under';
+    if (e.state === 'dig') { e.y = Math.min(e.groundY + 20, e.y + 1); if (e.act <= 0) { e.state = 'under'; e.act = 110 - rage * 15; } } else if (e.state === 'under') {
+      e.y = e.groundY + 20; e.x += clamp(p.x + p.w / 2 - (e.x + e.w / 2), -1.3 - rage * 0.3, 1.3 + rage * 0.3);
+      if (this.arena) e.x = clamp(e.x, this.arena.min, this.arena.max - e.w);
+      if (e.t % 10 === 0) Audio8.sfx('dig');
+      if (e.act <= 0 || (e.act < 70 && Math.abs(p.x + p.w / 2 - (e.x + e.w / 2)) < 8)) { e.state = 'pop'; e.act = 18; this.shake = 8; Audio8.sfx('boom'); this.dust(e.x + 12, e.groundY + e.h, 4); }
+    } else if (e.state === 'pop') {
+      e.y = e.groundY + Math.round((e.act / 18) * 20);
+      if (this.state === 'play' && overlap(p, e)) this.hurt();
+      if (e.act <= 0) { e.y = e.groundY; e.state = 'up'; e.act = 100 - rage * 10; }
+    } else if (e.state === 'up') {
+      if (e.act === 70 || e.act === 40 || (rage > 1 && e.act === 15)) { const toward = p.x < e.x ? -1 : 1; Audio8.sfx('swoop'); this.ents.push({ type: 'rock', hazard: true, alive: true, x: e.x + 8, y: e.y, w: 8, h: 8, vx: toward * (1.2 + Math.random() * 1.6), vy: -4.6, t: 0, life: 300 }); }
+      this.miniContact(e, 10);
+      if (e.act <= 0) { e.state = 'dig'; e.act = 20; Audio8.sfx('dig'); }
+    }
+  }
+  drawMole(e, x, y) {
+    const gy = Math.round(e.groundY + e.h);
+    if (e.state === 'under') {
+      const wob = (e.t >> 2) & 1;
+      ctx.fillStyle = '#1a1020'; ctx.fillRect(x - 1, gy - 7 - wob, 26, 8); ctx.fillStyle = '#8a5a30'; ctx.fillRect(x, gy - 6 - wob, 24, 6); ctx.fillStyle = '#5a3a1a'; ctx.fillRect(x + 4, gy - 4, 3, 2); ctx.fillRect(x + 15, gy - 5, 4, 2);
+      return;
+    }
+    if (e.inv > 0 && (frame >> 2) % 2) return;
+    ctx.save(); ctx.beginPath(); ctx.rect(x - 10, 0, 50, gy - 0); ctx.clip();
+    ctx.fillStyle = '#1a1020'; ctx.fillRect(x + 1, y + 4, 22, 18); ctx.fillStyle = '#7a5a8a'; ctx.fillRect(x + 2, y + 5, 20, 16); ctx.fillStyle = '#a080b0'; ctx.fillRect(x + 4, y + 7, 6, 3);
+    ctx.fillStyle = '#1a1020'; ctx.fillRect(x + 4, y + 9, 16, 4); ctx.fillStyle = '#3a3a4a'; ctx.fillRect(x + 5, y + 10, 6, 2); ctx.fillRect(x + 13, y + 10, 6, 2);
+    ctx.fillStyle = '#ff90a0'; ctx.fillRect(x + 10, y + 14, 4, 3);
+    const spin = (frame >> 1) & 1;
+    for (let k = 0; k < 8; k++) { ctx.fillStyle = (k + spin) % 2 ? '#c8ccd8' : '#7a7e90'; ctx.fillRect(x + 12 - (8 - k) / 2, y - 4 + k, 8 - k, 1); }
+    ctx.fillStyle = '#e8d0b0'; ctx.fillRect(x - 2, y + 14, 4, 6); ctx.fillRect(x + 22, y + 14, 4, 6);
+    ctx.restore();
+  }
+  // ---------- Nimbus the cloud dragon (Cloudtop Climb) ----------
+  updateDragon(e) {
+    const p = this.p;
+    if (e.inv > 0) e.inv--;
+    if (!e.active) { e.y = e.oy || (e.oy = e.y); if (Math.abs(p.x - e.x) < 150 && this.state === 'play') { this.activateMini(e); e.act = 90; } return; }
+    const rage = e.maxHp - e.hp, A = this.arena;
+    e.act--;
+    if (e.state === 'swoop') {
+      const tx = e.tx, ty = e.ty;
+      e.x += clamp(tx - e.x, -2.6 - rage * 0.3, 2.6 + rage * 0.3); e.y += e.climb ? -1.6 : 2.4;
+      if (!e.climb && e.y >= ty) e.climb = true;
+      if (e.climb && e.y <= 34) { e.state = 'idle'; e.act = 110 - rage * 15; }
+    } else {
+      e.x += clamp(A.min + 30 + ((Math.sin(e.t * 0.012) + 1) / 2) * (A.max - A.min - 60 - e.w) - e.x, -1.6, 1.6);
+      e.y += clamp(34 + Math.sin(e.t * 0.05) * 8 - e.y, -1, 1);
+      if (e.act === 50 || (rage > 1 && e.act === 25)) { Audio8.sfx('zap'); for (const d of [-1, 0, 1]) this.ents.push({ type: 'zap', hazard: true, alive: true, x: e.x + 12, y: e.y + 12, w: 6, h: 6, vx: d * 1.2, vy: 2.2, t: 0, life: 160 }); }
+      if (e.act <= 0) { e.state = 'swoop'; e.climb = false; e.tx = p.x - 10; e.ty = Math.min(p.y - 4, 160); Audio8.sfx('roar'); }
+    }
+    e.trail.unshift([e.x, e.y]); if (e.trail.length > 40) e.trail.pop();
+    this.miniContact(e, 8);
+  }
+  drawDragon(e, x, y, cx) {
+    const blink = e.inv > 0 && (frame >> 2) % 2;
+    for (let k = 6; k >= 1; k--) { const tp = e.trail[Math.min(e.trail.length - 1, k * 6)]; if (!tp) continue; const bx = Math.round(tp[0] - cx) + 6, by = Math.round(tp[1]) + 2, r = 9 - k; for (let yy = -r; yy <= r; yy++) { const h = Math.round(Math.sqrt(r * r - yy * yy)); ctx.fillStyle = yy > r / 3 ? '#b8b0e8' : '#f4f0ff'; ctx.fillRect(bx - h + 4, by + yy + 4, h * 2, 1); } }
+    if (blink) return;
+    const f = e.trail.length > 2 && e.trail[0][0] < e.trail[2][0] ? -1 : 1;
+    ctx.fillStyle = '#1a1020'; ctx.fillRect(x - 1, y + 1, 30, 14); ctx.fillStyle = '#f4f0ff'; ctx.fillRect(x, y + 2, 28, 12); ctx.fillStyle = '#b8b0e8'; ctx.fillRect(x, y + 10, 28, 4);
+    ctx.fillStyle = '#ffd860'; ctx.fillRect(x + (f > 0 ? 4 : 18), y - 4, 2, 6); ctx.fillRect(x + (f > 0 ? 9 : 23), y - 4, 2, 6);
+    ctx.fillStyle = e.hp < e.maxHp ? '#ff3040' : '#7a4ae8'; ctx.fillRect(x + (f > 0 ? 18 : 6), y + 5, 4, 3);
+    ctx.fillStyle = '#1a1020'; ctx.fillRect(x + (f > 0 ? 24 : 1), y + 9, 3, 2);
+    ctx.fillStyle = '#b8b0e8'; for (let k = 0; k < 8; k++) ctx.fillRect(x + (f > 0 ? 28 + k : -1 - k), y + 9 + Math.round(Math.sin(k * 0.8 + frame * 0.2) * 2), 1, 1);
+  }
   updateYeti(e) {
     const p = this.p;
     if (e.inv > 0) e.inv--;
@@ -1886,15 +2025,42 @@ class Play {
     }
   }
   damageYeti(e) {
-    if (e.inv > 0 || e.dying) return;
+    if (e.inv > 0 || e.dying || (e.type === 'mole' && e.state === 'under')) return;
     e.hp--; e.inv = 80; this.shake = 14; Audio8.sfx('bosshit'); this.addScore(1000, e.x, e.y - 8);
     if (e.hp <= 0) {
       e.dying = 'flip'; e.vy = -4; e.vx = this.p.x < e.x ? 1 : -1;
       this.arena = null; this.camMin = 0; this.camMax = null; this.addScore(3000);
-      this.ents.forEach((s2) => { if (s2.type === 'snowball') s2.alive = false; });
+      this.ents.forEach((s2) => { if (['snowball', 'rock', 'zap', 'spark'].includes(s2.type)) s2.alive = false; });
       Audio8.play(this.def.music);
-      this.parts.push({ k: 'text', s: 'YETI DEFEATED!', x: 128, y: 70, vy: 0, life: 120, fixed: true });
-      Ach.unlock('yeti'); Ach.unlock('boss'); if (!this.bossHit) Ach.unlock('flawless');
+      this.parts.push({ k: 'text', s: (e.mini || 'YETI') + ' DEFEATED!', x: 128, y: 70, vy: 0, life: 120, fixed: true });
+      if (e.type === 'yeti') Ach.unlock('yeti'); Ach.unlock('boss'); if (!this.bossHit) Ach.unlock('flawless');
+    }
+  }
+  // ---------- weather: wind gusts, rain showers, thunderstorms ----------
+  windNow() {
+    if (this.def.weather !== 'wind') return 0;
+    const cyc = frame % 600, dir = ((frame / 600) | 0) % 2 ? 1 : -1;
+    return cyc < 300 ? 0 : dir * Math.min(1, (cyc - 300) / 40, (600 - cyc) / 40);
+  }
+  rainNow() {
+    const w = this.def.weather;
+    if (w === 'storm') return 1;
+    if (w === 'rain') return clamp(Math.sin(frame * 0.0025) * 1.6 - 0.2, 0, 1);
+    return 0;
+  }
+  drawWeather(cx) {
+    const wind = this.windNow(), rain = this.rainNow();
+    if (wind) {
+      ctx.fillStyle = 'rgba(255,255,255,0.55)';
+      for (let i = 0; i < 18; i++) { const len = 10 + (i % 4) * 6, sp = 5 + (i % 3) * 2; const x = (((i * 71 + frame * sp * Math.sign(wind)) % (VW + 60)) + VW + 60) % (VW + 60) - 30, y = (i * 47) % 200 + 20; if (Math.abs(wind) > 0.3) ctx.fillRect(Math.round(x), y, Math.round(len * Math.abs(wind)), 1); }
+      if (Math.abs(wind) > 0.5) txt(wind > 0 ? 'WIND >>>' : '<<< WIND', 128, 30, '#d8f0ff', { align: 'center', outline: '#3a5a8a' });
+    }
+    if (rain > 0) {
+      ctx.fillStyle = `rgba(20,30,60,${0.18 * rain})`; ctx.fillRect(0, 0, VW, VH);
+      ctx.fillStyle = 'rgba(190,215,255,0.65)';
+      const n = Math.round(70 * rain);
+      for (let i = 0; i < n; i++) { const x = (((i * 37 - cx * 0.2 - frame * 2) % VW) + VW) % VW, y = (i * 53 + frame * 7) % (VH + 10) - 10; ctx.fillRect(Math.round(x), Math.round(y), 1, 5); ctx.fillRect(Math.round(x) - 1, Math.round(y) + 4, 1, 2); }
+      if (this.def.weather === 'storm' && frame % 300 === 0) Audio8.sfx('thunder');
     }
   }
   drawYeti(e, x, y) {
@@ -2006,6 +2172,27 @@ class Play {
       for (const [ox, oy, vx, vy] of [[0, 0, -1.2, -5], [8, 0, 1.2, -5]]) this.parts.push({ k: 'frag', x: tx * TS + ox, y: ty * TS + oy, vx, vy, g: 0.3, life: 70 });
     }
   }
+  // Fire Dino: bouncing fireballs
+  dinoFire() {
+    const p = this.p;
+    p.chompT = 18; Audio8.sfx('fireball');
+    this.fires.push({ x: p.x + p.w / 2 - 4 + p.face * 12, y: p.y + 10, w: 8, h: 8, vx: p.face * 3.4, vy: 0.5, life: 110 });
+  }
+  updateFires() {
+    for (const f of this.fires) {
+      f.life--; f.vy = Math.min(4, f.vy + 0.3);
+      this.move(f, true);
+      if (f.onGround) f.vy = -2.8;
+      if (f.hitWall) f.life = 0;
+      for (const e of this.ents) {
+        if (!e.enemy || !e.alive || e.dying || e.ghostOff || !overlap(f, e)) continue;
+        if (e.boss) this.damageBoss(e); else this.flipKill(e);
+        f.life = 0; break;
+      }
+      if (f.life <= 0) this.parts.push({ k: 'spark', x: f.x, y: f.y, life: 10 });
+    }
+    this.fires = this.fires.filter((f) => f.life > 0 && f.y < VH + 20);
+  }
   updateBats() {
     for (const bt of this.bats) {
       bt.life--; bt.t++;
@@ -2107,6 +2294,7 @@ class Play {
     }
     this.drawPlayer(cx);
     if (this.def.theme === 'snow') drawSnow(cx);
+    this.drawWeather(cx);
     if (this.def.water) {
       ctx.fillStyle = 'rgba(40,120,220,0.13)'; ctx.fillRect(0, 0, VW, VH);
       ctx.fillStyle = 'rgba(220,245,255,0.7)';
@@ -2124,6 +2312,7 @@ class Play {
     }
     for (const g of this.pings) this.drawPing(g, cx);
     for (const bl of this.balls) this.drawBall(bl, cx);
+    for (const f of this.fires) { const x = Math.round(f.x - cx), y = Math.round(f.y); ctx.fillStyle = '#a02010'; ctx.fillRect(x - 1, y - 1, 10, 10); ctx.fillStyle = (frame >> 1) & 1 ? '#ff7020' : '#ffa030'; ctx.fillRect(x, y, 8, 8); ctx.fillStyle = '#ffe060'; ctx.fillRect(x + 2, y + 2, 4, 4); ctx.fillStyle = '#ffffff'; ctx.fillRect(x + 3, y + 3, 2, 2); }
     for (const bt of this.bats) this.drawBat(bt, cx);
     for (const q of this.parts) this.drawPart(q, cx);
     this.drawHUD();
@@ -2206,7 +2395,7 @@ class Play {
       const di = p.fluttering ? 1 + ((frame >> 1) & 1) : !p.onGround ? 1 : moving ? 1 + (Math.floor(p.anim / 2) % 2) : 0;
       const lunge = p.chompT > 8 ? face * 3 : 0, bob = !p.onGround || moving || ((frame >> 4) & 1) === 0 ? 0 : 1;
       const dx = Math.round(fx - 12 + lunge), dy = Math.round(fy - 22);
-      const dimg = Sprites.dino[face > 0 ? 'r' : 'l'][di];
+      const dimg = Sprites.dinos[p.dinoKind || 'teal'][face > 0 ? 'r' : 'l'][di];
       ctx.drawImage(dimg, dx, dy);
       Wally.draw(ctx, dx + (face > 0 ? 9 : 15), dy + 20 + bob + (di === 2 ? 1 : 0), 'ride', face, {
         t: frame, signal, white: p.charge > 0 && (frame >> 2) % 2 === 0, glow: p.charge > 0 ? 0.7 : signal ? 0.25 + 0.2 * Math.sin(frame * 0.15) : 0,
@@ -2266,7 +2455,7 @@ class Play {
       case 'dino': {
         const face = e.state === 'flee' ? Math.sign(e.vx) || 1 : (this.p.x < e.x ? -1 : 1);
         const di = e.state === 'flee' ? 1 + ((e.t >> 3) & 1) : 0;
-        ctx.drawImage(Sprites.dino[face > 0 ? 'r' : 'l'][di], x - 4, y - 2 + (e.state === 'wait' && (e.t >> 4) & 1 ? 1 : 0));
+        ctx.drawImage(Sprites.dinos[e.kind || 'teal'][face > 0 ? 'r' : 'l'][di], x - 4, y - 2 + (e.state === 'wait' && (e.t >> 4) & 1 ? 1 : 0));
         if (e.state === 'wait' && e.rise <= 0 && (e.t >> 5) % 2 === 0) txt('!', x + 6, y - 12, '#ffe040', { outline: '#1a1020' });
         break;
       }
@@ -2274,6 +2463,11 @@ class Play {
       case 'fish': put(Sprites.fish[e.vx > 0 ? 'r' : 'l'][(e.t >> 3) & 1], -1, -3); break;
       case 'jelly': put(Sprites.jelly[(e.t >> 4) & 1], -1, -1); break;
       case 'ghost': ctx.save(); ctx.globalAlpha = e.dying ? 1 : e.fade ?? 1; put(Sprites.ghost[this.p.x < e.x ? 'l' : 'r'][(e.t >> 4) & 1], -1, -1); ctx.restore(); break;
+      case 'crab': if (e.dying) { ctx.save(); ctx.translate(x + 17, y + 10); ctx.scale(1, -1); this.drawCrab(e, -17, -10); ctx.restore(); } else this.drawCrab(e, x, y); break;
+      case 'mole': this.drawMole(e, x, y); break;
+      case 'dragon': if (!e.dying) this.drawDragon(e, x, y, cx); else { ctx.fillStyle = '#f4f0ff'; ctx.fillRect(x, y, 28, 12); } break;
+      case 'zap': ctx.fillStyle = (e.t >> 1) & 1 ? '#ffffff' : '#ffe040'; ctx.fillRect(x + 2, y, 2, 3); ctx.fillRect(x, y + 3, 4, 2); ctx.fillRect(x + 2, y + 5, 3, 2); ctx.fillRect(x + 1, y + 7, 2, 2); break;
+      case 'rock': ctx.fillStyle = '#1a1020'; ctx.fillRect(x - 1, y, 10, 8); ctx.fillRect(x, y - 1, 8, 10); ctx.fillStyle = '#8a7a6a'; ctx.fillRect(x, y, 8, 8); ctx.fillStyle = '#b8a890'; ctx.fillRect(x + 1, y + 1, 3, 3); break;
       case 'yeti': if (e.dying) { ctx.save(); ctx.translate(x + 14, y + 15); ctx.scale(1, -1); this.drawYeti(e, -14, -15); ctx.restore(); } else this.drawYeti(e, x, y); break;
       case 'snowball': ctx.fillStyle = '#1a1020'; ctx.fillRect(x - 1, y, 10, 8); ctx.fillRect(x, y - 1, 8, 10); ctx.fillStyle = '#ffffff'; ctx.fillRect(x, y, 8, 8); ctx.fillStyle = '#c8d8f0'; ctx.fillRect(x + 4, y + 4, 4, 4); break;
       case 'bomb': ctx.fillStyle = '#1a1020'; ctx.fillRect(x, y + 1, 8, 7); ctx.fillRect(x + 1, y, 6, 9); ctx.fillStyle = '#4a4a5a'; ctx.fillRect(x + 1, y + 2, 6, 5); ctx.fillStyle = (frame >> 1) & 1 ? '#ffe040' : '#ff6020'; ctx.fillRect(x + 3, y - 2, 2, 2); break;
@@ -2415,7 +2609,7 @@ class Play {
     if (!this.ta) for (let i = 0; i < 5; i++) ctx.drawImage((this.medalsGot | game.medals[this.li]) & (1 << i) ? Sprites.miniMedal : Sprites.miniMedalOff, 146 + i * 6, 16);
     if (this.taReady > 0) txt(this.taReady > 20 ? 'READY...' : 'GO!', 128, 96, this.taReady > 20 ? '#fff' : '#ffe040', { scale: 3, align: 'center', outline: '#101848' });
     const yeti = this.arena && this.ents.find((e) => e.yeti && !e.dying);
-    if (yeti) { txt('ICE YETI', 8, 26, '#a0d8ff'); for (let i = 0; i < yeti.maxHp; i++) { ctx.fillStyle = i < yeti.hp ? '#5ff0ff' : '#203040'; ctx.fillRect(60 + i * 8, 27, 6, 5); } }
+    if (yeti) { const nm = yeti.mini || 'ICE YETI', bx = 14 + Font.width(nm); txt(nm, 8, 26, '#a0d8ff'); for (let i = 0; i < yeti.maxHp; i++) { ctx.fillStyle = i < yeti.hp ? '#5ff0ff' : '#203040'; ctx.fillRect(bx + i * 8, 27, 6, 5); } }
     if (this.def.boss && this.bossLock) {
       const b = this.ents.find((e) => e.boss);
       if (b) { txt(this.def.bossName || 'BARON STATIC', 8, 26, '#ff8080'); for (let i = 0; i < b.maxHp; i++) { ctx.fillStyle = i < b.hp ? '#ff3040' : '#402028'; ctx.fillRect(84 + i * 8, 27, 6, 5); } }
