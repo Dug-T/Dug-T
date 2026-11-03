@@ -266,6 +266,13 @@ function buildLevel(i) {
     }
   }
   for (let x = 60; x < b.w; x++) { const y = b.g.findIndex((r) => r[x] === 'W'); if (y >= 0) { b.g[y][x] = 'A'; break; } }
+  // Secrets: an invisible block (bump it from below for a 1-UP) and a cracked wall hiding coins
+  for (let x = 88; x < b.w - 30; x++) {
+    if ([x - 1, x, x + 1].every((xx) => b.g[12][xx] === '#') && [6, 7, 8, 9, 10, 11].every((y) => b.g[y][x] === '.')) { b.g[8][x] = 'I'; break; }
+  }
+  for (let x = 150; x < b.w - 24; x++) {
+    if ([x - 1, x, x + 1, x + 2].every((xx) => b.g[12][xx] === '#') && [x, x + 1].every((xx) => [8, 9, 10, 11].every((y) => b.g[y][xx] === '.'))) { b.fill(x, 10, x + 1, 11, 'R'); break; }
+  }
   // Special Orbs (+3 special attacks): two per level, floating a little above the ground
   for (const want of [48, 138]) {
     for (let d = 0; d < 24; d++) {
