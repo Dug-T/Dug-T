@@ -258,6 +258,74 @@ const Wally = (() => {
     if (P.fist) blob(hand[0], hand[1], 3, G.skin);
     return c;
   }
+  // ================= Doug Thomson: third playable hero =================
+  // Bald head, blue rectangular glasses, light stubble, black graphic tee, jeans and trainers.
+  const DOUG = {
+    skin: '#f0c0a0', skinD: '#c89070', skinL: '#ffe0cc', stub: '#b89078', frame: '#1c2a78', lens: '#c8e0ff',
+    tee: '#18161e', teeL: '#34303e', teeD: '#0a080e', print: '#c8ccd8', jeans: '#2c4a80', jeansD: '#1c3058', shoe: '#e8e8f0', sole: '#6a6a7a',
+  };
+  const DOUG_COSTUMES = {
+    classic: {}, junior: { tee: '#2ea84a', teeL: '#5ad070', teeD: '#1a7030' }, gold: { tee: '#d8a820', teeL: '#ffd860', teeD: '#a07810', frame: '#7a4a10' },
+    ice: { tee: '#90c8f8', teeL: '#d0ecff', teeD: '#5888c0', jeans: '#e0e8f8', jeansD: '#a8b8d8' }, dino: { tee: '#2ec4b6', teeL: '#6ae8d8', teeD: '#1a8a80', frame: '#ff8c42' },
+    shadow: { tee: '#3a2a5a', teeL: '#5a4a8a', teeD: '#20142e', frame: '#8a1a3a', lens: '#ff8090' }, fire: { tee: '#e83030', teeL: '#ff7060', teeD: '#a01818', jeans: '#3a1a1a', jeansD: '#200c0c' },
+  };
+  function rigDoug(P, capeF, signal, costume) {
+    const G = Object.assign({}, DOUG, DOUG_COSTUMES[costume] || {});
+    const c = Sprites.canvas(W, H), x = c.getContext('2d');
+    const px = (X, Y, col, w = 1, h = 1) => { x.fillStyle = col; x.fillRect(Math.round(X), Math.round(Y), w, h); };
+    const blob = (X, Y, w, col) => { const o = Math.floor(w / 2); px(X - o, Y - o, col, w, w); };
+    const line = (x0, y0, x1, y1, w, col) => {
+      const n = Math.max(1, Math.ceil(Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0))));
+      for (let i = 0; i <= n; i++) blob(x0 + ((x1 - x0) * i) / n, y0 + ((y1 - y0) * i) / n, w, col);
+    };
+    const dir = (a, L) => [Math.sin(a) * L, Math.cos(a) * L];
+    const bob = P.bob, lean = P.lean, hipX = 12, hipY = 21 + bob, shX = hipX + lean, shY = 13 + bob;
+    const hx = shX + 0.5, hy = 8 + bob;
+    const leg = ([th, bend], back) => {
+      const [kx, ky] = dir(th, 4), [fx, fy] = dir(th - bend, 4);
+      const k = [hipX + (back ? -1 : 1) + kx, hipY + ky], f = [k[0] + fx, k[1] + fy];
+      line(hipX + (back ? -1 : 1), hipY, k[0], k[1], 3, back ? G.jeansD : G.jeans);
+      line(k[0], k[1], f[0], f[1], 3, back ? G.jeansD : G.jeans);
+      const sole = Math.max(f[1] + 1, 0);
+      px(f[0] - 1, sole - 1, back ? '#b8b8c8' : G.shoe, 4, 2);
+      px(f[0] - 1, sole + 1, G.sole, 4, 1);
+      if (!back) px(f[0] + 1, sole - 1, '#d03040');
+    };
+    const arm = ([ua, fa], back) => {
+      const sx = shX + (back ? -2 : 2), sy = shY + 1;
+      const [ex, ey] = dir(ua, 4), [hx2, hy2] = dir(fa, 4);
+      const e = [sx + ex, sy + ey], h = [e[0] + hx2, e[1] + hy2];
+      const mid = [sx + ex * 0.6, sy + ey * 0.6];
+      line(sx, sy, mid[0], mid[1], 3, back ? G.teeD : G.teeL); // short sleeve
+      line(mid[0], mid[1], e[0], e[1], 2, back ? G.skinD : G.skin);
+      line(e[0], e[1], h[0], h[1], 2, back ? G.skinD : G.skin);
+      blob(h[0], h[1], 2, back ? G.skinD : G.skinL);
+      return h;
+    };
+    leg(P.back, true);
+    arm(P.armB, true);
+    for (let y = 12; y <= 21; y++) {
+      const off = Math.round((lean * (21 - y)) / 9), yy = y + bob;
+      const l = (y === 12 ? 9 : 8) + off, r = (y === 12 ? 14 : 15) + off;
+      if (y >= 20) { px(l, yy, G.jeansD, r - l + 1); continue; }
+      px(l, yy, G.teeD); px(l + 1, yy, G.tee, r - l - 1); px(r, yy, G.teeL);
+    }
+    { const o = Math.round((lean * 6) / 9); px(11 + o, 15 + bob, G.print, 3, 1); px(12 + o, 16 + bob, G.print, 3, 1); px(11 + o, 17 + bob, '#5a8ac0', 2, 1); px(14 + o, 14 + bob, G.print); px(11 + o, 12 + bob, G.skinD, 3, 1); }
+    leg(P.front, false);
+    {
+      const R = [2, 3, 4, 4, 4, 4, 3, 2];
+      for (let i = 0; i < 8; i++) px(hx - R[i], hy - 4 + i, i >= 6 ? G.skinD : G.skin, R[i] * 2);
+      px(hx - 2, hy - 4, G.skinL, 3); px(hx - 3, hy - 3, G.skinL, 2); px(hx - 4, hy - 1, G.skinD, 1, 3); // shine + back of head
+      px(hx - 1, hy, G.skinD); // ear
+      px(hx, hy - 1, G.frame, 4, 1); px(hx + 1, hy, G.lens, 2, 1); px(hx, hy, G.frame); px(hx + 3, hy, G.frame); px(hx + 1, hy + 1, G.frame, 2, 1); px(hx - 1, hy - 1, G.frame); // glasses
+      px(hx + 2, hy, P.ouch ? '#1a1020' : '#3a5a9a'); // eye behind the lens
+      px(hx - 1, hy + 2, G.stub, 2, 1); px(hx + 1, hy + 3, G.stub, 3, 1); px(hx + 2, hy + 2, P.ouch ? '#1a1020' : '#c87060', 2, 1); // stubble + mouth
+    }
+    const hand = arm(P.armF, false);
+    if (P.phone) { px(hand[0], hand[1] - 3, '#2a3038', 2, 3); px(hand[0], hand[1] - 3, signal ? '#5ff0ff' : '#4a6070'); if (signal) px(hand[0] + 1, hand[1] - 4, '#5ff0ff'); }
+    if (P.fist) blob(hand[0], hand[1], 3, G.skin);
+    return c;
+  }
   function outline(src, col) {
     const x = src.getContext('2d'), img = x.getImageData(0, 0, W, H), d = img.data;
     const a = (X, Y) => (X >= 0 && Y >= 0 && X < W && Y < H ? d[(Y * W + X) * 4 + 3] : 0);
@@ -281,7 +349,7 @@ const Wally = (() => {
     let c = cache.get(key);
     if (c) return c;
     if (variant === 'n') {
-      if (face > 0) c = outline(hero === 'goth' ? rigGoth(POSES[pose], capeF, signal, costume) : rig(POSES[pose], capeF, signal, costume), PAL0.ink);
+      if (face > 0) c = outline(hero === 'goth' ? rigGoth(POSES[pose], capeF, signal, costume) : hero === 'doug' ? rigDoug(POSES[pose], capeF, signal, costume) : rig(POSES[pose], capeF, signal, costume), PAL0.ink);
       else c = Sprites.flip(frame(pose, capeF, signal, 1, 'n', costume, hero));
     } else c = tint(frame(pose, capeF, signal, face, 'n', costume, hero), variant === 'w' ? '#ffffff' : variant === 'k' ? '#1a1020' : '#5ff0ff');
     cache.set(key, c);

@@ -302,6 +302,7 @@ const Audio8 = (() => {
     roar: (t) => { noise(t, 0.6, 0.35, sfxBus, 'lowpass', 500); tone('square', 110, t, 0.55, 0.12, sfxBus, { slide: 60 }); },
     bats: (t) => [93, 98, 95, 100].forEach((m, i) => tone('p12', freq(m), t + i * 0.04, 0.04, 0.07, sfxBus, { slide: freq(m) * 1.3 })),
     shock: (t) => { tone('sine', 180, t, 0.5, 0.22, sfxBus, { slide: 1800, slideT: 0.35, echo: true }); noise(t, 0.4, 0.18, sfxBus, 'bandpass', 2500, 1); tone('p25', 1500, t + 0.05, 0.25, 0.08, sfxBus, { slide: 400 }); },
+    freeze: (t) => { [88, 84, 79, 76, 72].forEach((m, i) => tone('sine', freq(m), t + i * 0.05, 0.12, 0.12, sfxBus, { echo: true })); noise(t, 0.3, 0.1, sfxBus, 'highpass', 6000); },
     spring: (t) => tone('p25', 180, t, 0.3, 0.14, sfxBus, { slide: 1100, slideT: 0.25 }),
     letter: (t) => tone('p50', 1500, t, 0.03, 0.07, sfxBus),
     map: (t) => tone('triangle', 600, t, 0.05, 0.2, sfxBus, { slide: 900 }),

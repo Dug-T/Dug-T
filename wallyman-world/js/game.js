@@ -318,7 +318,7 @@ function JukeboxScene() {
 function GalleryScene() {
   const D = (img, s = 2) => (x, y) => ctx.drawImage(img, Math.round(x - (img.width * s) / 2), Math.round(y - img.height * s), img.width * s, img.height * s);
   const pages = [
-    ['HEROES', [['WALLYMAN', (x, y, t) => Wally.draw(ctx, x, y, 'walk' + ((t >> 2) % 8), 1, { t, hero: 'wally', costume: 'classic', sx: 2, sy: 2 })], ['GOTHCHICK', (x, y, t) => Wally.draw(ctx, x, y, 'walk' + ((t >> 2) % 8), 1, { t, hero: 'goth', costume: 'classic', sx: 2, sy: 2 })], ['WALLY JR', (x, y, t) => Wally.draw(ctx, x, y, 'idle' + ((t >> 4) % 4), 1, { t, hero: 'wally', costume: 'junior', sx: 2, sy: 2 })], ['DINO', (x, y, t) => D(Sprites.dino.r[(t >> 3) % 3])(x, y)]]],
+    ['HEROES', [['WALLYMAN', (x, y, t) => Wally.draw(ctx, x, y, 'walk' + ((t >> 2) % 8), 1, { t, hero: 'wally', costume: 'classic', sx: 2, sy: 2 })], ['GOTHCHICK', (x, y, t) => Wally.draw(ctx, x, y, 'walk' + ((t >> 2) % 8), 1, { t, hero: 'goth', costume: 'classic', sx: 2, sy: 2 })], ['DOUG THOMSON', (x, y, t) => Wally.draw(ctx, x, y, 'walk' + ((t >> 2) % 8), 1, { t, hero: 'doug', costume: 'classic', sx: 2, sy: 2 })], ['WALLY JR', (x, y, t) => Wally.draw(ctx, x, y, 'idle' + ((t >> 4) % 4), 1, { t, hero: 'wally', costume: 'junior', sx: 2, sy: 2 })], ['DINO', (x, y, t) => D(Sprites.dino.r[(t >> 3) % 3])(x, y)]]],
     ['ENEMIES', [['GRUMBLE', D(Sprites.grumble[0])], ['PRICKLE', D(Sprites.prickle.r[0])], ['BUZZER', D(Sprites.buzzer.r[0])], ['HOPPER', D(Sprites.hopper[0])], ['FLITTER BAT', D(Sprites.bat[0])], ['RHINO-BOT', D(Sprites.charger.r[0])]]],
     ['MORE ENEMIES', [['TURRET', D(Sprites.turret.r)], ['UFO', (x, y) => Play.prototype.drawUfo.call(null, { state: 'hover', beamX: 0, x: 0 }, x - 14, y - 16)], ['FISH', D(Sprites.fish.r[0])], ['JELLYFISH', D(Sprites.jelly[0])], ['GHOST', D(Sprites.ghost.r[0])]]],
     ['BOSSES', [['BARON STATIC', (x, y) => Play.prototype.drawBoss.call(null, { inv: 0, hp: 3, maxHp: 3 }, x - 16, y - 32)], ['ICE YETI', (x, y, t) => Play.prototype.drawYeti.call({ p: { x: 0 } }, { inv: 0, state: 'walk', t, hp: 3, maxHp: 3 }, x - 14, y - 32)], ['MOTHERSHIP', (x, y) => Play.prototype.drawMother.call(null, { inv: 0, beamX: 0, x: 0, mode: null }, x - 28, y - 20)]]],
@@ -384,6 +384,7 @@ function OptionsScene() {
 // ---------------- 2-player (taking turns) ----------------
 const HEROES = {
   wally: { name: 'WALLYMAN', alt: 'WALLY JR', color: '#f2702a', lines: ['THE CAPED ALL-ROUNDER.', 'SPECIAL: SIGNAL SHOCKWAVE', 'KNOCKS OUT EVERYTHING NEAR!'] },
+  doug: { name: 'DOUG THOMSON', alt: 'DOUG THOMSON', short: 'DOUG', color: '#ffd040', lines: ['FASTEST RUNNER. SLIDES DOWN', 'AND JUMPS OFF WALLS. SPECIAL:', 'PAUSE BUTTON FREEZES FOES!'] },
   goth: { name: 'GOTHCHICK', alt: 'GOTHCHICK', color: '#ff4aa8', lines: ['JUMPS HIGHER, GLIDES WHEN', 'YOU HOLD JUMP IN THE AIR.', 'SPECIAL: HOMING BAT SWARM!'] },
 };
 const heroOf = () => (game && game.hero) || 'wally';
@@ -396,14 +397,15 @@ const lastHero = () => { try { return localStorage.getItem('wallyman-last-hero')
 
 // Character select: shown after picking a file (and again for player 2 in a 2-player game).
 function HeroSelect(isNew, two, who = 0) {
-  const ids = ['wally', 'goth'];
+  const ids = ['wally', 'goth', 'doug'];
   let sel = Math.max(0, ids.indexOf(who === 0 ? game.hero || 'wally' : (game.other && game.other.hero) || 'wally')), t = 0;
   const done = () => go(() => (isNew ? StoryScene(() => MapScene()) : MapScene()));
   return {
     enter() { Audio8.play('menu'); },
     update() {
       t++;
-      if (Input.pressed('left') || Input.pressed('right')) { sel ^= 1; Audio8.sfx('select'); }
+      if (Input.pressed('right')) { sel = (sel + 1) % 3; Audio8.sfx('select'); }
+      if (Input.pressed('left')) { sel = (sel + 2) % 3; Audio8.sfx('select'); }
       if (Input.pressed('back')) { go(() => TitleScene()); return; }
       if (t > 10 && Input.confirm()) {
         const hero = ids[sel];
@@ -424,18 +426,18 @@ function HeroSelect(isNew, two, who = 0) {
       drawParallax('grass', t * 0.4);
       txt(two ? `PLAYER ${who + 1}: CHOOSE YOUR HERO` : 'CHOOSE YOUR HERO', 128, 8, '#ffe040', { align: 'center', outline: '#101848' });
       ids.forEach((id, i) => {
-        const cx = i ? 172 : 84, on = i === sel, x = cx - 40, y = 22;
-        ctx.fillStyle = on ? ((t >> 3) & 1 ? '#ffe040' : '#ffa020') : '#101848'; ctx.fillRect(x - 3, y - 3, 86, 118);
-        ctx.fillStyle = '#1a1020'; ctx.fillRect(x - 1, y - 1, 82, 114);
+        const cx = 48 + i * 80, on = i === sel, x = cx - 36, y = 22;
+        ctx.fillStyle = on ? ((t >> 3) & 1 ? '#ffe040' : '#ffa020') : '#101848'; ctx.fillRect(x - 3, y - 3, 78, 118);
+        ctx.fillStyle = '#1a1020'; ctx.fillRect(x - 1, y - 1, 74, 114);
         const gr = ctx.createLinearGradient(0, y, 0, y + 112);
-        gr.addColorStop(0, id === 'goth' ? '#3a1848' : '#5cb0f8'); gr.addColorStop(1, id === 'goth' ? '#120818' : '#c8ecff');
-        ctx.fillStyle = gr; ctx.fillRect(x, y, 80, 112);
-        const img = id === 'goth' ? Sprites.gothPortrait : Sprites.portrait;
+        gr.addColorStop(0, id === 'goth' ? '#3a1848' : id === 'doug' ? '#8ab8f0' : '#5cb0f8'); gr.addColorStop(1, id === 'goth' ? '#120818' : id === 'doug' ? '#2a3a7a' : '#c8ecff');
+        ctx.fillStyle = gr; ctx.fillRect(x, y, 72, 112);
+        const img = id === 'goth' ? Sprites.gothPortrait : id === 'doug' ? Sprites.dougPortrait : Sprites.portrait;
         if (img.complete && img.naturalWidth) ctx.drawImage(img, Math.round(cx - img.naturalWidth / 2), y + 112 - img.naturalHeight - (id === 'goth' ? 6 : 2));
-        if (!on) { ctx.fillStyle = 'rgba(16,24,72,0.45)'; ctx.fillRect(x, y, 80, 112); }
+        if (!on) { ctx.fillStyle = 'rgba(16,24,72,0.45)'; ctx.fillRect(x, y, 72, 112); }
         txt(HEROES[id].name, cx, y + 116, on ? HEROES[id].color : '#c8d0f0', { align: 'center', outline: '#101848' });
         Wally.draw(ctx, cx, 182, on ? 'walk' + ((t >> 2) % 8) : 'idle' + ((t >> 4) % 4), 1, { t, hero: id, costume: 'classic' });
-        if (on) txt('>', x - 12 + ((t >> 3) & 1), y + 50, '#ffe040', { scale: 2, outline: '#101848' });
+        if (on) txt('>', x - 11 + ((t >> 3) & 1), y + 50, '#ffe040', { scale: 2, outline: '#101848' });
       });
       drawWindow(16, 184, 224, 38);
       HEROES[ids[sel]].lines.forEach((l, k) => txt(l, 128, 190 + k * 10, '#fff', { align: 'center' }));
@@ -880,7 +882,7 @@ function MapScene() {
       const pose = walking ? 'walk' + ((t >> 2) % 8) : 'idle' + ((t >> 4) % 4);
       drawWally(pos.x, pos.y + 2, pose, face);
       drawWindow(4, 4, 248, 20);
-      txt(game.players === 2 ? pname() + "'S TURN" : 'WALLY ISLAND', 10, 10, '#ffe040');
+      txt(game.players === 2 ? (HEROES[heroOf()].short || pname()) + "'S TURN" : 'WALLY ISLAND', 10, 10, '#ffe040');
       ctx.drawImage(Sprites.heart, 112, 10); txt('*' + pad(game.lives, 2), 121, 10);
       ctx.drawImage(Sprites.coinIcon, 150, 10); txt('*' + pad(game.coins, 2), 157, 10);
       txt(pad(game.score, 7), 206, 10);
@@ -1411,6 +1413,7 @@ class Play {
     if (this.taReady > 0) { this.taReady--; if (this.taReady === 70 || this.taReady === 0) Audio8.sfx(this.taReady ? 'select' : 'confirm'); return; }
     if (this.ta && this.state === 'play') this.taT++;
     this.stateT++;
+    if (this.freezeT > 0 && this.state === 'play') this.freezeT--;
     if (this.shake > 0) this.shake--;
     if (this.state === 'dying') return this.updateDying();
     const p = this.p;
@@ -1486,8 +1489,8 @@ class Play {
     const ice = this.def.ice && p.onGround;
     const water = !!this.def.water, frozen = p.frozen > 0;
     if (frozen) p.frozen--;
-    const goth = heroOf() === 'goth';
-    const max = water ? (run ? 1.9 : 1.3) : run ? (goth ? 2.5 : 2.8) : goth ? 1.5 : 1.6, acc = (run ? 0.11 : 0.08) * (ice ? 0.45 : 1) * (water ? 0.7 : 1);
+    const goth = heroOf() === 'goth', doug = heroOf() === 'doug';
+    const max = water ? (run ? 1.9 : 1.3) : run ? (goth ? 2.5 : doug ? 3.05 : 2.8) : goth ? 1.5 : 1.6, acc = (run ? 0.11 : 0.08) * (ice ? 0.45 : 1) * (water ? 0.7 : 1);
     let dir = auto ? (this.stateT > 30 ? 1 : 0) : frozen ? 0 : (Input.down('right') ? 1 : 0) - (Input.down('left') ? 1 : 0);
     if (!auto && !water && !frozen && !p.onGround && !p.pound && Input.pressed('down')) { p.pound = 12; p.vx = 0; p.boost = false; Audio8.sfx('swoop'); }
     if (p.pound) dir = 0;
@@ -1505,8 +1508,11 @@ class Play {
     if (p.riding && p.onGround && !auto && Input.down('down') && Input.pressed('jump')) { this.dismount(false); p.jumpBuf = 0; p.coyote = 0; }
     if (water) { // swimming: every press is a stroke
       if (p.jumpBuf === 6) { p.vy = -2.7; p.jumpBuf = 0; Audio8.sfx('swim'); this.parts.push({ k: 'bubble', x: p.x + p.w / 2, y: p.y + 4, vy: -0.6, life: 50 }); }
+    } else if (doug && p.wallTouch && p.jumpBuf > 0 && !p.riding && !p.onGround) { // wall jump
+      p.vy = -5.6; p.vx = -p.wallTouch * 2.6; p.face = -p.wallTouch; p.jumpBuf = 0; p.wallTouch = 0; Audio8.sfx('jump');
+      this.dust(p.x + p.w / 2 - p.face * 6, p.y + p.h / 2, 2);
     } else if (p.jumpBuf > 0 && p.coyote > 0) {
-      p.vy = -((p.riding ? 6.1 : goth ? 5.9 : 5.4) + Math.abs(p.vx) * 0.25); p.jumpBuf = 0; p.coyote = 0; Audio8.sfx('jump');
+      p.vy = -((p.riding ? 6.1 : goth ? 5.9 : doug ? 5.25 : 5.4) + Math.abs(p.vx) * 0.25); p.jumpBuf = 0; p.coyote = 0; Audio8.sfx('jump');
       p.sx = 0.8; p.sy = 1.2; this.dust(p.x + p.w / 2, p.y + p.h, 2);
     }
     if (p.onGround) p.dj = false;
@@ -1524,6 +1530,9 @@ class Play {
     p.vy = water ? Math.min(1.4, p.vy + 0.09) : Math.min(5.5, p.vy + (hold ? 0.19 : 0.5));
     // GothChick's glide: hold Jump while falling to drift down gently
     p.gliding = goth && !water && !p.riding && !p.pound && !auto && !p.onGround && p.vy > 1.1 && Input.down('jump');
+    // Doug: pushing into a wall in mid-air slides down it slowly
+    { const sideX = dir > 0 ? p.x + p.w + 1 : p.x - 1; p.wallTouch = doug && dir && !p.onGround && !p.riding && !water && SOLID.has(this.tile(Math.floor(sideX / TS), Math.floor((p.y + p.h / 2) / TS))) ? dir : 0; }
+    if (p.wallTouch && p.vy > 1.3) { p.vy = 1.3; if (frame % 6 === 0) this.parts.push({ k: 'dust', x: p.x + p.w / 2 + p.wallTouch * 6, y: p.y + 6, vx: 0, vy: 0.4, life: 12 }); }
     if (p.gliding) { p.vy = 1.1; if (frame % 7 === 0) this.parts.push({ k: 'spark', x: p.x + p.w / 2 - p.face * 6, y: p.y + 6, life: 10 }); }
     if (water && frame % 50 === 0) this.parts.push({ k: 'bubble', x: p.x + p.w / 2 + p.face * 3, y: p.y + 4, vy: -0.5, life: 60 });
     if (p.onGround) p.flutter = 0;
@@ -1538,7 +1547,7 @@ class Play {
     if (p.spCool > 0) p.spCool--;
     if (p.shockT > 0) p.shockT--;
     if (!auto && Input.pressed('special')) {
-      if (p.special > 0 && !p.spCool) { p.special--; p.spCool = 30; if (goth) this.batSwarm(); else this.shockwave(); } else Audio8.sfx('tick');
+      if (p.special > 0 && !p.spCool) { p.special--; p.spCool = 30; if (goth) this.batSwarm(); else if (doug) this.pauseFreeze(); else this.shockwave(); } else Audio8.sfx('tick');
     }
     if (p.riding) { if (!auto && Input.pressed('run') && p.chompT === 0) this.chomp(); } else if (!auto && Input.pressed('run') && !p.crouch) {
       if (p.ammo > 0 && this.balls.length < 2) {
@@ -1643,6 +1652,13 @@ class Play {
     if (e.x > this.cam.x + VW + 64 && !e.boss) return; // asleep until on screen
     if (e.dying === 'flip') { e.vy += 0.3; e.x += e.vx; e.y += e.vy; if (e.y > VH + 20) e.alive = false; return; }
     if (e.dying === 'squish') { if (--e.dt <= 0) e.alive = false; return; }
+    if (this.freezeT > 0 && (e.enemy || e.hazard)) { // frozen by Doug: harmless, and anything can be stomped
+      if (this.state === 'play' && e.enemy && overlap(p, e) && p.vy > 0 && p.prevBottom <= e.y + 10) {
+        p.vy = Input.down('jump') ? -6.2 : -4;
+        if (e.boss) this.damageBoss(e); else this.flipKill(e);
+      }
+      return;
+    }
 
     switch (e.type) {
       case 'grumble': case 'prickle':
@@ -1960,6 +1976,11 @@ class Play {
   }
   // ---------- cannonballs ----------
   // GothChick's special: three homing bats
+  // Doug's special: freeze every enemy for 5 seconds (stomp anything while frozen)
+  pauseFreeze() {
+    this.freezeT = 300; this.p.shockT = 24; Audio8.sfx('freeze');
+    this.parts.push({ k: 'text', s: 'II PAUSED!', x: 128, y: 80, vy: 0, life: 70, fixed: true });
+  }
   batSwarm() {
     const p = this.p;
     p.fire = 10; Audio8.sfx('bats');
@@ -2080,6 +2101,10 @@ class Play {
     this.drawTiles(cx);
     for (const pl of this.platforms) this.drawPlatform(pl, cx);
     for (const e of this.ents) if (!e.item) this.drawEnt(e, cx);
+    if (this.freezeT > 0) {
+      ctx.fillStyle = 'rgba(140,190,255,0.12)'; ctx.fillRect(0, 0, VW, VH);
+      if (this.freezeT > 60 || (frame >> 2) & 1) for (const e of this.ents) if (e.enemy && !e.dying) { const x = Math.round(e.x + e.w / 2 - cx); ctx.fillStyle = '#1a1020'; ctx.fillRect(x - 4, e.y - 10, 9, 8); ctx.fillStyle = '#ffffff'; ctx.fillRect(x - 3, e.y - 9, 2, 6); ctx.fillRect(x + 1, e.y - 9, 2, 6); }
+    }
     this.drawPlayer(cx);
     if (this.def.theme === 'snow') drawSnow(cx);
     if (this.def.water) {
@@ -2264,11 +2289,11 @@ class Play {
       case 'battery': ctx.drawImage(Sprites.battery, x - 2, y - 1); break;
       case 'boots': ctx.drawImage(Sprites.boots, x - 2, y - 1); break;
       case 'orb': { // Special Orb: glows in the hero's colour, shows their special
-        const by = y + Math.round(Math.sin(e.t * 0.08) * 2), goth = heroOf() === 'goth', col = goth ? '#ff4aa8' : '#5ff0ff', dark = goth ? '#6a1a5a' : '#1a5a7a';
+        const by = y + Math.round(Math.sin(e.t * 0.08) * 2), goth = heroOf() === 'goth', dg = heroOf() === 'doug', col = goth ? '#ff4aa8' : dg ? '#ffd040' : '#5ff0ff', dark = goth ? '#6a1a5a' : dg ? '#6a4a10' : '#1a5a7a';
         ctx.fillStyle = (frame >> 3) & 1 ? col : '#ffffff'; ctx.fillRect(x + 5, by - 3, 2, 2); ctx.fillRect(x - 2, by + 5, 2, 2); ctx.fillRect(x + 12, by + 9, 2, 2);
         ctx.fillStyle = '#1a1020'; ctx.fillRect(x + 1, by, 10, 12); ctx.fillRect(x, by + 1, 12, 10);
         ctx.fillStyle = dark; ctx.fillRect(x + 1, by + 1, 10, 10); ctx.fillStyle = col; ctx.fillRect(x + 2, by + 2, 8, 8); ctx.fillStyle = '#ffffff'; ctx.fillRect(x + 3, by + 3, 2, 2);
-        if (goth) { ctx.fillStyle = '#1a1020'; ctx.fillRect(x + 4, by + 5, 4, 3); ctx.fillRect(x + 2, by + 4, 2, 2); ctx.fillRect(x + 8, by + 4, 2, 2); } else { ctx.fillStyle = '#1a1020'; ctx.fillRect(x + 5, by + 7, 2, 2); ctx.fillRect(x + 4, by + 4, 1, 3); ctx.fillRect(x + 7, by + 4, 1, 3); }
+        if (dg) { ctx.fillStyle = '#1a1020'; ctx.fillRect(x + 4, by + 3, 2, 6); ctx.fillRect(x + 7, by + 3, 2, 6); } else if (goth) { ctx.fillStyle = '#1a1020'; ctx.fillRect(x + 4, by + 5, 4, 3); ctx.fillRect(x + 2, by + 4, 2, 2); ctx.fillRect(x + 8, by + 4, 2, 2); } else { ctx.fillStyle = '#1a1020'; ctx.fillRect(x + 5, by + 7, 2, 2); ctx.fillRect(x + 4, by + 4, 1, 3); ctx.fillRect(x + 7, by + 4, 1, 3); }
         break;
       }
       case 'spark': {
@@ -2372,12 +2397,12 @@ class Play {
   }
   drawHUD() {
     const p = this.p;
-    txt(pname(), 8, 6, pname() === 'WALLY JR' ? '#5ad070' : HEROES[heroOf()].color);
+    txt(HEROES[heroOf()].short || pname(), 8, 6, pname() === 'WALLY JR' ? '#5ad070' : HEROES[heroOf()].color);
     txt('*' + pad(Math.max(0, game.lives), 2), 14, 15, '#fff');
     for (let i = 0; i < 3; i++) ctx.drawImage(i < p.hearts ? Sprites.heart : Sprites.heartEmpty, 65 + i * 9, 6);
     { let ix = 86; if (p.power === 'signal') { ctx.drawImage(Sprites.miniPhone, ix, 15); ix += 6; } if (p.boots) { ctx.drawImage(Sprites.miniBoots, ix, 16); ix += 7; } if (p.charge > 0 && (p.charge > 120 || (frame >> 2) & 1)) ctx.drawImage(Sprites.miniBattery, ix, 15); }
     { // special attacks left
-      const gx = 94, col = heroOf() === 'goth' ? '#ff4aa8' : '#5ff0ff';
+      const gx = 94, col = heroOf() === 'goth' ? '#ff4aa8' : heroOf() === 'doug' ? '#ffd040' : '#5ff0ff';
       ctx.fillStyle = '#1a1020'; ctx.fillRect(gx, 6, 7, 7); ctx.fillStyle = p.special ? col : '#4a4a60'; ctx.fillRect(gx + 1, 7, 5, 5); ctx.fillStyle = '#1a1020'; ctx.fillRect(gx + 3, 8, 1, 3);
       txt(String(p.special), gx + 8, 6, p.special ? '#fff' : '#ff6060');
     }

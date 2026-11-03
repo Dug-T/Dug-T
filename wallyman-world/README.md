@@ -29,7 +29,7 @@ Open `index.html` in any modern browser — or enable **GitHub Pages** for this 
   - **Haunted Manor** – pitch dark except for a pool of light around WallyMan, lightning flashes and ghosts that fade in and out.
   - **Coral Depths** – underwater: press Jump to swim, with fish, jellyfish and coral walls.
   - **Sky Armada** – an auto-scrolling airship level (don't get squashed by the screen edge) ending in a fight with the **UFO Mothership**, which sweeps a pink laser, drops bombs and launches mini UFOs.
-- **Two heroes** – after choosing a file, pick your hero on the **CHOOSE YOUR HERO** screen: **WallyMan**, the caped all-rounder, or **GothChick** (pink and purple pigtails, black halter dress, black boots) who jumps higher, runs a little slower, can **glide** by holding Jump in the air, and has her own special attack: the **Bat Swarm**, three homing bats that seek out enemies, UFOs and bosses. Both get every move, Dino rides and costume.
+- **Three heroes** – after choosing a file, pick your hero on the **CHOOSE YOUR HERO** screen: **Doug Thomson** (bald, blue glasses, black tee and jeans) – the fastest runner, who can **slide down and jump off walls** and whose special, the **Pause Button**, freezes every enemy for 5 seconds so they are harmless and can all be stomped; **WallyMan**, the caped all-rounder, or **GothChick** (pink and purple pigtails, black halter dress, black boots) who jumps higher, runs a little slower, can **glide** by holding Jump in the air, and has her own special attack: the **Bat Swarm**, three homing bats that seek out enemies, UFOs and bosses. Both get every move, Dino rides and costume.
 - **Special attacks** – on their own button (S / C key). WallyMan's **Signal Shockwave** blasts a ring of signal from his phone that knocks out every enemy around him, destroys incoming bolts, snowballs and bombs, and hurts bosses; GothChick's **Bat Swarm** sends three homing bats. Each hero starts every level or life with **3 specials**; glowing **Special Orbs** (two per level) give +3, up to 9.
 - **2-player mode** – pick "2 PLAYER GAME" after choosing a file. Players take turns on the same device: **WallyMan** and **Wally Jr** (green suit) share the island map and progress but have their own lives, score and coins. The turn passes after each level and each lost life; if one player runs out of lives the other carries on.
 - **Time Attack** – from the title menu, race any level you have beaten (in any save file) with no time limit and unlimited instant retries. Best times are saved, with a NEW RECORD! fanfare.
@@ -76,5 +76,5 @@ js/levels.js        level layouts (easy to edit – see the legend at the top)
 js/online-config.js Firebase settings for the worldwide high-score table
 firestore.rules     security rules to paste into Firebase
 js/game.js          engine: input, physics, enemies, scenes, HUD
-assets/             pixelated WallyMan and GothChick portraits (title, character select, ending)
+assets/             pixelated WallyMan, GothChick and Doug Thomson portraits (title, character select, ending)
 ```
