@@ -266,6 +266,15 @@ function buildLevel(i) {
     }
   }
   for (let x = 60; x < b.w; x++) { const y = b.g.findIndex((r) => r[x] === 'W'); if (y >= 0) { b.g[y][x] = 'A'; break; } }
+  // Special Orbs (+3 special attacks): two per level, floating a little above the ground
+  for (const want of [48, 138]) {
+    for (let d = 0; d < 24; d++) {
+      const x = want + d;
+      if (x >= b.w - 20) break;
+      const free = (xx) => b.g[10][xx] === '.' && b.g[11][xx] === '.' && b.g[12][xx] === '#' && b.g[9][xx] === '.';
+      if (free(x) && free(x - 1) && free(x + 1)) { b.g[10][x] = 's'; break; }
+    }
+  }
   // Extra enemies, placed on the nearest safe spot: ground walkers on solid ground,
   // bats under a ceiling, UFOs in open sky.
   const SOLIDS = '#BXUWPSOAJ';
@@ -314,7 +323,7 @@ function buildLevel(i) {
     }
     if (best) b.g[best[1]][best[0]] = 'M';
   }
-  const ENT = 'gpzhmnCGKabctuMfjeykZ';
+  const ENT = 'gpzhmnCGKabctuMfjeykZs';
   for (let y = 0; y < 14; y++) for (let x = 0; x < b.w; x++) {
     const c = b.g[y][x];
     if (c === '@') { start = { x, y }; b.g[y][x] = '.'; } else if (ENT.includes(c)) {

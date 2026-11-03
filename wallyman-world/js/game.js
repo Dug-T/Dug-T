@@ -15,12 +15,12 @@ const pad = (n, l) => String(Math.max(0, n | 0)).padStart(l, '0');
 // Input: keyboard, gamepad and on-screen touch buttons
 // =====================================================================
 const Input = (() => {
-  const names = ['left', 'right', 'up', 'down', 'jump', 'run', 'start', 'back'];
+  const names = ['left', 'right', 'up', 'down', 'jump', 'run', 'special', 'start', 'back'];
   const st = {}, prev = {}, kb = {}, hit = {}, touch = {}, gp = {};
   names.forEach((n) => { st[n] = prev[n] = kb[n] = hit[n] = touch[n] = gp[n] = 0; });
   const map = {
     ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right', ArrowUp: 'up', KeyW: 'up', ArrowDown: 'down', KeyS: 'down',
-    KeyZ: 'jump', Space: 'jump', KeyK: 'jump', KeyX: 'run', ShiftLeft: 'run', ShiftRight: 'run', KeyJ: 'run',
+    KeyZ: 'jump', Space: 'jump', KeyK: 'jump', KeyX: 'run', ShiftLeft: 'run', ShiftRight: 'run', KeyJ: 'run', KeyC: 'special', KeyL: 'special',
     Enter: 'start', KeyP: 'start', Escape: 'back', Backspace: 'back',
   };
   const typed = [];
@@ -67,7 +67,7 @@ const Input = (() => {
     for (const p of pads) {
       if (!p) continue;
       const b = (i) => (p.buttons[i] && p.buttons[i].pressed ? 1 : 0);
-      gp.jump |= b(0) | b(1); gp.run |= b(2) | b(3) | b(6) | b(7); gp.start |= b(9); gp.back |= b(8);
+      gp.jump |= b(0) | b(1); gp.run |= b(2) | b(6) | b(7); gp.special |= b(3) | b(4) | b(5); gp.start |= b(9); gp.back |= b(8);
       gp.up |= b(12) | (p.axes[1] < -0.5); gp.down |= b(13) | (p.axes[1] > 0.5);
       gp.left |= b(14) | (p.axes[0] < -0.5); gp.right |= b(15) | (p.axes[0] > 0.5);
     }
@@ -186,8 +186,8 @@ function finishRun(done, after) {
 
 // ---------------- 2-player (taking turns) ----------------
 const HEROES = {
-  wally: { name: 'WALLYMAN', alt: 'WALLY JR', color: '#f2702a', lines: ['THE CAPED HERO OF WALLY', 'ISLAND. FAST ON HIS FEET', 'AND ALWAYS ON THE PHONE.'] },
-  goth: { name: 'GOTHCHICK', alt: 'GOTHCHICK', color: '#ff4aa8', lines: ['JUMPS HIGHER, AND GLIDES IF', 'YOU HOLD JUMP IN THE AIR.', 'B SENDS A HOMING BAT SWARM!'] },
+  wally: { name: 'WALLYMAN', alt: 'WALLY JR', color: '#f2702a', lines: ['THE CAPED ALL-ROUNDER.', 'SPECIAL: SIGNAL SHOCKWAVE', 'KNOCKS OUT EVERYTHING NEAR!'] },
+  goth: { name: 'GOTHCHICK', alt: 'GOTHCHICK', color: '#ff4aa8', lines: ['JUMPS HIGHER, GLIDES WHEN', 'YOU HOLD JUMP IN THE AIR.', 'SPECIAL: HOMING BAT SWARM!'] },
 };
 const heroOf = () => (game && game.hero) || 'wally';
 function pname() {
@@ -526,7 +526,7 @@ function TitleScene() {
       } else if (mode === 'press') {
         if ((t >> 5) % 2 === 0) txt('PRESS START', 92, 132, '#fff', { outline: '#101848' });
         txt('Z/SPACE: JUMP   X/SHIFT: RUN+FIRE', 12, 152, '#d8f0ff');
-        txt('ENTER: START/PAUSE', 12, 162, '#d8f0ff');
+        txt('C: SPECIAL   ENTER: START/PAUSE', 12, 162, '#d8f0ff');
       } else if (mode === 'players') {
         drawWindow(16, 108, 172, 88);
         txt(`FILE ${'ABC'[pick.slot]}${pick.isNew ? ' - NEW GAME' : ''}`, 102, 116, '#a8b0d8', { align: 'center' });
@@ -958,7 +958,7 @@ class Play {
     this.state = 'play'; this.stateT = 0; this.paused = false; this.time = levelTime(this.def); this.timeTick = 0;
     this.cpHit = !!fromCheckpoint && !!this.lv.checkpoint; this.bossLock = false; this.camMin = 0; this.shake = 0;
     const s = this.cpHit ? this.lv.checkpoint : this.lv.start;
-    this.p = { x: s.x * TS + 3, y: (s.y + 1) * TS - 22, w: 10, h: 22, vx: 0, vy: 0, face: 1, onGround: false, hearts: 2, power: 'none', inv: 0, anim: 0, jumpBuf: 0, coyote: 0, prevBottom: 0, platform: null, sx: 1, sy: 1, hurtT: 0, trail: [], ammo: 3, charge: 0, boots: false, dj: false, riding: false, chompT: 0, pound: 0, flutter: 0 };
+    this.p = { x: s.x * TS + 3, y: (s.y + 1) * TS - 22, w: 10, h: 22, vx: 0, vy: 0, face: 1, onGround: false, hearts: 2, power: 'none', inv: 0, anim: 0, jumpBuf: 0, coyote: 0, prevBottom: 0, platform: null, sx: 1, sy: 1, hurtT: 0, trail: [], ammo: 3, special: 3, spCool: 0, charge: 0, boots: false, dj: false, riding: false, chompT: 0, pound: 0, flutter: 0 };
     this.medalsGot = 0; this.pauseSel = 0;
     if (game.bonusAmmo) { this.p.ammo = Math.min(9, 3 + game.bonusAmmo); game.bonusAmmo = 0; }
     if (game.startHearts) { this.p.hearts = 3; game.startHearts = 0; }
@@ -1030,6 +1030,7 @@ class Play {
       case 't': E({ type: 'turret', x: x + 1, y: y + 2, w: 14, h: 14, enemy: true, stomp: true, cool: 90, face: toward }); break;
       case 'u': E({ type: 'ufo', x, y: -24, w: 28, h: 12, enemy: true, stomp: true, state: 'enter', shots: 0, timer: 0, beamX: 0, beamEnd: 0 }); break;
       case 'M': E({ type: 'medal', item: true, x: x + 2, y: y + 1, w: 12, h: 14, rise: 0, id: sp.id, got: !!(game.medals[this.li] & (1 << sp.id)) }); break;
+      case 's': E({ type: 'orb', item: true, x: x + 2, y: y + 1, w: 12, h: 14, rise: 0, oy: y + 1 }); break;
       case 'a': E({ type: 'ammo', item: true, x: x + 2, y: y + 2, w: 12, h: 14, rise: 0 }); break;
       case 'f': E({ type: 'fish', x: x + 1, y: y + 3, w: 14, h: 10, vx: 0.8 * toward, oy: y + 3, ox: x, enemy: true, stomp: true }); break;
       case 'j': E({ type: 'jelly', x: x + 1, y, w: 14, h: 12, oy: y, enemy: true, stomp: false }); break;
@@ -1097,6 +1098,7 @@ class Play {
   playerPose() {
     const p = this.p;
     if (p.hurtT > 0) return 'hurt';
+    if (p.shockT > 12) return 'win0';
     if (p.fire > 2 && p.onGround) return 'throw';
     if (this.state === 'clear' && Math.abs(p.vx) < 0.2 && p.onGround) return 'win' + ((frame >> 4) & 1);
     if (this.state === 'bossdead' && p.onGround && Math.abs(p.vx) < 0.2) return 'win' + ((frame >> 4) & 1);
@@ -1280,16 +1282,13 @@ class Play {
 
     // B: throw a rolling cannonball (or a Signal ping once the cannonballs run out)
     if (p.chompT > 0) p.chompT--;
-    if (p.batCool > 0) p.batCool--;
-    if (p.riding) { if (!auto && Input.pressed('run') && p.chompT === 0) this.chomp(); } else if (goth) {
-      // GothChick's special: a swarm of three homing bats (no ammo, short recharge)
-      if (!auto && Input.pressed('run') && !p.crouch) {
-        if (!p.batCool) {
-          p.batCool = 50; p.fire = 10; Audio8.sfx('bats');
-          for (let i = 0; i < 3; i++) this.bats.push({ x: p.x + p.w / 2 - 3 + p.face * 6, y: p.y + 6, w: 6, h: 6, vx: p.face * 2.6, vy: (i - 1) * 0.9, life: 120, t: i * 3, slot: i });
-        } else Audio8.sfx('tick');
-      }
-    } else if (!auto && Input.pressed('run') && !p.crouch) {
+    // SPECIAL attack (S button / C key): 3 uses, refilled by Special Orbs
+    if (p.spCool > 0) p.spCool--;
+    if (p.shockT > 0) p.shockT--;
+    if (!auto && Input.pressed('special')) {
+      if (p.special > 0 && !p.spCool) { p.special--; p.spCool = 30; if (goth) this.batSwarm(); else this.shockwave(); } else Audio8.sfx('tick');
+    }
+    if (p.riding) { if (!auto && Input.pressed('run') && p.chompT === 0) this.chomp(); } else if (!auto && Input.pressed('run') && !p.crouch) {
       if (p.ammo > 0 && this.balls.length < 2) {
         p.ammo--; p.fire = 10; Audio8.sfx('cannon');
         const lob = Input.down('up');
@@ -1473,7 +1472,7 @@ class Play {
         if (e.cool > 0) e.cool--;
         if (!p.riding && e.cool <= 0 && this.state === 'play' && overlap(p, e)) this.mount(e);
         return;
-      case 'medal': break;
+      case 'medal': case 'orb': break;
       case 'drink': case 'phone': case 'badge': case 'ammo': case 'battery': case 'boots':
         if (e.rise > 0) { e.y -= 0.5; e.rise -= 0.5; if (e.rise <= 0) e.vx = { phone: 0, ammo: 0, badge: 1.2, battery: 1.3, boots: 0.8 }[e.type] ?? 1; break; }
         e.vy = Math.min(5, e.vy + 0.3);
@@ -1502,7 +1501,8 @@ class Play {
       }
       if (e.type === 'battery') { p.charge = 600; Audio8.sfx('power'); Audio8.play('charge'); this.parts.push({ k: 'text', s: 'SUPER CHARGE!', x: e.x - 30, y: e.y - 8, vy: -0.5, life: 60 }); }
       if (e.type === 'boots') { p.boots = true; Audio8.sfx('power'); this.parts.push({ k: 'text', s: 'JET BOOTS!', x: e.x - 20, y: e.y - 8, vy: -0.5, life: 60 }); }
-      if (e.type === 'ammo' && heroOf() === 'goth') { this.addScore(300, e.x, e.y - 8); Audio8.sfx('coin'); } else if (e.type === 'ammo') { p.ammo = Math.min(9, p.ammo + 3); Audio8.sfx('reload'); this.parts.push({ k: 'text', s: '+3', x: e.x, y: e.y - 8, vy: -0.5, life: 50 }); }
+      if (e.type === 'orb') { p.special = Math.min(9, p.special + 3); Audio8.sfx('power'); this.parts.push({ k: 'text', s: 'SPECIAL +3', x: e.x - 24, y: e.y - 8, vy: -0.5, life: 60 }); }
+      if (e.type === 'ammo') { p.ammo = Math.min(9, p.ammo + 3); Audio8.sfx('reload'); this.parts.push({ k: 'text', s: '+3', x: e.x, y: e.y - 8, vy: -0.5, life: 50 }); }
       if (e.type === 'badge') { game.lives++; Audio8.sfx('oneup'); this.parts.push({ k: 'text', s: '1UP', x: e.x, y: e.y - 8, vy: -0.5, life: 60 }); }
     }
     if ((e.enemy || e.hazard) && !e.ghostOff && overlap(p, e)) {
@@ -1701,6 +1701,24 @@ class Play {
     }
   }
   // ---------- cannonballs ----------
+  // GothChick's special: three homing bats
+  batSwarm() {
+    const p = this.p;
+    p.fire = 10; Audio8.sfx('bats');
+    for (let i = 0; i < 3; i++) this.bats.push({ x: p.x + p.w / 2 - 3 + p.face * 6, y: p.y + 6, w: 6, h: 6, vx: p.face * 2.6, vy: (i - 1) * 0.9, life: 120, t: i * 3, slot: i });
+  }
+  // WallyMan's special: a Signal Shockwave from his phone
+  shockwave() {
+    const p = this.p, x = p.x + p.w / 2, y = p.y + p.h / 2, R = 96;
+    p.shockT = 30; this.shake = 12; Audio8.sfx('shock');
+    this.parts.push({ k: 'shock', x, y, life: 30 });
+    for (const e of this.ents) {
+      if (!e.alive || e.dying || e.ghostOff) continue;
+      const dx = e.x + e.w / 2 - x, dy = e.y + e.h / 2 - y;
+      if (dx * dx + dy * dy > (R + e.w / 2) ** 2) continue;
+      if (e.hazard) { e.alive = false; this.parts.push({ k: 'spark', x: e.x, y: e.y, life: 10 }); } else if (e.enemy) { if (e.boss) this.damageBoss(e); else this.flipKill(e); }
+    }
+  }
   updateBats() {
     for (const bt of this.bats) {
       bt.life--; bt.t++;
@@ -1975,6 +1993,14 @@ class Play {
       }
       case 'battery': ctx.drawImage(Sprites.battery, x - 2, y - 1); break;
       case 'boots': ctx.drawImage(Sprites.boots, x - 2, y - 1); break;
+      case 'orb': { // Special Orb: glows in the hero's colour, shows their special
+        const by = y + Math.round(Math.sin(e.t * 0.08) * 2), goth = heroOf() === 'goth', col = goth ? '#ff4aa8' : '#5ff0ff', dark = goth ? '#6a1a5a' : '#1a5a7a';
+        ctx.fillStyle = (frame >> 3) & 1 ? col : '#ffffff'; ctx.fillRect(x + 5, by - 3, 2, 2); ctx.fillRect(x - 2, by + 5, 2, 2); ctx.fillRect(x + 12, by + 9, 2, 2);
+        ctx.fillStyle = '#1a1020'; ctx.fillRect(x + 1, by, 10, 12); ctx.fillRect(x, by + 1, 12, 10);
+        ctx.fillStyle = dark; ctx.fillRect(x + 1, by + 1, 10, 10); ctx.fillStyle = col; ctx.fillRect(x + 2, by + 2, 8, 8); ctx.fillStyle = '#ffffff'; ctx.fillRect(x + 3, by + 3, 2, 2);
+        if (goth) { ctx.fillStyle = '#1a1020'; ctx.fillRect(x + 4, by + 5, 4, 3); ctx.fillRect(x + 2, by + 4, 2, 2); ctx.fillRect(x + 8, by + 4, 2, 2); } else { ctx.fillStyle = '#1a1020'; ctx.fillRect(x + 5, by + 7, 2, 2); ctx.fillRect(x + 4, by + 4, 1, 3); ctx.fillRect(x + 7, by + 4, 1, 3); }
+        break;
+      }
       case 'spark': {
         ctx.fillStyle = (e.t >> 1) & 1 ? '#ffffff' : '#ffe040';
         ctx.fillRect(x + 3, y, 2, 3); ctx.fillRect(x + 1, y + 3, 4, 2); ctx.fillRect(x + 3, y + 5, 4, 2); ctx.fillRect(x + 2, y + 7, 2, 3);
@@ -2047,6 +2073,15 @@ class Play {
       case 'spark': ctx.fillStyle = q.life & 2 ? '#fff' : '#ffe040'; ctx.fillRect(x + 3, y, 2, 8); ctx.fillRect(x, y + 3, 8, 2); break;
       case 'bubble': { const bx = x + Math.round(Math.sin((q.life + q.x) * 0.2) * 2); ctx.fillStyle = '#d8f4ff'; ctx.fillRect(bx, y, 3, 1); ctx.fillRect(bx, y + 2, 3, 1); ctx.fillRect(bx - 1, y + 1, 1, 1); ctx.fillRect(bx + 3, y + 1, 1, 1); break; }
       case 'flame': ctx.fillStyle = q.life > 8 ? '#ffe040' : '#ff7020'; ctx.fillRect(x - 1, y, 3, 3); break;
+      case 'shock': {
+        const k = 30 - q.life, r = 10 + k * 3.2;
+        if (k < 3) { ctx.fillStyle = 'rgba(200,250,255,0.35)'; ctx.fillRect(0, 0, VW, VH); }
+        for (const [rr, col] of [[r, k < 15 ? '#ffffff' : '#5ff0ff'], [r * 0.7, '#5ff0ff'], [r * 0.45, 'rgba(95,240,255,0.6)']]) {
+          ctx.fillStyle = col;
+          for (let a = 0; a < 48; a++) { const t2 = (a / 48) * Math.PI * 2; ctx.fillRect(Math.round(x + Math.cos(t2) * rr) - 1, Math.round(y + Math.sin(t2) * rr * 0.8) - 1, 2, 2); }
+        }
+        break;
+      }
       case 'blast': {
         const k = 24 - q.life, r = Math.min(30, 6 + k * 3);
         const ring = (rad, col) => { ctx.fillStyle = col; for (let a = 0; a < 32; a++) { const t = (a / 32) * Math.PI * 2; ctx.fillRect(Math.round(x + Math.cos(t) * rad) - 1, Math.round(y + Math.sin(t) * rad * 0.85) - 1, 3, 3); } };
@@ -2071,11 +2106,13 @@ class Play {
     txt('*' + pad(Math.max(0, game.lives), 2), 14, 15, '#fff');
     for (let i = 0; i < 3; i++) ctx.drawImage(i < p.hearts ? Sprites.heart : Sprites.heartEmpty, 65 + i * 9, 6);
     { let ix = 86; if (p.power === 'signal') { ctx.drawImage(Sprites.miniPhone, ix, 15); ix += 6; } if (p.boots) { ctx.drawImage(Sprites.miniBoots, ix, 16); ix += 7; } if (p.charge > 0 && (p.charge > 120 || (frame >> 2) & 1)) ctx.drawImage(Sprites.miniBattery, ix, 15); }
-    if (heroOf() === 'goth') { // bat swarm recharge meter
-      ctx.fillStyle = '#9a4ae8'; ctx.fillRect(62, 17, 2, 2); ctx.fillRect(67, 17, 2, 2); ctx.fillStyle = '#1a1020'; ctx.fillRect(64, 17, 3, 3);
-      ctx.fillStyle = '#1a1020'; ctx.fillRect(71, 16, 14, 5); ctx.fillStyle = p.batCool ? '#5a3a78' : (frame >> 3) & 1 ? '#ff4aa8' : '#c070ff'; ctx.fillRect(72, 17, Math.round(12 * (1 - (p.batCool || 0) / 50)), 3);
-    } else { ctx.drawImage(Sprites.ballIcon, 62, 15); txt('*' + p.ammo, 70, 15, p.ammo ? '#fff' : '#ff6060'); }
-    if (this.ta) { txt('TIME ATTACK', 98, 6, '#5ff0ff'); txt(fmtTime(this.taT), 104, 15, '#fff'); } else {
+    { // special attacks left
+      const gx = 94, col = heroOf() === 'goth' ? '#ff4aa8' : '#5ff0ff';
+      ctx.fillStyle = '#1a1020'; ctx.fillRect(gx, 6, 7, 7); ctx.fillStyle = p.special ? col : '#4a4a60'; ctx.fillRect(gx + 1, 7, 5, 5); ctx.fillStyle = '#1a1020'; ctx.fillRect(gx + 3, 8, 1, 3);
+      txt(String(p.special), gx + 8, 6, p.special ? '#fff' : '#ff6060');
+    }
+    ctx.drawImage(Sprites.ballIcon, 62, 15); txt('*' + p.ammo, 70, 15, p.ammo ? '#fff' : '#ff6060');
+    if (this.ta) { txt('TIME', 112, 6, '#5ff0ff'); txt(fmtTime(this.taT), 104, 15, '#fff'); } else {
     txt('TIME', 112, 6, '#ffe040');
     txt(pad(this.time, 3), 117, 15, this.time <= 20 && (frame >> 4) & 1 ? '#ff6060' : '#fff'); }
     ctx.drawImage(Sprites.coinIcon, 176, 6); txt('*' + pad(game.coins, 2), 183, 6, '#fff');

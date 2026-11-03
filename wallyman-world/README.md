@@ -15,6 +15,7 @@ Open `index.html` in any modern browser — or enable **GitHub Pages** for this 
 | Dino flutter | Hold Jump while falling on Dino | Hold A | Hold A |
 | Jump (hold for higher) | Z / Space | A | A |
 | Run (hold) / throw cannonball (tap) | X / Shift | X / B | B |
+| Special attack | C | Y / LB / RB | S |
 | Start / Pause | Enter | Start | START |
 | Back (menus) / exit level when paused | Esc / X | Select | B |
 
@@ -28,7 +29,8 @@ Open `index.html` in any modern browser — or enable **GitHub Pages** for this 
   - **Haunted Manor** – pitch dark except for a pool of light around WallyMan, lightning flashes and ghosts that fade in and out.
   - **Coral Depths** – underwater: press Jump to swim, with fish, jellyfish and coral walls.
   - **Sky Armada** – an auto-scrolling airship level (don't get squashed by the screen edge) ending in a fight with the **UFO Mothership**, which sweeps a pink laser, drops bombs and launches mini UFOs.
-- **Two heroes** – after choosing a file, pick your hero on the **CHOOSE YOUR HERO** screen: **WallyMan**, the caped all-rounder, or **GothChick** (pink and purple pigtails, black halter dress, black boots) who jumps higher, runs a little slower, can **glide** by holding Jump in the air, and has her own special attack: B releases a **Bat Swarm** of three homing bats (no ammo, short recharge shown on the HUD) that seek out enemies, UFOs and bosses. Both get every move, Dino rides and costume.
+- **Two heroes** – after choosing a file, pick your hero on the **CHOOSE YOUR HERO** screen: **WallyMan**, the caped all-rounder, or **GothChick** (pink and purple pigtails, black halter dress, black boots) who jumps higher, runs a little slower, can **glide** by holding Jump in the air, and has her own special attack: the **Bat Swarm**, three homing bats that seek out enemies, UFOs and bosses. Both get every move, Dino rides and costume.
+- **Special attacks** – on their own button (S / C key). WallyMan's **Signal Shockwave** blasts a ring of signal from his phone that knocks out every enemy around him, destroys incoming bolts, snowballs and bombs, and hurts bosses; GothChick's **Bat Swarm** sends three homing bats. Each hero starts every level or life with **3 specials**; glowing **Special Orbs** (two per level) give +3, up to 9.
 - **2-player mode** – pick "2 PLAYER GAME" after choosing a file. Players take turns on the same device: **WallyMan** and **Wally Jr** (green suit) share the island map and progress but have their own lives, score and coins. The turn passes after each level and each lost life; if one player runs out of lives the other carries on.
 - **Time Attack** – from the title menu, race any level you have beaten (in any save file) with no time limit and unlimited instant retries. Best times are saved, with a NEW RECORD! fanfare.
 - **Costumes** – visit the **Wardrobe** in Dino's Shop at Wally's House. Seven outfits: Classic, Wally Jr, Golden (find 20 Wally Medals), Ice (clear Frosty Peaks), Dino Suit (clear Coral Depths), Shadow (clear Haunted Manor) and Fire (beat Baron Static).
@@ -40,7 +42,7 @@ Open `index.html` in any modern browser — or enable **GitHub Pages** for this 
 - **Wally Medals** – five hidden in every level, usually up high on blocks and ledges. They are saved when you clear the level, shown under each level on the map, and finding all five gives a 1-UP.
 - **Dino's Shop** at Wally's House on the map – spend coins on an extra life, +3 cannonballs, full hearts or Jet Boots for your next level.
 - **Story intro** when you start a new file, and a **pause menu** with music and sound-effect volume.
-- **Layered parallax backgrounds** – four to five scrolling layers per world (distant mountains, hills, bushes, crystals, stalactites, floating islands, banners, chains, sailboats, dunes and snowdrifts). 100 coins = extra life.
+- **Layered parallax backgrounds** – ten or eleven scrolling layers per world (distant mountains, hills, bushes, crystals, stalactites, floating islands, banners, chains, sailboats, dunes and snowdrifts). 100 coins = extra life.
 - **Enemies**: Grumbles (stompable), Prickles (spiky – don't stomp!), Buzzers (flying), Hoppers (jumping frogs), Flitter bats (swoop down from cave ceilings), Rhino-bots (charge when they spot you), Static Turrets (fire bolts), and **UFOs** that hover overhead, track you, flash a warning line and fire a laser beam down – stomp them or hold Up + B to lob a cannonball straight up.
 - **A tight timer** in real seconds: about 1.8x the time it takes to walk straight to the end (60–65s per level, extra for boss castles). A HURRY UP warning sounds at 20 seconds and the last 10 tick down; leftover seconds are worth 100 points each.
 - Checkpoint flags, Signal Tower goal posts, time bonus tally, moving platforms, lava, spikes.

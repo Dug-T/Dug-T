@@ -459,6 +459,89 @@ const Sprites = (() => {
   ];
   S.ghost = { r: gh, l: gh.map(flip) };
 
+  // ================= six more parallax layers for every world =================
+  const flock = (x, cx, cy, n, col, r) => { for (let i = 0; i < n; i++) { const bx = Math.round(cx + r() * 50 - 25), by = Math.round(cy + r() * 18); x.fillStyle = col; x.fillRect(bx, by, 2, 1); x.fillRect(bx + 2, by - 1, 1, 1); x.fillRect(bx - 1, by - 1, 1, 1); } };
+  const motes = (x, n, cols, y0, y1, size, seed, tall = 1) => { const r = rng(seed); for (let i = 0; i < n; i++) { x.fillStyle = cols[i % cols.length]; x.fillRect((r() * 512) | 0, (y0 + r() * (y1 - y0)) | 0, size, size * tall); } };
+  const fogBand = (x, y, h, col) => { x.fillStyle = col; for (let i = 0; i < 512; i++) x.fillRect(i, Math.round(y + Math.sin(i * 0.03) * 3 + Math.sin(i * 0.011 + 1) * 4), 1, h); };
+  const pine = (x, cx, base, ht, col, snow) => { for (let y = 0; y < ht; y++) { const w = Math.round((y / ht) * ht * 0.35) + 1; x.fillStyle = snow && y % 7 < 2 ? snow : col; x.fillRect(cx - w, base - ht + y, w * 2, 1); } };
+  const treeline = (x, base, col, seed, h0, h1) => { const r = rng(seed); for (let cx = 0; cx < 520; cx += 6 + ((r() * 6) | 0)) pine(x, cx, base, h0 + ((r() * (h1 - h0)) | 0), col); x.fillStyle = col; x.fillRect(0, base, 512, 224 - base); };
+  const tri = (x, cx, base, w, h, col) => { for (let y = 0; y < h; y++) { const ww = Math.round((w * (y + 1)) / h / 2); x.fillStyle = col; x.fillRect(cx - ww, base - h + y, ww * 2 + 1, 1); } };
+  const more = {
+    grass: [
+      { c: layer(512, 224, (x) => { const r = rng(71); flock(x, 80, 40, 5, '#3a5a7a', r); flock(x, 300, 60, 4, '#3a5a7a', r); flock(x, 450, 28, 6, '#3a5a7a', r); }), f: 0.04, drift: 0.25 },
+      { c: layer(512, 224, (x) => treeline(x, 150, '#6aa8a0', 72, 10, 22)), f: 0.13 },
+      { c: layer(512, 224, (x) => { for (const wx of [60, 260, 420]) { for (let y = 0; y < 30; y++) { const w = 3 + Math.round(y / 6); x.fillStyle = '#e8e0d0'; x.fillRect(wx - w, 104 + y, w * 2, 1); } x.fillStyle = '#7a6a5a'; x.fillRect(wx - 3, 112, 6, 6); for (let k = -14; k <= 14; k++) { x.fillRect(wx + k, 104, 1, 2); x.fillRect(wx, 104 + k, 2, 1); } x.fillStyle = '#5a4a3a'; x.fillRect(wx - 1, 103, 3, 3); } }), f: 0.18 },
+      { c: layer(512, 224, (x) => fogBand(x, 150, 6, 'rgba(255,255,255,0.35)')), f: 0.32 },
+      { c: layer(512, 224, (x) => motes(x, 140, ['#ff6080', '#ffd040', '#ffffff', '#c070ff'], 184, 198, 2, 73)), f: 0.6 },
+      { c: layer(512, 224, (x) => motes(x, 18, ['#fff8a0', '#ffffff'], 60, 170, 1, 74)), f: 0.85, drift: 0.3 },
+    ],
+    cave: [
+      { c: layer(512, 224, (x) => { const r = rng(81); for (let i = 0; i < 9; i++) disc(x, r() * 512, 40 + r() * 140, 22 + r() * 26, 'rgba(150,80,220,0.12)'); }), f: 0.05 },
+      { c: layer(512, 224, (x) => { const r = rng(82); for (let i = 0; i < 16; i++) tri(x, (i * 33 + r() * 20) | 0, 224, 14 + ((r() * 12) | 0), 30 + ((r() * 50) | 0), '#24183c'); }), f: 0.15 },
+      { c: layer(512, 224, (x) => { const r = rng(83); for (let i = 0; i < 7; i++) { const cx = (i * 75 + r() * 30) | 0; for (let k = 0; k < 3; k++) { const mx = cx + k * 7, h = 6 + k * 3, col = k % 2 ? '#ff70e0' : '#5ff0ff'; x.fillStyle = '#c8b8e0'; x.fillRect(mx, 200 - h, 2, h); disc(x, mx + 1, 200 - h, 3 + (k & 1), col); x.fillStyle = '#ffffff'; x.fillRect(mx, 198 - h, 1, 1); } } }), f: 0.3 },
+      { c: layer(512, 224, (x) => { for (let k = 0; k < 5; k++) { const bx = 40 + k * 120; x.fillStyle = '#4a3020'; x.fillRect(bx, 40, 6, 184); x.fillRect(bx + 40, 40, 6, 184); x.fillRect(bx - 4, 40, 54, 6); x.fillStyle = '#6a4a30'; x.fillRect(bx, 40, 2, 184); x.fillStyle = '#ffd860'; x.fillRect(bx + 20, 48, 6, 7); x.fillStyle = '#1a1020'; x.fillRect(bx + 22, 46, 2, 2); } }), f: 0.55 },
+      { c: layer(512, 224, (x) => motes(x, 30, ['#7af0ff'], 40, 200, 1, 85, 3)), f: 0.65 },
+      { c: layer(512, 224, (x) => motes(x, 40, ['#c8b8f0', '#8a7ab8'], 30, 210, 1, 86)), f: 0.85 },
+    ],
+    sky: [
+      { c: layer(512, 224, (x) => motes(x, 60, ['rgba(255,255,255,0.7)'], 0, 70, 1, 91)), f: 0.01 },
+      { c: layer(512, 224, (x) => { const bx = 150, by = 70; for (let yy = -10; yy <= 10; yy++) { const h = Math.round(Math.sqrt(100 - yy * yy)); for (let xx = -h; xx < h; xx++) { x.fillStyle = ((xx + 20) >> 2) % 2 ? '#ff6070' : '#ffe080'; x.fillRect(bx + xx, by + yy, 1, 1); } } x.fillStyle = '#6a3a2a'; x.fillRect(bx - 3, by + 14, 6, 4); x.fillStyle = '#3a2a2a'; x.fillRect(bx - 4, by + 9, 1, 6); x.fillRect(bx + 3, by + 9, 1, 6); }), f: 0.07, drift: 0.05 },
+      { c: layer(512, 224, (x) => { for (let i = 0; i < 8; i++) cloud(x, i * 64 + 10, 110 + (i % 3) * 6, 0.5, '#ffd0c0', '#f0b0a8'); }), f: 0.1 },
+      { c: layer(512, 224, (x) => { const r = rng(94); flock(x, 120, 70, 5, '#a05060', r); flock(x, 390, 50, 6, '#a05060', r); }), f: 0.22, drift: 0.3 },
+      { c: layer(512, 224, (x) => { for (const [cx, cy, w] of [[100, 130, 16], [360, 110, 20]]) { for (let k = 0; k < w; k++) { const ww = Math.round(w * (1 - k / w) * 0.8); x.fillStyle = k < 2 ? '#5ac860' : '#9a7050'; x.fillRect(cx - ww, cy + k, ww * 2, 1); } x.fillStyle = 'rgba(220,240,255,0.8)'; x.fillRect(cx + 4, cy + 2, 2, 60); x.fillRect(cx + 7, cy + 2, 1, 50); } }), f: 0.42 },
+      { c: layer(512, 224, (x) => { fogBand(x, 120, 3, 'rgba(255,230,230,0.3)'); fogBand(x, 196, 4, 'rgba(255,255,255,0.45)'); }), f: 0.62 },
+    ],
+    castle: [
+      { c: layer(512, 224, (x) => { for (let k = 0; k < 8; k++) { const ax = 20 + k * 64; x.fillStyle = '#100408'; x.fillRect(ax, 44, 14, 22); for (let yy = -7; yy <= 0; yy++) { const h = Math.round(Math.sqrt(49 - yy * yy)); x.fillRect(ax + 7 - h, 44 + yy, h * 2, 1); } x.fillStyle = '#3a1428'; x.fillRect(ax + 4, 38, 1, 28); x.fillRect(ax + 9, 38, 1, 28); x.fillRect(ax, 54, 14, 1); } }), f: 0.33 },
+      { c: layer(512, 224, (x) => motes(x, 90, ['#4a1a34', '#3a1028'], 0, 224, 3, 102)), f: 0.38 },
+      { c: layer(512, 224, (x) => { for (let k = 0; k < 4; k++) { const sx = 60 + k * 128; x.fillStyle = '#2a1a2a'; x.fillRect(sx - 8, 196, 16, 28); x.fillRect(sx - 5, 160, 10, 36); x.fillRect(sx - 4, 150, 8, 10); x.fillRect(sx - 8, 166, 16, 10); x.fillRect(sx + 9, 140, 2, 56); tri(x, sx + 10, 142, 4, 6, '#2a1a2a'); x.fillStyle = '#ff5030'; x.fillRect(sx - 2, 154, 4, 1); } }), f: 0.48 },
+      { c: layer(512, 224, (x) => { x.fillStyle = 'rgba(200,200,220,0.35)'; for (let k = 0; k < 3; k++) { const wx = k * 170; for (let a = 0; a < 5; a++) { const ang = (a / 4) * (Math.PI / 2); for (let r2 = 0; r2 < 34; r2++) x.fillRect(Math.round(wx + Math.cos(ang) * r2), Math.round(32 + Math.sin(ang) * r2), 1, 1); } for (const rr of [10, 20, 30]) for (let a = 0; a < 20; a++) { const ang = (a / 19) * (Math.PI / 2); x.fillRect(Math.round(wx + Math.cos(ang) * rr), Math.round(32 + Math.sin(ang) * rr), 1, 1); } } }), f: 0.6 },
+      { c: layer(512, 224, (x) => { x.fillStyle = '#3a1a24'; x.fillRect(0, 200, 512, 6); for (let k = 0; k < 24; k++) { const cx = k * 21 + 6; x.fillStyle = '#f0e8d0'; x.fillRect(cx, 192, 3, 8); x.fillStyle = '#ffb030'; x.fillRect(cx, 189, 3, 3); x.fillStyle = '#ffffff'; x.fillRect(cx + 1, 190, 1, 1); } }), f: 0.65 },
+      { c: layer(512, 224, (x) => motes(x, 40, ['#ff9030', '#ffd060'], 40, 210, 1, 106)), f: 0.82 },
+    ],
+    beach: [
+      { c: layer(512, 224, (x) => { const r = rng(111); flock(x, 140, 40, 4, '#ffffff', r); flock(x, 380, 60, 5, '#e0e8f0', r); }), f: 0.06, drift: 0.3 },
+      { c: layer(512, 224, (x) => { const lx = 200; x.fillStyle = '#5a8a50'; x.fillRect(lx - 14, 132, 28, 4); for (let y = 0; y < 30; y++) { const w = 4 - Math.floor(y / 12); x.fillStyle = (y >> 2) % 2 ? '#e83030' : '#ffffff'; x.fillRect(lx - w, 102 + y, w * 2, 1); } x.fillStyle = '#1a1020'; x.fillRect(lx - 3, 98, 6, 4); x.fillStyle = '#ffe060'; x.fillRect(lx - 2, 99, 4, 2); x.fillStyle = 'rgba(255,240,150,0.35)'; for (let k = 0; k < 30; k++) x.fillRect(lx + 3 + k, 99 - Math.round(k * 0.15), 1, 2 + Math.round(k * 0.2)); }), f: 0.17 },
+      { c: layer(512, 224, (x) => { fogBand(x, 150, 1, 'rgba(255,255,255,0.6)'); fogBand(x, 168, 1, 'rgba(255,255,255,0.45)'); fogBand(x, 186, 1, 'rgba(255,255,255,0.35)'); }), f: 0.22 },
+      { c: layer(512, 224, (x) => { const kx = 120, ky = 50; for (let y = -8; y <= 8; y++) { const w = 6 - Math.abs(y) * 0.7; x.fillStyle = y < 0 ? '#ff4060' : '#ffd040'; x.fillRect(Math.round(kx - w), ky + y, Math.round(w * 2), 1); } x.fillStyle = '#ffffff'; for (let k = 0; k < 24; k++) x.fillRect(kx - 1 + Math.round(Math.sin(k * 0.5) * 3), ky + 9 + k, 1, 1); }), f: 0.3, drift: 0.15 },
+      { c: layer(512, 224, (x) => { for (const [ux, c1, c2] of [[80, '#ff4060', '#ffffff'], [260, '#40a0ff', '#ffe040'], [430, '#40c060', '#ffffff']]) { x.fillStyle = '#8a6a4a'; x.fillRect(ux, 172, 2, 22); for (let yy = -9; yy <= 0; yy++) { const h = Math.round(Math.sqrt(81 - yy * yy) * 1.4); for (let xx = -h; xx < h; xx++) { x.fillStyle = ((xx + 20) >> 2) % 2 ? c1 : c2; x.fillRect(ux + 1 + xx, 172 + yy, 1, 1); } } } }), f: 0.6 },
+      { c: layer(512, 224, (x) => { const r = rng(116); for (let i = 0; i < 12; i++) { const sx = (r() * 500) | 0, sy = 204 + ((r() * 10) | 0); if (i % 2) { x.fillStyle = '#ff8060'; x.fillRect(sx, sy, 5, 1); x.fillRect(sx + 2, sy - 2, 1, 5); x.fillRect(sx + 1, sy + 1, 1, 1); x.fillRect(sx + 3, sy + 1, 1, 1); } else { x.fillStyle = '#fff0d0'; x.fillRect(sx, sy, 4, 3); x.fillStyle = '#d8b090'; x.fillRect(sx + 1, sy + 1, 2, 1); } } }), f: 0.82 },
+    ],
+    snow: [
+      { c: layer(512, 224, (x) => { for (let i = 0; i < 512; i++) { const y = Math.round(30 + Math.sin(i * 0.02) * 10 + Math.sin(i * 0.05) * 4); for (let k = 0; k < 22; k++) { x.fillStyle = `rgba(${k < 8 ? '120,255,170' : '190,120,255'},${0.32 * (1 - k / 22)})`; x.fillRect(i, y + k, 1, 1); } } }), f: 0.02 },
+      { c: layer(512, 224, (x) => treeline(x, 160, '#5a7898', 121, 10, 20)), f: 0.25 },
+      { c: layer(512, 224, (x) => { const cx = 300; x.fillStyle = '#6a4028'; x.fillRect(cx - 14, 176, 28, 16); x.fillStyle = '#ffffff'; for (let k = 0; k < 10; k++) x.fillRect(cx - 17 + k, 176 - k, 34 - k * 2, 1); x.fillStyle = '#ffd860'; x.fillRect(cx - 8, 181, 5, 5); x.fillRect(cx + 4, 181, 5, 5); x.fillStyle = '#5a3a2a'; x.fillRect(cx + 7, 164, 4, 8); for (let k = 0; k < 4; k++) disc(x, cx + 10 + k * 4, 158 - k * 6, 2 + k, 'rgba(220,225,240,0.7)'); }), f: 0.35 },
+      { c: layer(512, 224, (x) => motes(x, 40, ['#ffffff', '#a0e0ff'], 80, 200, 1, 124)), f: 0.5 },
+      { c: layer(512, 224, (x) => { for (let yy = -5; yy <= 5; yy++) { const h = Math.round(Math.sqrt(25 - yy * yy) * 18); x.fillStyle = yy < 0 ? '#d8ecff' : '#b8d8f4'; x.fillRect(180 - h, 200 + yy, h * 2, 1); } x.fillStyle = '#ffffff'; x.fillRect(120, 197, 20, 1); x.fillRect(200, 199, 30, 1); }), f: 0.6 },
+      { c: layer(512, 224, (x) => motes(x, 22, ['#ffffff'], 0, 224, 2, 126)), f: 0.9 },
+    ],
+    haunted: [
+      { c: layer(512, 224, (x) => motes(x, 70, ['#ffffff', '#c8c0ff'], 0, 120, 1, 131)), f: 0.01 },
+      { c: layer(512, 224, (x) => { const r = rng(132); flock(x, 100, 60, 7, '#000000', r); flock(x, 420, 40, 5, '#000000', r); }), f: 0.05, drift: 0.3 },
+      { c: layer(512, 224, (x) => { for (const cx of [60, 300]) { x.fillStyle = '#140a20'; x.fillRect(cx - 18, 130, 36, 94); x.fillRect(cx - 5, 96, 10, 34); tri(x, cx, 96, 12, 26, '#140a20'); x.fillRect(cx - 1, 62, 2, 10); x.fillRect(cx - 4, 65, 8, 2); x.fillStyle = '#ffd860'; x.fillRect(cx - 2, 108, 4, 6); } }), f: 0.1 },
+      { c: layer(512, 224, (x) => { fogBand(x, 172, 10, 'rgba(160,140,200,0.18)'); fogBand(x, 190, 8, 'rgba(160,140,200,0.14)'); }), f: 0.25 },
+      { c: layer(512, 224, (x) => { for (let k = 0; k < 4; k++) { const jx = 50 + k * 140; disc(x, jx, 196, 7, '#e86a10'); x.fillStyle = '#4a8a30'; x.fillRect(jx - 1, 187, 2, 3); x.fillStyle = '#ffe040'; x.fillRect(jx - 4, 193, 2, 2); x.fillRect(jx + 2, 193, 2, 2); x.fillRect(jx - 3, 198, 6, 1); } }), f: 0.55 },
+      { c: layer(512, 224, (x) => motes(x, 25, ['#80ffb0', '#c0ffd8'], 60, 200, 2, 136)), f: 0.85 },
+    ],
+    water: [
+      { c: layer(512, 224, (x) => { const wx = 200, wy = 70; for (let yy = -9; yy <= 9; yy++) { const h = Math.round(Math.sqrt(81 - yy * yy) * 3.4); x.fillStyle = '#0e3a70'; x.fillRect(wx - h, wy + yy, h * 2, 1); } for (let k = 0; k < 10; k++) { x.fillRect(wx - 30 - k, wy - k, 3, 2); x.fillRect(wx - 30 - k, wy + k - 2, 3, 2); } x.fillStyle = '#5a8ac0'; x.fillRect(wx + 18, wy - 2, 2, 2); }), f: 0.08, drift: 0.06 },
+      { c: layer(512, 224, (x) => { const r = rng(142); for (const [cx, cy] of [[100, 120], [360, 90]]) for (let i = 0; i < 26; i++) { x.fillStyle = '#2a6ab0'; x.fillRect(Math.round(cx + r() * 40 - 20), Math.round(cy + r() * 20 - 10), 3, 1); } }), f: 0.15, drift: 0.2 },
+      { c: layer(512, 224, (x) => { for (let k = 0; k < 22; k++) { const cx = k * 24 + 6, h = 90 + (k % 4) * 25; for (let y = 0; y < h; y++) { x.fillStyle = '#0e4a50'; x.fillRect(Math.round(cx + Math.sin(y * 0.08 + k) * 4), 224 - y, 3, 1); } } }), f: 0.3 },
+      { c: layer(512, 224, (x) => { const sx = 320; for (let k = 0; k < 18; k++) { x.fillStyle = '#123a5a'; x.fillRect(sx - 40 + k, 196 - Math.round(k * 0.4), 80 - k * 2, 1); } x.fillRect(sx - 40, 196, 80, 28); x.fillRect(sx - 2, 130, 3, 66); x.fillRect(sx - 20, 140, 40, 2); x.fillStyle = '#1e5070'; x.fillRect(sx - 30, 200, 6, 6); x.fillRect(sx - 10, 200, 6, 6); }), f: 0.35 },
+      { c: layer(512, 224, (x) => { for (const bx of [40, 170, 300, 440]) for (let k = 0; k < 14; k++) { x.fillStyle = 'rgba(216,244,255,0.5)'; const yy = 200 - k * 13, xx = bx + Math.round(Math.sin(k) * 3); x.fillRect(xx, yy, 3, 1); x.fillRect(xx, yy + 2, 3, 1); x.fillRect(xx - 1, yy + 1, 1, 1); x.fillRect(xx + 3, yy + 1, 1, 1); } }), f: 0.6 },
+      { c: layer(512, 224, (x) => { const r = rng(146); for (let i = 0; i < 8; i++) { const jx = (r() * 500) | 0, jy = 60 + ((r() * 90) | 0); disc(x, jx, jy, 4, 'rgba(224,128,255,0.35)'); x.fillStyle = 'rgba(224,128,255,0.3)'; for (let t = 0; t < 4; t++) x.fillRect(jx - 3 + t * 2, jy + 3, 1, 6); } }), f: 0.42 },
+    ],
+    airship: [
+      { c: layer(512, 224, (x) => { x.fillStyle = 'rgba(255,240,180,0.12)'; for (let k = 0; k < 7; k++) for (let i = 0; i < 160; i++) { const a = -1.2 + k * 0.25; x.fillRect(Math.round(100 + Math.cos(a) * i), Math.round(150 + Math.sin(a) * i), 6, 1); } }), f: 0.04 },
+      { c: layer(512, 224, (x) => peaks(x, 205, 45, 100, '#4a2a6a', null, 151)), f: 0.08 },
+      { c: layer(512, 224, (x) => { const r = rng(152); for (let i = 0; i < 10; i++) { const fx = (r() * 500) | 0, fy = 40 + ((r() * 60) | 0); x.fillStyle = '#5a3a7a'; x.fillRect(fx, fy, 10, 3); x.fillRect(fx + 1, fy - 1, 8, 1); x.fillRect(fx + 3, fy + 3, 4, 2); } }), f: 0.12, drift: 0.1 },
+      { c: layer(512, 224, (x) => { const zx = 300, zy = 90; for (let yy = -9; yy <= 9; yy++) { const h = Math.round(Math.sqrt(81 - yy * yy) * 3.2); x.fillStyle = yy < -4 ? '#b0a0c8' : '#8a7aa8'; x.fillRect(zx - h, zy + yy, h * 2, 1); } x.fillStyle = '#6a5a88'; x.fillRect(zx - 34, zy - 10, 6, 20); x.fillStyle = '#5a3a2a'; x.fillRect(zx - 8, zy + 10, 16, 5); x.fillStyle = '#ffd860'; for (let k = 0; k < 3; k++) x.fillRect(zx - 6 + k * 5, zy + 11, 2, 2); }), f: 0.3 },
+      { c: layer(512, 224, (x) => { for (let i = 0; i < 6; i++) cloud(x, i * 90 + 20, 145 + (i % 2) * 10, 0.9, '#ffb8c0', '#e898b0'); }), f: 0.4 },
+      { c: layer(512, 224, (x) => { for (let i = 0; i < 512; i++) { const y = Math.round(14 + Math.abs(Math.sin((i / 128) * Math.PI)) * 14); x.fillStyle = '#3a2a2a'; x.fillRect(i, y, 1, 1); if (i % 16 === 0) { const c = ['#ff4060', '#ffd040', '#40a0ff', '#40c060'][(i / 16) % 4]; for (let k = 0; k < 6; k++) { x.fillStyle = c; x.fillRect(i - 3 + Math.floor(k / 2), y + 1 + k, 6 - k, 1); } } } }), f: 0.7 },
+    ],
+  };
+  for (const k of Object.keys(more)) { S.bg[k].layers.push(...more[k]); S.bg[k].layers.sort((a, b) => a.f - b.f); }
+
   S.portrait = new Image();
   S.portrait.src = 'assets/wallyman-portrait.png';
   S.gothPortrait = new Image();
