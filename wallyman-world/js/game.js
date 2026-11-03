@@ -25,15 +25,41 @@ const Input = (() => {
   };
   const typed = [];
   addEventListener('keydown', (e) => { if (e.key && e.key.length === 1 && /[a-z0-9 .!-]/i.test(e.key)) typed.push(e.key.toUpperCase()); if (typed.length > 8) typed.shift(); const a = map[e.code]; if (a) { if (!e.repeat) hit[a] = 1; kb[a] = 1; e.preventDefault(); } Audio8.unlock(); });
-  addEventListener('keyup', (e) => { const a = map[e.code]; if (a) { kb[a] = 0; e.preventDefault(); } });
-  addEventListener('blur', () => names.forEach((n) => { kb[n] = 0; }));
-  document.querySelectorAll('[data-k]').forEach((el) => {
-    const k = el.dataset.k, ids = new Set();
-    const on = (e) => { e.preventDefault(); ids.add(e.pointerId); touch[k] = 1; hit[k] = 1; el.classList.add('on'); Audio8.unlock(); };
-    const off = (e) => { ids.delete(e.pointerId); if (!ids.size) { touch[k] = 0; el.classList.remove('on'); } };
-    el.addEventListener('pointerdown', on); el.addEventListener('pointerup', off);
-    el.addEventListener('pointercancel', off); el.addEventListener('pointerleave', off);
+  addEventListener('keyup', (e) => { if (e.key === 'Meta') names.forEach((n) => { kb[n] = 0; }); const a = map[e.code]; if (a) { kb[a] = 0; e.preventDefault(); } });
+  addEventListener('blur', () => names.forEach((n) => { kb[n] = 0; touch[n] = 0; }));
+  // On-screen buttons. Touches are re-read from scratch on every touch event (which
+  // buttons have a finger on them right now), so a lost "finger lifted" event can
+  // never leave a button stuck down, and a thumb can slide between D-pad buttons.
+  const btns = [...document.querySelectorAll('[data-k]')];
+  const press = (held) => btns.forEach((el) => {
+    const k = el.dataset.k, v = held.has(k);
+    if (v && !touch[k]) hit[k] = 1;
+    touch[k] = v ? 1 : 0; el.classList.toggle('on', v);
   });
+  const fromTouches = (list) => {
+    const held = new Set();
+    for (const t of list) {
+      const el = document.elementFromPoint(t.clientX, t.clientY), btn = el && el.closest ? el.closest('[data-k]') : null;
+      if (btn) held.add(btn.dataset.k);
+    }
+    press(held);
+  };
+  for (const type of ['touchstart', 'touchmove', 'touchend', 'touchcancel']) {
+    document.addEventListener(type, (e) => {
+      if (type === 'touchstart') Audio8.unlock();
+      if (e.target && e.target.closest && e.target.closest('#pad')) e.preventDefault();
+      fromTouches(e.touches);
+    }, { passive: false });
+  }
+  // mouse (desktop testing of the touch buttons)
+  let mouseBtn = null;
+  btns.forEach((el) => el.addEventListener('pointerdown', (e) => { if (e.pointerType !== 'mouse') return; e.preventDefault(); mouseBtn = el.dataset.k; press(new Set([mouseBtn])); Audio8.unlock(); }));
+  addEventListener('pointerup', (e) => { if (e.pointerType === 'mouse' && mouseBtn) { mouseBtn = null; press(new Set()); } });
+  addEventListener('contextmenu', (e) => { if (e.target && e.target.closest && e.target.closest('#pad')) e.preventDefault(); });
+  // safety: let go of everything if the page loses focus or is hidden
+  const releaseAll = () => { names.forEach((n) => { kb[n] = 0; }); press(new Set()); };
+  addEventListener('pagehide', releaseAll);
+  document.addEventListener('visibilitychange', () => { if (document.hidden) releaseAll(); });
   cv.addEventListener('pointerdown', () => Audio8.unlock());
   function pollPad() {
     names.forEach((n) => { gp[n] = 0; });
