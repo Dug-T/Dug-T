@@ -21,6 +21,8 @@ const Wally = (() => {
     dino: { blue: '#2ec4b6', blueD: '#1a8a80', blueL: '#6ae8d8', blueLL: '#a0fff0', org: '#ff8c42', orgD: '#c0602a', orgL: '#ffb880' },
     shadow: { blue: '#3a2a5a', blueD: '#20142e', blueL: '#5a4a8a', blueLL: '#8a7ab8', org: '#8a3ac8', orgD: '#5a1a8a', orgL: '#c070ff', lens: '#ff3040' },
     fire: { blue: '#e83030', blueD: '#a01818', blueL: '#ff7060', blueLL: '#ffb0a0', org: '#ffd040', orgD: '#c09010', orgL: '#fff0a0' },
+    // secret hero: Robo-Wally (steel body, red cape, glowing red visor)
+    robo: { blue: '#9aa4b8', blueD: '#626c80', blueL: '#c8d0e0', blueLL: '#eef2ff', org: '#e83030', orgD: '#a01818', orgL: '#ff7060', skin: '#b8c0d0', skinD: '#7a8498', skinL: '#e8eef8', lens: '#ff3040', sole: '#30343c' },
   };
   let C = PAL0;
 
@@ -170,6 +172,8 @@ const Wally = (() => {
     dino: { hairP: '#2ec4b6', hairV: '#ff8c42', dress: '#1a4a44', dressL: '#2e8a80' },
     shadow: { hairP: '#8a3ac8', hairV: '#5a1a8a', eye: '#ff3040', lips: '#8a1a5a' },
     fire: { hairP: '#ff3020', hairV: '#ffa020', dress: '#6a0c10', dressL: '#a02028', bootL: '#ff7020' },
+    // secret hero: Frost Queen
+    frost: { hair: '#e8f4ff', hairP: '#a8e0ff', hairV: '#5aa0f0', dress: '#2a5a9a', dressL: '#5a90d0', dressD: '#183a68', skin: '#eef4ff', skinD: '#b8c8e8', skinL: '#ffffff', boot: '#c8e0ff', bootD: '#7aa0d0', bootL: '#ffffff', lips: '#4a80e0', eye: '#5ff0ff', silver: '#5ff0ff' },
   };
   function rigGoth(P, capeF, signal, costume) {
     const G = Object.assign({}, GOTH, GOTH_COSTUMES[costume] || {});
@@ -349,11 +353,44 @@ const Wally = (() => {
     let c = cache.get(key);
     if (c) return c;
     if (variant === 'n') {
-      if (face > 0) c = outline(hero === 'goth' ? rigGoth(POSES[pose], capeF, signal, costume) : hero === 'doug' ? rigDoug(POSES[pose], capeF, signal, costume) : rig(POSES[pose], capeF, signal, costume), PAL0.ink);
+      const cos = hero === 'robo' ? 'robo' : hero === 'frost' ? 'frost' : costume;
+      if (face > 0) c = outline(hero === 'goth' || hero === 'frost' ? rigGoth(POSES[pose], capeF, signal, cos) : hero === 'doug' ? rigDoug(POSES[pose], capeF, signal, cos) : rig(POSES[pose], capeF, signal, cos), PAL0.ink);
       else c = Sprites.flip(frame(pose, capeF, signal, 1, 'n', costume, hero));
     } else c = tint(frame(pose, capeF, signal, face, 'n', costume, hero), variant === 'w' ? '#ffffff' : variant === 'k' ? '#1a1020' : '#5ff0ff');
     cache.set(key, c);
     return c;
+  }
+  // ---------- hats and accessories (drawn on top of any hero) ----------
+  const headCache = new WeakMap();
+  function headOf(img) { // top of the head and its centre, found once per frame image
+    let h = headCache.get(img);
+    if (h) return h;
+    const d = img.getContext('2d').getImageData(0, 0, W, H).data;
+    let top = 0;
+    for (let y = 0; y < H && !top; y++) for (let x = 0; x < W; x++) if (d[(y * W + x) * 4 + 3] > 0) { top = y; break; }
+    let sx = 0, n = 0;
+    for (let y = top; y < top + 3; y++) for (let x = 0; x < W; x++) if (d[(y * W + x) * 4 + 3] > 0) { sx += x; n++; }
+    h = { top, cx: n ? sx / n : W / 2 }; headCache.set(img, h); return h;
+  }
+  const HATS = {
+    party: { w: 7, h: 9, draw(x, p) { const r = (X, Y, w, h, c) => { x.fillStyle = c; x.fillRect(p.x + X * p.s, p.y + Y * p.s, w * p.s, h * p.s); };
+      r(3, 0, 1, 1, '#ffe040'); for (let i = 1; i < 9; i++) r(3 - (i >> 1), i, 1 + (i >> 1) * 2, 1, i % 3 === 0 ? '#ffe040' : i % 3 === 1 ? '#ff4aa8' : '#5ff0ff'); } },
+    crown: { w: 9, h: 6, draw(x, p) { const r = (X, Y, w, h, c) => { x.fillStyle = c; x.fillRect(p.x + X * p.s, p.y + Y * p.s, w * p.s, h * p.s); };
+      r(0, 1, 1, 5, '#a07010'); r(4, 0, 1, 6, '#a07010'); r(8, 1, 1, 5, '#a07010'); r(0, 3, 9, 3, '#ffd040'); r(1, 2, 1, 1, '#ffd040'); r(4, 1, 1, 1, '#ffd040'); r(7, 2, 1, 1, '#ffd040'); r(2, 4, 1, 1, '#e83050'); r(4, 4, 1, 1, '#40a0ff'); r(6, 4, 1, 1, '#e83050'); r(0, 5, 9, 1, '#c09010'); } },
+    tophat: { w: 11, h: 8, draw(x, p) { const r = (X, Y, w, h, c) => { x.fillStyle = c; x.fillRect(p.x + X * p.s, p.y + Y * p.s, w * p.s, h * p.s); };
+      r(2, 0, 7, 6, '#1a1020'); r(3, 0, 1, 5, '#3a3048'); r(2, 4, 7, 1, '#c02030'); r(0, 6, 11, 2, '#1a1020'); } },
+    cowboy: { w: 13, h: 6, draw(x, p) { const r = (X, Y, w, h, c) => { x.fillStyle = c; x.fillRect(p.x + X * p.s, p.y + Y * p.s, w * p.s, h * p.s); };
+      r(3, 0, 7, 4, '#8a5a2a'); r(5, 0, 3, 1, '#6a3a1a'); r(3, 3, 7, 1, '#3a2010'); r(0, 4, 13, 1, '#a06a30'); r(0, 3, 1, 1, '#a06a30'); r(12, 3, 1, 1, '#a06a30'); r(1, 5, 11, 1, '#6a3a1a'); } },
+    propeller: { w: 11, h: 7, draw(x, p, t) { const r = (X, Y, w, h, c) => { x.fillStyle = c; x.fillRect(p.x + X * p.s, p.y + Y * p.s, w * p.s, h * p.s); };
+      const k = (t >> 2) % 3, bl = [5, 3, 1][k]; r(5 - bl, 0, bl * 2 + 1, 1, '#e83050'); r(5, 1, 1, 2, '#808898'); r(2, 3, 7, 3, '#e83050'); r(2, 3, 2, 3, '#ffe040'); r(7, 3, 2, 3, '#40a0ff'); r(1, 6, 10, 1, '#1a1020'); } },
+    halo: { w: 11, h: 4, float: 3, draw(x, p, t) { const r = (X, Y, w, h, c) => { x.fillStyle = c; x.fillRect(p.x + X * p.s, p.y + Y * p.s, w * p.s, h * p.s); };
+      const c = (t >> 3) & 1 ? '#fff8a0' : '#ffe040'; r(2, 0, 7, 1, c); r(0, 1, 2, 2, c); r(9, 1, 2, 2, c); r(2, 3, 7, 1, c); r(2, 1, 7, 2, 'rgba(255,240,140,0.25)'); } },
+  };
+  function drawHat(ctx, img, X, Y, sx, sy, hat, t) {
+    const H_ = HATS[hat]; if (!H_) return;
+    const hd = headOf(img), s = Math.max(1, Math.round(sx));
+    const px = Math.round(X + hd.cx * sx - (H_.w * s) / 2), py = Math.round(Y + hd.top * sy - H_.h * s + 3 * s - (H_.float || 0) * s);
+    H_.draw(ctx, { x: px, y: py, s }, t || 0);
   }
   // draw with feet centred at (cx, feetY); sx/sy for squash & stretch
   function draw(ctx, cx, feetY, pose, face, o = {}) {
@@ -367,8 +404,11 @@ const Wally = (() => {
       for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) ctx.drawImage(g, X + dx, Y + dy, w, h);
       ctx.restore();
     }
-    ctx.drawImage(frame(pose, capeF, o.signal, face, o.white ? 'w' : o.ghost ? 'g' : o.black ? 'k' : 'n', o.costume || api.current, o.hero || api.hero), X, Y, w, h);
+    const img = frame(pose, capeF, o.signal, face, o.white ? 'w' : o.ghost ? 'g' : o.black ? 'k' : 'n', o.costume || api.current, o.hero || api.hero);
+    ctx.drawImage(img, X, Y, w, h);
+    const hat = o.hat !== undefined ? o.hat : api.hat;
+    if (hat && hat !== 'none' && !o.ghost && !o.black) drawHat(ctx, img, X, Y, w / W, h / H, hat, o.t);
   }
-  const api = { draw, frame, POSES, W, H, COSTUMES, current: 'classic', hero: 'wally' };
+  const api = { draw, frame, drawHat, POSES, W, H, COSTUMES, HATS, current: 'classic', hero: 'wally', hat: 'none' };
   return api;
 })();

@@ -20,7 +20,7 @@ LevelBuilder.prototype = {
 
 const LEVELS = [
   {
-    name: "WALLY'S BACKYARD", theme: 'grass', music: 'grass', time: 300, width: 200,
+    name: "WALLY'S BACKYARD", theme: 'grass', music: 'grass', time: 300, width: 200, warp: { x: 118, to: 2 },
     extras: [['u', 12], ['c', 58], ['t', 96], ['u', 108], ['g', 134], ['p', 166], ['h', 45]],
     build(b) {
       b.ground(0, 38).set(3, 11, '@');
@@ -120,7 +120,7 @@ const LEVELS = [
     },
   },
   {
-    name: 'SUNNY SHORELINE', theme: 'beach', music: 'beach', time: 300, width: 200, weather: 'rain',
+    name: 'SUNNY SHORELINE', theme: 'beach', music: 'beach', time: 300, width: 200, warp: { x: 60, to: 6 }, weather: 'rain',
     mini: ['q', 152, 10], miniArena: [142, 157],
     secret: { to: 9, x: 95, y: 2 },
     extras: [['u', 56], ['c', 98], ['t', 148], ['g', 176], ['h', 120], ['u', 150]],
@@ -142,7 +142,7 @@ const LEVELS = [
     },
   },
   {
-    name: 'FROSTY PEAKS', theme: 'snow', music: 'snow', time: 300, width: 200, ice: true,
+    name: 'FROSTY PEAKS', theme: 'snow', music: 'snow', time: 300, width: 200, ice: true, dino: 'ice',
     yetiArena: [118, 133], yeti: [129, 9],
     secret: { to: 10, x: 160, y: 4, prep: (b) => b.row(156, 8, '==') },
     extras: [['u', 28], ['c', 68], ['t', 112], ['u', 148], ['h', 182], ['c', 130]],
@@ -315,14 +315,14 @@ const LEVELS = [
 ];
 
 function buildLevel(i) {
-  const def = i === 99 ? window.CUSTOM_LEVEL : LEVELS[i], b = new LevelBuilder(def.width);
+  const def = i === 99 ? window.CUSTOM_LEVEL : i === 98 ? window.RUSH_LEVEL : LEVELS[i], b = new LevelBuilder(def.width);
   def.build(b);
   if (def.secret) { if (def.secret.prep) def.secret.prep(b); b.set(def.secret.x, def.secret.y, 'Z'); }
   if (def.yeti) b.set(def.yeti[0], def.yeti[1], 'y');
   if (def.mini) b.set(def.mini[1], def.mini[2], def.mini[0]);
   const spawns = [];
   let start = { x: 2, y: 11 }, goal = null, checkpoint = null;
-  if (!def.custom) { // auto-placed goodies (not in Level Maker courses)
+  if (!def.custom && !def.noAuto) { // auto-placed goodies (not in Level Maker courses)
   // Cannonball ammo: a few crates on the ground through each level, plus one bonus block turned into an ammo block.
   for (const want of [24, 70, 115, 160]) {
     for (let d = 0; d < 20; d++) {
@@ -351,7 +351,7 @@ function buildLevel(i) {
   }
   // Extra enemies, placed on the nearest safe spot: ground walkers on solid ground,
   // bats under a ceiling, UFOs in open sky.
-  const SOLIDS = '#BXUWPSOAJ';
+  const SOLIDS = '#BXUWPSOAJNTEY';
   const ground = (x0) => {
     for (let x = x0; x < Math.min(b.w - 18, x0 + 14); x++) {
       for (let y = 3; y < 14; y++) {
@@ -378,9 +378,21 @@ function buildLevel(i) {
     }
   };
   swap(12, 'D'); swap(105, 'V'); swap(20, 'Q');
+  // batch D power-ups: Magnet, Shrink Ray (tiny hero) and Bubble Shield
+  swap(30 + (i * 7) % 40, 'N'); swap(80 + (i * 11) % 30, 'E'); swap(130 + (i * 5) % 30, 'T');
+  // Warp pipe: press Down on top to skip ahead
+  if (def.warp) {
+    for (let x = def.warp.x; x < b.w - 20; x++) {
+      const s1 = ground(x);
+      if (!s1 || s1[0] !== x) continue;
+      const [px, py] = s1;
+      if (py < 4 || [px, px + 1].some((xx) => b.g[py][xx] !== '.' || b.g[py - 1][xx] !== '.' || b.g[py - 2][xx] !== '.' || !SOLIDS.includes(b.g[py + 1][xx]))) continue;
+      b.fill(px, py - 1, px + 1, py, 'Y'); def.warpAt = px; break;
+    }
+  }
   // Five Wally Medals per level, tucked up high: on top of blocks, platforms and ledges,
   // one in each fifth of the level (floating above the ground if a fifth has no ledge).
-  const firm = '#BXUW=PSOAVQDJ';
+  const firm = '#BXUW=PSOAVQDJNTEY';
   const seg = (b.w - 32) / 5;
   for (let k = 0; k < 5; k++) {
     const x0 = 10 + Math.floor(k * seg), x1 = 10 + Math.floor((k + 1) * seg);

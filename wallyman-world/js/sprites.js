@@ -135,9 +135,15 @@ const Sprites = (() => {
   const dinoOf = (pal) => { const fr = dinoLegs.map((l) => fromRows(dinoTop.concat(l), Object.assign({}, DPAL, pal))); return { r: fr, l: fr.map(flip) }; };
   S.dinos = {
     teal: S.dino,
+    ice: dinoOf({ T: '#bfe8ff', t: '#7ab8e8', k: '#2a5a8a', Y: '#ffffff', O: '#e0f8ff', S: '#5ff0ff', s: '#c0ffff' }),
     red: dinoOf({ T: '#e84838', t: '#a02818', k: '#5a1008', Y: '#ffd060', O: '#ffe040', S: '#3a2a3a', s: '#6a5a6a' }),
     blue: dinoOf({ T: '#5a9af0', t: '#2a5ab8', k: '#1a3a7a', Y: '#e0f0ff', O: '#ffffff', S: '#ffd040', s: '#fff0a0' }),
   };
+  // ---- batch D items: magnet, shrink ray, bubble shield, 1-UP mushroom ----
+  S.magnet = fromRows(['................', '................', '...KKKK..KKKK...', '..KRRRK..KBBBK..', '..KRRRK..KBBBK..', '..KRRK....KBBK..', '..KRRK....KBBK..', '..KRRK....KBBK..', '..KRRRKKKKBBBK..', '...KRRRRBBBBK...', '....KKRRBBKK....', '......KKKK......', '..w...........w.', '.w.w........w.w.', '..w...........w.', '................'], { K: '#1a1020', R: '#e83030', B: '#2f62d0', w: '#ffe040' });
+  S.shrink = fromRows(['................', '.......KK.......', '......KwwK......', '......KKKK......', '.....KppppK.....', '....KppwpppK....', '...KpppppwppK...', '...KppPPPPppK...', '...KpPPPPPPpK...', '...KpPPwPPPpK...', '...KpPPPPPPpK...', '....KpPPPPpK....', '.....KKKKKK.....', '................', '................', '................'], { K: '#1a1020', p: '#d0a0ff', P: '#9a4ae8', w: '#ffffff' });
+  S.shield = fromRows(['................', '.....KKKKKK.....', '...KKccccccKK...', '..KccwwccccccK..', '.KccwcccccccccK.', '.KcwccccccccccK.', 'KccwccccccccccK.', 'KcccccccccccccK.', 'KcccccccccccccK.', 'KcccccccccccbcK.', '.KccccccccccbK..', '.KcccccccccbcK..', '..KccccccbbcK...', '...KKccccccKK...', '.....KKKKKK.....', '................'], { K: '#2a6aa0', c: 'rgba(160,220,255,0.55)', w: '#ffffff', b: '#5ff0ff' });
+  S.shroom = fromRows(['................', '.....KKKKKK.....', '...KKGGwwGGKK...', '..KGGwwwwGGGGK..', '.KGGGwwwwGGwwGK.', '.KwwGGGGGGwwwwK.', 'KwwwwGGGGGGwwGGK', 'KwwwGGwwGGGGGGGK', 'KGGGGwwwwGGGwwGK', '.KKKKKKKKKKKKKK.', '...KssKssKssK...', '...KsKsssKKsK...', '...KsssssssssK..', '...KsssssssssK..', '....KKKKKKKKK...', '................'], { K: '#1a1020', G: '#2eb84a', w: '#ffffff', s: '#f8e0c0' });
   // ---- Wally Medals (5 hidden in every level) ----
   const MPAL = { K: '#7a4a10', R: '#e83850', B: '#2f62d0', Y: '#ffd040', y: '#f0a020', w: '#fff8c0' };
   S.medal = fromRows(['.....KK..KK.....', '....KRRK.KBBK...', '....KRRKKKBBK...', '.....KRRKBBK....', '......KKKKK.....', '.....KYYYYYK....', '....KYyyyyyYK...', '...KYyYwYwYyYK..',
