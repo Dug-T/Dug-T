@@ -236,7 +236,26 @@ function buildLevel(i) {
     }
   };
   swap(12, 'D'); swap(105, 'V'); swap(20, 'Q');
-  const ENT = 'gpzhmnCGKabctu';
+  // Five Wally Medals per level, tucked up high: on top of blocks, platforms and ledges,
+  // one in each fifth of the level (floating above the ground if a fifth has no ledge).
+  const firm = '#BXUW=PSOAVQDJ';
+  const seg = (b.w - 32) / 5;
+  for (let k = 0; k < 5; k++) {
+    const x0 = 10 + Math.floor(k * seg), x1 = 10 + Math.floor((k + 1) * seg);
+    let best = null;
+    for (let x = x0; x < x1; x++) for (let y = 2; y <= 9; y++) {
+      if (b.g[y][x] !== '.' || b.g[y - 1][x] !== '.' || !firm.includes(b.g[y + 1][x])) continue;
+      if (!best || y < best[1]) best = [x, y];
+    }
+    if (!best) {
+      for (let x = Math.floor((x0 + x1) / 2); x < x1 && !best; x++) {
+        const spot = ground(x);
+        if (spot && spot[1] >= 6 && b.g[spot[1] - 4][spot[0]] === '.') best = [spot[0], spot[1] - 4];
+      }
+    }
+    if (best) b.g[best[1]][best[0]] = 'M';
+  }
+  const ENT = 'gpzhmnCGKabctuM';
   for (let y = 0; y < 14; y++) for (let x = 0; x < b.w; x++) {
     const c = b.g[y][x];
     if (c === '@') { start = { x, y }; b.g[y][x] = '.'; } else if (ENT.includes(c)) {
@@ -246,5 +265,7 @@ function buildLevel(i) {
     }
   }
   spawns.sort((a, b2) => a.x - b2.x);
+  let medalId = 0;
+  for (const sp of spawns) if (sp.t === 'M') sp.id = medalId++;
   return { def, w: b.w, h: 14, grid: b.g, spawns, start, goal, checkpoint };
 }

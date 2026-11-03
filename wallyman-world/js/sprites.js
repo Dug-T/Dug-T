@@ -132,6 +132,13 @@ const Sprites = (() => {
   ];
   const dino = dinoLegs.map((l) => fromRows(dinoTop.concat(l), DPAL));
   S.dino = { r: dino, l: dino.map(flip) };
+  // ---- Wally Medals (5 hidden in every level) ----
+  const MPAL = { K: '#7a4a10', R: '#e83850', B: '#2f62d0', Y: '#ffd040', y: '#f0a020', w: '#fff8c0' };
+  S.medal = fromRows(['.....KK..KK.....', '....KRRK.KBBK...', '....KRRKKKBBK...', '.....KRRKBBK....', '......KKKKK.....', '.....KYYYYYK....', '....KYyyyyyYK...', '...KYyYwYwYyYK..',
+    '...KYyYwYwYyYK..', '...KYyYwwwYyYK..', '...KYyyYwYyyYK..', '....KYyyyyyYK...', '.....KYYYYYK....', '......KKKKK.....', '................', '................'], MPAL);
+  S.medalGhost = (() => { const c = canvas(16, 16), x = c.getContext('2d'); x.globalAlpha = 0.4; x.drawImage(S.medal, 0, 0); return c; })();
+  S.miniMedal = fromRows(['.KKK.', 'KYwYK', 'KYYYK', 'KYYYK', '.KKK.'], { K: '#7a4a10', Y: '#ffd040', w: '#fff8c0' });
+  S.miniMedalOff = fromRows(['.KKK.', 'KgggK', 'KgggK', 'KgggK', '.KKK.'], { K: '#1a1020', g: '#4a4a60' });
   // ---- new power-ups ----
   S.battery = fromRows(['................', '......KKKK......', '......KwwK......', '....KKKKKKKK....', '....KGGGGGGK....', '....KGGYGGgK....', '....KGYYGGgK....', '....KYYYYYgK....',
     '....KGGYYGgK....', '....KGYYGGgK....', '....KGYGGGgK....', '....KGGGGGgK....', '....KKKKKKKK....', '....KddddddK....', '....KKKKKKKK....', '................'],

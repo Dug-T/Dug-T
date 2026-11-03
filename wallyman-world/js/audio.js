@@ -3,7 +3,8 @@
 // plus an echo send for that warm SNES "reverb". All music here is original.
 const Audio8 = (() => {
   let ctx = null, master, musicBus, sfxBus, echoIn, noiseBuf, waves = {};
-  let enabled = true;
+  let enabled = true, musicVol = 1, sfxVol = 1;
+  try { const m = localStorage.getItem('wallyman-music-vol'), f = localStorage.getItem('wallyman-sfx-vol'); if (m !== null) musicVol = +m; if (f !== null) sfxVol = +f; } catch (e) { /* ignore */ }
   try { enabled = localStorage.getItem('wallyman-sound') !== 'off'; } catch (e) { /* ignore */ }
 
   const NOTE = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
@@ -29,8 +30,8 @@ const Audio8 = (() => {
     const comp = ctx.createDynamicsCompressor();
     comp.threshold.value = -14; comp.ratio.value = 4;
     master.connect(comp); comp.connect(ctx.destination);
-    musicBus = ctx.createGain(); musicBus.gain.value = 0.55; musicBus.connect(master);
-    sfxBus = ctx.createGain(); sfxBus.gain.value = 0.7; sfxBus.connect(master);
+    musicBus = ctx.createGain(); musicBus.gain.value = 0.55 * musicVol; musicBus.connect(master);
+    sfxBus = ctx.createGain(); sfxBus.gain.value = 0.7 * sfxVol; sfxBus.connect(master);
     // echo
     echoIn = ctx.createGain(); echoIn.gain.value = 0.28;
     const d = ctx.createDelay(1); d.delayTime.value = 0.19;
@@ -244,7 +245,7 @@ const Audio8 = (() => {
     // fade out lingering notes quickly by swapping the music bus
     const old = musicBus; old.gain.setTargetAtTime(0, ctx.currentTime, 0.03);
     setTimeout(() => old.disconnect(), 400);
-    musicBus = ctx.createGain(); musicBus.gain.value = 0.55; musicBus.connect(master);
+    musicBus = ctx.createGain(); musicBus.gain.value = 0.55 * musicVol; musicBus.connect(master);
   }
 
   // ---------- sound effects ----------
@@ -292,5 +293,11 @@ const Audio8 = (() => {
     try { localStorage.setItem('wallyman-sound', v ? 'on' : 'off'); } catch (e) { /* ignore */ }
     if (master) master.gain.value = v ? 0.8 : 0;
   }
-  return { init, unlock: init, play, stop, sfx, setEnabled, isEnabled: () => enabled, current: () => curName };
+  function setVolume(kind, v) {
+    v = Math.max(0, Math.min(1, Math.round(v * 5) / 5));
+    if (kind === 'music') { musicVol = v; if (musicBus) musicBus.gain.value = 0.55 * v; } else { sfxVol = v; if (sfxBus) sfxBus.gain.value = 0.7 * v; }
+    try { localStorage.setItem(kind === 'music' ? 'wallyman-music-vol' : 'wallyman-sfx-vol', String(v)); } catch (e) { /* ignore */ }
+  }
+  const getVolume = (kind) => (kind === 'music' ? musicVol : sfxVol);
+  return { setVolume, getVolume, init, unlock: init, play, stop, sfx, setEnabled, isEnabled: () => enabled, current: () => curName };
 })();

@@ -64,10 +64,10 @@ const Save = (() => {
   const KEY = 'wallyman-world-save-v1';
   let slots = [null, null, null];
   try { const d = JSON.parse(localStorage.getItem(KEY)); if (Array.isArray(d)) slots = [d[0] || null, d[1] || null, d[2] || null]; } catch (e) { /* ignore */ }
-  slots.forEach((s) => { if (s) { s.cleared = Array.from({ length: 8 }, (_, i) => !!(s.cleared && s.cleared[i])); } });
+  slots.forEach((s) => { if (s) { s.cleared = Array.from({ length: 8 }, (_, i) => !!(s.cleared && s.cleared[i])); s.medals = Array.from({ length: 8 }, (_, i) => (s.medals && s.medals[i]) | 0); } });
   return {
     slots,
-    fresh: () => ({ cleared: Array(8).fill(false), lives: 5, score: 0, coins: 0, node: 0 }),
+    fresh: () => ({ cleared: Array(8).fill(false), medals: Array(8).fill(0), lives: 5, score: 0, coins: 0, node: 0, bonusAmmo: 0, startHearts: 0, startBoots: false }),
     persist() { try { localStorage.setItem(KEY, JSON.stringify(slots)); } catch (e) { /* ignore */ } },
   };
 })();
@@ -258,10 +258,11 @@ function TitleScene() {
           if (eraseMode) {
             Save.slots[sel] = null; Save.persist(); eraseMode = false; Audio8.sfx('brick');
           } else {
-            if (!Save.slots[sel]) Save.slots[sel] = Save.fresh();
+            const isNew = !Save.slots[sel];
+            if (isNew) Save.slots[sel] = Save.fresh();
             game = Save.slots[sel]; Save.persist();
             Audio8.sfx('confirm');
-            go(() => MapScene());
+            go(() => (isNew ? StoryScene(() => MapScene()) : MapScene()));
           }
         } else if (sel === 3) { Audio8.sfx('confirm'); go(() => HighScoreScene(null, () => TitleScene())); } else if (sel === 4) { Audio8.setEnabled(!Audio8.isEnabled()); Audio8.sfx('confirm'); } else { eraseMode = !eraseMode; Audio8.sfx('select'); }
       }
@@ -369,7 +370,7 @@ function MapScene() {
       }
       const fwd = Input.pressed('right') || Input.pressed('up'), back = Input.pressed('left') || Input.pressed('down');
       if (fwd && unlocked(node + 1)) { target = node + 1; Audio8.sfx('map'); } else if (back && node > 0) { target = node - 1; Audio8.sfx('map'); } else if (fwd) Audio8.sfx('bump');
-      if (Input.confirm() && NODES[node].li !== undefined) { Audio8.sfx('confirm'); const li = NODES[node].li; go(() => IntroScene(li, false)); }
+      if (Input.confirm() && NODES[node].li !== undefined) { Audio8.sfx('confirm'); const li = NODES[node].li; go(() => IntroScene(li, false)); } else if (Input.confirm() && NODES[node].kind === 'home') { Audio8.sfx('confirm'); go(() => ShopScene()); }
       if (Input.pressed('back')) go(() => TitleScene());
     },
     draw() {
@@ -383,6 +384,7 @@ function MapScene() {
         for (let s = 0; s < d; s += 4) { ctx.fillStyle = '#7a5a2a'; ctx.fillRect(Math.round(a.x + ((b.x - a.x) * s) / d) - 1, Math.round(a.y + ((b.y - a.y) * s) / d), 3, 2); }
       }
       NODES.forEach(drawNode);
+      NODES.forEach((n) => { if (n.li === undefined || !unlocked(NODES.indexOf(n))) return; for (let i = 0; i < 5; i++) { ctx.fillStyle = '#1a1020'; ctx.fillRect(n.x - 8 + i * 3, n.y + 7, 3, 3); ctx.fillStyle = game.medals[n.li] & (1 << i) ? '#ffd040' : '#4a4a60'; ctx.fillRect(n.x - 7 + i * 3, n.y + 8, 2, 1); } });
       const walking = target !== null;
       const face = target !== null ? Math.sign(NODES[target].x - pos.x) || 1 : 1;
       const pose = walking ? 'walk' + ((t >> 2) % 8) : 'idle' + ((t >> 4) % 4);
@@ -396,8 +398,8 @@ function MapScene() {
       const n = NODES[node];
       const label = n.li !== undefined ? `${n.li + 1}. ${LEVELS[n.li].name}` : n.name;
       txt(label, 12, 205, '#fff');
-      if (n.li !== undefined && game.cleared[n.li]) txt('# CLEAR', 200, 205, '#ffe040');
-      if (target === null && (t >> 5) % 2 === 0) txt(n.li !== undefined ? 'PRESS START' : '> ARROWS', 160, 186, '#fff', { outline: '#101848' });
+      if (n.li !== undefined) { const mc = medalCount(n.li); ctx.drawImage(Sprites.miniMedal, 186, 206); txt(mc + '/5', 193, 205, mc === 5 ? '#ffe040' : '#fff'); if (game.cleared[n.li]) txt('#', 236, 205, '#ffe040'); }
+      if (target === null && (t >> 5) % 2 === 0) txt(n.li !== undefined ? 'PRESS START' : 'START: SHOP', 160, 186, '#fff', { outline: '#101848' });
     },
   };
 }
@@ -416,6 +418,7 @@ function IntroScene(li, fromCheckpoint) {
       txt(LEVELS[li].name, 128, 88, '#fff', { align: 'center' });
       drawWally(110, 142, 'idle' + ((t >> 4) % 4), 1);
       txt('*  ' + game.lives, 124, 126, '#fff');
+      for (let i = 0; i < 5; i++) ctx.drawImage(game.medals[li] & (1 << i) ? Sprites.miniMedal : Sprites.miniMedalOff, 113 + i * 7, 160);
     },
   };
 }
@@ -443,6 +446,104 @@ function EndingScene() {
       const shown = Math.min(lines.length, Math.floor(t / 30));
       for (let i = 0; i < shown; i++) txt(lines[i], 18, 28 + i * 14, i === 0 || i === 8 ? '#ffe040' : '#fff');
       if (t > 240 && (t >> 5) % 2 === 0) txt('PRESS START', 62, 196, '#5ff0ff');
+    },
+  };
+}
+
+function medalCount(li) { return [0, 1, 2, 3, 4].filter((i) => game.medals[li] & (1 << i)).length; }
+
+// Opening story, shown when a new save file starts.
+function StoryScene(next) {
+  const pages = [
+    { bg: 'grass', lines: ['WALLY ISLAND WAS A HAPPY', 'PLACE. EVERY PHONE HAD', 'FULL SIGNAL, AND WALLYMAN', 'AND HIS PAL DINO KEPT', 'THE PEACE.'] },
+    { bg: 'castle', lines: ['THEN BARON STATIC ARRIVED', 'IN HIS FLYING SAUCER AND', 'SCRAMBLED EVERY SIGNAL', 'ON THE ISLAND!'] },
+    { bg: 'sky', lines: ['NOW ONLY ONE HERO CAN', 'BRING THE SIGNAL BACK...', '', 'IT IS TIME FOR', 'WALLYMAN!'] },
+  ];
+  let page = 0, t = 0;
+  return {
+    enter() { Audio8.play('title'); },
+    update() {
+      t++;
+      if (Input.pressed('back')) { go(next); return; }
+      if (t > 20 && Input.confirm()) {
+        const total = pages[page].lines.join('').length;
+        if (t * 1.2 < total) { t = 999; return; }
+        Audio8.sfx('select');
+        if (++page >= pages.length) go(next); else t = 0;
+      }
+    },
+    draw() {
+      const P = pages[Math.min(page, pages.length - 1)];
+      drawParallax(P.bg, frame * 0.4);
+      if (page === 0) {
+        drawWally(104, 118, 'idle' + ((frame >> 4) % 4), 1);
+        ctx.drawImage(Sprites.dino.l[0], 132, 96 + ((frame >> 4) & 1));
+        ctx.fillStyle = '#5ff0ff'; for (let r = 0; r < 3; r++) if (((frame >> 4) % 3) >= r) ctx.fillRect(112 + r * 3, 88 - r * 3, 2, 4 + r * 2);
+      } else if (page === 1) {
+        Play.prototype.drawUfo.call(null, { state: 'hover', beamX: 0, x: 0 }, 70, 40 + Math.round(Math.sin(frame * 0.05) * 3));
+        Play.prototype.drawBoss.call(null, { inv: 0, hp: 3, maxHp: 3 }, 150, 70);
+        ctx.fillStyle = '#5ff0ff'; for (let i = 0; i < 12; i++) ctx.fillRect((i * 37 + frame * 3) % 256, 20 + (i * 23) % 90, 3, 1);
+      } else if (Sprites.portrait.complete && Sprites.portrait.naturalWidth) {
+        ctx.drawImage(Sprites.portrait, 128 - Sprites.portrait.naturalWidth / 2, 14 + Math.round(Math.sin(frame * 0.05) * 2));
+      }
+      drawWindow(16, 124, 224, 84);
+      let left = Math.floor(t * 1.2);
+      P.lines.forEach((l, i) => { const s = l.slice(0, Math.max(0, left)); left -= l.length; txt(s, 28, 134 + i * 13, i === P.lines.length - 1 && page === 2 ? '#ffe040' : '#fff'); });
+      if ((frame >> 5) % 2 === 0) txt(page < pages.length - 1 ? 'START: NEXT' : 'START: PLAY', 236, 212, '#5ff0ff', { align: 'right' });
+      txt('ESC/SELECT: SKIP', 20, 212, '#a8b0d8');
+    },
+  };
+}
+
+// Dino's shop at Wally's House: spend coins on boosts for your next level.
+function ShopScene() {
+  const items = [
+    { name: 'EXTRA LIFE', price: 50, can: () => game.lives < 99, buy: () => { game.lives++; }, owned: () => false },
+    { name: '+3 CANNONBALLS', price: 20, can: () => (game.bonusAmmo || 0) < 6, buy: () => { game.bonusAmmo = (game.bonusAmmo || 0) + 3; }, owned: () => (game.bonusAmmo || 0) >= 6 },
+    { name: 'FULL HEARTS', price: 30, can: () => !game.startHearts, buy: () => { game.startHearts = 3; }, owned: () => !!game.startHearts },
+    { name: 'JET BOOTS', price: 60, can: () => !game.startBoots, buy: () => { game.startBoots = true; }, owned: () => !!game.startBoots },
+    { name: 'LEAVE SHOP', price: 0 },
+  ];
+  let sel = 0, t = 0, say = "HI! WHAT'LL IT BE?", sayT = 0;
+  return {
+    enter() { Audio8.play('menu'); },
+    update() {
+      t++; if (sayT > 0) sayT--;
+      if (Input.pressed('down')) { sel = (sel + 1) % items.length; Audio8.sfx('select'); }
+      if (Input.pressed('up')) { sel = (sel + items.length - 1) % items.length; Audio8.sfx('select'); }
+      if (Input.pressed('back') || Input.pressed('start')) { go(() => MapScene()); return; }
+      if (Input.pressed('jump')) {
+        const it = items[sel];
+        if (!it.buy) { go(() => MapScene()); return; }
+        if (!it.can()) { say = 'YOU ALREADY HAVE THAT!'; Audio8.sfx('bump'); } else if (game.coins < it.price) { say = 'NOT ENOUGH COINS!'; Audio8.sfx('bump'); } else {
+          game.coins -= it.price; it.buy(); Save.persist(); say = 'THANKS! ROAR!'; Audio8.sfx('power');
+        }
+        sayT = 120;
+      }
+      if (sayT === 0) say = "HI! WHAT'LL IT BE?";
+    },
+    draw() {
+      ctx.fillStyle = '#e8b878'; ctx.fillRect(0, 0, VW, VH);
+      ctx.fillStyle = '#d8a060'; for (let x = 0; x < VW; x += 16) ctx.fillRect(x, 0, 1, 120);
+      ctx.fillStyle = '#5ab0f0'; ctx.fillRect(176, 24, 56, 40); ctx.fillStyle = '#ffffff'; ctx.fillRect(176, 43, 56, 2); ctx.fillRect(203, 24, 2, 40);
+      ctx.fillStyle = '#6a3a1a'; ctx.fillRect(174, 22, 60, 2); ctx.fillRect(174, 64, 60, 2);
+      ctx.drawImage(Sprites.dino.l[0], 150, 82 + ((t >> 4) & 1));
+      ctx.fillStyle = '#8a5a2a'; ctx.fillRect(110, 104, 146, 18); ctx.fillStyle = '#a87040'; ctx.fillRect(110, 104, 146, 3);
+      ctx.drawImage(Sprites.ammo, 120, 89); ctx.drawImage(Sprites.boots, 216, 89); ctx.drawImage(Sprites.heart, 240, 96);
+      drawWindow(8, 8, 156, 24); txt("DINO'S SHOP", 86, 16, '#ffe040', { align: 'center' });
+      drawWindow(8, 40, 140, 22); txt(say.slice(0, 22), 14, 48, sayT ? '#5ff0ff' : '#fff');
+      drawWindow(8, 126, 240, 92);
+      items.forEach((it, i) => {
+        const y = 134 + i * 14, on = i === sel;
+        if (on) txt('>', 16 + ((t >> 3) & 1), y, '#ffe040');
+        txt(it.name, 26, y, on ? '#ffe040' : '#fff');
+        if (it.buy) {
+          if (it.owned()) txt('READY', 196, y, '#5ae060');
+          else { ctx.drawImage(Sprites.coinIcon, 200, y); txt(pad(it.price, 2), 207, y, game.coins >= it.price ? '#fff' : '#ff6060'); }
+        }
+      });
+      ctx.drawImage(Sprites.coinIcon, 172, 16); txt('*' + pad(game.coins, 2), 179, 16, '#fff');
+      txt('BOOSTS LAST FOR YOUR NEXT LEVEL', 128, 210, '#a8b0d8', { align: 'center' });
     },
   };
 }
@@ -558,7 +659,12 @@ class Play {
     this.state = 'play'; this.stateT = 0; this.paused = false; this.time = levelTime(this.def); this.timeTick = 0;
     this.cpHit = !!fromCheckpoint && !!this.lv.checkpoint; this.bossLock = false; this.camMin = 0; this.shake = 0;
     const s = this.cpHit ? this.lv.checkpoint : this.lv.start;
-    this.p = { x: s.x * TS + 3, y: (s.y + 1) * TS - 22, w: 10, h: 22, vx: 0, vy: 0, face: 1, onGround: false, hearts: 2, power: 'none', inv: 0, anim: 0, jumpBuf: 0, coyote: 0, prevBottom: 0, platform: null, sx: 1, sy: 1, hurtT: 0, trail: [], ammo: 3, charge: 0, boots: false, dj: false, riding: false, chompT: 0 };
+    this.p = { x: s.x * TS + 3, y: (s.y + 1) * TS - 22, w: 10, h: 22, vx: 0, vy: 0, face: 1, onGround: false, hearts: 2, power: 'none', inv: 0, anim: 0, jumpBuf: 0, coyote: 0, prevBottom: 0, platform: null, sx: 1, sy: 1, hurtT: 0, trail: [], ammo: 3, charge: 0, boots: false, dj: false, riding: false, chompT: 0, pound: 0, flutter: 0 };
+    this.medalsGot = 0; this.pauseSel = 0;
+    if (game.bonusAmmo) { this.p.ammo = Math.min(9, 3 + game.bonusAmmo); game.bonusAmmo = 0; }
+    if (game.startHearts) { this.p.hearts = 3; game.startHearts = 0; }
+    if (game.startBoots) { this.p.boots = true; game.startBoots = false; }
+    Save.persist();
     this.cam = { x: clamp(this.p.x - 100, 0, this.lv.w * TS - VW) };
     this.spawnIdx = 0;
     while (this.spawnIdx < this.lv.spawns.length && this.lv.spawns[this.spawnIdx].x * TS < this.p.x - 140) {
@@ -624,6 +730,7 @@ class Play {
       case 'c': E({ type: 'charger', x: x + 1, y: y + 2, w: 14, h: 14, vx: 0.4 * toward, enemy: true, stomp: true, charge: 0 }); break;
       case 't': E({ type: 'turret', x: x + 1, y: y + 2, w: 14, h: 14, enemy: true, stomp: true, cool: 90, face: toward }); break;
       case 'u': E({ type: 'ufo', x, y: -24, w: 28, h: 12, enemy: true, stomp: true, state: 'enter', shots: 0, timer: 0, beamX: 0, beamEnd: 0 }); break;
+      case 'M': E({ type: 'medal', item: true, x: x + 2, y: y + 1, w: 12, h: 14, rise: 0, id: sp.id, got: !!(game.medals[this.li] & (1 << sp.id)) }); break;
       case 'a': E({ type: 'ammo', item: true, x: x + 2, y: y + 2, w: 12, h: 14, rise: 0 }); break;
       case 'G': E({ type: 'goal', x: x + 2, y: y - 80, w: 12, h: 96 }); break;
       case 'K': E({ type: 'boss', x, y: y - 14, w: 28, h: 30, hp: this.def.bossHp || 3, maxHp: this.def.bossHp || 3, inv: 0, jumpT: 120, enemy: true, boss: true }); break;
@@ -689,7 +796,7 @@ class Play {
     if (this.state === 'clear' && Math.abs(p.vx) < 0.2 && p.onGround) return 'win' + ((frame >> 4) & 1);
     if (this.state === 'bossdead' && p.onGround && Math.abs(p.vx) < 0.2) return 'win' + ((frame >> 4) & 1);
     if (!p.onGround) return p.vy < 0 ? 'jump' : 'fall';
-    if (p.crouch) return 'crouch';
+    if (p.crouch || p.pound) return 'crouch';
     if (p.skid) return 'skid';
     if (Math.abs(p.vx) > 0.15) return (Math.abs(p.vx) > 2.2 ? 'run' : 'walk') + (Math.floor(p.anim) % 8);
     return 'idle' + ((frame >> 4) % 4);
@@ -727,9 +834,16 @@ class Play {
 
   // ---------- update ----------
   update() {
-    if (Input.pressed('start') && (this.state === 'play')) { this.paused = !this.paused; Audio8.sfx('pause'); }
+    if (Input.pressed('start') && (this.state === 'play')) { this.paused = !this.paused; this.pauseSel = 0; Audio8.sfx('pause'); return; }
     if (this.paused) {
-      if (Input.pressed('run') || Input.pressed('back')) { this.paused = false; Save.persist(); go(() => MapScene()); }
+      if (Input.pressed('down')) { this.pauseSel = (this.pauseSel + 1) % 4; Audio8.sfx('select'); }
+      if (Input.pressed('up')) { this.pauseSel = (this.pauseSel + 3) % 4; Audio8.sfx('select'); }
+      if (this.pauseSel === 1 || this.pauseSel === 2) {
+        const kind = this.pauseSel === 1 ? 'music' : 'sfx', d = (Input.pressed('right') ? 0.2 : 0) - (Input.pressed('left') ? 0.2 : 0);
+        if (d) { Audio8.setVolume(kind, Audio8.getVolume(kind) + d); Audio8.sfx('coin'); }
+      }
+      if (Input.pressed('back') || (Input.pressed('jump') && this.pauseSel === 0)) { this.paused = false; Audio8.sfx('pause'); }
+      if (Input.pressed('jump') && this.pauseSel === 3) { this.paused = false; Save.persist(); go(() => MapScene()); }
       return;
     }
     this.stateT++;
@@ -782,7 +896,7 @@ class Play {
       if (this.stateT % 8 === 0 && this.stateT < 100) { Audio8.sfx('boom'); this.parts.push({ k: 'boom', x: this.bossX + Math.random() * 32, y: this.bossY + Math.random() * 32, life: 20 }); }
       if (this.stateT === 110) Audio8.play('clear');
       if (this.stateT > 300) {
-        game.cleared[this.li] = true; game.node = Math.max(game.node, this.li + 1); Save.persist(); this.state = 'done';
+        game.cleared[this.li] = true; game.medals[this.li] |= this.medalsGot; game.node = Math.max(game.node, this.li + 1); Save.persist(); this.state = 'done';
         if (this.li === LEVELS.length - 1) go(() => EndingScene());
         else go(() => MessageScene(['BARON STATIC IS BEATEN...', 'BUT HE ESCAPED!', '', 'HE FLED NORTH ACROSS', 'WALLY ISLAND TO HIS', 'STATIC TOWER.', '', 'AFTER HIM, WALLYMAN!'], () => MapScene()));
       }
@@ -795,6 +909,8 @@ class Play {
     const ice = this.def.ice && p.onGround;
     const max = run ? 2.8 : 1.6, acc = (run ? 0.11 : 0.08) * (ice ? 0.45 : 1);
     let dir = auto ? (this.stateT > 30 ? 1 : 0) : (Input.down('right') ? 1 : 0) - (Input.down('left') ? 1 : 0);
+    if (!auto && !p.onGround && !p.pound && Input.pressed('down')) { p.pound = 12; p.vx = 0; p.boost = false; Audio8.sfx('swoop'); }
+    if (p.pound) dir = 0;
     p.crouch = !auto && p.onGround && Input.down('down') && !dir;
     if (p.crouch) dir = 0;
     if (dir) {
@@ -822,8 +938,13 @@ class Play {
       if (p.charge === 0 && this.state === 'play') Audio8.play(this.bossLock ? 'boss' : this.def.music);
     }
     if (p.vy >= 0) p.boost = false;
-    const hold = (p.boost || (!auto && Input.down('jump'))) && p.vy < 0;
+    const hold = (p.boost || (!auto && Input.down('jump'))) && p.vy < 0 && !p.flutter;
     p.vy = Math.min(5.5, p.vy + (hold ? 0.19 : 0.5));
+    if (p.onGround) p.flutter = 0;
+    // Dino's flutter: hold jump while falling to hover for a moment
+    p.fluttering = p.riding && !p.pound && !auto && !p.onGround && Input.down('jump') && p.flutter < 50 && (p.flutter > 0 || p.vy > 0);
+    if (p.fluttering) { p.flutter++; p.vy = Math.min(p.vy, 0.5) - 0.35; if (p.flutter % 6 === 0) this.parts.push({ k: 'dust', x: p.x + p.w / 2 - p.face * 8, y: p.y + p.h, vx: -p.face * 0.4, vy: 0.3, life: 14 }); }
+    if (p.pound > 0) { p.pound--; p.vy = 0; p.vx = 0; if (p.pound === 0) p.pound = -1; } else if (p.pound === -1) { p.vy = 7; p.vx = 0; }
 
     // B: throw a rolling cannonball (or a Signal ping once the cannonballs run out)
     if (p.chompT > 0) p.chompT--;
@@ -842,7 +963,21 @@ class Play {
     p.prevBottom = p.y + p.h;
     const wasGround = p.onGround, fallV = p.vy;
     this.move(p, true);
-    if (p.onGround && !wasGround && fallV > 2) { p.sx = 1.25; p.sy = 0.8; this.dust(p.x + p.w / 2, p.y + p.h, 3); }
+    if (p.pound === -1 && p.onGround) {
+      const ty = Math.floor((p.y + p.h) / TS), x0 = Math.floor(p.x / TS), x1 = Math.floor((p.x + p.w - 1) / TS);
+      let broke = false;
+      for (let tx = x0; tx <= x1; tx++) {
+        const c = this.tile(tx, ty);
+        if (c === 'B') { this.setTile(tx, ty, '.'); this.addScore(50); broke = true; for (const [ox, oy, vx, vy] of [[0, 0, -1.2, -5], [8, 0, 1.2, -5], [0, 8, -1, -3.5], [8, 8, 1, -3.5]]) this.parts.push({ k: 'frag', x: tx * TS + ox, y: ty * TS + oy, vx, vy, g: 0.3, life: 70 }); } else if ('WPSOAVQD'.includes(c)) this.hitBlock(tx, ty);
+      }
+      if (broke) { Audio8.sfx('brick'); p.onGround = false; } else {
+        p.pound = 0; p.sx = 1.4; p.sy = 0.7; this.shake = 8; Audio8.sfx('bump'); Audio8.sfx('stomp'); this.dust(p.x + p.w / 2, p.y + p.h, 4);
+        for (const e of this.ents) {
+          if (!e.enemy || !e.alive || e.dying || e.boss || e.type === 'ufo') continue;
+          if (Math.abs(e.y + e.h - (p.y + p.h)) < 6 && Math.abs(e.x + e.w / 2 - (p.x + p.w / 2)) < 36) this.flipKill(e);
+        }
+      }
+    } else if (p.onGround && !wasGround && fallV > 2) { p.sx = 1.25; p.sy = 0.8; this.dust(p.x + p.w / 2, p.y + p.h, 3); }
     if (p.onGround && p.skid && frame % 4 === 0) this.dust(p.x + p.w / 2 + p.face * 4, p.y + p.h, 1);
     if (p.onGround && Math.abs(p.vx) > 2.4 && frame % 9 === 0) this.dust(p.x + p.w / 2 - Math.sign(p.vx) * 5, p.y + p.h, 1);
     p.sx += (1 - p.sx) * 0.22; p.sy += (1 - p.sy) * 0.22;
@@ -884,7 +1019,7 @@ class Play {
       if (t % 4 === 0) Audio8.sfx('tick');
     }
     if (t === 420) {
-      game.cleared[this.li] = true; game.node = Math.max(game.node, this.li + 1); Save.persist();
+      game.cleared[this.li] = true; game.medals[this.li] |= this.medalsGot; game.node = Math.max(game.node, this.li + 1); Save.persist();
       go(() => MapScene());
     }
   }
@@ -964,6 +1099,7 @@ class Play {
         if (e.cool > 0) e.cool--;
         if (!p.riding && e.cool <= 0 && this.state === 'play' && overlap(p, e)) this.mount(e);
         return;
+      case 'medal': break;
       case 'drink': case 'phone': case 'badge': case 'ammo': case 'battery': case 'boots':
         if (e.rise > 0) { e.y -= 0.5; e.rise -= 0.5; if (e.rise <= 0) e.vx = { phone: 0, ammo: 0, badge: 1.2, battery: 1.3, boots: 0.8 }[e.type] ?? 1; break; }
         e.vy = Math.min(5, e.vy + 0.3);
@@ -983,6 +1119,13 @@ class Play {
       e.alive = false;
       if (e.type === 'drink') { if (p.hearts >= 3) this.addScore(1000, e.x, e.y); else { p.hearts++; this.parts.push({ k: 'text', s: '+$', x: e.x, y: e.y - 8, vy: -0.5, life: 50 }); } Audio8.sfx('power'); }
       if (e.type === 'phone') { p.power = 'signal'; Audio8.sfx('signal'); this.parts.push({ k: 'text', s: 'SIGNAL!', x: e.x - 12, y: e.y - 8, vy: -0.5, life: 60 }); }
+      if (e.type === 'medal') {
+        this.medalsGot |= 1 << e.id; Audio8.sfx('check');
+        const n = [0, 1, 2, 3, 4].filter((i) => (this.medalsGot | game.medals[this.li]) & (1 << i)).length;
+        this.addScore(e.got ? 200 : 1000, e.x, e.y - 8);
+        this.parts.push({ k: 'text', s: `MEDAL ${n}/5`, x: e.x - 18, y: e.y - 18, vy: -0.4, life: 70 });
+        if (n === 5 && !e.got) { game.lives++; Audio8.sfx('oneup'); this.parts.push({ k: 'text', s: 'ALL MEDALS! 1UP', x: e.x - 40, y: e.y - 30, vy: -0.4, life: 90 }); }
+      }
       if (e.type === 'battery') { p.charge = 600; Audio8.sfx('power'); Audio8.play('charge'); this.parts.push({ k: 'text', s: 'SUPER CHARGE!', x: e.x - 30, y: e.y - 8, vy: -0.5, life: 60 }); }
       if (e.type === 'boots') { p.boots = true; Audio8.sfx('power'); this.parts.push({ k: 'text', s: 'JET BOOTS!', x: e.x - 20, y: e.y - 8, vy: -0.5, life: 60 }); }
       if (e.type === 'ammo') { p.ammo = Math.min(9, p.ammo + 3); Audio8.sfx('reload'); this.parts.push({ k: 'text', s: '+3', x: e.x, y: e.y - 8, vy: -0.5, life: 50 }); }
@@ -990,7 +1133,7 @@ class Play {
     }
     if ((e.enemy || e.hazard) && overlap(p, e)) {
       if (p.charge > 0 && e.enemy) this.flipKill(e);
-      else if ((e.stomp || (p.riding && e.enemy)) && p.vy > 0 && p.prevBottom <= e.y + 7) this.stomp(e); else this.hurt();
+      else if ((e.stomp || ((p.riding || p.pound === -1) && e.enemy)) && p.vy > 0 && p.prevBottom <= e.y + 7) { this.stomp(e); if (p.pound === -1) p.vy = 7; } else this.hurt();
     }
   }
   updateBoss(e) {
@@ -1131,9 +1274,19 @@ class Play {
     this.drawHUD();
     if (this.paused) {
       ctx.fillStyle = 'rgba(0,0,0,0.45)'; ctx.fillRect(0, 0, VW, VH);
-      drawWindow(60, 84, 136, 52);
-      txt('PAUSED', 128, 94, '#ffe040', { scale: 2, align: 'center' });
-      txt('X: EXIT TO MAP', 128, 118, '#fff', { align: 'center' });
+      drawWindow(48, 56, 160, 112);
+      txt('PAUSED', 128, 64, '#ffe040', { scale: 2, align: 'center' });
+      const labels = ['CONTINUE', 'MUSIC', 'SOUND FX', 'EXIT TO MAP'];
+      labels.forEach((l, i) => {
+        const y = 88 + i * 15, on = i === this.pauseSel;
+        txt(l, 70, y, on ? '#ffe040' : '#fff');
+        if (on) txt('>', 60 + ((frame >> 3) & 1), y, '#ffe040');
+        if (i === 1 || i === 2) {
+          const v = Math.round(Audio8.getVolume(i === 1 ? 'music' : 'sfx') * 5);
+          for (let k = 0; k < 5; k++) { ctx.fillStyle = k < v ? (on ? '#ffe040' : '#5ff0ff') : '#3a3a58'; ctx.fillRect(130 + k * 9, y + 6 - k, 7, 2 + k); }
+        }
+      });
+      txt('A: SELECT   < >: VOLUME', 128, 152, '#a8b0d8', { align: 'center' });
     }
   }
   drawTiles(cx) {
@@ -1192,7 +1345,7 @@ class Play {
     if (p.inv > 0 && p.hurtT <= 0 && (frame >> 2) % 2) return;
     if (p.riding) {
       const face = p.face, moving = p.onGround && Math.abs(p.vx) > 0.15;
-      const di = !p.onGround ? 1 : moving ? 1 + (Math.floor(p.anim / 2) % 2) : 0;
+      const di = p.fluttering ? 1 + ((frame >> 1) & 1) : !p.onGround ? 1 : moving ? 1 + (Math.floor(p.anim / 2) % 2) : 0;
       const lunge = p.chompT > 8 ? face * 3 : 0, bob = !p.onGround || moving || ((frame >> 4) & 1) === 0 ? 0 : 1;
       const dx = Math.round(fx - 12 + lunge), dy = Math.round(fy - 22);
       const dimg = Sprites.dino[face > 0 ? 'r' : 'l'][di];
@@ -1259,6 +1412,7 @@ class Play {
         if (e.state === 'wait' && e.rise <= 0 && (e.t >> 5) % 2 === 0) txt('!', x + 6, y - 12, '#ffe040', { outline: '#1a1020' });
         break;
       }
+      case 'medal': ctx.drawImage(e.got ? Sprites.medalGhost : Sprites.medal, x - 2, y - 1 + Math.round(Math.sin(e.t * 0.08) * 1.5)); if (!e.got && (frame >> 3) % 6 === 0) { ctx.fillStyle = '#fff'; ctx.fillRect(x + 8, y + 3, 1, 3); ctx.fillRect(x + 7, y + 4, 3, 1); } break;
       case 'battery': ctx.drawImage(Sprites.battery, x - 2, y - 1); break;
       case 'boots': ctx.drawImage(Sprites.boots, x - 2, y - 1); break;
       case 'spark': {
@@ -1360,6 +1514,7 @@ class Play {
     txt(pad(this.time, 3), 117, 15, this.time <= 20 && (frame >> 4) & 1 ? '#ff6060' : '#fff');
     ctx.drawImage(Sprites.coinIcon, 176, 6); txt('*' + pad(game.coins, 2), 183, 6, '#fff');
     txt(pad(game.score, 7), 206, 15, '#fff');
+    for (let i = 0; i < 5; i++) ctx.drawImage((this.medalsGot | game.medals[this.li]) & (1 << i) ? Sprites.miniMedal : Sprites.miniMedalOff, 146 + i * 6, 16);
     if (this.def.boss && this.bossLock) {
       const b = this.ents.find((e) => e.boss);
       if (b) { txt('BARON STATIC', 8, 26, '#ff8080'); for (let i = 0; i < b.maxHp; i++) { ctx.fillStyle = i < b.hp ? '#ff3040' : '#402028'; ctx.fillRect(84 + i * 8, 27, 6, 5); } }
