@@ -322,3 +322,100 @@ Play.prototype.drawNight = function (cx) {
     if (this.talk) this.drawTalk();
   };
 }
+
+// ---------------- 2 players together (co-op) ----------------
+// Player 2 uses W A S D to move, F to jump, G to run/throw and H for specials
+// (or the second gamepad). Player 1 leads the camera; player 2 is kept on screen.
+const Input2 = (() => {
+  const names = ['left', 'right', 'up', 'down', 'jump', 'run', 'special'], st = {}, prev = {}, kb = {}, hit = {};
+  names.forEach((n) => { st[n] = prev[n] = kb[n] = hit[n] = 0; });
+  addEventListener('keydown', (e) => { const a = P2_KEYS[e.code]; if (a && coopActive()) { if (!e.repeat) hit[a] = 1; kb[a] = 1; e.preventDefault(); } });
+  addEventListener('keyup', (e) => { const a = P2_KEYS[e.code]; if (a) kb[a] = 0; });
+  addEventListener('blur', () => names.forEach((n) => { kb[n] = 0; }));
+  function poll() {
+    const gp = {}; names.forEach((n) => { gp[n] = 0; });
+    const pads = navigator.getGamepads ? [...navigator.getGamepads()].filter(Boolean) : [];
+    const p = pads[1];
+    if (p) {
+      const b = (i) => (p.buttons[i] && p.buttons[i].pressed ? 1 : 0);
+      gp.jump = b(0) | b(1); gp.run = b(2) | b(6) | b(7); gp.special = b(3) | b(4) | b(5);
+      gp.up = b(12) | (p.axes[1] < -0.5); gp.down = b(13) | (p.axes[1] > 0.5); gp.left = b(14) | (p.axes[0] < -0.5); gp.right = b(15) | (p.axes[0] > 0.5);
+    }
+    names.forEach((n) => { prev[n] = st[n]; st[n] = kb[n] || hit[n] || gp[n] ? 1 : 0; hit[n] = 0; });
+  }
+  return { poll, down: (k) => !!st[k], pressed: (k) => !!(st[k] && !prev[k]) };
+})();
+const p2Hero = () => (game.other && game.other.hero) || 'wally';
+const p2Costume = () => (game.other && game.other.costume) || (p2Hero() === game.hero ? 'junior' : 'classic');
+Play.prototype.makeP2 = function () {
+  const p = this.p;
+  this.p2 = Object.assign({}, p, { x: p.x - 14, vx: 0, vy: 0, trail: [], platform: null, riding: false, w: 10, h: 22, y: p.y + p.h - 22, hearts: DIFF[this.diff].hearts, ammo: 3, special: 3, inv: 60, power: 'none', boots: false, charge: 0, tiny: 0, shield: false, magnet: 0, warpT: 0, down: 0, isP2: true });
+};
+Play.prototype.withP2 = function (fn) { // run fn as if player 2 were the hero
+  const p1 = this.p, hero = game.hero, cos = game.costume, d = Input.down, pr = Input.pressed;
+  this.p = this.p2; game.hero = p2Hero(); game.costume = p2Costume(); Wally.hero = game.hero; Wally.current = game.costume;
+  Input.down = Input2.down; Input.pressed = (k) => (k === 'start' || k === 'back' ? pr(k) : Input2.pressed(k));
+  this._p2ctx = true;
+  try { fn(); } finally {
+    this._p2ctx = false; this.p = p1; game.hero = hero; game.costume = cos; Wally.hero = hero; Wally.current = cos; Input.down = d; Input.pressed = pr;
+  }
+};
+Play.prototype.p2Down = function () {
+  const q = this.p2; if (q.down) return;
+  q.down = 150; q.riding = false; q.w = 10; q.h = 22; q.tiny = 0; Audio8.sfx('hurt'); rumble(0.5, 200);
+  this.parts.push({ k: 'text', s: 'P2 DOWN!', x: q.x - 14, y: Math.min(q.y, 180) - 10, vy: -0.4, life: 70 });
+  game.lives--; if (game.lives < 0) { game.lives = 0; q.out = true; }
+};
+Play.prototype.updateP2 = function () {
+  const q = this.p2, p = this.p;
+  Input2.poll();
+  if (q.out) return;
+  if (q.down) { // respawn next to player 1 after a short break
+    if (--q.down === 0) { Object.assign(q, { x: p.x - 12, y: Math.max(16, p.y - 30), vx: 0, vy: 0, hearts: DIFF[this.diff].hearts, inv: 120, platform: null }); this.parts.push({ k: 'text', s: 'P2 BACK!', x: q.x - 14, y: q.y - 12, vy: -0.4, life: 60 }); }
+    return;
+  }
+  this.withP2(() => {
+    this.updatePlayer();
+    // touch enemies, items, goals: replay those entities' logic for player 2 without moving them twice
+    for (const e of this.ents) {
+      if (!e.alive || e.dying || q.down || !overlap({ x: q.x - 2, y: q.y - 2, w: q.w + 4, h: q.h + 4 }, e)) continue;
+      const keep = { x: e.x, y: e.y, vx: e.vx, vy: e.vy, t: e.t };
+      this.updateEnt(e);
+      if (e.alive && !e.dying) Object.assign(e, keep);
+    }
+  });
+  if (q.down) return;
+  // keep player 2 on screen
+  if (q.x < this.cam.x + 2) { q.x = this.cam.x + 2; if (q.vx < 0) q.vx = 0; }
+  if (q.x > this.cam.x + VW - q.w - 2) { q.x = this.cam.x + VW - q.w - 2; if (q.vx > 0) q.vx = 0; }
+  // bounce off each other's heads
+  for (const [a, b] of [[q, p], [p, q]]) {
+    if (a.vy > 0 && a.x + a.w > b.x && a.x < b.x + b.w && a.y + a.h >= b.y && a.y + a.h <= b.y + 8 && !a.riding) { a.vy = -5.6; a.y = b.y - a.h; Audio8.sfx('spring'); this.parts.push({ k: 'star', x: b.x + b.w / 2, y: b.y, life: 10 }); }
+  }
+};
+{
+  const _upd = Play.prototype.update;
+  Play.prototype.update = function () {
+    if (game && game.coop && !this.p2 && !this.ta && !this.rush && !this.daily && !this.def.custom) this.makeP2();
+    const was = this.state;
+    _upd.call(this);
+    if (this.p2 && !this.paused && !this.talk && this.state === 'play' && was === 'play' && !this.taReady) this.updateP2();
+  };
+  const _dp = Play.prototype.drawPlayer;
+  Play.prototype.drawPlayer = function (cx) {
+    if (this.p2 && !this.p2.down && !this.p2.out) {
+      this.withP2(() => { if (this.state !== 'dying') _dp.call(this, cx); });
+      const q = this.p2; txt('P2', Math.round(q.x + q.w / 2 - cx), Math.round(q.y) - (q.riding ? 18 : 10) - 6, '#5ae060', { align: 'center', outline: '#101848' });
+    }
+    _dp.call(this, cx);
+  };
+  const _hud = Play.prototype.drawHUD;
+  Play.prototype.drawHUD = function () {
+    _hud.call(this);
+    const q = this.p2; if (!q) return;
+    ctx.fillStyle = 'rgba(16,24,72,0.7)'; ctx.fillRect(196, 26, 58, 11);
+    txt('P2', 199, 28, '#5ae060');
+    if (q.out) txt('OUT', 216, 28, '#ff6060'); else if (q.down) txt('...', 216, 28, '#fff');
+    else for (let i = 0; i < 3; i++) ctx.drawImage(i < q.hearts ? Sprites.heart : Sprites.heartEmpty, 214 + i * 9, 28);
+  };
+}

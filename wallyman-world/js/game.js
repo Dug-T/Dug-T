@@ -14,6 +14,9 @@ const pad = (n, l) => String(Math.max(0, n | 0)).padStart(l, '0');
 // =====================================================================
 // Input: keyboard, gamepad and on-screen touch buttons
 // =====================================================================
+const P2_KEYS = { KeyW: 'up', KeyA: 'left', KeyS: 'down', KeyD: 'right', KeyF: 'jump', KeyG: 'run', KeyH: 'special', KeyT: 'jump', KeyR: 'run', KeyY: 'special' };
+const coopActive = () => typeof game !== 'undefined' && !!game && !!game.coop && typeof Play !== 'undefined' && scene instanceof Play && !!scene.p2;
+const coopOwns = (code) => coopActive() && code in P2_KEYS;
 const Input = (() => {
   const names = ['left', 'right', 'up', 'down', 'jump', 'run', 'special', 'start', 'back'];
   const st = {}, prev = {}, kb = {}, hit = {}, touch = {}, gp = {};
@@ -24,7 +27,7 @@ const Input = (() => {
     Enter: 'start', KeyP: 'start', Escape: 'back', Backspace: 'back',
   };
   const typed = [];
-  addEventListener('keydown', (e) => { if (e.key && e.key.length === 1 && /[a-z0-9 .!-]/i.test(e.key)) typed.push(e.key.toUpperCase()); if (typed.length > 8) typed.shift(); const a = map[e.code]; if (a) { if (!e.repeat) hit[a] = 1; kb[a] = 1; e.preventDefault(); } Audio8.unlock(); });
+  addEventListener('keydown', (e) => { if (e.key && e.key.length === 1 && /[a-z0-9 .!-]/i.test(e.key)) typed.push(e.key.toUpperCase()); if (typed.length > 8) typed.shift(); const a = coopOwns(e.code) ? null : map[e.code]; if (a) { if (!e.repeat) hit[a] = 1; kb[a] = 1; e.preventDefault(); } Audio8.unlock(); });
   addEventListener('keyup', (e) => { if (e.key === 'Meta') names.forEach((n) => { kb[n] = 0; }); const a = map[e.code]; if (a) { kb[a] = 0; e.preventDefault(); } });
   addEventListener('blur', () => names.forEach((n) => { kb[n] = 0; touch[n] = 0; }));
   // On-screen buttons. Touches are re-read from scratch on every touch event (which
@@ -64,8 +67,10 @@ const Input = (() => {
   function pollPad() {
     names.forEach((n) => { gp[n] = 0; });
     const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+    let seen = 0;
     for (const p of pads) {
       if (!p) continue;
+      if (seen++ > 0 && coopActive()) break; // the second pad drives player 2
       const b = (i) => (p.buttons[i] && p.buttons[i].pressed ? 1 : 0);
       gp.jump |= b(0) | b(1); gp.run |= b(2) | b(6) | b(7); gp.special |= b(3) | b(4) | b(5); gp.start |= b(9); gp.back |= b(8);
       gp.up |= b(12) | (p.axes[1] < -0.5); gp.down |= b(13) | (p.axes[1] > 0.5);
@@ -784,14 +789,15 @@ function TitleScene() {
         return;
       }
       if (mode === 'players') {
-        if (Input.pressed('down') || Input.pressed('up')) { psel ^= 1; Audio8.sfx('select'); }
+        if (Input.pressed('down')) { psel = (psel + 1) % 3; Audio8.sfx('select'); }
+        if (Input.pressed('up')) { psel = (psel + 2) % 3; Audio8.sfx('select'); }
         if (Input.pressed('back')) { mode = 'menu'; return; }
         if (Input.confirm()) {
-          const { slot, isNew } = pick, two = psel === 1;
+          const { slot, isNew } = pick, two = psel >= 1, coop = psel === 2;
           if (isNew) Save.slots[slot] = Save.fresh();
           game = Save.slots[slot];
           if (two) Ach.unlock('two');
-          if (two) { if (!game.other) game.other = { lives: 5, score: 0, coins: 0, costume: 'junior', out: false }; game.other.out = false; game.players = 2; } else { if (game.turn === 1 && game.other) swapPlayers(false); game.players = 1; game.other = null; game.turn = 0; }
+          if (two) { if (!game.other) game.other = { lives: 5, score: 0, coins: 0, costume: 'junior', out: false }; game.other.out = false; game.players = coop ? 1 : 2; game.coop = coop; if (coop && game.turn === 1) swapPlayers(false); } else { if (game.turn === 1 && game.other) swapPlayers(false); game.players = 1; game.coop = false; game.other = null; game.turn = 0; }
           Save.persist(); Audio8.sfx('confirm');
           go(() => HeroSelect(isNew, two));
         }
@@ -805,7 +811,7 @@ function TitleScene() {
           if (eraseMode) {
             Save.slots[sel] = null; Save.persist(); eraseMode = false; Audio8.sfx('brick');
           } else {
-            pick = { slot: sel, isNew: !Save.slots[sel] }; psel = Save.slots[sel] && Save.slots[sel].players === 2 ? 1 : 0;
+            pick = { slot: sel, isNew: !Save.slots[sel] }; psel = Save.slots[sel] && Save.slots[sel].coop ? 2 : Save.slots[sel] && Save.slots[sel].players === 2 ? 1 : 0;
             mode = 'players'; Audio8.sfx('confirm');
           }
         } else if (sel === 3) { Audio8.sfx('confirm'); go(() => ChallengeScene()); } else if (sel === 4) { Audio8.sfx('confirm'); go(() => HighScoreScene(null, () => TitleScene())); } else if (sel === 5) { Audio8.sfx('confirm'); go(() => ExtrasScene()); } else { eraseMode = !eraseMode; Audio8.sfx('select'); }
@@ -832,10 +838,10 @@ function TitleScene() {
       } else if (mode === 'players') {
         drawWindow(16, 108, 172, 88);
         txt(`FILE ${'ABC'[pick.slot]}${pick.isNew ? ' - NEW GAME' : ''}`, 102, 116, '#a8b0d8', { align: 'center' });
-        ['1 PLAYER GAME', '2 PLAYER GAME'].forEach((l, i) => { txt(l, 40, 134 + i * 16, i === psel ? '#ffe040' : '#fff'); if (i === psel) txt('>', 30 + ((t >> 3) & 1), 134 + i * 16, '#ffe040'); });
+        ['1 PLAYER GAME', '2P TAKE TURNS', '2P TOGETHER'].forEach((l, i) => { txt(l, 40, 130 + i * 13, i === psel ? '#ffe040' : '#fff'); if (i === psel) txt('>', 30 + ((t >> 3) & 1), 130 + i * 13, '#ffe040'); });
         drawWally(142, 188, 'idle' + ((t >> 4) % 4), 1, { costume: 'classic' });
-        if (psel === 1) drawWally(166, 188, 'idle' + ((t >> 4) % 4), -1, { costume: 'junior' });
-        txt(psel === 1 ? 'TAKE TURNS' : 'WALLYMAN', 40, 172, '#a8b0d8');
+        if (psel >= 1) drawWally(166, 188, 'idle' + ((t >> 4) % 4), -1, { costume: 'junior' });
+        txt(psel === 2 ? 'P2: WASD + F G H' : psel === 1 ? 'SAME DEVICE, TURNS' : 'WALLYMAN', 30, 176, '#a8b0d8');
       } else {
         drawWindow(16, 108, 172, 88);
         items().forEach((s, i) => {
@@ -1583,6 +1589,7 @@ class Play {
     go(() => MessageScene(['WARP PIPE!', '', 'WHOOSH... SKIPPING AHEAD', 'TO ' + LEVELS[to].name + '!'], () => IntroScene(to, false)));
   }
   die() {
+    if (this._p2ctx) { this.p2Down(); return; }
     if (this.state === 'dying') return;
     this.state = 'dying'; this.stateT = 0; this.p.hearts = 0; rumble(1, 400);
     Audio8.play('die');
@@ -1711,6 +1718,7 @@ class Play {
       if (this.stateT % 8 === 0 && this.stateT < 100) { Audio8.sfx('boom'); this.parts.push({ k: 'boom', x: this.bossX + Math.random() * 32, y: this.bossY + Math.random() * 32, life: 20 }); }
       if (this.stateT === 110) Audio8.play('clear');
       if (this.rush) { if (this.stateT === 140) rushNext(this); return; }
+      if (this.def.custom) { if (this.stateT === 200) go(() => LevelMakerScene(Maker.state)); return; }
       if (this.stateT > 300 && this.ta) { this.state = 'done'; const li = this.li, f = this.taT; const rec = this.ghostRec; go(() => TAResultScene(li, f, rec)); } else if (this.stateT > 300) {
         game.cleared[this.li] = true; game.medals[this.li] |= this.medalsGot; game.bars[this.li] |= this.barsGot; setNode(this.li); Save.persist(); this.state = 'done';
         if (this.def.final) go(() => EndingScene());
@@ -1750,7 +1758,7 @@ class Play {
     }
     const run = !auto && Input.down('run');
     const ice = this.def.ice && p.onGround;
-    const water = !!this.def.water, frozen = p.frozen > 0;
+    const water = !!this.def.water || this.tile(Math.floor((p.x + p.w / 2) / TS), Math.floor((p.y + p.h / 2) / TS)) === '~', frozen = p.frozen > 0;
     if (frozen) p.frozen--;
     const hid = heroOf(), goth = hid === 'goth' || hid === 'frost', doug = hid === 'doug', robo = hid === 'robo';
     const max = water ? (run ? 1.9 : 1.3) : run ? (goth ? 2.5 : doug ? 3.05 : 2.8) : goth ? 1.5 : 1.6, acc = (run ? 0.11 : 0.08) * (ice ? 0.45 : 1) * (water ? 0.7 : 1);
@@ -2614,7 +2622,7 @@ class Play {
       ctx.fillStyle = 'rgba(220,245,255,0.7)';
       for (let i = 0; i < 24; i++) { const bx = (((i * 61 - cx * 0.3 + Math.sin(frame * 0.03 + i) * 4) % VW) + VW) % VW, by = VH - ((i * 47 + frame * (0.4 + (i % 3) * 0.2)) % VH); ctx.fillRect(Math.round(bx), Math.round(by), 2, 2); }
     }
-    if (this.def.dark) { // spooky: only a pool of light around WallyMan, with the odd lightning flash
+    if (this.def.dark || (this.def.darkCols && this.def.darkCols.has(Math.floor((this.p.x + this.p.w / 2) / TS)))) { // spooky: only a pool of light around WallyMan, with the odd lightning flash
       const lf = frame % 420, flash = lf < 5 || (lf > 10 && lf < 14);
       if (lf === 0) Audio8.sfx('boom');
       if (!flash) {
@@ -2662,6 +2670,7 @@ class Play {
         case '#': img = this.tile(tx, ty - 1) === '#' ? T.fill : T.top; break;
         case 'B': img = T.brick; break;
         case 'W': case 'P': case 'S': case 'O': case 'A': case 'V': case 'Q': case 'D': case 'N': case 'T': case 'E': img = T.bonus[bonusF]; break;
+        case '~': { const X = tx * TS - cx, Y = ty * TS; ctx.fillStyle = 'rgba(40,120,220,0.45)'; ctx.fillRect(X, Y, 16, 16); if (this.tile(tx, ty - 1) !== '~') { ctx.fillStyle = 'rgba(200,240,255,0.8)'; ctx.fillRect(X, Y + ((frame >> 4) + tx) % 2, 16, 1); } continue; }
         case 'Y': { // warp pipe
           const X = tx * TS - cx, Y = ty * TS, left = this.tile(tx - 1, ty) !== 'Y', lip = this.tile(tx, ty - 1) !== 'Y';
           ctx.fillStyle = '#0a3a14'; ctx.fillRect(X, Y, 16, 16);
