@@ -351,7 +351,7 @@
     ctx.save();
     ctx.beginPath(); ctx.rect(0, 0, W, VIEW_H); ctx.clip();
     // weapons are authored at 1x and drawn scaled up around the bottom-centre of the view
-    ctx.translate(W / 2 + bobX, VIEW_H + 12 + bobY + lower); ctx.scale(1.15, 1.15);
+    ctx.translate(W / 2 + bobX, VIEW_H + 10 + bobY + lower); ctx.scale(0.8, 0.8);
     w.draw(ctx, 0, 0, p.firePhase, p.flashT > 0, time);
     ctx.restore();
   }
