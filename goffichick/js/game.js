@@ -68,7 +68,17 @@
     orb: { name: 'Smiley Orb', hp: 300, speed: 1.0, radius: 0.45, h: 0.62, z: 0.25, fly: true, attack: 'proj', proj: 'sun', range: 18, cooldown: [1.5, 3], pain: 0.3, sight: 'giggle', atkSound: 'giggle' },
     boss: { name: 'WALLY PRIME', hp: 2500, speed: 1.5, radius: 0.6, h: 1.55, attack: 'boss', range: 30, cooldown: [0.7, 1.4], pain: 0.04, sight: 'bossRoar', atkSound: 'phoneRing', boss: true },
     barrel: { name: 'Pumpkin Spice Barrel', hp: 20, radius: 0.3, h: 0.5, ai: false },
+    // --- Episode 2 ---
+    yoga: { name: 'Yoga Instructor', hp: 70, speed: 2.0, radius: 0.27, h: 0.86, attack: 'proj', proj: 'chakra', range: 16, cooldown: [1.2, 2.2], pain: 0.5, sight: 'om', atkSound: 'om', dodge: 0.5 },
+    coach: { name: 'Life Coach', hp: 100, speed: 1.3, radius: 0.3, h: 0.9, attack: 'proj', proj: 'shout', range: 14, cooldown: [1.6, 2.6], pain: 0.5, sight: 'coach', atkSound: 'coach', slogans: true },
+    bubbly: { name: 'Bubbly Orb', hp: 120, speed: 1.3, radius: 0.35, h: 0.48, z: 0.3, fly: true, attack: 'proj', proj: 'sun', range: 16, cooldown: [1.4, 2.6], pain: 0.4, sight: 'giggle', atkSound: 'giggle', split: 'mini' },
+    mini: { name: 'Mini Orb', hp: 25, speed: 2.6, radius: 0.2, h: 0.26, z: 0.25, fly: true, attack: 'charge', melee: [3, 10], range: 6, cooldown: [1, 2], pain: 1, sight: 'giggle', atkSound: 'skull' },
+    wallyfit: { name: 'Wally Man FIT', hp: 70, speed: 2.6, radius: 0.28, h: 0.8, attack: 'melee', melee: [8, 18], range: 1.1, cooldown: [0.6, 1.0], pain: 0.5, sight: 'phoneRing', atkSound: 'brute' },
+    wallydeluxe: { name: 'Wally Man DELUXE', hp: 200, speed: 1.2, radius: 0.3, h: 0.86, attack: 'proj', proj: 'phone', range: 20, cooldown: [1.6, 2.8], pain: 0.25, sight: 'phoneRing', atkSound: 'phoneRing' },
+    megaorb: { name: 'MEGA SMILEY', hp: 3000, speed: 1.1, radius: 0.8, h: 1.6, z: 0.4, fly: true, attack: 'megaorb', range: 30, cooldown: [0.8, 1.5], pain: 0.03, sight: 'bossRoar', atkSound: 'giggle', boss: true, deathMsg: 'MEGA SMILEY HAS BEEN POPPED!' },
   };
+  ENEMY_DEFS.boss.deathMsg = 'WALLY PRIME HAS BEEN UNSUBSCRIBED!';
+  const SLOGANS = ['YOU\'VE GOT THIS!', 'LIVE, LAUGH, LOVE!', 'GOOD VIBES ONLY!', 'RISE AND GRIND!', 'SMILE MORE!', 'MANIFEST IT!', 'BE YOUR BEST SELF!', 'NO BAD DAYS!'];
 
   const PROJECTILES = {
     skull: { speed: 11, dmg: [20, 60], splash: 1.7, splashDmg: 110, size: 0.22, fx: 'boom', fxSize: 1.0, sound: 'explode', trail: true },
@@ -80,6 +90,8 @@
     sun: { speed: 6.5, dmg: [10, 26], size: 0.25, fx: 'splash', fxSize: 0.45, sound: 'hexHit' },
     // flamethrower: short-lived, growing gouts of fire that set enemies alight
     flame: { speed: 7.5, dmg: [3, 7], size: 0.16, grow: 2.4, life: 0.5, fx: 'flameHit', fxSize: 0.35, sound: null, ignite: 2.2, quiet: true },
+    chakra: { speed: 6, dmg: [4, 10], size: 0.24, fx: 'hexHit', fxSize: 0.35, sound: 'hexHit', slow: 1.6 },
+    shout: { speed: 7, dmg: [5, 12], size: 0.3, grow: 1.2, fx: 'splash', fxSize: 0.5, sound: 'hexHit', slow: 1.2 },
     phone: { speed: 9.5, dmg: [15, 30], splash: 1.4, splashDmg: 50, size: 0.26, fx: 'boom', fxSize: 0.9, sound: 'explode' },
   };
 
@@ -120,7 +132,7 @@
       switchT: 0, cooldown: 0, firePhase: 0, fireT: 0, flashT: 0, windupT: 0,
       bobT: 0, move: 0, eyeZ: 0.5, refireT: 0, dead: false, faceLook: 0, faceT: 0, painT: 0, grinT: 0,
       kills: 0, items: 0, secrets: 0, slimeT: 0,
-      fz: 0, vz: 0, keys: {}, pw: { veil: 0, shroud: 0, mask: 0 }, berserk: false, rageT: 0,
+      fz: 0, vz: 0, keys: {}, pw: { veil: 0, shroud: 0, mask: 0 }, berserk: false, rageT: 0, slowT: 0,
     };
     if (keep) {
       p.health = keep.health; p.armor = keep.armor; p.armorType = keep.armorType;
@@ -355,12 +367,14 @@
           let tt, du = -1, dside = 0;
           if (dr.vertical) { tt = (mx + 0.5 - p.x) / rdx; const hy = p.y + tt * rdy; if (Math.floor(hy) === my) du = hy - my; dside = 0; }
           else { tt = (my + 0.5 - p.y) / rdy; const hx = p.x + tt * rdx; if (Math.floor(hx) === mx) du = hx - mx; dside = 1; }
-          if (curH !== 0) occlude(x, d, clip);
+          const dh = fhm[idx];
+          if (dh > curH + 0.001) clip = vSpan(x, d, curH, dh, L.stepTex, u, side, idx, clip);
+          if (dh !== curH) occlude(x, d, clip);
           if (tt > d && du >= dr.open) { // the door panel itself
-            clip = floorSpan(x, rdx, rdy, idx, 0, d, tt, clip);
-            vSpan(x, tt, 0, ceilH, dr.tex, du - dr.open, dside, curIdx, clip); L.seen[idx] = 1; wallD = tt; break;
+            clip = floorSpan(x, rdx, rdy, idx, dh, d, tt, clip);
+            vSpan(x, tt, dh, ceilH, dr.tex, du - dr.open, dside, curIdx, clip); L.seen[idx] = 1; wallD = tt; break;
           }
-          curIdx = idx; curH = 0; dNear = d; prevDoor = !dr.secret; continue;
+          curIdx = idx; curH = dh; dNear = d; prevDoor = !dr.secret; continue;
         }
         if (t > 0) { // solid wall
           vSpan(x, d, curH, ceilH, prevDoor ? 10 : t, u, side, curIdx, clip, t === 7 || t === 11);
@@ -552,7 +566,7 @@
       const b = L.bossRef, fr = b.hp / b.def.hp;
       ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(W / 2 - 101, 28, 202, 10);
       ctx.fillStyle = '#ff5a1f'; ctx.fillRect(W / 2 - 100, 29, 200 * fr, 8);
-      label('WALLY PRIME', W / 2, 26, '#ffcf3a', 'center', 8);
+      label(b.def.name, W / 2, 26, '#ffcf3a', 'center', 8);
     }
     // power-up timers (top right)
     let px = W - 4;
@@ -830,7 +844,15 @@
       e.dead = true; e.state = 'dead'; e.frame = 0; e.t = 0;
       Sfx.play[e.def.boss ? 'bossRoar' : 'enemyDie'](pd);
       player.kills++;
-      if (e.def.boss) { L.bossDeadT = 3; msg = 'WALLY PRIME HAS BEEN UNSUBSCRIBED!'; msgT = 4; }
+      if (e.def.boss) { L.bossDeadT = 3; msg = e.def.deathMsg || 'THE BOSS IS DOWN!'; msgT = 4; }
+      if (e.def.split) { // pops into smaller orbs
+        Sfx.play.pop(pd);
+        for (const s of [-1, 1]) {
+          const ox = e.x + s * 0.3, oy = e.y + s * 0.15;
+          spawnEnemy(e.def.split, collides(ox, oy, 0.2, true) ? e.x : ox, collides(ox, oy, 0.2, true) ? e.y : oy);
+          const m = L.enemies[L.enemies.length - 1]; m.fz = e.fz || 0; m.state = 'chase'; m.atkT = rand(0.4, 1); L.totalKills++;
+        }
+      }
       return;
     }
     if (Math.random() < e.def.pain && e.state !== 'attack-charge') { e.state = 'pain'; e.t = 0.22; Sfx.play.enemyPain(pd); }
@@ -923,6 +945,7 @@
     const z = (e.fz || 0) + e.z + d.h * 0.6;
     const hurt = dmg => tg ? damageEnemy(tg, dmg, e) : damagePlayer(dmg, e.x, e.y);
     Sfx.play[d.atkSound] && Sfx.play[d.atkSound](playerDist);
+    if (d.slogans && playerDist < 14) { msg = `"${SLOGANS[irand(0, SLOGANS.length - 1)]}"`; msgT = 1.6; }
     if (d.attack === 'hitscan') {
       // a monster standing in the line of fire takes the hit instead (and gets angry)
       const c = Math.cos(ang), s = Math.sin(ang);
@@ -941,6 +964,13 @@
       if (d.attack === 'melee') return;
       const n = d.count || 1;
       for (let i = 0; i < n; i++) fireProjectile(d.proj, e.x, e.y, z, ang + (i - (n - 1) / 2) * (d.spread || 0), e);
+    } else if (d.attack === 'megaorb') {
+      const enraged = e.hp < d.hp / 2, bz = (e.fz || 0) + e.z + 0.6;
+      if (Math.random() < 0.65) { const n = enraged ? 9 : 6; for (let i = 0; i < n; i++) fireProjectile('sun', e.x, e.y, bz, ang + (i - (n - 1) / 2) * 0.14, e); }
+      else if (L.enemies.filter(o => !o.dead && o.type === 'mini').length < 8) { // spits out mini orbs
+        Sfx.play.pop(playerDist);
+        for (const s of [-1, 1]) { spawnEnemy('mini', e.x + Math.cos(ang + s * 1.2) * 0.9, e.y + Math.sin(ang + s * 1.2) * 0.9); const m = L.enemies[L.enemies.length - 1]; m.state = 'chase'; m.fz = floorAt(m.x, m.y); L.totalKills++; }
+      }
     } else if (d.attack === 'boss') {
       const enraged = e.hp < d.hp / 2, bz = (e.fz || 0) + 0.6;
       if (Math.random() < 0.5) {
@@ -977,6 +1007,11 @@
         e.seeT -= dt;
         if (e.seeT <= 0) { e.seeT = 0.3; if (pd < (p.pw.veil > 0 ? 6 : 22) && losClear(e.x, e.y, p.x, p.y)) wake(e); }
         continue;
+      }
+      if (e.dodgeT > 0) { // quick sidestep
+        e.dodgeT -= dt;
+        const c = Math.cos(p.a), s = Math.sin(p.a), sp = 6 * dt * e.dodgeDir;
+        tryMove(e, -s * sp, c * sp, d.radius * 0.8); e.fz = floorAt(e.x, e.y);
       }
       if (e.state === 'pain') { e.t -= dt; if (e.t <= 0) e.state = 'chase'; continue; }
       if (e.state === 'attack') {
@@ -1048,7 +1083,9 @@
         pr.x = nx; pr.y = ny;
         if (pr.owner !== 'player') {
           if (Math.hypot(p.x - pr.x, p.y - pr.y) < 0.3 + pr.def.size / 2) {
-            damagePlayer(irand(pr.def.dmg[0], pr.def.dmg[1]), pr.x - pr.vx, pr.y - pr.vy); explode(pr); pr.done = true; break;
+            damagePlayer(irand(pr.def.dmg[0], pr.def.dmg[1]), pr.x - pr.vx, pr.y - pr.vy);
+            if (pr.def.slow && !p.pw.shroud) p.slowT = Math.max(p.slowT, pr.def.slow);
+            explode(pr); pr.done = true; break;
           }
         }
         for (const e of L.enemies) {
@@ -1103,8 +1140,18 @@
     return 'knuckles';
   }
 
+  // yoga instructors flow sideways out of the line of fire
+  function yogaDodge() {
+    const p = player, c = Math.cos(p.a), s = Math.sin(p.a);
+    for (const e of L.enemies) {
+      if (e.dead || !e.def.dodge || e.state === 'idle' || e.dodgeT > 0) continue;
+      const vx = e.x - p.x, vy = e.y - p.y, along = vx * c + vy * s, lat = vy * c - vx * s;
+      if (along > 0 && along < 14 && Math.abs(lat) < 1.2 && Math.random() < e.def.dodge) { e.dodgeT = 0.35; e.dodgeDir = lat >= 0 ? 1 : -1; }
+    }
+  }
   function doFire(w) {
     const p = player;
+    if (w.type !== 'melee') yogaDodge();
     if (w.ammo) p.ammo[w.ammo] -= w.cost;
     Sfx.play[w.sound] && Sfx.play[w.sound]();
     if (w.after) setTimeout(() => Sfx.play[w.after](), 350);
@@ -1148,7 +1195,8 @@
     fwd += touch.my; str += touch.mx;
     const len = Math.hypot(fwd, str);
     if (len > 1) { fwd /= len; str /= len; }
-    const speed = (keys.ShiftLeft || keys.ShiftRight ? 6.5 : 4.4) * dt;
+    const speed = (keys.ShiftLeft || keys.ShiftRight ? 6.5 : 4.4) * dt * (p.slowT > 0 ? 0.5 : 1);
+    p.slowT = Math.max(0, p.slowT - dt);
     const c = Math.cos(p.a), s = Math.sin(p.a);
     const dx = (c * fwd - s * str) * speed, dy = (s * fwd + c * str) * speed;
     if (dx || dy) tryMove(p, dx, dy, 0.24);
@@ -1379,7 +1427,7 @@
     if (state === 'intermission' || state === 'victory') {
       if (state === 'victory') {
         drawTitle();
-        drawOverlayText('VICTORY', 'Wally Prime is unsubscribed. The world is safely gloomy again.', [
+        drawOverlayText('VICTORY', 'The cheerfulness is defeated. The world is safely gloomy again.', [
           `KILLS  ${interStats.kills}%`, `ITEMS  ${interStats.items}%`, `TIME   ${fmtTime(interStats.time)}`, `SKILL  ${DIFFS[diff].name}`, 'THANKS FOR PLAYING - CLICK TO PLAY AGAIN']);
       } else {
         drawOverlayText(interStats.name, 'FINISHED', [`KILLS  ${interStats.kills}%`, `ITEMS  ${interStats.items}%`, `SECRET ${interStats.secrets}%`, `TIME   ${fmtTime(interStats.time)}`, '', stateT > 1 ? 'CLICK OR PRESS ENTER' : '']);
@@ -1398,6 +1446,7 @@
     if (painFlash > 0) { ctx.fillStyle = `rgba(255,0,0,${painFlash * 0.45})`; ctx.fillRect(0, 0, W, VIEW_H); }
     if (pickupFlash > 0) { ctx.fillStyle = `rgba(255,120,220,${pickupFlash * 0.4})`; ctx.fillRect(0, 0, W, VIEW_H); }
     if (pw.mask > 0 && (pw.mask > 3 || Math.sin(time * 18) > 0)) { ctx.fillStyle = 'rgba(40,255,90,0.12)'; ctx.fillRect(0, 0, W, VIEW_H); }
+    if (player.slowT > 0) { ctx.fillStyle = `rgba(80,200,255,${Math.min(0.22, player.slowT * 0.15)})`; ctx.fillRect(0, 0, W, VIEW_H); }
     if (player.rageT > 0) { ctx.fillStyle = `rgba(255,0,0,${Math.min(0.35, player.rageT * 0.04)})`; ctx.fillRect(0, 0, W, VIEW_H); }
     if (pw.veil > 0) { const g = ctx.createRadialGradient(W / 2, HOR, 40, W / 2, HOR, W * 0.6); g.addColorStop(0, 'rgba(60,0,90,0)'); g.addColorStop(1, 'rgba(60,0,90,0.45)'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, VIEW_H); }
     if (automap) drawAutomap();

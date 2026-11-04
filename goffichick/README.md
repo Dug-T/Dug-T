@@ -62,6 +62,17 @@ flinches when hit, and her eyes glow pink when she picks up a new weapon.
 | `K` | **WALLY PRIME** | Final boss | Golden, red-eyed giant Wally. Exploding phones and notification barrages. Gets angrier below half health |
 | `y` | Pumpkin-Spice Barrel | Explosive barrel | Shoot it near enemies |
 
+### Episode 2 enemies
+
+| Map letter | Enemy | Attack |
+|---|---|---|
+| `g` | **Yoga Instructor** | Throws calming chakra orbs that slow you down, and sidesteps when you shoot at her |
+| `l` | **Life Coach** | Shouts motivational slogans; the sound waves slow you down |
+| `x` | **Bubbly Orb** | Pink Smiley Orb that pops into two fast Mini Orbs when killed |
+| `f` | **WALLY MAN FIT** | Red-suited, fast Wally Man who punches |
+| `d` | **WALLY MAN DELUXE** | Black-and-gold, tough Wally Man who throws exploding phones |
+| `J` | **MEGA SMILEY** | Episode 2 boss: a giant orange grin that sprays sunshine and spits out Mini Orbs |
+
 ## Weapons
 
 Goffichick starts with **every weapon**: press 1-8 (press a number twice to swap between two weapons in the
@@ -100,6 +111,17 @@ green sludge that burns, and dark rooms with flickering lights.
 1. **E1M1: The Cemetery Gates** — start room, zig-zag hall, a big courtyard with a slime pool and armor on an island, a dark crypt with ambush alcoves, a stained-glass chapel, a hidden machine-gun stash, and a winding route to the exit
 2. **E1M2: Cubicle Hell** — an office of smiley-face wallpaper and motivational posters
 3. **E1M3: Wally's Penthouse** — marble, Wally shrines and the boss fight
+
+### Episode 2: The Sunny Side
+
+4. **E2M1: Shopping Maul**: an atrium with escalator stairs up to a mezzanine of shops, a lift, a food court with a
+   toxic smoothie spill, and a department-store exit behind the skull door.
+5. **E2M2: Gains Gym**: a raised boxing ring, a running track reached by lift or stairs, protein-sludge showers and
+   a sauna exit behind the bat door.
+6. **E2M3: Sunshine Park**: open sky, hedges, a hedge maze hiding the coffin key, a funhouse, a toxic duck pond, a
+   bandstand, and the Mega Smiley's arena.
+
+Each level has its own music track.
 
 ## Project layout
 
