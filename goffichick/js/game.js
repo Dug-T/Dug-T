@@ -23,8 +23,19 @@
   const viewC = document.createElement('canvas');
   const viewCtx = viewC.getContext('2d');
   let img, buf, zbuf;
+  // Phones whose browser won't rotate (Facebook's built-in browser is stuck upright): the game
+  // draws itself sideways inside the upright page, so turning the phone shows it the right way up
+  // and filling the screen. Touch input is mapped back into the game's own coordinates.
+  const coarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+  const stage = document.getElementById('stage');
+  let sideways = false;
+  const toLocal = (x, y) => sideways ? { x: y, y: window.innerWidth - x } : { x, y };
   function fitScreen() {
-    const vw = window.innerWidth, vh = window.innerHeight;
+    const iw = window.innerWidth, ih = window.innerHeight;
+    sideways = coarse && ih > iw * 1.05;
+    if (sideways) Object.assign(stage.style, { inset: 'auto', top: '0px', left: iw + 'px', width: ih + 'px', height: iw + 'px', transform: 'rotate(90deg)', transformOrigin: '0 0' });
+    else stage.removeAttribute('style');
+    const vw = sideways ? ih : iw, vh = sideways ? iw : ih;
     const nw = clamp(Math.round(H * vw / vh / 2) * 2, BASE_W, MAX_W);
     if (nw !== W || !img) {
       W = nw; PLANE = (W / 2) / PROJ;
@@ -1140,7 +1151,7 @@
       '1-8 / Q / WHEEL  weapons', 'SHIFT run   TAB map   M music'];
     lines.forEach((l, i) => label(l, 18, 150 + i * 11, '#b78ab7', 'left', 8));
     label('ON A PHONE? Left stick moves, drag right side to look.', 18, 225, '#7a5a7a', 'left', 7);
-    if (inAppBrowser) label('In Facebook? For the smoothest play tap  ...  then "Open in browser".', 18, 238, '#ff9be0', 'left', 7);
+    if (inAppBrowser) label('In Facebook? Tap  ...  then "Open in external browser" for the best play.', 18, 238, '#ff9be0', 'left', 7);
   }
 
   function drawOverlayText(title, sub, lines) {
@@ -1182,7 +1193,7 @@
       }
     }
     if (paused) drawOverlayText('PAUSED', 'Click to resume', []);
-    if (isTouch && window.innerHeight > window.innerWidth) {
+    if (isTouch && !sideways && window.innerHeight > window.innerWidth) {
       ctx.fillStyle = 'rgba(10,0,16,0.75)'; ctx.fillRect(0, VIEW_H - 16, W, 16);
       label('Turn your phone sideways for full screen', W / 2, VIEW_H - 5, '#ff9be0', 'center', 8);
     }
@@ -1252,19 +1263,20 @@
     const ui = document.getElementById('touch'); ui.style.display = 'block';
     const stick = document.getElementById('stick'), knob = document.getElementById('knob');
     let stickId = null, sx0 = 0, sy0 = 0;
-    stick.addEventListener('pointerdown', e => { stickId = e.pointerId; const r = stick.getBoundingClientRect(); sx0 = r.left + r.width / 2; sy0 = r.top + r.height / 2; stick.setPointerCapture(e.pointerId); moveStick(e); e.preventDefault(); });
+    stick.addEventListener('pointerdown', e => { stickId = e.pointerId; const r = stick.getBoundingClientRect(), c = toLocal(r.left + r.width / 2, r.top + r.height / 2); sx0 = c.x; sy0 = c.y; stick.setPointerCapture(e.pointerId); moveStick(e); e.preventDefault(); });
     const moveStick = e => {
       if (e.pointerId !== stickId) return;
       const r = stick.getBoundingClientRect().width / 2;
-      let dx = (e.clientX - sx0) / r, dy = (e.clientY - sy0) / r; const l = Math.hypot(dx, dy); if (l > 1) { dx /= l; dy /= l; }
+      const pt = toLocal(e.clientX, e.clientY);
+      let dx = (pt.x - sx0) / r, dy = (pt.y - sy0) / r; const l = Math.hypot(dx, dy); if (l > 1) { dx /= l; dy /= l; }
       touch.mx = dx; touch.my = -dy; knob.style.transform = `translate(${dx * r * 0.6}px, ${dy * r * 0.6}px)`;
     };
     stick.addEventListener('pointermove', moveStick);
     const endStick = e => { if (e.pointerId !== stickId) return; stickId = null; touch.mx = touch.my = 0; knob.style.transform = ''; };
     stick.addEventListener('pointerup', endStick); stick.addEventListener('pointercancel', endStick);
     const look = document.getElementById('look'); let lookId = null, lx = 0;
-    look.addEventListener('pointerdown', e => { if (primaryAction()) return; lookId = e.pointerId; lx = e.clientX; look.setPointerCapture(e.pointerId); });
-    look.addEventListener('pointermove', e => { if (e.pointerId === lookId) { touch.turn += (e.clientX - lx) * 0.009; lx = e.clientX; } });
+    look.addEventListener('pointerdown', e => { if (primaryAction()) return; lookId = e.pointerId; lx = toLocal(e.clientX, e.clientY).x; look.setPointerCapture(e.pointerId); });
+    look.addEventListener('pointermove', e => { if (e.pointerId === lookId) { const x = toLocal(e.clientX, e.clientY).x; touch.turn += (x - lx) * 0.009; lx = x; } });
     const endLook = e => { if (e.pointerId === lookId) lookId = null; };
     look.addEventListener('pointerup', endLook); look.addEventListener('pointercancel', endLook);
     const btn = (id, down, up) => { const b = document.getElementById(id); b.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); if (!primaryAction()) down(); }); if (up) { b.addEventListener('pointerup', up); b.addEventListener('pointercancel', up); b.addEventListener('pointerleave', up); } };
@@ -1287,6 +1299,27 @@
   }
   for (const ev of ['gesturestart', 'gesturechange', 'dblclick', 'contextmenu']) document.addEventListener(ev, blockGesture, { passive: false });
   const inAppBrowser = /FBAN|FBAV|FB_IAB|FBIOS|Instagram|Messenger/i.test(navigator.userAgent);
+  // Inside Facebook / Instagram: try to hand the game to the phone's real browser.
+  //  Android: an intent link opens Chrome directly (tried once automatically, and on the button).
+  //  iPhone: Facebook doesn't allow a hand-off, but "x-safari-https://" opens Safari on newer
+  //  iPhones; otherwise the screen explains the manual way (the ... menu).
+  (function offerExternalBrowser() {
+    if (!inAppBrowser || window.top !== window || !/^https?:$/.test(location.protocol)) return;
+    const box = document.getElementById('inapp'), open = document.getElementById('inappOpen');
+    const ua = navigator.userAgent, android = /Android/i.test(ua), ios = /iPhone|iPad|iPod/i.test(ua);
+    const here = location.href.replace(/#.*$/, '');
+    if (android) {
+      open.href = `intent://${location.host}${location.pathname}${location.search}#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=${encodeURIComponent(here)};end`;
+      open.textContent = 'Open in Chrome';
+      let tried = false; try { tried = sessionStorage.getItem('goffi-ext') === '1'; sessionStorage.setItem('goffi-ext', '1'); } catch (e) {}
+      if (!tried) setTimeout(() => { location.href = open.href; }, 300);
+    } else if (ios) {
+      open.href = 'x-safari-' + here; open.textContent = 'Open in Safari';
+      document.getElementById('inappHow').innerHTML = 'If nothing happens, tap <b>&middot;&middot;&middot;</b> in the top corner, then <b>Open in external browser</b>.';
+    } else open.href = here;
+    box.hidden = false;
+    document.getElementById('inappStay').addEventListener('click', () => { box.hidden = true; });
+  })();
 
   // ------------------------------------------------------------------ boot
   function loadImages(map) {
