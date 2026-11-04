@@ -77,7 +77,7 @@ const DECOR_TYPES = {
 
 const LEVELS = [
   {
-    name: 'E1M1: THE CEMETERY GATES',
+    name: 'E1M1: THE CEMETERY GATES', par: 240,
     floor: 'graveyard', ceil: 'stoneCeil', fog: [92, 90, 94], ceilH: 1.4, stepTex: 1,
     heights: [
       { x: 37, y: 3, w: 1, h: 15, z: 0.12 },   // chapel steps up to the altar
@@ -133,7 +133,7 @@ const LEVELS = [
     ],
   },
   {
-    name: 'E1M2: CUBICLE HELL',
+    name: 'E1M2: CUBICLE HELL', par: 240,
     floor: 'carpet', ceil: 'officeCeil', fog: [70, 70, 76], ceilH: 1.5, stepTex: 4,
     heights: [
       { x: 10, y: 14, w: 5, h: 2, z: 0.25 },   // the manager's raised office
@@ -170,7 +170,7 @@ const LEVELS = [
     ],
   },
   {
-    name: "E1M3: WALLY'S PENTHOUSE",
+    name: "E1M3: WALLY'S PENTHOUSE", par: 200,
     floor: 'tiles', ceil: 'goldCeil', fog: [50, 30, 56], boss: true, ceilH: 1.6, stepTex: 9,
     heights: [{ x: 12, y: 18, w: 9, h: 5, z: 0.25 }],   // Wally Prime's stage
     lights: [
@@ -207,7 +207,7 @@ const LEVELS = [
   },
   // ===================== EPISODE 2: THE SUNNY SIDE =====================
   {
-    name: 'E2M1: SHOPPING MAUL',
+    name: 'E2M1: SHOPPING MAUL', par: 270,
     floor: 'tiles',
     ceil: 'officeCeil',
     fog: [110, 104, 110],
@@ -250,7 +250,7 @@ const LEVELS = [
     ],
   },
   {
-    name: 'E2M2: GAINS GYM',
+    name: 'E2M2: GAINS GYM', par: 270,
     floor: 'rubber',
     ceil: 'officeCeil',
     fog: [60, 56, 64],
@@ -293,7 +293,7 @@ const LEVELS = [
     ],
   },
   {
-    name: 'E2M3: SUNSHINE PARK',
+    name: 'E2M3: SUNSHINE PARK', par: 240,
     floor: 'grass',
     ceil: 'sky',
     fog: [150, 190, 225],

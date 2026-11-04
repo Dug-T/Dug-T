@@ -202,6 +202,7 @@
     for (const e of L.enemies) e.fz = fh[Math.floor(e.y) * mw + Math.floor(e.x)];
     levelTime = 0; L.flowFrom = -1;
     Sfx.setSong(i + 1);
+    Voice.say('levelStart', 0.9, true);
     msg = `${def.name}   - music: ${Sfx.songName()}`; msgT = 4;
   }
 
@@ -654,7 +655,7 @@
       const idx = my * L.mw + mx, t = L.grid[idx];
       if (t === DOOR) {
         const d = L.doors.get(idx);
-        if (d.secret) { if (d.state === 'closed') { d.state = 'opening'; Sfx.play.door(); player.secrets++; msg = 'A secret is revealed!'; msgT = 3; } return; }
+        if (d.secret) { if (d.state === 'closed') { d.state = 'opening'; Sfx.play.door(); player.secrets++; msg = 'A secret is revealed!'; msgT = 3; Voice.say('secret', 1, true); } return; }
         if (d.lock && !p.keys[d.lock]) { lockedMsg(d); return; }
         toggleDoor(d); return;
       }
@@ -844,6 +845,7 @@
       e.dead = true; e.state = 'dead'; e.frame = 0; e.t = 0;
       Sfx.play[e.def.boss ? 'bossRoar' : 'enemyDie'](pd);
       player.kills++;
+      if (e.def.boss) Voice.say('boss', 1, true); else if (src === 'player') Voice.say('kill', 0.18);
       if (e.def.boss) { L.bossDeadT = 3; msg = e.def.deathMsg || 'THE BOSS IS DOWN!'; msgT = 4; }
       if (e.def.split) { // pops into smaller orbs
         Sfx.play.pop(pd);
@@ -874,8 +876,12 @@
       p.faceLook = Math.abs(da) < 0.5 ? 0 : da < 0 ? 1 : 2; p.faceT = 1;
     }
     if (p.health <= 0) {
-      p.health = 0; p.dead = true; Sfx.play.playerDie(); state = 'dead'; stateT = 0;
-    } else Sfx.play.playerPain();
+      p.health = 0; p.dead = true; Sfx.play.playerDie(); state = 'dead'; stateT = 0; Voice.say('death', 1, true);
+    } else {
+      Sfx.play.playerPain();
+      if (p.health < 25 && !p.lowSaid) { p.lowSaid = true; Voice.say('lowHealth', 1, true); }
+      else if (dmg >= 15) Voice.say('hurt', 0.5);
+    }
   }
 
   function wake(e) {
@@ -1266,12 +1272,13 @@
     if (def.armor) {
       if (p.armor < def.armor) { p.armor = def.armor; p.armorType = def.armorType; used = true; }
     }
-    if (def.key) { p.keys[def.key] = true; used = true; }
-    if (def.power) { p.pw[def.power] = def.time; used = true; p.grinT = 1.5; }
-    if (def.berserk) { p.berserk = true; p.rageT = 10; p.health = Math.max(p.health, 100); used = true; switchWeapon('knuckles'); }
+    if (def.key) { p.keys[def.key] = true; used = true; Voice.say('key', 0.8, true); }
+    if (def.power) { p.pw[def.power] = def.time; used = true; p.grinT = 1.5; Voice.say('power', 1, true); }
+    if (def.berserk) { p.berserk = true; p.rageT = 10; p.health = Math.max(p.health, 100); used = true; switchWeapon('knuckles'); Voice.say('rage', 1, true); }
+    if (p.health > 50) p.lowSaid = false;
     if (def.weapon) {
       const w = weaponByKey(def.weapon);
-      if (!p.weapons[def.weapon]) { p.weapons[def.weapon] = true; switchWeapon(def.weapon); p.grinT = 1.5; Sfx.play.weaponUp(); msg = `You got the ${w.name}!`; msgT = 3; used = true; }
+      if (!p.weapons[def.weapon]) { p.weapons[def.weapon] = true; switchWeapon(def.weapon); p.grinT = 1.5; Sfx.play.weaponUp(); msg = `You got the ${w.name}!`; msgT = 3; used = true; Voice.say('weapon', 1, true); }
       else def = { ...def, msg: `Picked up ammo for the ${w.name}.`, weapon: null };
     }
     if (def.ammo) {
@@ -1308,15 +1315,29 @@
   };
   { const d = store.get(DIFF_KEY); if (d === 0 || d === 1 || d === 2) diff = d; }
   function saveProgress() { store.set(SAVE_KEY, { level: levelIndex, diff, carry }); }
+  // ---- scoring, best times and the high-score table (kept on this device)
+  const SCORES_KEY = 'goffichick-scores', TIMES_KEY = 'goffichick-best-times', DIFF_MUL = [0.6, 1, 1.5];
+  let runScore = 0, lastEntry = -1;
+  const highScores = () => store.get(SCORES_KEY) || [];
+  const qualifies = sc => sc > 0 && (highScores().length < 10 || sc > highScores()[highScores().length - 1].score);
+  const ALPHA = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 ';
+  let initials = [6, 14, 5], initCur = 0; // "GOF"
+  function saveHighScore() {
+    const name = initials.map(i => ALPHA[i]).join('').trim() || '???';
+    const list = highScores(); const entry = { name, score: runScore, diff, date: new Date().toISOString().slice(0, 10) };
+    list.push(entry); list.sort((a, b) => b.score - a.score);
+    lastEntry = list.indexOf(entry); store.set(SCORES_KEY, list.slice(0, 10));
+    state = 'scores'; stateT = 0;
+  }
   function savedGame() { const s = store.get(SAVE_KEY); return s && LEVELS[s.level] ? s : null; }
   function beginPlay() { state = 'playing'; Sfx.init(); Sfx.startMusic(); }
   function startGame() {
-    levelIndex = 0; carry = null; god = false;
+    levelIndex = 0; carry = null; god = false; runScore = 0;
     loadLevel(0, null); saveProgress(); beginPlay();
   }
   function continueGame() {
     const sv = savedGame(); if (!sv) return startGame();
-    levelIndex = sv.level; diff = sv.diff; carry = sv.carry; god = false;
+    levelIndex = sv.level; diff = sv.diff; carry = sv.carry; god = false; runScore = (carry && carry.score) || 0;
     loadLevel(levelIndex, carry); beginPlay();
   }
   // title menu
@@ -1326,11 +1347,15 @@
     if (sv) items.push({ id: 'continue', text: `CONTINUE  -  ${LEVELS[sv.level].name.split(':')[0]}, ${DIFFS[sv.diff].name}` });
     items.push({ id: 'new', text: 'NEW GAME' });
     items.push({ id: 'diff', text: `DIFFICULTY   <  ${DIFFS[diff].name}  >` });
+    items.push({ id: 'scores', text: 'HIGH SCORES' });
+    items.push({ id: 'voice', text: `GOFFICHICK'S VOICE   ${Voice.on ? 'ON' : 'OFF'}` });
     return items;
   }
   function menuActivate(item, dir = 1) {
     if (item.id === 'continue') continueGame();
     else if (item.id === 'new') startGame();
+    else if (item.id === 'scores') { state = 'scores'; stateT = 0; lastEntry = -1; }
+    else if (item.id === 'voice') { Voice.toggle(); Sfx.init(); Sfx.play.switch(); if (Voice.on) Voice.say('levelStart', 1, true); }
     else { diff = (diff + dir + DIFFS.length) % DIFFS.length; store.set(DIFF_KEY, diff); Sfx.init(); Sfx.play.switch(); }
     if (state === 'playing') lockPointer();
   }
@@ -1339,15 +1364,22 @@
   function titleTap(gx, gy) {
     const items = menuItems();
     const row = Math.floor((gy - (MENU_Y - 9)) / MENU_DY);
-    if (gx !== undefined && gx < 330 && row >= 0 && row < items.length) { menuSel = row; menuActivate(items[row], 1); }
+    if (gx !== undefined && gx > 8 && gx < 215 && row >= 0 && row < items.length) { menuSel = row; menuActivate(items[row], 1); }
     else menuActivate(items[Math.min(menuSel, items.length - 1)], 1);
   }
   function completeLevel() {
     if (state !== 'playing') return;
-    interStats = { name: L.def.name, kills: L.totalKills ? Math.round(player.kills / L.totalKills * 100) : 100,
+    interStats = { name: L.def.name, kills: L.totalKills ? Math.min(100, Math.round(player.kills / L.totalKills * 100)) : 100,
       items: L.totalItems ? Math.round(player.items / L.totalItems * 100) : 100,
-      secrets: L.totalSecrets ? Math.round(player.secrets / L.totalSecrets * 100) : 100, time: levelTime };
-    carry = { health: player.health, armor: player.armor, armorType: player.armorType, ammo: player.ammo, weapons: player.weapons, cur: player.cur };
+      secrets: L.totalSecrets ? Math.round(player.secrets / L.totalSecrets * 100) : 100, time: levelTime, par: L.def.par || 240 };
+    const st = interStats;
+    st.score = Math.round((st.kills * 20 + st.items * 10 + st.secrets * 30 + Math.max(0, st.par - st.time) * 5) * DIFF_MUL[diff]);
+    runScore += st.score; st.total = runScore;
+    const times = store.get(TIMES_KEY) || {};
+    st.best = times[L.def.name]; st.newBest = st.best === undefined || st.time < st.best;
+    if (st.newBest) { times[L.def.name] = Math.round(st.time); store.set(TIMES_KEY, times); }
+    Voice.say('exit', 0.8, true);
+    carry = { health: player.health, armor: player.armor, armorType: player.armorType, ammo: player.ammo, weapons: player.weapons, cur: player.cur, score: runScore };
     state = levelIndex >= LEVELS.length - 1 ? 'victory' : 'intermission'; stateT = 0;
     if (state === 'victory') store.del(SAVE_KEY);
     else { levelIndex++; saveProgress(); levelIndex--; } // a CONTINUE now starts the next level
@@ -1362,6 +1394,7 @@
 
   function update(dt) {
     time += dt; stateT += dt;
+    Voice.update(dt);
     if (msgT > 0) msgT -= dt;
     if (state === 'playing' || state === 'dead') {
       levelTime += dt;
@@ -1402,35 +1435,78 @@
       const items = menuItems(); menuSel = Math.min(menuSel, items.length - 1);
       items.forEach((it, i) => {
         const sel = i === menuSel, y = MENU_Y + i * MENU_DY;
-        if (sel) { ctx.fillStyle = 'rgba(255,79,184,0.18)'; ctx.fillRect(12, y - 9, 300, 12); }
+        if (sel) { ctx.fillStyle = 'rgba(255,79,184,0.18)'; ctx.fillRect(12, y - 9, 203, 12); }
         label((sel ? '> ' : '  ') + it.text, 16, y, sel ? '#ffffff' : '#ff9be0', 'left', 9);
       });
     }
     const lines = ['WASD / ARROWS  move      MOUSE  look (click to lock)', 'CLICK / CTRL   fire      E / SPACE  switches, lifts, secrets',
       '1-8 / Q / WHEEL  weapons   SHIFT run   TAB map   M music'];
-    lines.forEach((l, i) => label(l, 18, 163 + i * 11, '#b78ab7', 'left', 7));
-    label('Keys open coloured doors. Stairs and lifts take you up.', 18, 205, '#8a6a8a', 'left', 7);
-    label('ON A PHONE? Left stick moves, drag right side to look.', 18, 225, '#7a5a7a', 'left', 7);
+    lines.forEach((l, i) => label(l, 18, 180 + i * 10, '#b78ab7', 'left', 7));
+    label('Keys open coloured doors. Stairs and lifts take you up. V toggles her voice.', 18, 215, '#8a6a8a', 'left', 7);
+    label('ON A PHONE? Left stick moves, drag right side to look.', 18, 227, '#7a5a7a', 'left', 7);
   }
 
-  function drawOverlayText(title, sub, lines) {
-    ctx.fillStyle = 'rgba(5,0,10,0.82)'; ctx.fillRect(0, 0, W, H);
+  function drawOverlayText(title, sub, lines, dy = 16) {
+    ctx.fillStyle = 'rgba(5,0,10,0.9)'; ctx.fillRect(0, 0, W, H);
     ctx.font = '30px "Metal Mania", Impact, serif'; ctx.textAlign = 'center';
     ctx.fillStyle = '#ff4fb8'; ctx.shadowColor = '#ff2d95'; ctx.shadowBlur = 10; ctx.fillText(title, W / 2, 60); ctx.shadowBlur = 0;
     label(sub, W / 2, 80, '#c9a6c9', 'center', 9);
-    (lines || []).forEach((l, i) => label(l, W / 2, 112 + i * 16, '#ffffff', 'center', 11));
+    (lines || []).forEach((l, i) => label(l, W / 2, 108 + i * dy, /NEW/.test(l) ? '#ffcf3a' : '#ffffff', 'center', 10));
+  }
+  function drawScores() {
+    drawTitle(); drawOverlayText('HIGH SCORES', 'The gloomiest players on this device', []);
+    const list = highScores();
+    if (!list.length) label('No scores yet. Finish the game to get on the board!', W / 2, 130, '#ffd0ec', 'center', 9);
+    list.forEach((e, i) => {
+      const y = 104 + i * 13, col = i === lastEntry ? '#ffcf3a' : '#ffffff';
+      label(`${String(i + 1).padStart(2)}.  ${e.name.padEnd(3)}`, W / 2 - 120, y, col, 'left', 10);
+      label(e.score.toLocaleString(), W / 2 + 20, y, col, 'right', 10);
+      label(`${DIFFS[e.diff] ? DIFFS[e.diff].name : ''}  ${e.date || ''}`, W / 2 + 34, y, '#b78ab7', 'left', 8);
+    });
+    if (stateT > 0.5) label('CLICK OR PRESS ENTER', W / 2, 250, '#c9a6c9', 'center', 8);
+  }
+  // arcade-style initials: three letter boxes and an OK button
+  const NAME_BOX = i => ({ x: W / 2 - 75 + i * 40, y: 112, w: 32, h: 40 }), NAME_OK = () => ({ x: W / 2 + 55, y: 120, w: 44, h: 24 });
+  function drawEnterName() {
+    drawTitle(); drawOverlayText('NEW HIGH SCORE', `${runScore.toLocaleString()} points - enter your initials`, []);
+    for (let i = 0; i < 3; i++) {
+      const b = NAME_BOX(i);
+      ctx.fillStyle = i === initCur ? 'rgba(255,79,184,0.35)' : 'rgba(255,255,255,0.08)'; ctx.fillRect(b.x, b.y, b.w, b.h);
+      ctx.strokeStyle = '#ff4fb8'; ctx.strokeRect(b.x + 0.5, b.y + 0.5, b.w - 1, b.h - 1);
+      digits(ALPHA[initials[i]] === ' ' ? '_' : ALPHA[initials[i]], b.x + b.w / 2, b.y + 30, 26, '#ffffff');
+      label('^', b.x + b.w / 2, b.y - 3, '#ff9be0', 'center', 9); label('v', b.x + b.w / 2, b.y + b.h + 9, '#ff9be0', 'center', 9);
+    }
+    const ok = NAME_OK(); ctx.fillStyle = '#ff2d95'; ctx.fillRect(ok.x, ok.y, ok.w, ok.h); label('OK', ok.x + ok.w / 2, ok.y + 16, '#ffffff', 'center', 11);
+    label('Type letters, or tap the top / bottom of a letter to change it', W / 2, 190, '#b78ab7', 'center', 8);
+  }
+  function enterNameTap(gx, gy) {
+    const ok = NAME_OK();
+    if (gx >= ok.x && gx <= ok.x + ok.w && gy >= ok.y && gy <= ok.y + ok.h) { saveHighScore(); return; }
+    for (let i = 0; i < 3; i++) {
+      const b = NAME_BOX(i);
+      if (gx >= b.x && gx <= b.x + b.w && gy >= b.y - 12 && gy <= b.y + b.h + 12) {
+        initCur = i; initials[i] = (initials[i] + (gy < b.y + b.h / 2 ? 1 : -1) + ALPHA.length) % ALPHA.length; Sfx.play.switch();
+      }
+    }
   }
 
   function draw() {
     ctx.setTransform(RES, 0, 0, RES, 0, 0); ctx.imageSmoothingEnabled = true;
     if (state === 'loading' || state === 'title') { drawTitle(); return; }
+    if (state === 'scores') { drawScores(); return; }
+    if (state === 'enterName') { drawEnterName(); return; }
     if (state === 'intermission' || state === 'victory') {
       if (state === 'victory') {
         drawTitle();
         drawOverlayText('VICTORY', 'The cheerfulness is defeated. The world is safely gloomy again.', [
-          `KILLS  ${interStats.kills}%`, `ITEMS  ${interStats.items}%`, `TIME   ${fmtTime(interStats.time)}`, `SKILL  ${DIFFS[diff].name}`, 'THANKS FOR PLAYING - CLICK TO PLAY AGAIN']);
+          `LAST LEVEL  +${interStats.score}`, `FINAL SCORE  ${runScore.toLocaleString()}`, `SKILL  ${DIFFS[diff].name}`, '',
+          stateT > 2 ? (qualifies(runScore) ? 'A NEW HIGH SCORE! CLICK TO SIGN YOUR NAME' : 'THANKS FOR PLAYING - CLICK TO CONTINUE') : ''], 15);
       } else {
-        drawOverlayText(interStats.name, 'FINISHED', [`KILLS  ${interStats.kills}%`, `ITEMS  ${interStats.items}%`, `SECRET ${interStats.secrets}%`, `TIME   ${fmtTime(interStats.time)}`, '', stateT > 1 ? 'CLICK OR PRESS ENTER' : '']);
+        const st = interStats;
+        drawOverlayText(st.name, 'FINISHED', [`KILLS  ${st.kills}%     ITEMS  ${st.items}%     SECRETS  ${st.secrets}%`,
+          `TIME  ${fmtTime(st.time)}   (PAR ${fmtTime(st.par)})`,
+          st.newBest ? 'NEW BEST TIME!' : `BEST TIME  ${fmtTime(st.best)}`,
+          `LEVEL SCORE  +${st.score.toLocaleString()}`, `TOTAL  ${st.total.toLocaleString()}`, '', stateT > 1 ? 'CLICK OR PRESS ENTER' : ''], 14);
       }
       return;
     }
@@ -1451,6 +1527,12 @@
     if (pw.veil > 0) { const g = ctx.createRadialGradient(W / 2, HOR, 40, W / 2, HOR, W * 0.6); g.addColorStop(0, 'rgba(60,0,90,0)'); g.addColorStop(1, 'rgba(60,0,90,0.45)'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, VIEW_H); }
     if (automap) drawAutomap();
     drawMessages();
+    if (Voice.subtitle) {
+      const t = `"${Voice.subtitle}"`;
+      ctx.font = 'italic bold 9px monospace'; const tw = ctx.measureText(t).width;
+      ctx.fillStyle = 'rgba(10,0,16,0.6)'; ctx.fillRect(W / 2 - tw / 2 - 4, VIEW_H - 30, tw + 8, 13);
+      ctx.textAlign = 'center'; ctx.fillStyle = '#ff9be0'; ctx.fillText(t, W / 2, VIEW_H - 20.5);
+    }
     drawHUD();
     if (state === 'dead') {
       ctx.fillStyle = `rgba(80,0,0,${Math.min(0.6, stateT * 0.4)})`; ctx.fillRect(0, 0, W, VIEW_H);
@@ -1483,7 +1565,9 @@
     }
     if (state === 'dead' && stateT > 1) { restartLevel(); return true; }
     if (state === 'intermission' && stateT > 1) { nextLevel(); return true; }
-    if (state === 'victory' && stateT > 2) { state = 'title'; return true; }
+    if (state === 'victory' && stateT > 2) { if (qualifies(runScore)) { state = 'enterName'; initCur = 0; } else { state = 'scores'; lastEntry = -1; } stateT = 0; return true; }
+    if (state === 'scores' && stateT > 0.3) { state = 'title'; return true; }
+    if (state === 'enterName') { if (ev && ev.clientX !== undefined) { const g = gamePoint(ev.clientX, ev.clientY); enterNameTap(g.x, g.y); } else saveHighScore(); return true; }
     if (paused) { paused = false; lockPointer(); return true; }
     return false;
   }
@@ -1499,8 +1583,19 @@
       if (e.code === 'ArrowDown') menuSel = (menuSel + 1) % items.length;
       if ((e.code === 'ArrowLeft' || e.code === 'ArrowRight') && items[menuSel].id === 'diff') menuActivate(items[menuSel], e.code === 'ArrowLeft' ? -1 : 1);
     }
+    if (state === 'enterName') {
+      if (e.code === 'ArrowUp') initials[initCur] = (initials[initCur] + 1) % ALPHA.length;
+      if (e.code === 'ArrowDown') initials[initCur] = (initials[initCur] + ALPHA.length - 1) % ALPHA.length;
+      if (e.code === 'ArrowLeft') initCur = (initCur + 2) % 3;
+      if (e.code === 'ArrowRight') initCur = (initCur + 1) % 3;
+      if (/^[a-z0-9]$/i.test(e.key)) { initials[initCur] = ALPHA.indexOf(e.key.toUpperCase()); initCur = Math.min(2, initCur + 1); }
+      if (e.code === 'Backspace') { initials[initCur] = ALPHA.length - 1; initCur = Math.max(0, initCur - 1); }
+      if (e.code === 'Enter') saveHighScore();
+      return;
+    }
     if (e.code === 'Enter') primaryAction();
     if (state !== 'playing') return;
+    if (e.code === 'KeyV') { msg = Voice.toggle() ? "Goffichick's voice on" : "Goffichick's voice off"; msgT = 1.5; }
     if (e.key.length === 1) cheatKey(e.key.toLowerCase());
     if (e.code === 'KeyE' || e.code === 'Space') useAction();
     if (e.code === 'Tab') automap = !automap;
@@ -1608,6 +1703,6 @@
     titleImg = photos.title;
     state = 'title';
     // expose a tiny debug hook for testing
-    window.GOFFI = { get state() { return state; }, get player() { return player; }, get level() { return L; }, start: startGame, completeLevel, get diff() { return diff; }, set diff(v) { diff = v; }, continueGame, savedGame, setLevel: i => { levelIndex = i; loadLevel(i, null); state = 'playing'; } };
+    window.GOFFI = { get state() { return state; }, get player() { return player; }, get level() { return L; }, start: startGame, completeLevel, get score() { return runScore; }, highScores, get diff() { return diff; }, set diff(v) { diff = v; }, continueGame, savedGame, setLevel: i => { levelIndex = i; loadLevel(i, null); state = 'playing'; } };
   });
 })();
