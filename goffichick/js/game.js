@@ -65,8 +65,8 @@
   function newPlayer(keep) {
     const p = {
       x: 0, y: 0, a: 0, health: 100, armor: 0, armorType: 0,
-      ammo: { bullets: 50, shells: 0, skulls: 0, rockets: 0, souls: 0 },
-      weapons: { knuckles: true, pistol: true }, cur: 'pistol', next: null,
+      ammo: { bullets: 100, shells: 20, skulls: 8, rockets: 8, souls: 100 },
+      weapons: Object.fromEntries(WEAPONS.map(w => [w.key, true])), cur: 'shotgun', next: null,
       switchT: 0, cooldown: 0, firePhase: 0, fireT: 0, flashT: 0, windupT: 0,
       bobT: 0, move: 0, eyeZ: 0.5, refireT: 0, dead: false, faceLook: 0, faceT: 0, painT: 0, grinT: 0,
       kills: 0, items: 0, secrets: 0, slimeT: 0,
@@ -125,7 +125,8 @@
       L.doors.set(y * mw + x, { x, y, open: 0, state: 'closed', t: 0, vertical: solidNS, secret, tex: secret ? (near > 0 && near !== DOOR ? near : 1) : 5 });
     }
     levelTime = 0; L.flowFrom = -1;
-    msg = def.name; msgT = 4;
+    Sfx.setSong(i + 1);
+    msg = `${def.name}   - music: ${Sfx.songName()}`; msgT = 4;
   }
 
   function spawnEnemy(type, x, y) {
@@ -221,8 +222,8 @@
       const isFloor = y > HOR;
       const dy = isFloor ? (y + 0.5 - HOR) : (HOR - y - 0.5);
       const rowDist = (isFloor ? eyeZ : 1 - eyeZ) * PROJ / dy;
-      let s = clamp(1.12 - rowDist * 0.085 + boost, 0, 1);
-      if (!isFloor) s *= 0.85;
+      let s = clamp(1.3 - rowDist * 0.05 + boost, 0.25, 1);
+      if (!isFloor) s *= 0.92;
       const is = 1 - s, ar = fr * is, ag = fg * is, ab = fb * is;
       const stepX = rowDist * (r1x - r0x) / W, stepY = rowDist * (r1y - r0y) / W;
       let fx = p.x + rowDist * r0x, fy = p.y + rowDist * r0y;
@@ -257,7 +258,7 @@
       const tx = Math.min(63, (h.u * 64) | 0);
       const lx = (p.x + rdx * (h.dist - 0.02)) | 0, ly = (p.y + rdy * (h.dist - 0.02)) | 0;
       const wl = (lx >= 0 && ly >= 0 && lx < mw && ly < L.mh) ? L.lightNow[ly * mw + lx] : 1;
-      let s = clamp(1.12 - dist * 0.085 + boost, 0, 1) * (h.side ? 0.78 : 1) * wl;
+      let s = clamp(1.3 - dist * 0.05 + boost, 0.25, 1) * (h.side ? 0.86 : 1) * wl;
       if (h.tex === 7 || h.tex === 11) s = Math.max(s, 0.85); // glowing glass / lit switch
       const is = 1 - s, ar = fr * is, ag = fg * is, ab = fb * is;
       const texStep = 64 / (bot - top);
@@ -305,7 +306,7 @@
       if (x0 >= x1) continue;
       const y0 = Math.max(0, Math.ceil(top)), y1 = Math.min(VIEW_H, Math.ceil(bottom));
       if (y0 >= y1) continue;
-      let s = sp.bright ? 1 : clamp(1.12 - depth * 0.085 + boost, 0, 1) * sp.light;
+      let s = sp.bright ? 1 : clamp(1.3 - depth * 0.05 + boost, 0.3, 1) * sp.light;
       const is = 1 - s, ar = fr * is, ag = fg * is, ab = fb * is;
       const data = spr.data, sw = spr.w, sh = spr.h;
       const uStep = sw / wPx, vStep = sh / hPx;
@@ -546,7 +547,7 @@
       const was = z.on;
       if (z.on ? Math.random() < 0.025 : Math.random() < 0.25) z.on = !z.on;
       if (was === z.on) continue;
-      const v = z.on ? z.level : z.level * 0.35;
+      const v = z.on ? z.level : z.level * 0.65;
       for (let y = z.y; y < z.y + z.h; y++) for (let x = z.x; x < z.x + z.w; x++) if (x >= 0 && y >= 0 && x < L.mw && y < L.mh) L.lightNow[y * L.mw + x] = v;
     }
   }
@@ -986,7 +987,7 @@
     p.painT -= dt; p.grinT -= dt;
   }
 
-  function pickup(def) {
+  function pickup(def) { // eslint-disable-line no-param-reassign
     const p = player;
     let used = false;
     if (def.health) {
@@ -998,8 +999,8 @@
     }
     if (def.weapon) {
       const w = weaponByKey(def.weapon);
-      if (!p.weapons[def.weapon]) { p.weapons[def.weapon] = true; switchWeapon(def.weapon); p.grinT = 1.5; Sfx.play.weaponUp(); msg = `You got the ${w.name}!`; msgT = 3; }
-      used = true;
+      if (!p.weapons[def.weapon]) { p.weapons[def.weapon] = true; switchWeapon(def.weapon); p.grinT = 1.5; Sfx.play.weaponUp(); msg = `You got the ${w.name}!`; msgT = 3; used = true; }
+      else def = { ...def, msg: `Picked up ammo for the ${w.name}.`, weapon: null };
     }
     if (def.ammo) {
       for (const [k, v] of Object.entries(def.ammo)) {

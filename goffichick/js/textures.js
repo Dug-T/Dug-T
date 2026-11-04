@@ -204,5 +204,17 @@ const Textures = (() => {
     speckle(g, 90, ['#ffffff', '#ffd0f4'], 1);
   });
 
+  // lift the darkest gothic surfaces so the levels read clearly
+  function brighten(tex, f) {
+    const d = tex.data;
+    for (let i = 0; i < d.length; i++) {
+      const c = d[i];
+      const r = Math.min(255, (c & 255) * f + 6) | 0, g2 = Math.min(255, (c >> 8 & 255) * f + 6) | 0, b = Math.min(255, (c >> 16 & 255) * f + 8) | 0;
+      d[i] = (c & 0xff000000) | (b << 16) | (g2 << 8) | r;
+    }
+  }
+  for (const k of [1, 2, 5, 6, 10, 11]) brighten(T[k], 1.45);
+  brighten(F.graveyard, 1.6); brighten(F.stoneCeil, 1.7); brighten(F.checker, 1.3);
+
   return { walls: T, flats: F };
 })();

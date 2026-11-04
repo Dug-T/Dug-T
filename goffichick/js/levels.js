@@ -56,14 +56,14 @@ const DECOR_TYPES = {
 const LEVELS = [
   {
     name: 'E1M1: THE CEMETERY GATES',
-    floor: 'graveyard', ceil: 'stoneCeil', fog: [10, 6, 16],
+    floor: 'graveyard', ceil: 'stoneCeil', fog: [34, 24, 44],
     // light zones: x, y, w, h, level (0..1), flicker
     lights: [
-      { x: 1, y: 1, w: 12, h: 13, level: 0.45, flicker: true },   // the crypt
-      { x: 13, y: 24, w: 5, h: 7, level: 0.55 },                  // secret stash
-      { x: 6, y: 18, w: 8, h: 6, level: 0.7 },                    // zig-zag hall
-      { x: 19, y: 19, w: 17, h: 14, level: 0.65 },                // south passage
-      { x: 31, y: 26, w: 12, h: 7, level: 0.5, flicker: true },   // exit hall
+      { x: 1, y: 1, w: 12, h: 13, level: 0.7, flicker: true },   // the crypt
+      { x: 13, y: 24, w: 5, h: 7, level: 0.75 },                  // secret stash
+      { x: 6, y: 18, w: 8, h: 6, level: 0.81 },                    // zig-zag hall
+      { x: 19, y: 19, w: 17, h: 14, level: 0.79 },                // south passage
+      { x: 31, y: 26, w: 12, h: 7, level: 0.72, flicker: true },   // exit hall
     ],
     map: [
       '############################################',
@@ -104,11 +104,11 @@ const LEVELS = [
   },
   {
     name: 'E1M2: CUBICLE HELL',
-    floor: 'carpet', ceil: 'officeCeil', fog: [40, 40, 44],
+    floor: 'carpet', ceil: 'officeCeil', fog: [70, 70, 76],
     lights: [
-      { x: 24, y: 8, w: 9, h: 7, level: 0.5, flicker: true },
-      { x: 1, y: 8, w: 6, h: 4, level: 0.6 },
-      { x: 24, y: 16, w: 9, h: 4, level: 0.55, flicker: true },
+      { x: 24, y: 8, w: 9, h: 7, level: 0.72, flicker: true },
+      { x: 1, y: 8, w: 6, h: 4, level: 0.77 },
+      { x: 24, y: 16, w: 9, h: 4, level: 0.75, flicker: true },
     ],
     map: [
       'WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW',
@@ -136,10 +136,10 @@ const LEVELS = [
   },
   {
     name: "E1M3: WALLY'S PENTHOUSE",
-    floor: 'tiles', ceil: 'goldCeil', fog: [24, 10, 30], boss: true,
+    floor: 'tiles', ceil: 'goldCeil', fog: [50, 30, 56], boss: true,
     lights: [
-      { x: 0, y: 16, w: 33, h: 9, level: 0.7, flicker: true },
-      { x: 1, y: 7, w: 7, h: 5, level: 0.55 },
+      { x: 0, y: 16, w: 33, h: 9, level: 0.81, flicker: true },
+      { x: 1, y: 7, w: 7, h: 5, level: 0.75 },
     ],
     map: [
       'MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM',
