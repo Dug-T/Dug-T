@@ -199,31 +199,94 @@ const Sprites = (() => {
   }
 
   // --- WALLY MAN: from the photo. Fires a spread of "reply-all" notifications from his phone.
+  // The photo is a single pose, so the animation is made by warping parts of it:
+  // legs swing (stride), the cape ripples, the body bobs and sways, and he leans into attacks.
   function wallyFrames(img, boss) {
-    const H = boss ? 240 : 160, W = Math.round(img.width * H / img.height);
-    const frame = (fn) => { const c = document.createElement('canvas'); c.width = W + 20; c.height = H; const g = c.getContext('2d'); fn(g); return c; };
-    const base = (g, dx = 10, dy = 0, sk = 0) => { g.save(); g.translate(dx, dy); g.transform(1, 0, sk, 1, 0, 0); g.drawImage(img, 0, 0, W, H - dy); g.restore(); };
-    const bossify = (g) => {
-      if (!boss) return;
-      g.globalCompositeOperation = 'source-atop';
-      g.fillStyle = 'rgba(255,190,0,0.18)'; g.fillRect(0, 0, W + 20, H);
-      g.globalCompositeOperation = 'source-over';
-      // glowing red eyes behind the goggles
-      const ex = 10 + W * 0.585, ey = H * 0.075;
-      E(g, '#ff1a1a', ex - W * 0.03, ey, W * 0.018, H * 0.008); E(g, '#ff1a1a', ex + W * 0.045, ey, W * 0.018, H * 0.008);
+    const H = boss ? 240 : 160, W = Math.round(img.width * H / img.height), M = Math.round(W * 0.12), CW = W + M * 2;
+    const canvas = (w = CW) => { const c = document.createElement('canvas'); c.width = w; c.height = H; return c; };
+    const HIP = 0.46;                      // belt line, as a fraction of height
+    const smooth = (a, b, v) => { const t = Math.max(0, Math.min(1, (v - a) / (b - a))); return t * t * (3 - 2 * t); };
+
+    // Re-sample a canvas through a displacement function (nearest pixel; keeps the crisp sprite look)
+    function warp(src, fn) {
+      const out = canvas(src.width), sg = src.getContext('2d'), og = out.getContext('2d');
+      const sd = sg.getImageData(0, 0, src.width, src.height), od = og.createImageData(src.width, src.height);
+      const s32 = new Uint32Array(sd.data.buffer), o32 = new Uint32Array(od.data.buffer), w = src.width, h = src.height;
+      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+        const [dx, dy] = fn((x - M) / W, y / H);
+        const sx = Math.round(x - dx * W), sy = Math.round(y - dy * H);
+        if (sx >= 0 && sy >= 0 && sx < w && sy < h) o32[y * w + x] = s32[sy * w + sx];
+      }
+      og.putImageData(od, 0, 0); return out;
+    }
+    // Draw the photo with a lean (radians, pivoting on his feet), a vertical bob, and a squash
+    function pose(lean = 0, bob = 0, squash = 1) {
+      const c = canvas(), g = c.getContext('2d');
+      g.translate(CW / 2, H); g.rotate(lean); g.translate(-CW / 2, -H);
+      const h = H * 0.96 * squash;
+      g.drawImage(img, M, H - h - bob * H, W, h);
+      return c;
+    }
+    // stride + cape flutter for a given phase of the walk cycle
+    const walkWarp = (ph, stride, flap) => (u, v) => {
+      let dx = 0, dy = 0;
+      if (v > HIP) dx += Math.sin(ph) * stride * (v - HIP) / (1 - HIP);           // legs swing
+      const cape = smooth(0.42, 0.12, u) * smooth(0.22, 0.36, v) * smooth(0.66, 0.56, v); // cape region (left, mid-height)
+      if (cape > 0) { dx += Math.sin(ph * 2 + v * 14) * flap * cape; dy += Math.cos(ph * 2 + u * 11) * flap * 0.5 * cape; }
+      return [dx, dy];
     };
-    const w0 = frame(g => { base(g); bossify(g); });
-    const w1 = frame(g => { base(g, 10, 3, -0.02); bossify(g); });
-    const at = frame(g => {
-      base(g); bossify(g);
-      const px = 10 + W * 0.73, py = H * 0.33;
-      glow(g, px, py, W * 0.22, 'rgba(160,220,255,0.95)', 'rgba(40,120,255,0)');
-      E(g, '#ffffff', px, py, W * 0.05, W * 0.05);
+    const bossify = (c) => {
+      if (!boss) return c;
+      const g = c.getContext('2d');
+      g.globalCompositeOperation = 'source-atop'; g.fillStyle = 'rgba(255,190,0,0.18)'; g.fillRect(0, 0, c.width, H);
+      g.globalCompositeOperation = 'source-over';
+      return c;
+    };
+    const eyes = (c, lean = 0) => { // glowing red eyes behind the goggles (boss only)
+      if (!boss) return c;
+      const g = c.getContext('2d'); g.save(); g.translate(CW / 2, H); g.rotate(lean); g.translate(-CW / 2, -H);
+      const ex = M + W * 0.585, ey = H * 0.04 + H * 0.96 * 0.075;
+      E(g, '#ff1a1a', ex - W * 0.03, ey, W * 0.018, H * 0.008); E(g, '#ff1a1a', ex + W * 0.045, ey, W * 0.018, H * 0.008);
+      g.restore(); return c;
+    };
+    const phoneGlow = (c, lean, r, a) => {
+      const g = c.getContext('2d'); g.save(); g.translate(CW / 2, H); g.rotate(lean); g.translate(-CW / 2, -H);
+      const px = M + W * 0.73, py = H * 0.04 + H * 0.96 * 0.33;
+      glow(g, px, py, W * r, `rgba(160,220,255,${a})`, 'rgba(40,120,255,0)');
+      E(g, '#ffffff', px, py, W * r * 0.22, W * r * 0.22);
+      g.restore(); return c;
+    };
+
+    // walk cycle: 6 frames
+    const walk = [];
+    for (let k = 0; k < 6; k++) {
+      const ph = k / 6 * Math.PI * 2;
+      const lean = Math.sin(ph) * 0.03, bob = Math.abs(Math.sin(ph)) * 0.025;
+      walk.push(fromCanvas(eyes(bossify(warp(pose(lean, bob), walkWarp(ph, 0.09, 0.035))), lean)));
+    }
+    // idle: breathing, cape stirring
+    const idle = [0, 1, 2, 3].map(k => {
+      const ph = k / 4 * Math.PI * 2;
+      return fromCanvas(eyes(bossify(warp(pose(0, 0, 1 - 0.012 * (1 - Math.cos(ph)) / 2), walkWarp(ph, 0, 0.015)))));
     });
-    const set = { walk: [fromCanvas(w0), fromCanvas(w1)], attack: [fromCanvas(at)] };
-    set.pain = [fromCanvas(tinted(w0, '#ff0000', 0.45))];
-    set.die = deathFrames(w0);
-    return set;
+    // attack: lean back and the phone lights up, then lunge forward with the blast
+    const wind = phoneGlow(eyes(bossify(warp(pose(0.05, 0), walkWarp(0.5, 0.02, 0.02))), 0.05), 0.05, 0.16, 0.7);
+    const fire = phoneGlow(eyes(bossify(warp(pose(-0.06, 0.01), walkWarp(2.5, -0.04, 0.04))), -0.06), -0.06, 0.3, 0.95);
+    // pain: knocked back, flash of red
+    const painC = tinted(warp(pose(0.09, 0.015), walkWarp(1, -0.03, 0.04)), '#ff0000', 0.45);
+    // death: topples backwards onto the floor
+    const die = [];
+    const DW = Math.round(H * 2.1);
+    [[0.25, 0.25], [0.6, 0.4], [1.0, 0.55], [1.35, 0.7], [1.57, 0.8]].forEach(([ang, red], i) => {
+      const c = document.createElement('canvas'); c.width = DW; c.height = H;
+      const g = c.getContext('2d');
+      if (i >= 3) E(g, '#5a0008', DW / 2 - H * 0.45, H - 3, H * 0.5, 4);
+      const body = tinted(warp(pose(0, 0), walkWarp(i, 0.04, 0.05)), '#400000', red * 0.6);
+      g.save(); g.translate(DW / 2, H); g.rotate(-ang); g.drawImage(body, -CW / 2, -H); g.restore();
+      g.globalCompositeOperation = 'source-atop'; splatter(g, DW, H, 6 + i * 6, 31 + i, H * 0.2); g.globalCompositeOperation = 'source-over';
+      die.push(fromCanvas(c));
+    });
+    return { walk, walkFps: 9, idle, attack: [fromCanvas(wind), fromCanvas(fire)], pain: [fromCanvas(painC)], die };
   }
 
   // ===================== PROJECTILES & EFFECTS =====================

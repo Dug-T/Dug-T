@@ -60,7 +60,8 @@ const Sfx = (() => {
     hexHit: (d) => { tone(600, 0.15, 'triangle', 0.2 * vol(d), 150); },
     bfgCharge: () => { tone(80, 0.9, 'sawtooth', 0.3, 900); tone(120, 0.9, 'square', 0.12, 1300); },
     bfgBoom: (d) => { const v = vol(d); noise(1.6, 3000, 1.0, 'lowpass', v, 50); tone(50, 1.4, 'sine', 0.9 * v, 20); tone(400, 0.8, 'sawtooth', 0.3 * v, 40); },
-    flame: () => { noise(0.16, 700, 0.32, 'bandpass', 1, 1600); noise(0.12, 260, 0.25, 'lowpass'); },
+    flame: () => fireOn(),
+    burn: (d) => { const v = vol(d) * 0.7; crackle(v); setTimeout(() => crackle(v), 60 + Math.random() * 90); },
     empty: () => tone(1800, 0.03, 'square', 0.1),
     pickup: () => { tone(660, 0.06, 'square', 0.15); tone(990, 0.09, 'square', 0.15, null, 0.06); },
     weaponUp: () => { tone(330, 0.08, 'square', 0.2); tone(495, 0.08, 'square', 0.2, null, 0.08); tone(660, 0.18, 'square', 0.2, null, 0.16); },
@@ -81,6 +82,63 @@ const Sfx = (() => {
     bossRoar: (d) => { const v = vol(d); tone(60, 1.2, 'sawtooth', 0.5 * v, 30); tone(90, 1.2, 'square', 0.2 * v, 45); noise(1, 300, 0.4, 'lowpass', v); },
     exit: () => { [440, 554, 659, 880].forEach((f, i) => tone(f, 0.25, 'square', 0.18, null, i * 0.12)); },
   };
+
+  // =====================================================================
+  //  FLAMETHROWER - a sustained roar of fire while the trigger is held.
+  //  Every shot calls fireOn(), which keeps the roar alive; when the shots stop
+  //  it dies away by itself with a hiss and a few last crackles.
+  // =====================================================================
+  let fire = null;
+  function crackle(v = 1) {
+    if (!ctx) return;
+    const t = ctx.currentTime + Math.random() * 0.03;
+    const src = ctx.createBufferSource(); src.buffer = noiseBuf;
+    const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 1500 + Math.random() * 3500; f.Q.value = 1.5;
+    const g = ctx.createGain(), len = 0.006 + Math.random() * 0.025, peak = (0.15 + Math.random() * 0.4) * v;
+    g.gain.setValueAtTime(peak, t); g.gain.exponentialRampToValueAtTime(0.0001, t + len);
+    src.connect(f); f.connect(g); g.connect(master); src.start(t, Math.random()); src.stop(t + len + 0.02);
+  }
+  function fireOn() {
+    if (!ctx) return;
+    if (!fire) {
+      const t = ctx.currentTime;
+      const out = ctx.createGain(); out.gain.setValueAtTime(0.0001, t); out.gain.exponentialRampToValueAtTime(0.5, t + 0.09); out.connect(master);
+      // the roar: filtered noise with a warm resonant body
+      const src = ctx.createBufferSource(); src.buffer = noiseBuf; src.loop = true;
+      const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 1000; lp.Q.value = 0.8;
+      const body = ctx.createBiquadFilter(); body.type = 'peaking'; body.frequency.value = 320; body.Q.value = 0.9; body.gain.value = 9;
+      src.connect(lp); lp.connect(body); body.connect(out);
+      // the low rumble underneath
+      const rum = ctx.createBufferSource(); rum.buffer = noiseBuf; rum.loop = true; rum.playbackRate.value = 0.45;
+      const rlp = ctx.createBiquadFilter(); rlp.type = 'lowpass'; rlp.frequency.value = 170;
+      const rg = ctx.createGain(); rg.gain.value = 1.6;
+      rum.connect(rlp); rlp.connect(rg); rg.connect(out);
+      src.start(t, Math.random()); rum.start(t, Math.random());
+      noise(0.4, 180, 0.8, 'lowpass', 1, 2200); // ignition "whoomph"
+      // flames flicker: wobble the tone and loudness, and crackle at random
+      const flicker = setInterval(() => {
+        const now = ctx.currentTime;
+        lp.frequency.setTargetAtTime(650 + Math.random() * 1100, now, 0.03);
+        out.gain.setTargetAtTime(0.38 + Math.random() * 0.24, now, 0.04);
+        if (Math.random() < 0.75) crackle(0.9);
+        if (Math.random() < 0.3) crackle(0.6);
+      }, 45);
+      fire = { out, src, rum, flicker, timer: null };
+    }
+    clearTimeout(fire.timer);
+    fire.timer = setTimeout(fireOff, 170);
+  }
+  function fireOff() {
+    if (!fire) return;
+    const f = fire; fire = null;
+    clearInterval(f.flicker);
+    const t = ctx.currentTime;
+    f.out.gain.cancelScheduledValues(t); f.out.gain.setValueAtTime(Math.max(0.0001, f.out.gain.value), t);
+    f.out.gain.exponentialRampToValueAtTime(0.0001, t + 0.4);
+    f.src.stop(t + 0.45); f.rum.stop(t + 0.45);
+    noise(0.45, 2600, 0.1, 'highpass'); // dying hiss
+    setTimeout(() => crackle(0.7), 90); setTimeout(() => crackle(0.5), 210); setTimeout(() => crackle(0.35), 330);
+  }
 
   // =====================================================================
   //  MUSIC - a small step sequencer playing multi-section songs.
