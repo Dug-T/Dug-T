@@ -14,7 +14,7 @@
   body { position: fixed; inset: 0; }
   #screen, #touch, #touch * { touch-action: none; }
   body { display: flex; align-items: center; justify-content: center; }
-  #screen { width: min(100vw, calc(100vh * 480 / 270)); height: auto; aspect-ratio: 480 / 270; display: block; cursor: crosshair; }
+  #screen { display: block; cursor: crosshair; } /* the game sizes the canvas to fill the screen */
   #touch { display: none; position: fixed; inset: 0; pointer-events: none; }
   #touch > * { pointer-events: auto; position: absolute; }
   #look { right: 0; top: 0; width: 60%; height: 100%; }

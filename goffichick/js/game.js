@@ -4,9 +4,14 @@
 
 (() => {
   // ------------------------------------------------------------------ constants
-  const W = 480, VIEW_H = 222, HUD_H = 48, H = VIEW_H + HUD_H;
+  // Height is fixed; the width follows the screen's shape (16:9 up to ~21:9) so a phone held
+  // sideways is filled edge to edge. A wider screen shows more to the sides (wider field of
+  // view) rather than stretching anything.
+  const BASE_W = 480, MAX_W = 640, VIEW_H = 222, HUD_H = 48, H = VIEW_H + HUD_H;
+  let W = BASE_W;
   const HOR = VIEW_H / 2;
-  const FOV = 70 * Math.PI / 180, PLANE = Math.tan(FOV / 2), PROJ = (W / 2) / PLANE;
+  const FOV = 70 * Math.PI / 180, PROJ = (BASE_W / 2) / Math.tan(FOV / 2);
+  let PLANE = (W / 2) / PROJ;
   const DOOR = 100;
   const TAU = Math.PI * 2;
 
@@ -15,12 +20,22 @@
   // The canvas is 3x the game's logical resolution: the 3D world is upscaled with chunky
   // pixels (classic look) while weapons, HUD and text are drawn smooth and detailed.
   const RES = 3;
-  canvas.width = W * RES; canvas.height = H * RES;
-  const viewC = document.createElement('canvas'); viewC.width = W; viewC.height = VIEW_H;
+  const viewC = document.createElement('canvas');
   const viewCtx = viewC.getContext('2d');
-  const img = viewCtx.createImageData(W, VIEW_H);
-  const buf = new Uint32Array(img.data.buffer);
-  const zbuf = new Float32Array(W);
+  let img, buf, zbuf;
+  function fitScreen() {
+    const vw = window.innerWidth, vh = window.innerHeight;
+    const nw = clamp(Math.round(H * vw / vh / 2) * 2, BASE_W, MAX_W);
+    if (nw !== W || !img) {
+      W = nw; PLANE = (W / 2) / PROJ;
+      canvas.width = W * RES; canvas.height = H * RES;
+      viewC.width = W; viewC.height = VIEW_H;
+      img = viewCtx.createImageData(W, VIEW_H); buf = new Uint32Array(img.data.buffer); zbuf = new Float32Array(W);
+      if (hudBg) buildHudBg();
+    }
+    const scale = Math.min(vw / W, vh / H);
+    canvas.style.width = Math.floor(W * scale) + 'px'; canvas.style.height = Math.floor(H * scale) + 'px';
+  }
 
   const rand = (a, b) => a + Math.random() * (b - a);
   const irand = (a, b) => Math.floor(rand(a, b + 1));
@@ -375,12 +390,13 @@
   let hudBg = null;
   function buildHudBg() {
     const c = document.createElement('canvas'); c.width = W; c.height = HUD_H;
+    const hx = (W - BASE_W) / 2;
     const g = c.getContext('2d');
     for (let x = 0; x < W; x += 64) g.drawImage(Textures.walls[2].canvas, 0, 0, 64, 48, x, 0, 64, 48);
     g.fillStyle = 'rgba(10,4,14,0.55)'; g.fillRect(0, 0, W, HUD_H);
     g.fillStyle = '#ff3fa8'; g.fillRect(0, 0, W, 1);
     g.fillStyle = '#000'; g.fillRect(0, 1, W, 1);
-    const sections = [0, 70, 150, 214, 266, 346, W];
+    const sections = [0, 70, 150, 214, 266, 346, BASE_W].map(v => v + hx);
     for (let i = 0; i < sections.length - 1; i++) {
       g.fillStyle = 'rgba(0,0,0,0.45)'; g.fillRect(sections[i] + 2, 4, sections[i + 1] - sections[i] - 4, HUD_H - 7);
       g.strokeStyle = '#5c2a5c'; g.strokeRect(sections[i] + 2.5, 4.5, sections[i + 1] - sections[i] - 5, HUD_H - 8);
@@ -401,6 +417,7 @@
   function drawHUD() {
     const p = player, y0 = VIEW_H;
     ctx.imageSmoothingEnabled = false; ctx.drawImage(hudBg, 0, y0); ctx.imageSmoothingEnabled = true;
+    ctx.save(); ctx.translate((W - BASE_W) / 2, 0);
     const w = weaponByKey(p.cur);
     digits(w && w.ammo ? p.ammo[w.ammo] : '--', 36, y0 + 33, 24);
     label('AMMO', 36, y0 + 43);
@@ -426,6 +443,7 @@
       label(`${p.ammo[k]}/${AMMO_TYPES[k].max}`, 474, yy, '#ffcf3a', 'right', 6.5);
       yy += 7;
     }
+    ctx.restore();
   }
 
   function drawMessages() {
@@ -1164,6 +1182,10 @@
       }
     }
     if (paused) drawOverlayText('PAUSED', 'Click to resume', []);
+    if (isTouch && window.innerHeight > window.innerWidth) {
+      ctx.fillStyle = 'rgba(10,0,16,0.75)'; ctx.fillRect(0, VIEW_H - 16, W, 16);
+      label('Turn your phone sideways for full screen', W / 2, VIEW_H - 5, '#ff9be0', 'center', 8);
+    }
   }
   const fmtTime = t => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
 
@@ -1213,8 +1235,20 @@
 
   // ---- touch controls
   let isTouch = false;
+  // Real full screen (hides the browser bars) where the phone allows it - Android and most
+  // tablets. Browsers only allow this from a tap, so every touch control asks for it.
+  function tryFullscreen() {
+    if (window.innerHeight > window.innerWidth) return; // only once the phone is sideways
+    const el = document.documentElement, fs = document.fullscreenElement || document.webkitFullscreenElement;
+    if (fs) return;
+    try {
+      const r = el.requestFullscreen ? el.requestFullscreen({ navigationUI: 'hide' }) : el.webkitRequestFullscreen && el.webkitRequestFullscreen();
+      if (r && r.catch) r.catch(() => {});
+    } catch (e) {}
+  }
   function setupTouch() {
     if (isTouch) return; isTouch = true;
+    document.getElementById('touch').addEventListener('pointerdown', tryFullscreen, true);
     const ui = document.getElementById('touch'); ui.style.display = 'block';
     const stick = document.getElementById('stick'), knob = document.getElementById('knob');
     let stickId = null, sx0 = 0, sy0 = 0;
@@ -1241,7 +1275,7 @@
   }
   window.addEventListener('touchstart', () => setupTouch(), { once: true, passive: true });
   // the very first tap lands on the canvas (before the touch overlay exists): let it start the game
-  canvas.addEventListener('pointerdown', e => { if (e.pointerType === 'touch') { setupTouch(); primaryAction(); } });
+  canvas.addEventListener('pointerdown', e => { if (e.pointerType === 'touch') { setupTouch(); tryFullscreen(); primaryAction(); } });
   // Claim every touch gesture for the game. Without this, in-app browsers such as Facebook's
   // read a sideways look-drag as "swipe to go back / close", and a downward drag as "pull to close".
   const blockGesture = e => { if (e.cancelable) e.preventDefault(); };
@@ -1268,6 +1302,9 @@
     draw();
     requestAnimationFrame(frame);
   }
+  fitScreen();
+  for (const ev of ['resize', 'orientationchange']) window.addEventListener(ev, () => { fitScreen(); setTimeout(fitScreen, 250); });
+  if (window.visualViewport) window.visualViewport.addEventListener('resize', fitScreen);
   requestAnimationFrame(frame);
 
   const fontReady = document.fonts ? document.fonts.load('30px "Metal Mania"').catch(() => {}) : Promise.resolve();
