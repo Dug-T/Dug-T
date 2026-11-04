@@ -17,7 +17,7 @@ Open `goffichick/index.html` in a browser (double-click works, since all art is 
 | Mouse | Look (click the game to lock the mouse) |
 | Left click / Ctrl | Fire |
 | E / Space | Press switches, open secret walls (doors open by themselves) |
-| 1-7, Q, mouse wheel | Change weapon |
+| 1-8, Q, mouse wheel | Change weapon |
 | Shift | Run |
 | Tab | Automap |
 | M | Music on/off |
@@ -49,7 +49,7 @@ flinches when hit, and her eyes glow pink when she picks up a new weapon.
 
 ## Weapons
 
-Goffichick starts with **every weapon**: press 1-7 (press a number twice to swap between two weapons in the
+Goffichick starts with **every weapon**: press 1-8 (press a number twice to swap between two weapons in the
 same slot), Q, or scroll. Weapon pickups on the maps give ammo for that weapon.
 
 
@@ -64,6 +64,7 @@ same slot), Q, or scroll. Weapon pickups on the maps give ammo for that weapon.
 | 5 | **Rocket Launcher** | rockets | Big splash damage, including to you |
 | 5 | **Skull Launcher** | skulls | Explosive flaming skulls |
 | 6 | **Hexcaster** | souls | Rapid-fire purple plasma |
+| 8 | **Flamethrower** | fuel | Short-range stream of fire; sets enemies (and barrels) alight so they keep burning |
 | 7 | **B.F.G. (Big Freakin' Gloom)** | 40 souls | Charges, then fires a gloom orb. On impact it also hits everything in front of you |
 
 ## Music

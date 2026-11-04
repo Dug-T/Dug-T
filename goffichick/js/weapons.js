@@ -30,6 +30,7 @@ const AMMO_TYPES = {
   shells: { name: 'SHELLS', max: 50 },
   skulls: { name: 'SKULLS', max: 50 },
   rockets: { name: 'ROCKETS', max: 50 },
+  fuel: { name: 'FUEL', max: 300 },
   souls: { name: 'SOULS', max: 300 },
 };
 
@@ -397,6 +398,52 @@ const WEAPONS = [
       ell(g, rad(g, x - 2, yf + 8, 8, [[0, '#ffffff'], [0.5, '#e070ff'], [1, '#5a0a9a']]), x, yf + 10, 7, 7);
       supportFingers(g, x, yb - 12, 50, 1.05);
       gripHand(g, x + 28, by - 6, 1.15, 1);
+    },
+  },
+  {
+    slot: 8, key: 'flamethrower', name: 'FLAMETHROWER', ammo: 'fuel', cost: 1, cooldown: 0.06,
+    type: 'projectile', projectile: 'flame', projSpread: 0.06, sound: 'flame', kick: 0, auto: true,
+    draw(g, cx, by, phase, flash, t) {
+      const { lin, rad, poly, ell, rr, tube, bore, metal, gripHand, supportHand, supportFingers } = WDraw;
+      const firing = phase > 0;
+      const jit = firing ? (Math.random() - 0.5) * 2 : 0;
+      const x = cx + 6 + jit, yb = by - 50 + (firing ? 2 : 0), yf = by - 120;
+      supportHand(g, x, yb - 26, 34, 1.05);
+      // valve body + fuel line at the bottom
+      rr(g, metal(g, x - 30, x + 30, 'gun'), x - 30, yb - 4, 60, 70, 8);
+      rr(g, metal(g, x - 9, x + 9, 'polymer'), x - 9, yb + 30, 18, 40, 4);
+      // pressure gauge
+      ell(g, metal(g, x - 34, x - 14, 'steel'), x - 24, yb + 10, 10, 10);
+      ell(g, '#f4f1e6', x - 24, yb + 10, 7.5, 7.5);
+      g.strokeStyle = '#c2181c'; g.lineWidth = 1.2; g.beginPath(); g.arc(x - 24, yb + 10, 6, Math.PI * 0.8, Math.PI * 1.4); g.stroke();
+      const needle = Math.PI * (0.9 + (firing ? 0.25 + Math.random() * 0.1 : 0.55));
+      g.strokeStyle = '#111'; g.lineWidth = 1; g.beginPath(); g.moveTo(x - 24, yb + 10); g.lineTo(x - 24 + Math.cos(needle) * 6, yb + 10 + Math.sin(needle) * 6); g.stroke();
+      // red valve wheel
+      ell(g, lin(g, x + 14, 0, x + 34, 0, [[0, '#6a0a0a'], [0.45, '#e2281c'], [1, '#5a0808']]), x + 24, yb + 10, 10, 10);
+      ell(g, metal(g, x + 20, x + 28, 'gun'), x + 24, yb + 10, 6, 6);
+      for (let i = 0; i < 4; i++) { const a = i * Math.PI / 2 + 0.4; g.strokeStyle = '#3a0606'; g.lineWidth = 1.4; g.beginPath(); g.moveTo(x + 24, yb + 10); g.lineTo(x + 24 + Math.cos(a) * 9, yb + 10 + Math.sin(a) * 9); g.stroke(); }
+      // nozzle inside a perforated heat shield
+      tube(g, x, yb, 34, yf + 22, 20, 'steel');
+      g.fillStyle = 'rgba(30,30,34,0.35)'; poly(g, 'rgba(30,30,34,0.35)', [x - 17, yb, x - 10, yf + 22, x + 10, yf + 22, x + 17, yb]);
+      for (let r = 0; r < 6; r++) for (let c = -2; c <= 2; c++) { const k = (r + 0.5) / 6, yy = yb + (yf + 22 - yb) * k, hw = 17 - 7 * k; ell(g, '#0b0b0d', x + c * hw * 0.38, yy, 1.8 - k * 0.6, 1.2 - k * 0.4); }
+      ell(g, metal(g, x - 11, x + 11, 'steel'), x, yf + 22, 11, 4);
+      tube(g, x, yf + 22, 10, yf, 7, 'gun');
+      bore(g, x, yf, 8, 'gun');
+      // flickering blue pilot light
+      const fl = 0.8 + Math.random() * 0.4;
+      g.save(); g.globalCompositeOperation = 'lighter';
+      ell(g, rad(g, x, yf - 4, 7 * fl, [[0, 'rgba(200,230,255,0.95)'], [0.4, 'rgba(60,120,255,0.7)'], [1, 'rgba(0,40,255,0)']]), x, yf - 4, 5 * fl, 7 * fl);
+      ell(g, rad(g, x, yf - 10, 5, [[0, 'rgba(255,200,80,0.8)'], [1, 'rgba(255,90,0,0)']]), x, yf - 9, 2.5 * fl, 5 * fl);
+      // the jet of fire while the trigger is held
+      if (firing) {
+        for (let i = 0; i < 9; i++) {
+          const k = i / 8, w = 5 + k * 24 + Math.random() * 6, yy = yf - 5 - k * 40 - Math.random() * 4, xx = x + (Math.random() - 0.5) * 8 * k;
+          ell(g, rad(g, xx, yy, w, [[0, `rgba(255,${240 - k * 120 | 0},${160 - k * 150 | 0},${0.9 - k * 0.45})`], [0.55, `rgba(255,${120 - k * 70 | 0},0,${0.55 - k * 0.3})`], [1, 'rgba(120,20,0,0)']]), xx, yy, w, w * 0.8);
+        }
+      }
+      g.restore();
+      supportFingers(g, x, yb - 28, 36, 1.05);
+      gripHand(g, x + 24, by - 6, 1.1, 1);
     },
   },
   {

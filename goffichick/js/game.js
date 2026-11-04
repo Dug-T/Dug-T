@@ -48,6 +48,8 @@
     memo: { speed: 6.5, dmg: [5, 18], size: 0.2, fx: 'boom', fxSize: 0.35, sound: 'hexHit' },
     notif: { speed: 8, dmg: [4, 10], size: 0.16, fx: 'hexHit', fxSize: 0.3, sound: 'hexHit' },
     sun: { speed: 6.5, dmg: [10, 26], size: 0.25, fx: 'splash', fxSize: 0.45, sound: 'hexHit' },
+    // flamethrower: short-lived, growing gouts of fire that set enemies alight
+    flame: { speed: 7.5, dmg: [3, 7], size: 0.16, grow: 2.4, life: 0.5, fx: 'flameHit', fxSize: 0.35, sound: null, ignite: 2.2, quiet: true },
     phone: { speed: 9.5, dmg: [15, 30], splash: 1.4, splashDmg: 50, size: 0.26, fx: 'boom', fxSize: 0.9, sound: 'explode' },
   };
 
@@ -69,7 +71,7 @@
   function newPlayer(keep) {
     const p = {
       x: 0, y: 0, a: 0, health: 100, armor: 0, armorType: 0,
-      ammo: { bullets: 100, shells: 20, skulls: 8, rockets: 8, souls: 100 },
+      ammo: { bullets: 100, shells: 20, skulls: 8, rockets: 8, souls: 100, fuel: 120 },
       weapons: Object.fromEntries(WEAPONS.map(w => [w.key, true])), cur: 'shotgun', next: null,
       switchT: 0, cooldown: 0, firePhase: 0, fireT: 0, flashT: 0, windupT: 0,
       bobT: 0, move: 0, eyeZ: 0.5, refireT: 0, dead: false, faceLook: 0, faceT: 0, painT: 0, grinT: 0,
@@ -293,7 +295,10 @@
       const h = e.dead && e.def.ai !== false ? e.def.h * (spr.h / (enemyBase(e).h)) : e.def.h;
       add(e.x, e.y, spr, e.dead ? 0 : e.z, h, false);
     }
-    for (const pr of L.projs) { const fr = pr.frames; add(pr.x, pr.y, fr[((time * 12) | 0) % fr.length], pr.z - pr.def.size / 2, pr.def.size, true, 1, 0.5); }
+    for (const pr of L.projs) {
+      const fr = pr.frames, size = pr.def.grow ? pr.def.size * (1 + pr.age * pr.def.grow) : pr.def.size;
+      add(pr.x, pr.y, fr[((time * 12 + pr.x * 7) | 0) % fr.length], pr.z - size / 2, size, true, 1, 0.5);
+    }
     for (const f of L.fx) add(f.x, f.y, f.frames[Math.min(f.frames.length - 1, (f.t / f.life * f.frames.length) | 0)], f.z - f.size / 2, f.size, true, 1, 0.6);
     list.sort((a, b) => b.depth - a.depth);
 
@@ -402,10 +407,10 @@
     digits(Math.max(0, Math.ceil(p.health)) + '%', 110, y0 + 33, 24);
     label('HEALTH', 110, y0 + 43);
     // arms
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < 7; i++) {
       const slot = i + 2, has = WEAPONS.some(wp => wp.slot === slot && p.weapons[wp.key]);
       const cur = w && w.slot === slot;
-      label(String(slot), 168 + (i % 3) * 16, y0 + 17 + Math.floor(i / 3) * 14, cur ? '#ffffff' : has ? '#ff4fb8' : '#4a3a4a', 'center', 11);
+      label(String(slot), 161 + (i % 4) * 14, y0 + 17 + Math.floor(i / 4) * 14, cur ? '#ffffff' : has ? '#ff4fb8' : '#4a3a4a', 'center', 11);
     }
     label('ARMS', 182, y0 + 43);
     // face
@@ -414,12 +419,12 @@
     digits(Math.ceil(p.armor) + '%', 306, y0 + 33, 24, p.armorType === 2 ? '#b04cff' : '#e0115f');
     label('ARMOR', 306, y0 + 43);
     // ammo table
-    let yy = y0 + 11;
+    let yy = y0 + 10;
     for (const k of Object.keys(AMMO_TYPES)) {
       const isCur = w && w.ammo === k;
-      label(AMMO_TYPES[k].name, 352, yy, isCur ? '#ffffff' : '#c9a6c9', 'left');
-      label(`${p.ammo[k]}/${AMMO_TYPES[k].max}`, 474, yy, '#ffcf3a', 'right');
-      yy += 8;
+      label(AMMO_TYPES[k].name, 352, yy, isCur ? '#ffffff' : '#c9a6c9', 'left', 6.5);
+      label(`${p.ammo[k]}/${AMMO_TYPES[k].max}`, 474, yy, '#ffcf3a', 'right', 6.5);
+      yy += 7;
     }
   }
 
@@ -602,14 +607,14 @@
   function fireProjectile(kind, x, y, z, ang, owner) {
     const def = PROJECTILES[kind];
     L.projs.push({ kind, def, x: x + Math.cos(ang) * 0.4, y: y + Math.sin(ang) * 0.4, z, vx: Math.cos(ang) * def.speed, vy: Math.sin(ang) * def.speed,
-      owner, frames: S.proj[kind], life: 6, fireA: player.a });
+      owner, frames: S.proj[kind], life: def.life || 6, age: 0, fireA: player.a });
   }
 
   function explode(pr) {
     const d = pr.def;
     spawnFx(d.fx, pr.x, pr.y, pr.z, d.fxSize, d.bfg ? 0.6 : 0.4);
     const pd = Math.hypot(pr.x - player.x, pr.y - player.y);
-    Sfx.play[d.sound] && Sfx.play[d.sound](pd);
+    if (d.sound) Sfx.play[d.sound] && Sfx.play[d.sound](pd);
     if (d.splash) {
       splash(pr.x, pr.y, d.splash, d.splashDmg, pr.owner);
       if (pd < 4) shake = Math.max(shake, (4 - pd) * 2);
@@ -780,6 +785,11 @@
         if (e.type !== 'barrel' && e.frame < 2) { e.t += dt; if (e.t > 0.14) { e.t = 0; e.frame++; } }
         continue;
       }
+      if (e.burnT > 0) { // on fire: damage ticks and flickering flames
+        e.burnT -= dt; e.burnTick = (e.burnTick || 0) - dt;
+        if (e.burnTick <= 0) { e.burnTick = 0.3; damageEnemy(e, irand(2, 5), e.burnBy || 'player'); spawnFx('flameHit', e.x + rand(-0.15, 0.15), e.y + rand(-0.15, 0.15), e.z + e.def.h * rand(0.3, 0.8), 0.3, 0.3); }
+        if (e.dead) continue;
+      }
       if (e.state === 'static') continue;
       const d = e.def;
       const pdx = p.x - e.x, pdy = p.y - e.y, pd = Math.hypot(pdx, pdy);
@@ -848,7 +858,7 @@
   function updateProjectiles(dt) {
     const p = player;
     for (const pr of L.projs) {
-      pr.life -= dt;
+      pr.life -= dt; pr.age += dt;
       const steps = 4;
       for (let i = 0; i < steps && !pr.done; i++) {
         const nx = pr.x + pr.vx * dt / steps, ny = pr.y + pr.vy * dt / steps;
@@ -863,12 +873,14 @@
           if (e.dead || e === pr.owner) continue;
           if (pr.owner !== 'player' && e.type !== 'barrel') continue; // no infighting
           if (Math.hypot(e.x - pr.x, e.y - pr.y) < e.def.radius + pr.def.size / 2) {
-            damageEnemy(e, irand(pr.def.dmg[0], pr.def.dmg[1]), pr.owner); explode(pr); pr.done = true; break;
+            damageEnemy(e, irand(pr.def.dmg[0], pr.def.dmg[1]), pr.owner);
+            if (pr.def.ignite && !e.dead) { e.burnT = Math.max(e.burnT || 0, pr.def.ignite); e.burnBy = pr.owner; }
+            explode(pr); pr.done = true; break;
           }
         }
       }
       if (pr.def.trail && Math.random() < 0.6) spawnFx('puff', pr.x, pr.y, pr.z, 0.08, 0.3);
-      if (pr.life <= 0) pr.done = true;
+      if (pr.life <= 0) { if (pr.def.quiet && !pr.done) spawnFx('flameHit', pr.x, pr.y, pr.z, pr.def.size * (1 + pr.age * pr.def.grow), 0.25); pr.done = true; }
     }
     L.projs = L.projs.filter(pr => !pr.done);
     for (const f of L.fx) f.t += dt;
@@ -904,7 +916,7 @@
   }
   function bestWeapon() {
     const p = player;
-    const order = ['gatling', 'machinegun', 'coffin', 'shotgun', 'hexcaster', 'pistol', 'rocketlauncher', 'launcher', 'bfg', 'knuckles'];
+    const order = ['gatling', 'machinegun', 'coffin', 'shotgun', 'hexcaster', 'flamethrower', 'pistol', 'rocketlauncher', 'launcher', 'bfg', 'knuckles'];
     for (const k of order) { const w = weaponByKey(k); if (w && p.weapons[k] && (!w.ammo || p.ammo[w.ammo] >= w.cost)) return k; }
     return 'knuckles';
   }
@@ -931,7 +943,7 @@
       const accurate = w.pellets === 1 && p.refireT <= 0;
       for (let i = 0; i < w.pellets; i++) hitscan(p.x, p.y, p.a + (accurate ? 0 : rand(-w.spread, w.spread)), irand(w.damage[0], w.damage[1]), 40);
     } else if (w.type === 'projectile') {
-      fireProjectile(w.projectile, p.x, p.y, p.eyeZ - 0.12, p.a, 'player');
+      fireProjectile(w.projectile, p.x, p.y, p.eyeZ - 0.12, p.a + (w.projSpread ? rand(-w.projSpread, w.projSpread) : 0), 'player');
     }
     p.refireT = 0.5;
   }
@@ -1106,7 +1118,7 @@
     const blink = Math.sin(time * 5) > 0;
     if (blink) label(state === 'loading' ? 'SUMMONING...' : 'CLICK OR PRESS ENTER TO BEGIN', 18, 122, '#ffffff', 'left', 10);
     const lines = ['WASD / ARROWS  move', 'MOUSE          look (click to lock)', 'CLICK / CTRL   fire', 'E / SPACE      switches, secret walls',
-      '1-7 / Q / WHEEL  weapons', 'SHIFT run   TAB map   M music'];
+      '1-8 / Q / WHEEL  weapons', 'SHIFT run   TAB map   M music'];
     lines.forEach((l, i) => label(l, 18, 150 + i * 11, '#b78ab7', 'left', 8));
     label('ON A PHONE? Left stick moves, drag right side to look.', 18, 225, '#7a5a7a', 'left', 7);
   }
