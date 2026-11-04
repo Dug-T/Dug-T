@@ -60,7 +60,7 @@ same slot), Q, or scroll. Weapon pickups on the maps give ammo for that weapon.
 | 3 | **Shotgun** | shells | Pump-action, 7 pellets |
 | 3 | **Coffin Shotgun** | 2 shells | Double barrel, 20 pellets, coffin-shaped stock with a silver bat |
 | 4 | **Machine Gun** | bullets | Fast, fully automatic |
-| 4 | **Bone Gatling** | bullets | Rotating bone barrels |
+| 4 | **Gatling Gun** | bullets | Six spinning barrels |
 | 5 | **Rocket Launcher** | rockets | Big splash damage, including to you |
 | 5 | **Skull Launcher** | skulls | Explosive flaming skulls |
 | 6 | **Hexcaster** | souls | Rapid-fire purple plasma |

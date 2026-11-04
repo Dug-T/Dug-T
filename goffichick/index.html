@@ -10,7 +10,7 @@
   :root { --bg: #07030a; --pink: #ff4fb8; }
   html, body { margin: 0; height: 100%; background: var(--bg); overflow: hidden; touch-action: none; -webkit-user-select: none; user-select: none; }
   body { display: flex; align-items: center; justify-content: center; }
-  #screen { image-rendering: pixelated; image-rendering: crisp-edges; width: min(100vw, calc(100vh * 480 / 270)); height: auto; aspect-ratio: 480 / 270; display: block; cursor: crosshair; }
+  #screen { width: min(100vw, calc(100vh * 480 / 270)); height: auto; aspect-ratio: 480 / 270; display: block; cursor: crosshair; }
   #touch { display: none; position: fixed; inset: 0; pointer-events: none; }
   #touch > * { pointer-events: auto; position: absolute; }
   #look { right: 0; top: 0; width: 60%; height: 100%; }

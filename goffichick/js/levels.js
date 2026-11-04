@@ -56,7 +56,7 @@ const DECOR_TYPES = {
 const LEVELS = [
   {
     name: 'E1M1: THE CEMETERY GATES',
-    floor: 'graveyard', ceil: 'stoneCeil', fog: [34, 24, 44],
+    floor: 'graveyard', ceil: 'stoneCeil', fog: [92, 90, 94],
     // light zones: x, y, w, h, level (0..1), flicker
     lights: [
       { x: 1, y: 1, w: 12, h: 13, level: 0.7, flicker: true },   // the crypt

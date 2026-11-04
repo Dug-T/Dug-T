@@ -12,9 +12,13 @@
 
   const canvas = document.getElementById('screen');
   const ctx = canvas.getContext('2d');
-  canvas.width = W; canvas.height = H;
-  ctx.imageSmoothingEnabled = false;
-  const img = ctx.createImageData(W, VIEW_H);
+  // The canvas is 3x the game's logical resolution: the 3D world is upscaled with chunky
+  // pixels (classic look) while weapons, HUD and text are drawn smooth and detailed.
+  const RES = 3;
+  canvas.width = W * RES; canvas.height = H * RES;
+  const viewC = document.createElement('canvas'); viewC.width = W; viewC.height = VIEW_H;
+  const viewCtx = viewC.getContext('2d');
+  const img = viewCtx.createImageData(W, VIEW_H);
   const buf = new Uint32Array(img.data.buffer);
   const zbuf = new Float32Array(W);
 
@@ -347,7 +351,7 @@
     ctx.save();
     ctx.beginPath(); ctx.rect(0, 0, W, VIEW_H); ctx.clip();
     // weapons are authored at 1x and drawn scaled up around the bottom-centre of the view
-    ctx.translate(W / 2 + bobX, VIEW_H + 14 + bobY + lower); ctx.scale(1.3, 1.3);
+    ctx.translate(W / 2 + bobX, VIEW_H + 12 + bobY + lower); ctx.scale(1.15, 1.15);
     w.draw(ctx, 0, 0, p.firePhase, p.flashT > 0, time);
     ctx.restore();
   }
@@ -391,7 +395,7 @@
 
   function drawHUD() {
     const p = player, y0 = VIEW_H;
-    ctx.drawImage(hudBg, 0, y0);
+    ctx.imageSmoothingEnabled = false; ctx.drawImage(hudBg, 0, y0); ctx.imageSmoothingEnabled = true;
     const w = weaponByKey(p.cur);
     digits(w && w.ammo ? p.ammo[w.ammo] : '--', 36, y0 + 33, 24);
     label('AMMO', 36, y0 + 43);
@@ -1100,6 +1104,7 @@
   }
 
   function draw() {
+    ctx.setTransform(RES, 0, 0, RES, 0, 0); ctx.imageSmoothingEnabled = true;
     if (state === 'loading' || state === 'title') { drawTitle(); return; }
     if (state === 'intermission' || state === 'victory') {
       if (state === 'victory') {
@@ -1113,7 +1118,8 @@
     }
     render3D();
     const sx = shake ? (Math.random() - 0.5) * shake * 2 : 0, sy = shake ? (Math.random() - 0.5) * shake * 2 : 0;
-    ctx.putImageData(img, sx | 0, sy | 0);
+    viewCtx.putImageData(img, 0, 0);
+    ctx.imageSmoothingEnabled = false; ctx.drawImage(viewC, sx | 0, sy | 0); ctx.imageSmoothingEnabled = true;
     drawWeapon();
     if (painFlash > 0) { ctx.fillStyle = `rgba(255,0,0,${painFlash * 0.45})`; ctx.fillRect(0, 0, W, VIEW_H); }
     if (pickupFlash > 0) { ctx.fillStyle = `rgba(255,120,220,${pickupFlash * 0.4})`; ctx.fillRect(0, 0, W, VIEW_H); }
