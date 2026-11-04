@@ -5,7 +5,7 @@
 //          G  stained glass    C  crimson curtain M  pastel marble      Y  Wally poster
 //          X  EXIT switch      D  door (opens automatically)
 //          $  SECRET door: looks like a wall, press USE on it
-//  Floors: ~  toxic glitter-slime (hurts!)
+//  Floors: ~  toxic green sludge (hurts!)
 //  Player: > < ^ v  start position and facing
 //  Enemies: z latte zombie   m middle manager   w WALLY MAN   b gym brute
 //           i influencer skull   h smiley orb   K WALLY PRIME (boss)

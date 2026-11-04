@@ -241,11 +241,25 @@ const Textures = (() => {
   });
 
   // toxic glitter-slime (animated by scrolling in the renderer)
-  F.slime = make(g => {
-    g.fillStyle = '#b0128a'; g.fillRect(0, 0, 64, 64);
-    for (let i = 0; i < 26; i++) { g.fillStyle = ['#d81b9a', '#8a0f70', '#ff4fd0'][(rnd() * 3) | 0]; g.beginPath(); g.ellipse(rnd() * 64, rnd() * 64, 3 + rnd() * 8, 2 + rnd() * 5, rnd() * 3, 0, 7); g.fill(); }
-    speckle(g, 90, ['#ffffff', '#ffd0f4'], 1);
-  });
+  // toxic green sludge, 4 animation frames: swirling ripples and bubbles that swell and pop
+  const blobs = Array.from({ length: 22 }, () => ({ x: rnd() * 64, y: rnd() * 64, rx: 3 + rnd() * 9, ry: 2 + rnd() * 5, r: rnd() * 3, c: (rnd() * 3) | 0 }));
+  const bubbles = Array.from({ length: 9 }, () => ({ x: 4 + rnd() * 56, y: 4 + rnd() * 56, t: rnd() * 4 | 0, s: 1.5 + rnd() * 2 }));
+  F.slimeFrames = [0, 1, 2, 3].map(f => make(g => {
+    g.fillStyle = '#2f8a12'; g.fillRect(0, 0, 64, 64);
+    for (const b of blobs) {
+      g.fillStyle = ['#47b51c', '#1f6a0c', '#6fd62a'][b.c];
+      g.beginPath(); g.ellipse((b.x + f * 2) % 64, b.y + Math.sin(f * 1.57 + b.x) * 1.5, b.rx, b.ry, b.r + f * 0.15, 0, 7); g.fill();
+    }
+    for (const b of bubbles) { // a bubble grows over three frames and pops on the fourth
+      const age = (f + b.t) % 4;
+      if (age === 3) { g.fillStyle = '#c8ff8a'; for (let k = 0; k < 4; k++) g.fillRect(b.x + Math.cos(k * 1.57) * (b.s + 2), b.y + Math.sin(k * 1.57) * (b.s + 2), 1, 1); continue; }
+      const r = b.s * (0.6 + age * 0.4);
+      g.fillStyle = '#7ee636'; g.beginPath(); g.arc(b.x, b.y, r, 0, 7); g.fill();
+      g.fillStyle = '#d6ff9e'; g.fillRect(b.x - r * 0.4, b.y - r * 0.5, 1.2, 1.2);
+    }
+    speckle(g, 70, ['#b6ff6a', '#e4ffbf'], 1);
+  }, 10));
+  F.slime = F.slimeFrames[0];
 
   return { walls: T, flats: F };
 })();

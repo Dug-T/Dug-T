@@ -32,7 +32,7 @@
   const ENEMY_DEFS = {
     zombie: { name: 'Latte Zombie', hp: 20, speed: 1.1, radius: 0.3, h: 0.78, attack: 'hitscan', dmg: [3, 12], pellets: 1, range: 14, cooldown: [1.4, 2.8], pain: 0.85, sight: 'groan', atkSound: 'memo' },
     manager: { name: 'Middle Manager', hp: 60, speed: 1.4, radius: 0.3, h: 0.84, attack: 'proj', proj: 'memo', melee: [6, 16], range: 16, cooldown: [1.2, 2.4], pain: 0.6, sight: 'groan', atkSound: 'memo' },
-    wally: { name: 'Wally Man', hp: 90, speed: 1.6, radius: 0.32, h: 0.95, attack: 'proj', proj: 'notif', count: 3, spread: 0.13, range: 18, cooldown: [1.3, 2.4], pain: 0.4, sight: 'phoneRing', atkSound: 'phoneRing' },
+    wally: { name: 'Wally Man', hp: 90, speed: 1.6, radius: 0.28, h: 0.8, attack: 'proj', proj: 'notif', count: 3, spread: 0.13, range: 18, cooldown: [1.3, 2.4], pain: 0.4, sight: 'phoneRing', atkSound: 'phoneRing' },
     brute: { name: 'Gym Brute', hp: 150, speed: 2.7, radius: 0.4, h: 0.72, attack: 'melee', melee: [8, 24], range: 1.1, cooldown: [0.7, 1.0], pain: 0.5, sight: 'brute', atkSound: 'brute' },
     skull: { name: 'Influencer Skull', hp: 40, speed: 1.7, radius: 0.25, h: 0.36, z: 0.3, fly: true, attack: 'charge', melee: [3, 18], range: 10, cooldown: [1.5, 3], pain: 1, sight: 'skull', atkSound: 'skull' },
     orb: { name: 'Smiley Orb', hp: 300, speed: 1.0, radius: 0.45, h: 0.62, z: 0.25, fly: true, attack: 'proj', proj: 'sun', range: 18, cooldown: [1.5, 3], pain: 0.3, sight: 'giggle', atkSound: 'giggle' },
@@ -223,7 +223,7 @@
     // --- floor + ceiling
     const r0x = dirX - plX, r0y = dirY - plY, r1x = dirX + plX, r1y = dirY + plY;
     const floorT = L.floor, ceilT = L.ceil, mh = L.mh;
-    const lightNow = L.lightNow, slimeMap = L.slime, slimeT = L.slimeTex, slimeShift = (time * 14) | 0;
+    const lightNow = L.lightNow, slimeMap = L.slime, slimeT = Textures.flats.slimeFrames[((time * 5) | 0) % 4].data, slimeShift = (time * 6) | 0;
     for (let y = 0; y < VIEW_H; y++) {
       const isFloor = y > HOR;
       const dy = isFloor ? (y + 0.5 - HOR) : (HOR - y - 0.5);
@@ -455,7 +455,7 @@
       if (!L.seen[idx] && !(god)) continue;
       if (t === DOOR && L.doors.get(idx).secret && L.doors.get(idx).open < 0.5) ctx.fillStyle = '#b0307a';
       else if (t === DOOR) ctx.fillStyle = '#ffcf3a';
-      else if (L.slime[idx]) { ctx.fillStyle = '#5a1048'; }
+      else if (L.slime[idx]) { ctx.fillStyle = '#2f6a12'; }
       else if (t === 6 || t === 11) ctx.fillStyle = '#39ff6a';
       else if (t > 0) ctx.fillStyle = '#b0307a';
       else continue;

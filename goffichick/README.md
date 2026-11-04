@@ -79,7 +79,7 @@ in `js/audio.js` and are easy to edit: each section is a list of chords plus a f
 Press a number again to swap between two weapons in the same slot.
 
 Levels have doors that open as you approach, secret walls (press USE on suspicious walls), toxic
-glitter-slime that burns, and dark rooms with flickering lights.
+green sludge that burns, and dark rooms with flickering lights.
 
 
 1. **E1M1: The Cemetery Gates** — start room, zig-zag hall, a big courtyard with a slime pool and armor on an island, a dark crypt with ambush alcoves, a stained-glass chapel, a hidden machine-gun stash, and a winding route to the exit

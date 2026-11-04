@@ -227,13 +227,38 @@ const Sprites = (() => {
       g.drawImage(img, M, H - h - bob * H, W, h);
       return c;
     }
-    // stride + cape flutter for a given phase of the walk cycle
-    const walkWarp = (ph, stride, flap) => (u, v) => {
+    // Body-part motion for one frame. All values are fractions of the sprite size.
+    //  ph     - phase of the walk cycle (radians)       stride - how far the legs swing
+    //  step   - how high each boot lifts (alternating)   flap   - cape ripple strength
+    //  arm    - phone-forearm rotation about the elbow (radians, + raises the phone)
+    //  head   - head nod amount (-1..1)
+    const ELBOW = [0.80, 0.27];
+    const walkWarp = (ph, o = {}) => (u, v) => {
+      const { stride = 0, step = 0, flap = 0, arm = 0, head = 0 } = o;
       let dx = 0, dy = 0;
       if (v > HIP) dx += Math.sin(ph) * stride * (v - HIP) / (1 - HIP);           // legs swing
-      const cape = smooth(0.42, 0.12, u) * smooth(0.22, 0.36, v) * smooth(0.66, 0.56, v); // cape region (left, mid-height)
-      if (cape > 0) { dx += Math.sin(ph * 2 + v * 14) * flap * cape; dy += Math.cos(ph * 2 + u * 11) * flap * 0.5 * cape; }
+      if (step && v > 0.68) {                                                      // boots lift in turn
+        const left = smooth(0.56, 0.44, u), lift = (Math.max(0, Math.sin(ph)) * left + Math.max(0, -Math.sin(ph)) * (1 - left)) * step;
+        dy -= lift * smooth(0.68, 0.9, v);
+      }
+      const cape = smooth(0.42, 0.12, u) * smooth(0.22, 0.36, v) * smooth(0.66, 0.56, v);
+      if (cape > 0) { const w = ph * 2 + v * 14 - u * 8; dx += Math.sin(w) * flap * cape; dy += Math.cos(w) * flap * 0.6 * cape; }
+      if (arm) {                                                                   // forearm + phone pivot on the elbow
+        const wgt = smooth(0.55, 0.63, u) * smooth(0.21, 0.27, v) * smooth(0.45, 0.39, v);
+        if (wgt > 0) {
+          const a = arm * wgt, px = (u - ELBOW[0]) * W, py = (v - ELBOW[1]) * H;
+          dx += (px * Math.cos(a) - py * Math.sin(a) - px) / W; dy += (px * Math.sin(a) + py * Math.cos(a) - py) / H;
+        }
+      }
+      if (head) { const wgt = smooth(0.15, 0.07, v) * smooth(0.42, 0.5, u); dy += head * 0.014 * wgt; dx += head * 0.008 * wgt; }
       return [dx, dy];
+    };
+    // where the phone ends up after the forearm rotates (for the glow when attacking)
+    const phoneAt = (arm, lean) => {
+      const px = (0.73 - ELBOW[0]) * W, py = (0.33 - ELBOW[1]) * H;
+      let x = M + ELBOW[0] * W + px * Math.cos(arm) - py * Math.sin(arm), y = H * 0.04 + (ELBOW[1] * H + px * Math.sin(arm) + py * Math.cos(arm)) * 0.96;
+      const cx = CW / 2, cy = H, rx = x - cx, ry = y - cy; // apply the body lean
+      return [cx + rx * Math.cos(lean) - ry * Math.sin(lean), cy + rx * Math.sin(lean) + ry * Math.cos(lean)];
     };
     const bossify = (c) => {
       if (!boss) return c;
@@ -249,31 +274,30 @@ const Sprites = (() => {
       E(g, '#ff1a1a', ex - W * 0.03, ey, W * 0.018, H * 0.008); E(g, '#ff1a1a', ex + W * 0.045, ey, W * 0.018, H * 0.008);
       g.restore(); return c;
     };
-    const phoneGlow = (c, lean, r, a) => {
-      const g = c.getContext('2d'); g.save(); g.translate(CW / 2, H); g.rotate(lean); g.translate(-CW / 2, -H);
-      const px = M + W * 0.73, py = H * 0.04 + H * 0.96 * 0.33;
+    const phoneGlow = (c, lean, arm, r, a) => {
+      const g = c.getContext('2d'), [px, py] = phoneAt(arm, lean);
       glow(g, px, py, W * r, `rgba(160,220,255,${a})`, 'rgba(40,120,255,0)');
       E(g, '#ffffff', px, py, W * r * 0.22, W * r * 0.22);
-      g.restore(); return c;
+      return c;
     };
 
-    // walk cycle: 6 frames
+    // walk cycle: 8 frames - stride, alternating steps, arm swing, head bob, billowing cape
     const walk = [];
-    for (let k = 0; k < 6; k++) {
-      const ph = k / 6 * Math.PI * 2;
-      const lean = Math.sin(ph) * 0.03, bob = Math.abs(Math.sin(ph)) * 0.025;
-      walk.push(fromCanvas(eyes(bossify(warp(pose(lean, bob), walkWarp(ph, 0.09, 0.035))), lean)));
+    for (let k = 0; k < 8; k++) {
+      const ph = k / 8 * Math.PI * 2;
+      const lean = Math.sin(ph) * 0.035, bob = Math.abs(Math.sin(ph)) * 0.03;
+      walk.push(fromCanvas(eyes(bossify(warp(pose(lean, bob), walkWarp(ph, { stride: 0.12, step: 0.045, flap: 0.05, arm: Math.sin(ph) * 0.32, head: Math.sin(ph * 2) }))), lean)));
     }
-    // idle: breathing, cape stirring
-    const idle = [0, 1, 2, 3].map(k => {
-      const ph = k / 4 * Math.PI * 2;
-      return fromCanvas(eyes(bossify(warp(pose(0, 0, 1 - 0.012 * (1 - Math.cos(ph)) / 2), walkWarp(ph, 0, 0.015)))));
+    // idle: breathing, checking his phone, cape stirring
+    const idle = [0, 1, 2, 3, 4, 5].map(k => {
+      const ph = k / 6 * Math.PI * 2;
+      return fromCanvas(eyes(bossify(warp(pose(0, 0, 1 - 0.014 * (1 - Math.cos(ph)) / 2), walkWarp(ph, { flap: 0.02, arm: 0.12 + Math.sin(ph) * 0.1, head: 0.6 + Math.sin(ph) * 0.5 })))));
     });
-    // attack: lean back and the phone lights up, then lunge forward with the blast
-    const wind = phoneGlow(eyes(bossify(warp(pose(0.05, 0), walkWarp(0.5, 0.02, 0.02))), 0.05), 0.05, 0.16, 0.7);
-    const fire = phoneGlow(eyes(bossify(warp(pose(-0.06, 0.01), walkWarp(2.5, -0.04, 0.04))), -0.06), -0.06, 0.3, 0.95);
-    // pain: knocked back, flash of red
-    const painC = tinted(warp(pose(0.09, 0.015), walkWarp(1, -0.03, 0.04)), '#ff0000', 0.45);
+    // attack: lean back and raise the glowing phone, then lunge forward with the blast
+    const wind = phoneGlow(eyes(bossify(warp(pose(0.06, 0), walkWarp(0.5, { stride: 0.03, flap: 0.03, arm: 0.6, head: -0.8 }))), 0.06), 0.06, 0.6, 0.16, 0.7);
+    const fire = phoneGlow(eyes(bossify(warp(pose(-0.07, 0.012), walkWarp(2.5, { stride: -0.06, flap: 0.06, arm: 0.25, head: 0.8 }))), -0.07), -0.07, 0.25, 0.32, 0.95);
+    // pain: knocked back, arm flung up, red flash
+    const painC = tinted(warp(pose(0.1, 0.02), walkWarp(1, { stride: -0.05, flap: 0.06, arm: 0.7, head: -1 })), '#ff0000', 0.45);
     // death: topples backwards onto the floor
     const die = [];
     const DW = Math.round(H * 2.1);
@@ -281,12 +305,12 @@ const Sprites = (() => {
       const c = document.createElement('canvas'); c.width = DW; c.height = H;
       const g = c.getContext('2d');
       if (i >= 3) E(g, '#5a0008', DW / 2 - H * 0.45, H - 3, H * 0.5, 4);
-      const body = tinted(warp(pose(0, 0), walkWarp(i, 0.04, 0.05)), '#400000', red * 0.6);
+      const body = tinted(warp(pose(0, 0), walkWarp(i, { stride: 0.05, flap: 0.06, arm: 0.5 + i * 0.15, head: -1 })), '#400000', red * 0.6);
       g.save(); g.translate(DW / 2, H); g.rotate(-ang); g.drawImage(body, -CW / 2, -H); g.restore();
       g.globalCompositeOperation = 'source-atop'; splatter(g, DW, H, 6 + i * 6, 31 + i, H * 0.2); g.globalCompositeOperation = 'source-over';
       die.push(fromCanvas(c));
     });
-    return { walk, walkFps: 9, idle, attack: [fromCanvas(wind), fromCanvas(fire)], pain: [fromCanvas(painC)], die };
+    return { walk, walkFps: 12, idle, attack: [fromCanvas(wind), fromCanvas(fire)], pain: [fromCanvas(painC)], die };
   }
 
   // ===================== PROJECTILES & EFFECTS =====================
