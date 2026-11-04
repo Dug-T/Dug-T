@@ -23,16 +23,18 @@
   const viewC = document.createElement('canvas');
   const viewCtx = viewC.getContext('2d');
   let img, buf, zbuf;
-  // Phones whose browser won't rotate (Facebook's built-in browser is stuck upright): the game
-  // draws itself sideways inside the upright page, so turning the phone shows it the right way up
-  // and filling the screen. Touch input is mapped back into the game's own coordinates.
+  // Facebook / Instagram / Messenger's built-in browser never rotates, so there the game draws
+  // itself sideways inside the upright page: turning the phone shows it the right way up and
+  // filling the screen. Touch input is mapped back into the game's own coordinates.
+  // Every other browser rotates normally, so it is left alone.
   const coarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+  const inAppBrowser = /FBAN|FBAV|FB_IAB|FBIOS|Instagram|Messenger/i.test(navigator.userAgent);
   const stage = document.getElementById('stage');
   let sideways = false;
   const toLocal = (x, y) => sideways ? { x: y, y: window.innerWidth - x } : { x, y };
   function fitScreen() {
     const iw = window.innerWidth, ih = window.innerHeight;
-    sideways = coarse && ih > iw * 1.05;
+    sideways = coarse && inAppBrowser && ih > iw * 1.05;
     if (sideways) Object.assign(stage.style, { inset: 'auto', top: '0px', left: iw + 'px', width: ih + 'px', height: iw + 'px', transform: 'rotate(90deg)', transformOrigin: '0 0' });
     else stage.removeAttribute('style');
     const vw = sideways ? ih : iw, vh = sideways ? iw : ih;
@@ -1151,7 +1153,6 @@
       '1-8 / Q / WHEEL  weapons', 'SHIFT run   TAB map   M music'];
     lines.forEach((l, i) => label(l, 18, 150 + i * 11, '#b78ab7', 'left', 8));
     label('ON A PHONE? Left stick moves, drag right side to look.', 18, 225, '#7a5a7a', 'left', 7);
-    if (inAppBrowser) label('In Facebook? Tap  ...  then "Open in external browser" for the best play.', 18, 238, '#ff9be0', 'left', 7);
   }
 
   function drawOverlayText(title, sub, lines) {
@@ -1298,28 +1299,6 @@
     }, { passive: false });
   }
   for (const ev of ['gesturestart', 'gesturechange', 'dblclick', 'contextmenu']) document.addEventListener(ev, blockGesture, { passive: false });
-  const inAppBrowser = /FBAN|FBAV|FB_IAB|FBIOS|Instagram|Messenger/i.test(navigator.userAgent);
-  // Inside Facebook / Instagram: try to hand the game to the phone's real browser.
-  //  Android: an intent link opens Chrome directly (tried once automatically, and on the button).
-  //  iPhone: Facebook doesn't allow a hand-off, but "x-safari-https://" opens Safari on newer
-  //  iPhones; otherwise the screen explains the manual way (the ... menu).
-  (function offerExternalBrowser() {
-    if (!inAppBrowser || window.top !== window || !/^https?:$/.test(location.protocol)) return;
-    const box = document.getElementById('inapp'), open = document.getElementById('inappOpen');
-    const ua = navigator.userAgent, android = /Android/i.test(ua), ios = /iPhone|iPad|iPod/i.test(ua);
-    const here = location.href.replace(/#.*$/, '');
-    if (android) {
-      open.href = `intent://${location.host}${location.pathname}${location.search}#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=${encodeURIComponent(here)};end`;
-      open.textContent = 'Open in Chrome';
-      let tried = false; try { tried = sessionStorage.getItem('goffi-ext') === '1'; sessionStorage.setItem('goffi-ext', '1'); } catch (e) {}
-      if (!tried) setTimeout(() => { location.href = open.href; }, 300);
-    } else if (ios) {
-      open.href = 'x-safari-' + here; open.textContent = 'Open in Safari';
-      document.getElementById('inappHow').innerHTML = 'If nothing happens, tap <b>&middot;&middot;&middot;</b> in the top corner, then <b>Open in external browser</b>.';
-    } else open.href = here;
-    box.hidden = false;
-    document.getElementById('inappStay').addEventListener('click', () => { box.hidden = true; });
-  })();
 
   // ------------------------------------------------------------------ boot
   function loadImages(map) {
