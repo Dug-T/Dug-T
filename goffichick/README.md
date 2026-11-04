@@ -34,6 +34,21 @@ and there are FIRE / USE / WPN / MAP buttons.
 **Goffichick** — The HUD face is her photo. It glances around, gets bloodier as she takes damage,
 flinches when hit, and her eyes glow pink when she picks up a new weapon.
 
+## Features
+
+- **Title menu:** New Game, Continue (your progress is saved on your device at the start of every level), and
+  three difficulty levels: *Mildly Gloomy*, *Properly Goth* and *Ultra Goth*.
+- **Keys and locked doors:** find the **Bat key** (red), **Skull key** (blue) or **Coffin key** (gold) to open
+  the matching coloured door. Keys you hold show on the status bar.
+- **Stairs, ledges and lifts:** floors can be raised. Walk up steps, look down from balconies, and ride lifts:
+  they sink when you come near, wait, then carry you up.
+- **Power-ups:**
+  - **Shadow Veil:** monsters can barely see you (30s).
+  - **Night Shroud:** invulnerable (30s).
+  - **Gas Mask:** toxic sludge is harmless (60s).
+  - **Rage Heart:** your fists hit 10 times harder for the rest of the level.
+- **Monster infighting:** monsters that get hit by a different kind of monster turn on each other.
+
 ## Enemies
 
 | Map letter | Enemy | Role (classic shooter equivalent) | Attack |

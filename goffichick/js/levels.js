@@ -5,12 +5,21 @@
 //          G  stained glass    C  crimson curtain M  pastel marble      Y  Wally poster
 //          X  EXIT switch      D  door (opens automatically)
 //          $  SECRET door: looks like a wall, press USE on it
+//          E  BAT door (red)   B  SKULL door (blue)   Q  COFFIN door (gold) - need the matching key
 //  Floors: ~  toxic green sludge (hurts!)
 //  Player: > < ^ v  start position and facing
 //  Enemies: z latte zombie   m middle manager   w WALLY MAN   b gym brute
 //           i influencer skull   h smiley orb   K WALLY PRIME (boss)
 //  Items:  + health vial   * black heart   o soul orb   a leather jacket   A spiked corset
 //          c bullets   s shells   r skulls   u rockets   n fuel   e soul jar
+//  Keys:   1 bat key (red)   2 skull key (blue)   @ coffin key (gold)
+//  Power-ups: V shadow veil (monsters can barely see you)   N night shroud (invulnerable)
+//             Z gas mask (toxic sludge is harmless)       U rage heart (berserk fists)
+//  Heights (in each level's definition):
+//    heights: [{ x, y, w, h, z }]        raise a rectangle of floor to height z (1 = a full wall)
+//                                         - steps of up to 0.36 can be walked up, like stairs
+//    lifts:   [{ x, y, w, h, low, high }] a lift that sinks when you come near, then rises
+//    ceilH: 1.4                           ceiling height for the level (raise it when floors go up)
 //  Weapons: 3 coffin shotgun  4 bone gatling  5 skull launcher  6 hexcaster  7 BFG
 //           8 machine gun   9 shotgun   0 rocket launcher   F flamethrower
 //  Decor:  T candelabra  R tombstone  L torch pillar  p office plant  q water cooler
@@ -42,6 +51,13 @@ const ITEM_TYPES = {
   '9': { sprite: 'w9', weapon: 'shotgun', ammo: { shells: 8 } },
   '0': { sprite: 'w0', weapon: 'rocketlauncher', ammo: { rockets: 4 } },
   'F': { sprite: 'wF', weapon: 'flamethrower', ammo: { fuel: 80 } },
+  '1': { sprite: 'keyRed', key: 'red', msg: 'Picked up the BAT KEY.' },
+  '2': { sprite: 'keyBlue', key: 'blue', msg: 'Picked up the SKULL KEY.' },
+  '@': { sprite: 'keyGold', key: 'gold', msg: 'Picked up the COFFIN KEY.' },
+  'V': { sprite: 'veil', power: 'veil', time: 30, msg: 'SHADOW VEIL! Monsters can barely see you.' },
+  'N': { sprite: 'shroud', power: 'shroud', time: 30, msg: 'NIGHT SHROUD! Nothing can hurt you.' },
+  'Z': { sprite: 'mask', power: 'mask', time: 60, msg: 'GAS MASK! Toxic sludge is harmless.' },
+  'U': { sprite: 'rage', berserk: true, msg: 'RAGE HEART! Your fists hit ten times harder.' },
 };
 
 const DECOR_TYPES = {
@@ -58,7 +74,15 @@ const DECOR_TYPES = {
 const LEVELS = [
   {
     name: 'E1M1: THE CEMETERY GATES',
-    floor: 'graveyard', ceil: 'stoneCeil', fog: [92, 90, 94],
+    floor: 'graveyard', ceil: 'stoneCeil', fog: [92, 90, 94], ceilH: 1.4, stepTex: 1,
+    heights: [
+      { x: 37, y: 3, w: 1, h: 15, z: 0.12 },   // chapel steps up to the altar
+      { x: 38, y: 3, w: 1, h: 15, z: 0.24 },
+      { x: 39, y: 3, w: 3, h: 15, z: 0.36 },
+      { x: 22, y: 11, w: 1, h: 1, z: 0.3 },    // armour island in the sludge
+      { x: 39, y: 27, w: 3, h: 2, z: 0.7 },    // balcony in the exit hall
+    ],
+    lifts: [{ x: 38, y: 27, w: 1, h: 2, low: 0, high: 0.7 }],
     // light zones: x, y, w, h, level (0..1), flicker
     lights: [
       { x: 1, y: 1, w: 12, h: 13, level: 0.7, flicker: true },   // the crypt
@@ -70,7 +94,7 @@ const LEVELS = [
     map: [
       '############################################',
       '##.z.#####.z.###############################',
-      '##...#####...####################GGG#GGG#GG#',
+      '##1..#####...####################GGG#GGG#GG#',
       '##...........###################G.........G#',
       '##..z.n...m..###################G....w....G#',
       '##...........#..................G.........G#',
@@ -78,15 +102,15 @@ const LEVELS = [
       '##...........#..L............L..G.........G#',
       '##j....z.....D..................G.........G#',
       '##...........#...%.~~~~~~~~.s...G.........G#',
-      '##.%..%..%...#.....~~~~~~~~.....G.rT.y.Te.G#',
+      '##.%..%..%...#....Z~~~~~~~~.....G.rT.y.Te.G#',
       '##...........#.z...~~~A~~~~...z.D.........G#',
       '##..k..*..s..#...9.~~~~~~~~.....G.........G#',
       '##...........#.....~~~~~~~~.%...G.........G#',
       '############....................G..T...T..G#',
       '############.+..L........F...L..G.........G#',
-      '############......R...i....R....G....m....G#',
+      '############......R...i....R....G....m...VG#',
       '############....................G.........G#',
-      '######...z....###########D#######GGG#GGG#GG#',
+      '######...z....###########E#######GGG#GGG#GG#',
       '######........###########..#################',
       '######..#################..#################',
       '######..#################..#################',
@@ -95,8 +119,8 @@ const LEVELS = [
       '##..........#######..#######################',
       '##..........#.c..##..#######################',
       '##..T....T..#....##..#######################',
-      '##..........$..8a##...........#...........##',
-      '##..........#....##....y..n..c#...k...T...##',
+      '##..........$.N8a##...........#.........U.##',
+      '##..........#....##....y..n..c#...k.......##',
       '##..T....T..#.c..##......m....#.....w.....##',
       '##....^.....#########.~~~.....D...........X#',
       '##.c......+.#########......z..#........*..##',
@@ -106,7 +130,12 @@ const LEVELS = [
   },
   {
     name: 'E1M2: CUBICLE HELL',
-    floor: 'carpet', ceil: 'officeCeil', fog: [70, 70, 76],
+    floor: 'carpet', ceil: 'officeCeil', fog: [70, 70, 76], ceilH: 1.5, stepTex: 4,
+    heights: [
+      { x: 10, y: 14, w: 5, h: 2, z: 0.25 },   // the manager's raised office
+      { x: 30, y: 9, w: 2, h: 3, z: 0.75 },    // storage mezzanine
+    ],
+    lifts: [{ x: 29, y: 9, w: 1, h: 3, low: 0, high: 0.75 }],
     lights: [
       { x: 24, y: 8, w: 9, h: 7, level: 0.72, flicker: true },
       { x: 1, y: 8, w: 6, h: 4, level: 0.77 },
@@ -114,7 +143,7 @@ const LEVELS = [
     ],
     map: [
       'WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW',
-      'W>.....W.........q.....W........W',
+      'W>.....W.........q.....W.......2W',
       'W......W..OO..OO..OO...W..m..b..W',
       'W..c...D...z.......m...D......n.W',
       'W......W..OO..OO..OO...W..OOOO..W',
@@ -122,23 +151,24 @@ const LEVELS = [
       'WWWDWWWW..OO..OO..OO...W..r...4.W',
       'W......W....z..........WWWWDWWWWW',
       'W..+...WWWWWWWWDWWWWWWWW........W',
-      'W......W...........y...W..i..i0.W',
-      'W..s...D..z...m....i...D........W',
+      'W......W...........y...W..i...0.W',
+      'W..s...D..z...m....i...D...i....W',
       'W......W...........y...W...y....W',
       'WWWWDWWWWWWWWWWWWWDWWWWW........W',
       'W........OOOOOOO.......W...u.5..W',
-      'W..w.....O..*..O...mn..W........W',
-      'W........O..a..O.......WWWWDWWWWW',
+      'W..w.....O..*V.O...mn..W........W',
+      'W........O..a..O.......WWWWBWWWWW',
       'W..z.....OOODOOO..z....W........W',
       'W..........b...........W..w..wu.W',
-      'W..y.....m.........y...D.....e..W',
+      'WU.y.....m.........y...B.....e..W',
       'W....+.........q.......W..p..o..X',
       'WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW',
     ],
   },
   {
     name: "E1M3: WALLY'S PENTHOUSE",
-    floor: 'tiles', ceil: 'goldCeil', fog: [50, 30, 56], boss: true,
+    floor: 'tiles', ceil: 'goldCeil', fog: [50, 30, 56], boss: true, ceilH: 1.6, stepTex: 9,
+    heights: [{ x: 12, y: 18, w: 9, h: 5, z: 0.25 }],   // Wally Prime's stage
     lights: [
       { x: 0, y: 16, w: 33, h: 9, level: 0.81, flicker: true },
       { x: 1, y: 7, w: 7, h: 5, level: 0.75 },
@@ -149,17 +179,17 @@ const LEVELS = [
       'M......M..h.....h..M..w......w..M',
       'M..e...D...........D............M',
       'M......M...p...p...M..MMMMMMM...M',
-      'M..6...M...........M..M..A..M...M',
+      'M..6...M...........M..M..A@.M...M',
       'MMMDMMMMMMMMDMMMMMMMM.M..e..M...M',
       'M.......Y...........M.MMMDMMM...M',
       'M..wu...Y..i....i...M...........M',
-      'M.......D...........D.....h...n.M',
+      'MU......D...........D.....h...n.M',
       'M..z....Y..m....m...M...........M',
       'M..+....Y...........MMMMMMDMMMMMM',
       'MMDMMMMMMMMMMMDMMMMMM...........M',
-      'M.......u...........n.....b.....M',
+      'M...N...u...........n.....b...V.M',
       'M..o....7......r.....s....e.....M',
-      'MMMMMMMMMMMMMMMMDMMMMMMMMMMMMMMMM',
+      'MMMMMMMMMMMMMMMMQMMMMMMMMMMMMMMMM',
       'CCCCCC.....................CCCCCC',
       'C...........y.......y...........C',
       'C...L......................L....C',

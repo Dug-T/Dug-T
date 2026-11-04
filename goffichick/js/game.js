@@ -22,7 +22,8 @@
   const RES = 3;
   const viewC = document.createElement('canvas');
   const viewCtx = viewC.getContext('2d');
-  let img, buf, zbuf;
+  let img, buf, zbuf, occD, occY, occN;
+  const OCC = 8; // ledges per screen column that can hide sprites behind them
   // Facebook / Instagram / Messenger's built-in browser never rotates, so there the game draws
   // itself sideways inside the upright page: turning the phone shows it the right way up and
   // filling the screen. Touch input is mapped back into the game's own coordinates.
@@ -44,6 +45,7 @@
       canvas.width = W * RES; canvas.height = H * RES;
       viewC.width = W; viewC.height = VIEW_H;
       img = viewCtx.createImageData(W, VIEW_H); buf = new Uint32Array(img.data.buffer); zbuf = new Float32Array(W);
+      occD = new Float32Array(W * OCC); occY = new Int16Array(W * OCC); occN = new Uint8Array(W);
       if (hudBg) buildHudBg();
     }
     const scale = Math.min(vw / W, vh / H);
@@ -81,6 +83,20 @@
     phone: { speed: 9.5, dmg: [15, 30], splash: 1.4, splashDmg: 50, size: 0.26, fx: 'boom', fxSize: 0.9, sound: 'explode' },
   };
 
+  const STEP = 0.36;            // tallest ledge you can walk straight up (stairs)
+  const DIFFS = [
+    { name: 'MILDLY GLOOMY', dmg: 0.5, ammo: 2, speed: 0.85, cool: 1.3, hp: 0.8 },
+    { name: 'PROPERLY GOTH', dmg: 1, ammo: 1, speed: 1, cool: 1, hp: 1 },
+    { name: 'ULTRA GOTH', dmg: 1.5, ammo: 0.75, speed: 1.2, cool: 0.7, hp: 1.25 },
+  ];
+  const KEYS = {
+    red: { name: 'BAT KEY', color: '#ff2a4a', tex: 13 },
+    blue: { name: 'SKULL KEY', color: '#3d8bff', tex: 14 },
+    gold: { name: 'COFFIN KEY', color: '#ffcf3a', tex: 15 },
+  };
+  const LOCK_CHARS = { E: 'red', B: 'blue', Q: 'gold' };
+  let diff = 1;
+
   // ------------------------------------------------------------------ state
   let S = null;            // sprite library
   let faces = null;        // HUD face canvases
@@ -104,6 +120,7 @@
       switchT: 0, cooldown: 0, firePhase: 0, fireT: 0, flashT: 0, windupT: 0,
       bobT: 0, move: 0, eyeZ: 0.5, refireT: 0, dead: false, faceLook: 0, faceT: 0, painT: 0, grinT: 0,
       kills: 0, items: 0, secrets: 0, slimeT: 0,
+      fz: 0, vz: 0, keys: {}, pw: { veil: 0, shroud: 0, mask: 0 }, berserk: false, rageT: 0,
     };
     if (keep) {
       p.health = keep.health; p.armor = keep.armor; p.armorType = keep.armorType;
@@ -123,8 +140,17 @@
     const seen = new Uint8Array(mw * mh);
     const slime = new Uint8Array(mw * mh);
     const light = new Float32Array(mw * mh).fill(1);
+    const fh = new Float32Array(mw * mh);                    // floor height of every tile
+    for (const z of def.heights || []) for (let y = z.y; y < z.y + z.h; y++) for (let x = z.x; x < z.x + z.w; x++) if (x >= 0 && y >= 0 && x < mw && y < mh) fh[y * mw + x] = z.z;
+    const liftTile = new Uint8Array(mw * mh);
+    const lifts = (def.lifts || []).map(lf => {
+      const tiles = [];
+      for (let y = lf.y; y < lf.y + lf.h; y++) for (let x = lf.x; x < lf.x + lf.w; x++) { tiles.push(y * mw + x); fh[y * mw + x] = lf.high; liftTile[y * mw + x] = 1; }
+      return { tiles, low: lf.low, high: lf.high, h: lf.high, state: 'up', t: 0, onT: 0 };
+    });
+    const lockAt = new Map();
     for (const z of def.lights || []) for (let y = z.y; y < z.y + z.h; y++) for (let x = z.x; x < z.x + z.w; x++) if (x >= 0 && y >= 0 && x < mw && y < mh) light[y * mw + x] = z.level;
-    L = { def, mw, mh, grid, block, seen, slime, light, lightNow: new Float32Array(light), zones: (def.lights || []).map(z => ({ ...z, on: true })), totalSecrets: 0,
+    L = { def, mw, mh, grid, block, seen, slime, light, fh, lifts, liftTile, ceilH: def.ceilH || 1, stepTex: def.stepTex || 1, lightNow: new Float32Array(light), zones: (def.lights || []).map(z => ({ ...z, on: true })), totalSecrets: 0,
       slimeTex: Textures.flats.slime.data, doors: new Map(), enemies: [], items: [], decor: [], projs: [], fx: [],
       totalKills: 0, totalItems: 0, exitT: -1, flow: null, flowFrom: -1, fog: def.fog,
       floor: Textures.flats[def.floor].data, ceil: Textures.flats[def.ceil].data };
@@ -136,6 +162,7 @@
         const idx = y * mw + x;
         if (ch in WALL_CHARS) { grid[idx] = WALL_CHARS[ch]; continue; }
         if (ch === 'D') { grid[idx] = DOOR; continue; }
+        if (ch in LOCK_CHARS) { grid[idx] = DOOR; lockAt.set(idx, LOCK_CHARS[ch]); continue; }
         if (ch === '$') { grid[idx] = DOOR; L.secretAt = L.secretAt || new Set(); L.secretAt.add(idx); L.totalSecrets++; continue; }
         if (ch === '~') { slime[idx] = 1; continue; }
         const cx = x + 0.5, cy = y + 0.5;
@@ -156,8 +183,11 @@
       const secret = !!(L.secretAt && L.secretAt.has(y * mw + x));
       // a secret door wears the texture of the wall next to it
       const near = solidNS ? grid[(y - 1) * mw + x] : grid[y * mw + x - 1];
-      L.doors.set(y * mw + x, { x, y, open: 0, state: 'closed', t: 0, vertical: solidNS, secret, tex: secret ? (near > 0 && near !== DOOR ? near : 1) : 5 });
+      const lock = lockAt.get(y * mw + x) || null;
+      L.doors.set(y * mw + x, { x, y, open: 0, state: 'closed', t: 0, vertical: solidNS, secret, lock, tex: secret ? (near > 0 && near !== DOOR ? near : 1) : lock ? KEYS[lock].tex : 5 });
     }
+    player.fz = fh[Math.floor(player.y) * mw + Math.floor(player.x)];
+    for (const e of L.enemies) e.fz = fh[Math.floor(e.y) * mw + Math.floor(e.x)];
     levelTime = 0; L.flowFrom = -1;
     Sfx.setSong(i + 1);
     msg = `${def.name}   - music: ${Sfx.songName()}`; msgT = 4;
@@ -165,19 +195,25 @@
 
   function spawnEnemy(type, x, y) {
     const def = ENEMY_DEFS[type];
-    L.enemies.push({ type, def, x, y, hp: def.hp, state: def.ai === false ? 'static' : 'idle', t: 0, atkT: rand(0.5, 1.5),
+    L.enemies.push({ type, def, x, y, hp: def.ai === false ? def.hp : Math.round(def.hp * DIFFS[diff].hp), fz: 0, target: null, state: def.ai === false ? 'static' : 'idle', t: 0, atkT: rand(0.5, 1.5),
       frame: 0, animT: rand(0, 1), vx: 0, vy: 0, dead: false, fired: false, seeT: rand(0, 0.3), z: def.z || 0 });
   }
 
   const isWallTile = (x, y) => { if (x < 0 || y < 0 || x >= L.mw || y >= L.mh) return true; const t = L.grid[y * L.mw + x]; return t > 0 && t !== DOOR; };
 
-  // solid for movement
-  function solidAt(x, y, ignoreBlock) {
+  function floorAt(x, y) {
+    const mx = Math.floor(x), my = Math.floor(y);
+    if (mx < 0 || my < 0 || mx >= L.mw || my >= L.mh) return 0;
+    return L.fh[my * L.mw + mx];
+  }
+  // solid for movement. fz = the mover's feet height: a ledge more than `step` above it blocks.
+  function solidAt(x, y, ignoreBlock, fz, step = STEP) {
     const mx = Math.floor(x), my = Math.floor(y);
     if (mx < 0 || my < 0 || mx >= L.mw || my >= L.mh) return true;
     const idx = my * L.mw + mx, t = L.grid[idx];
     if (t === DOOR) return L.doors.get(idx).open < 0.9;
     if (t > 0) return true;
+    if (fz !== undefined && L.fh[idx] - fz > step) return true;
     return !ignoreBlock && L.block[idx] === 1;
   }
   // solid for projectiles / line of sight (decorations don't block)
@@ -194,13 +230,14 @@
     return true;
   }
 
-  function collides(x, y, r, ignoreBlock) {
-    return solidAt(x - r, y - r, ignoreBlock) || solidAt(x + r, y - r, ignoreBlock) || solidAt(x - r, y + r, ignoreBlock) || solidAt(x + r, y + r, ignoreBlock);
+  function collides(x, y, r, ignoreBlock, fz, step) {
+    return solidAt(x - r, y - r, ignoreBlock, fz, step) || solidAt(x + r, y - r, ignoreBlock, fz, step) || solidAt(x - r, y + r, ignoreBlock, fz, step) || solidAt(x + r, y + r, ignoreBlock, fz, step);
   }
   function tryMove(e, dx, dy, r) {
     let moved = false;
-    if (!collides(e.x + dx, e.y, r)) { e.x += dx; moved = true; }
-    if (!collides(e.x, e.y + dy, r)) { e.y += dy; moved = true; }
+    const step = e.def && e.def.fly ? 0.9 : STEP;
+    if (!collides(e.x + dx, e.y, r, false, e.fz, step)) { e.x += dx; moved = true; }
+    if (!collides(e.x, e.y + dy, r, false, e.fz, step)) { e.y += dy; moved = true; }
     return moved;
   }
 
@@ -248,60 +285,94 @@
     const walls = Textures.walls;
     const mw = L.mw;
 
-    // --- floor + ceiling
+    // --- ceiling: one height per level, drawn row by row above the horizon
     const r0x = dirX - plX, r0y = dirY - plY, r1x = dirX + plX, r1y = dirY + plY;
-    const floorT = L.floor, ceilT = L.ceil, mh = L.mh;
+    const floorT = L.floor, ceilT = L.ceil, mh = L.mh, fhm = L.fh, grid = L.grid, ceilH = L.ceilH;
     const lightNow = L.lightNow, slimeMap = L.slime, slimeT = Textures.flats.slimeFrames[((time * 5) | 0) % 4].data, slimeShift = (time * 6) | 0;
-    for (let y = 0; y < VIEW_H; y++) {
-      const isFloor = y > HOR;
-      const dy = isFloor ? (y + 0.5 - HOR) : (HOR - y - 0.5);
-      const rowDist = (isFloor ? eyeZ : 1 - eyeZ) * PROJ / dy;
-      let s = clamp(1.3 - rowDist * 0.05 + boost, 0.25, 1);
-      if (!isFloor) s *= 0.92;
-      const is = 1 - s, ar = fr * is, ag = fg * is, ab = fb * is;
+    for (let y = 0; y < HOR; y++) {
+      const rowDist = (ceilH - eyeZ) * PROJ / (HOR - y - 0.5);
+      const s = clamp(1.3 - rowDist * 0.05 + boost, 0.25, 1) * 0.92;
       const stepX = rowDist * (r1x - r0x) / W, stepY = rowDist * (r1y - r0y) / W;
-      let fx = p.x + rowDist * r0x, fy = p.y + rowDist * r0y;
-      const tex = isFloor ? floorT : ceilT;
-      let o = y * W;
+      let fx = p.x + rowDist * r0x, fy = p.y + rowDist * r0y, o = y * W;
       for (let x = 0; x < W; x++, o++) {
         const cx = fx | 0, cy = fy | 0;
-        let ls = 1, t = tex, sx = 0;
-        if (cx >= 0 && cy >= 0 && cx < mw && cy < mh) {
-          const ci = cy * mw + cx; ls = lightNow[ci];
-          if (isFloor && slimeMap[ci]) { t = slimeT; sx = slimeShift; ls = Math.max(ls, 0.9); }
-        }
-        const tx = (fx * 64 + sx) & 63, ty = (fy * 64) & 63;
+        const ls = (cx >= 0 && cy >= 0 && cx < mw && cy < mh) ? lightNow[cy * mw + cx] : 1;
+        const c = ceilT[((fy * 64) & 63) * 64 + ((fx * 64) & 63)];
         fx += stepX; fy += stepY;
-        const c = t[ty * 64 + tx];
-        if (ls === 1) buf[o] = 0xff000000 | (((c >> 16 & 255) * s + ab) << 16) | (((c >> 8 & 255) * s + ag) << 8) | ((c & 255) * s + ar);
-        else { const q = s * ls, iq = 1 - q; buf[o] = 0xff000000 | (((c >> 16 & 255) * q + fb * iq) << 16) | (((c >> 8 & 255) * q + fg * iq) << 8) | ((c & 255) * q + fr * iq); }
+        const q = s * ls, iq = 1 - q;
+        buf[o] = 0xff000000 | (((c >> 16 & 255) * q + fb * iq) << 16) | (((c >> 8 & 255) * q + fg * iq) << 8) | ((c & 255) * q + fr * iq);
       }
     }
-
-    // --- walls
-    for (let x = 0; x < W; x++) {
-      const cam = 2 * x / W - 1;
-      const rdx = dirX + plX * cam, rdy = dirY + plY * cam;
-      const h = cast(p.x, p.y, rdx, rdy);
-      const dist = Math.max(h.dist, 0.01);
-      zbuf[x] = dist;
-      if (h.dist < 64) L.seen[h.my * mw + h.mx] = 1;
-      const top = HOR - (1 - eyeZ) * PROJ / dist, bot = HOR + eyeZ * PROJ / dist;
-      const y0 = Math.max(0, Math.ceil(top)), y1 = Math.min(VIEW_H, Math.ceil(bot));
-      const tex = (walls[h.tex] || walls[1]).data;
-      const tx = Math.min(63, (h.u * 64) | 0);
-      const lx = (p.x + rdx * (h.dist - 0.02)) | 0, ly = (p.y + rdy * (h.dist - 0.02)) | 0;
-      const wl = (lx >= 0 && ly >= 0 && lx < mw && ly < L.mh) ? L.lightNow[ly * mw + lx] : 1;
-      let s = clamp(1.3 - dist * 0.05 + boost, 0.25, 1) * (h.side ? 0.86 : 1) * wl;
-      if (h.tex === 7 || h.tex === 11) s = Math.max(s, 0.85); // glowing glass / lit switch
-      const is = 1 - s, ar = fr * is, ag = fg * is, ab = fb * is;
-      const texStep = 64 / (bot - top);
-      let texPos = (y0 - top) * texStep;
-      let o = y0 * W + x;
-      for (let y = y0; y < y1; y++, o += W) {
-        const c = tex[((texPos | 0) & 63) * 64 + tx]; texPos += texStep;
-        buf[o] = 0xff000000 | (((c >> 16 & 255) * s + ab) << 16) | (((c >> 8 & 255) * s + ag) << 8) | ((c & 255) * s + ar);
+    // shade one pixel: texture colour c, brightness q (0..1), blended toward the level's fog
+    const put = (o, c, q) => { const iq = 1 - q; buf[o] = 0xff000000 | (((c >> 16 & 255) * q + fb * iq) << 16) | (((c >> 8 & 255) * q + fg * iq) << 8) | ((c & 255) * q + fr * iq); };
+    // floor of one tile between two distances along this column's ray; returns the new clip line
+    function floorSpan(x, rdx, rdy, idx, h, dNear, dFar, clip) {
+      const e = eyeZ - h; if (e <= 0.001) return clip;
+      const yA = Math.max(Math.ceil(HOR + e * PROJ / dFar), Math.floor(HOR) + 1);
+      const yB = Math.min(dNear < 0.02 ? VIEW_H : Math.ceil(HOR + e * PROJ / dNear), clip);
+      const isSlime = slimeMap[idx], tex = isSlime ? slimeT : floorT, ls = isSlime ? Math.max(lightNow[idx], 0.9) : lightNow[idx];
+      for (let y = yA, o = yA * W + x; y < yB; y++, o += W) {
+        const rowDist = e * PROJ / (y + 0.5 - HOR);
+        const wx = p.x + rdx * rowDist, wy = p.y + rdy * rowDist;
+        put(o, tex[((wy * 64) & 63) * 64 + ((wx * 64 + (isSlime ? slimeShift : 0)) & 63)], clamp(1.3 - rowDist * 0.05 + boost, 0.25, 1) * ls);
       }
+      return Math.min(clip, yA);
+    }
+    // a vertical surface (wall or the front of a raised floor) from height zLo to zHi at distance d
+    function vSpan(x, d, zLo, zHi, texId, u, side, lightIdx, clip, glow) {
+      const y0 = Math.max(0, Math.ceil(HOR - (zHi - eyeZ) * PROJ / d)), y1 = Math.min(clip, Math.ceil(HOR + (eyeZ - zLo) * PROJ / d));
+      if (y0 >= y1) return Math.min(clip, Math.max(0, y0));
+      const tex = (walls[texId] || walls[1]).data, tx = Math.min(63, (u * 64) | 0);
+      let q = clamp(1.3 - d * 0.05 + boost, 0.25, 1) * (side ? 0.86 : 1) * (lightIdx >= 0 ? lightNow[lightIdx] : 1);
+      if (glow) q = Math.max(q, 0.85);
+      const vStep = d / PROJ * 64; let v = (zHi - eyeZ + (y0 + 0.5 - HOR) * d / PROJ) * 64 + (ceilH - zHi) * 64;
+      for (let y = y0, o = y0 * W + x; y < y1; y++, o += W, v += vStep) put(o, tex[((v | 0) & 63) * 64 + tx], q);
+      return Math.min(clip, y0);
+    }
+    const occlude = (x, d, y) => { const n = occN[x]; if (n < OCC) { occD[x * OCC + n] = d; occY[x * OCC + n] = y; occN[x] = n + 1; } };
+
+    // --- floors, ledges and walls: walk each column's ray front to back, drawing as it goes
+    const startX = Math.floor(p.x), startY = Math.floor(p.y);
+    for (let x = 0; x < W; x++) {
+      const cam = 2 * x / W - 1, rdx = dirX + plX * cam, rdy = dirY + plY * cam;
+      let mx = startX, my = startY;
+      const ddx = rdx === 0 ? 1e30 : Math.abs(1 / rdx), ddy = rdy === 0 ? 1e30 : Math.abs(1 / rdy);
+      let stepX, stepY, sdx, sdy, side = 0;
+      if (rdx < 0) { stepX = -1; sdx = (p.x - mx) * ddx; } else { stepX = 1; sdx = (mx + 1 - p.x) * ddx; }
+      if (rdy < 0) { stepY = -1; sdy = (p.y - my) * ddy; } else { stepY = 1; sdy = (my + 1 - p.y) * ddy; }
+      let curIdx = my * mw + mx, curH = fhm[curIdx] || 0, dNear = 0.01, clip = VIEW_H, wallD = 64, prevDoor = false;
+      occN[x] = 0;
+      for (let i = 0; i < 160 && clip > 0; i++) {
+        let d;
+        if (sdx < sdy) { d = sdx; sdx += ddx; mx += stepX; side = 0; } else { d = sdy; sdy += ddy; my += stepY; side = 1; }
+        clip = floorSpan(x, rdx, rdy, curIdx, curH, dNear, d, clip);
+        if (mx < 0 || my < 0 || mx >= mw || my >= mh) { wallD = d; break; }
+        const idx = my * mw + mx, t = grid[idx];
+        let u = side === 0 ? p.y + d * rdy : p.x + d * rdx; u -= Math.floor(u);
+        if ((side === 0 && rdx > 0) || (side === 1 && rdy < 0)) u = 1 - u;
+        if (t === DOOR) {
+          const dr = L.doors.get(idx);
+          let tt, du = -1, dside = 0;
+          if (dr.vertical) { tt = (mx + 0.5 - p.x) / rdx; const hy = p.y + tt * rdy; if (Math.floor(hy) === my) du = hy - my; dside = 0; }
+          else { tt = (my + 0.5 - p.y) / rdy; const hx = p.x + tt * rdx; if (Math.floor(hx) === mx) du = hx - mx; dside = 1; }
+          if (curH !== 0) occlude(x, d, clip);
+          if (tt > d && du >= dr.open) { // the door panel itself
+            clip = floorSpan(x, rdx, rdy, idx, 0, d, tt, clip);
+            vSpan(x, tt, 0, ceilH, dr.tex, du - dr.open, dside, curIdx, clip); L.seen[idx] = 1; wallD = tt; break;
+          }
+          curIdx = idx; curH = 0; dNear = d; prevDoor = !dr.secret; continue;
+        }
+        if (t > 0) { // solid wall
+          vSpan(x, d, curH, ceilH, prevDoor ? 10 : t, u, side, curIdx, clip, t === 7 || t === 11);
+          L.seen[idx] = 1; wallD = d; break;
+        }
+        prevDoor = false;
+        const nh = fhm[idx];
+        if (nh > curH + 0.001) clip = vSpan(x, d, curH, nh, L.liftTile[idx] ? 10 : L.stepTex, u, side, idx, clip); // step / ledge front
+        if (nh !== curH) occlude(x, d, clip);
+        curIdx = idx; curH = nh; dNear = d;
+      }
+      zbuf[x] = wallD;
     }
 
     // --- sprites
@@ -313,15 +384,16 @@
       const li = (y | 0) * mw + (x | 0);
       list.push({ dx, dy, depth, spr, z, h, bright, wscale: wscale || 1, light: L.lightNow[li] ?? 1 });
     };
-    for (const d of L.decor) add(d.x, d.y, S.decor[d.def.sprite], 0, d.def.h, d.def.bright);
+    for (const d of L.decor) add(d.x, d.y, S.decor[d.def.sprite], floorAt(d.x, d.y), d.def.h, d.def.bright);
     for (const it of L.items) if (!it.taken) {
       const spr = S.item[it.def.sprite];
-      add(it.x, it.y, spr, 0, spr.h / 72, it.def.sprite === 'soul' || it.def.sprite === 'souls');
+      const bob = it.def.power || it.def.key ? 0.04 + Math.sin(time * 3 + it.x) * 0.03 : 0;
+      add(it.x, it.y, spr, floorAt(it.x, it.y) + bob, spr.h / 72, it.def.sprite === 'soul' || it.def.sprite === 'souls' || !!it.def.power || !!it.def.key);
     }
     for (const e of L.enemies) {
       const spr = enemySprite(e);
       const h = e.dead && e.def.ai !== false ? e.def.h * (spr.h / (enemyBase(e).h)) : e.def.h;
-      add(e.x, e.y, spr, e.dead ? 0 : e.z, h, false);
+      add(e.x, e.y, spr, (e.fz || 0) + (e.dead ? 0 : e.z), h, false);
     }
     for (const pr of L.projs) {
       const fr = pr.frames, size = pr.def.grow ? pr.def.size * (1 + pr.age * pr.def.grow) : pr.def.size;
@@ -352,9 +424,11 @@
         if (zbuf[x] < depth) continue;
         const u = ((x - left) * uStep) | 0;
         if (u < 0 || u >= sw) continue;
+        let yEnd = y1; // a nearer ledge hides the lower part of the sprite
+        for (let k = 0, n = occN[x]; k < n; k++) if (occD[x * OCC + k] < depth && occY[x * OCC + k] < yEnd) yEnd = occY[x * OCC + k];
         let v = (y0 - top) * vStep;
         let o = y0 * W + x;
-        for (let y = y0; y < y1; y++, o += W, v += vStep) {
+        for (let y = y0; y < yEnd; y++, o += W, v += vStep) {
           const c = data[(v | 0) * sw + u];
           if (c === 0) continue;
           buf[o] = 0xff000000 | (((c >> 16 & 255) * s + ab) << 16) | (((c >> 8 & 255) * s + ag) << 8) | ((c & 255) * s + ar);
@@ -383,6 +457,7 @@
     const lower = p.switchT > 0 ? (p.next ? (0.25 - p.switchT) / 0.25 : p.switchT / 0.25) * 120 : 0;
     ctx.save();
     ctx.beginPath(); ctx.rect(0, 0, W, VIEW_H); ctx.clip();
+    if (p.pw.veil > 0 && (p.pw.veil > 3 || Math.sin(time * 18) > 0)) ctx.globalAlpha = 0.35;
     // weapons are authored at 1x and drawn scaled up around the bottom-centre of the view
     ctx.translate(W / 2 + bobX, VIEW_H + 10 + bobY + lower); ctx.scale(0.8, 0.8);
     w.draw(ctx, 0, 0, p.firePhase, p.flashT > 0, time);
@@ -445,7 +520,15 @@
     label('ARMS', 182, y0 + 43);
     // face
     const f = faceCanvas();
+    if (p.pw.veil > 0) ctx.globalAlpha = 0.45;
     ctx.drawImage(f, 0, 0, f.width, f.height, 217, y0 + 3, 46, HUD_H - 5);
+    ctx.globalAlpha = 1;
+    Object.keys(KEYS).forEach((k, i) => { // collected keys
+      const ky = y0 + 9 + i * 12, kx = 337;
+      if (!p.keys[k]) { ctx.strokeStyle = '#3a2a3a'; ctx.strokeRect(kx - 3.5, ky - 3.5, 7, 9); return; }
+      ctx.fillStyle = KEYS[k].color; ctx.beginPath(); ctx.arc(kx, ky, 3, 0, Math.PI * 2); ctx.fill();
+      ctx.fillRect(kx - 0.8, ky, 1.6, 6); ctx.fillRect(kx, ky + 4, 2.2, 1.2);
+    });
     digits(Math.ceil(p.armor) + '%', 306, y0 + 33, 24, p.armorType === 2 ? '#b04cff' : '#e0115f');
     label('ARMOR', 306, y0 + 43);
     // ammo table
@@ -471,6 +554,15 @@
       ctx.fillStyle = '#ff5a1f'; ctx.fillRect(W / 2 - 100, 29, 200 * fr, 8);
       label('WALLY PRIME', W / 2, 26, '#ffcf3a', 'center', 8);
     }
+    // power-up timers (top right)
+    let px = W - 4;
+    for (const [k, nm, col] of [['shroud', 'SHROUD', '#ffffff'], ['veil', 'VEIL', '#b04cff'], ['mask', 'MASK', '#39ff6a']]) {
+      const t = player.pw[k]; if (t <= 0) continue;
+      if (t < 3 && Math.sin(time * 18) < 0) { px -= 46; continue; }
+      ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.fillRect(px - 44, 4, 44, 12);
+      label(`${nm} ${Math.ceil(t)}`, px - 22, 13, col, 'center', 8); px -= 46;
+    }
+    if (player.berserk) label('RAGE', W - 4, 26, '#ff2a4a', 'right', 8);
     // crosshair
     ctx.fillStyle = 'rgba(255,80,180,0.75)';
     ctx.fillRect(W / 2 - 1, HOR - 4, 2, 3); ctx.fillRect(W / 2 - 1, HOR + 2, 2, 3);
@@ -485,7 +577,9 @@
       const idx = y * L.mw + x, t = L.grid[idx];
       if (!L.seen[idx] && !(god)) continue;
       if (t === DOOR && L.doors.get(idx).secret && L.doors.get(idx).open < 0.5) ctx.fillStyle = '#b0307a';
-      else if (t === DOOR) ctx.fillStyle = '#ffcf3a';
+      else if (t === DOOR && L.doors.get(idx).lock) ctx.fillStyle = KEYS[L.doors.get(idx).lock].color;
+      else if (t === DOOR) ctx.fillStyle = '#d8d0b0';
+      else if (L.liftTile[idx]) ctx.fillStyle = '#7fb0ff';
       else if (L.slime[idx]) { ctx.fillStyle = '#2f6a12'; }
       else if (t === 6 || t === 11) ctx.fillStyle = '#39ff6a';
       else if (t > 0) ctx.fillStyle = '#b0307a';
@@ -547,21 +641,33 @@
       if (t === DOOR) {
         const d = L.doors.get(idx);
         if (d.secret) { if (d.state === 'closed') { d.state = 'opening'; Sfx.play.door(); player.secrets++; msg = 'A secret is revealed!'; msgT = 3; } return; }
+        if (d.lock && !p.keys[d.lock]) { lockedMsg(d); return; }
         toggleDoor(d); return;
       }
+      if (L.liftTile[idx]) { const lf = L.lifts.find(l => l.tiles.includes(idx)); if (lf && lf.state === 'up') { lf.state = 'lowering'; Sfx.play.door(); } return; }
       if (t === 6) { L.grid[idx] = 11; Sfx.play.switch(); Sfx.play.exit(); L.exitT = 1.0; msg = 'Level complete!'; msgT = 2; return; }
       if (t > 0) { Sfx.play.oof(); return; }
     }
   }
+  function lockedMsg(d) {
+    msg = `You need the ${KEYS[d.lock].name} to open this door.`; msgT = 2.5;
+    Sfx.play.oof();
+  }
   function toggleDoor(d, byEnemy) {
+    if (d.lock && (byEnemy || !player.keys[d.lock])) return;
     if (d.state === 'closed' || d.state === 'closing') { d.state = 'opening'; Sfx.play.door(); }
     else if (d.state === 'open' && !byEnemy) { d.state = 'closing'; d.t = 0; Sfx.play.door(); }
   }
   function updateDoors(dt) {
     for (const d of L.doors.values()) {
       // doors open by themselves when Goffichick walks up to them
-      if (!d.secret && (d.state === 'closed' || d.state === 'closing') && !player.dead &&
-          Math.hypot(player.x - (d.x + 0.5), player.y - (d.y + 0.5)) < 1.6) { if (d.state === 'closed') Sfx.play.door(); d.state = 'opening'; }
+      const near = !player.dead && Math.hypot(player.x - (d.x + 0.5), player.y - (d.y + 0.5)) < 1.6;
+      if (d.lock && !player.keys[d.lock]) { // locked: say which key it needs, once per visit
+        if (near && !d.warned) { d.warned = true; lockedMsg(d); }
+        if (!near && Math.hypot(player.x - (d.x + 0.5), player.y - (d.y + 0.5)) > 2.6) d.warned = false;
+        continue;
+      }
+      if (!d.secret && (d.state === 'closed' || d.state === 'closing') && near) { if (d.state === 'closed') Sfx.play.door(); d.state = 'opening'; }
       if (d.secret && d.state === 'open') continue; // secrets stay open
       if (d.state === 'opening') { d.open += dt * 2.6; if (d.open >= 1) { d.open = 1; d.state = 'open'; d.t = 0; } }
       else if (d.state === 'open') {
@@ -577,6 +683,29 @@
         if (occupied) d.state = 'opening';
         else { d.open -= dt * 1.6; if (d.open <= 0) { d.open = 0; d.state = 'closed'; } }
       }
+    }
+  }
+
+  // Lifts sit at the top until Goffichick comes near from below; they then sink, wait, and rise
+  // again carrying whoever stands on them. Standing still on a raised lift brings it down too.
+  function updateLifts(dt) {
+    const p = player, here = Math.floor(p.y) * L.mw + Math.floor(p.x);
+    for (const lf of L.lifts) {
+      const on = lf.tiles.includes(here);
+      const near = !p.dead && lf.tiles.some(i => Math.hypot(p.x - (i % L.mw + 0.5), p.y - (((i / L.mw) | 0) + 0.5)) < 2.1);
+      // standing still on the raised lift sends it down - but not right after riding it up
+      if (!on) lf.rode = false; else if (lf.state === 'raising' || lf.state === 'down' || lf.state === 'lowering') lf.rode = true;
+      lf.onT = on && !lf.rode && p.move < 0.1 ? lf.onT + dt : 0;
+      if (lf.state === 'up') {
+        if ((near && !on && p.fz < lf.high - STEP) || lf.onT > 1.2) { lf.state = 'lowering'; Sfx.play.door(); }
+      } else if (lf.state === 'lowering') {
+        lf.h -= dt * 1.4; if (lf.h <= lf.low) { lf.h = lf.low; lf.state = 'down'; lf.t = 0; }
+      } else if (lf.state === 'down') {
+        lf.t += dt; if (lf.t > 2.5) { lf.state = 'raising'; Sfx.play.door(); }
+      } else if (lf.state === 'raising') {
+        lf.h += dt * 1.1; if (lf.h >= lf.high) { lf.h = lf.high; lf.state = 'up'; }
+      }
+      for (const i of lf.tiles) L.fh[i] = lf.h;
     }
   }
 
@@ -655,6 +784,7 @@
 
   function splash(x, y, radius, maxDmg, owner) {
     for (const e of shootables()) {
+      if (e === owner) continue;
       const dd = Math.hypot(e.x - x, e.y - y) - e.def.radius;
       if (dd < radius && losClear(x, y, e.x, e.y)) damageEnemy(e, maxDmg * (1 - Math.max(0, dd) / radius), owner);
     }
@@ -692,11 +822,14 @@
       return;
     }
     const pd = Math.hypot(e.x - player.x, e.y - player.y);
+    // infighting: a monster hurt by a different kind of monster turns on it
+    if (src && typeof src === 'object' && src !== e && !src.dead && src.type !== e.type && src.type !== 'barrel') e.target = src;
+    else if (src === 'player') e.target = null;
     if (e.state === 'idle') wake(e);
     if (e.hp <= 0) {
       e.dead = true; e.state = 'dead'; e.frame = 0; e.t = 0;
       Sfx.play[e.def.boss ? 'bossRoar' : 'enemyDie'](pd);
-      if (src === 'player') player.kills++;
+      player.kills++;
       if (e.def.boss) { L.bossDeadT = 3; msg = 'WALLY PRIME HAS BEEN UNSUBSCRIBED!'; msgT = 4; }
       return;
     }
@@ -705,8 +838,8 @@
 
   function damagePlayer(dmg, fromX, fromY) {
     const p = player;
-    if (p.dead || god || state !== 'playing') return;
-    dmg = Math.round(dmg);
+    if (p.dead || god || state !== 'playing' || p.pw.shroud > 0) return;
+    dmg = Math.round(dmg * DIFFS[diff].dmg);
     if (p.armor > 0) {
       const absorb = Math.min(p.armor, Math.floor(dmg * (p.armorType === 2 ? 0.5 : 0.333)));
       p.armor -= absorb; dmg -= absorb; if (p.armor <= 0) p.armorType = 0;
@@ -756,7 +889,8 @@
         if (dist[ni] !== -1) continue;
         const tile = L.grid[ni];
         if ((tile > 0 && tile !== DOOR) || L.block[ni]) continue;
-        if (tile === DOOR && L.doors.get(ni).secret && L.doors.get(ni).open < 0.9) continue;
+        if (tile === DOOR) { const dr = L.doors.get(ni); if ((dr.secret || dr.lock) && dr.open < 0.9) continue; }
+        if (Math.abs(L.fh[ni] - L.fh[c]) > STEP) continue;
         dist[ni] = dist[c] + 1; q[t++] = ni;
       }
     }
@@ -781,28 +915,40 @@
   }
 
   function enemyAttack(e) {
-    const d = e.def, p = player;
-    const pd = Math.hypot(p.x - e.x, p.y - e.y);
-    const ang = Math.atan2(p.y - e.y, p.x - e.x);
-    const z = e.z + d.h * 0.6;
-    Sfx.play[d.atkSound] && Sfx.play[d.atkSound](pd);
+    const d = e.def, p = player, tg = e.target && !e.target.dead ? e.target : null;
+    const tx = tg ? tg.x : p.x, ty = tg ? tg.y : p.y;
+    const pd = Math.hypot(tx - e.x, ty - e.y), playerDist = Math.hypot(p.x - e.x, p.y - e.y);
+    const veiled = !tg && p.pw.veil > 0;              // Shadow Veil: monsters can barely see her
+    const ang = Math.atan2(ty - e.y, tx - e.x) + (veiled ? rand(-0.5, 0.5) : 0);
+    const z = (e.fz || 0) + e.z + d.h * 0.6;
+    const hurt = dmg => tg ? damageEnemy(tg, dmg, e) : damagePlayer(dmg, e.x, e.y);
+    Sfx.play[d.atkSound] && Sfx.play[d.atkSound](playerDist);
     if (d.attack === 'hitscan') {
-      const acc = clamp(1 - pd / 16, 0.15, 0.6);
-      if (Math.random() < acc && losClear(e.x, e.y, p.x, p.y)) damagePlayer(irand(d.dmg[0], d.dmg[1]), e.x, e.y);
+      // a monster standing in the line of fire takes the hit instead (and gets angry)
+      const c = Math.cos(ang), s = Math.sin(ang);
+      let blocker = null, best = pd;
+      for (const o of shootables()) {
+        if (o === e || o === tg || o.type === 'barrel') continue;
+        const vx = o.x - e.x, vy = o.y - e.y, along = vx * c + vy * s;
+        if (along > 0.3 && along < best && Math.abs(vy * c - vx * s) < o.def.radius) { blocker = o; best = along; }
+      }
+      const acc = clamp(1 - pd / 16, 0.15, 0.6) * (veiled ? 0.25 : 1);
+      if (blocker) damageEnemy(blocker, irand(d.dmg[0], d.dmg[1]), e);
+      else if (Math.random() < (tg ? 0.7 : acc) && losClear(e.x, e.y, tx, ty)) hurt(irand(d.dmg[0], d.dmg[1]));
       spawnFx('splash', e.x + Math.cos(ang) * 0.5, e.y + Math.sin(ang) * 0.5, z, 0.25, 0.25);
     } else if (d.attack === 'proj' || d.attack === 'melee') {
-      if (d.melee && pd < d.radius + 0.95) { damagePlayer(irand(d.melee[0], d.melee[1]), e.x, e.y); Sfx.play.punch(); return; }
+      if (d.melee && pd < d.radius + 0.95) { hurt(irand(d.melee[0], d.melee[1])); Sfx.play.punch(); return; }
       if (d.attack === 'melee') return;
       const n = d.count || 1;
       for (let i = 0; i < n; i++) fireProjectile(d.proj, e.x, e.y, z, ang + (i - (n - 1) / 2) * (d.spread || 0), e);
     } else if (d.attack === 'boss') {
-      const enraged = e.hp < d.hp / 2;
+      const enraged = e.hp < d.hp / 2, bz = (e.fz || 0) + 0.6;
       if (Math.random() < 0.5) {
-        fireProjectile('phone', e.x, e.y, 0.6, ang, e);
-        if (enraged) { fireProjectile('phone', e.x, e.y, 0.6, ang - 0.25, e); fireProjectile('phone', e.x, e.y, 0.6, ang + 0.25, e); }
+        fireProjectile('phone', e.x, e.y, bz, ang, e);
+        if (enraged) { fireProjectile('phone', e.x, e.y, bz, ang - 0.25, e); fireProjectile('phone', e.x, e.y, bz, ang + 0.25, e); }
       } else {
         const n = enraged ? 7 : 5;
-        for (let i = 0; i < n; i++) fireProjectile('notif', e.x, e.y, 0.6, ang + (i - (n - 1) / 2) * 0.12, e);
+        for (let i = 0; i < n; i++) fireProjectile('notif', e.x, e.y, bz, ang + (i - (n - 1) / 2) * 0.12, e);
       }
     }
   }
@@ -823,17 +969,20 @@
       }
       if (e.state === 'static') continue;
       const d = e.def;
-      const pdx = p.x - e.x, pdy = p.y - e.y, pd = Math.hypot(pdx, pdy);
+      if (e.target && e.target.dead) e.target = null;
+      const tg = e.target;
+      const pdx = (tg ? tg.x : p.x) - e.x, pdy = (tg ? tg.y : p.y) - e.y, pd = Math.hypot(pdx, pdy) || 0.001;
+      const sk = DIFFS[diff];
       if (e.state === 'idle') {
         e.seeT -= dt;
-        if (e.seeT <= 0) { e.seeT = 0.3; if (pd < 22 && losClear(e.x, e.y, p.x, p.y)) wake(e); }
+        if (e.seeT <= 0) { e.seeT = 0.3; if (pd < (p.pw.veil > 0 ? 6 : 22) && losClear(e.x, e.y, p.x, p.y)) wake(e); }
         continue;
       }
       if (e.state === 'pain') { e.t -= dt; if (e.t <= 0) e.state = 'chase'; continue; }
       if (e.state === 'attack') {
         e.t -= dt;
         if (!e.fired && e.t < 0.22) { e.fired = true; if (!p.dead) enemyAttack(e); }
-        if (e.t <= 0) { e.state = 'chase'; e.atkT = rand(d.cooldown[0], d.cooldown[1]) * (d.boss && e.hp < d.hp / 2 ? 0.6 : 1); }
+        if (e.t <= 0) { e.state = 'chase'; e.atkT = rand(d.cooldown[0], d.cooldown[1]) * sk.cool * (d.boss && e.hp < d.hp / 2 ? 0.6 : 1); }
         continue;
       }
       if (e.state === 'attack-charge') { // influencer skull dive
@@ -841,18 +990,19 @@
         const steps = 3;
         for (let i = 0; i < steps; i++) {
           const nx = e.x + e.vx * dt / steps, ny = e.y + e.vy * dt / steps;
-          if (Math.hypot(p.x - nx, p.y - ny) < d.radius + 0.3) { damagePlayer(irand(d.melee[0], d.melee[1]), e.x, e.y); e.state = 'chase'; e.atkT = rand(1, 2); break; }
-          if (collides(nx, ny, d.radius, true)) { e.state = 'chase'; e.atkT = rand(1, 2); break; }
+          const hx = tg ? tg.x : p.x, hy = tg ? tg.y : p.y;
+          if (Math.hypot(hx - nx, hy - ny) < d.radius + (tg ? tg.def.radius : 0.3)) { const dm = irand(d.melee[0], d.melee[1]); if (tg) damageEnemy(tg, dm, e); else damagePlayer(dm, e.x, e.y); e.state = 'chase'; e.atkT = rand(1, 2); break; }
+          if (collides(nx, ny, d.radius, true, e.fz, 0.9)) { e.state = 'chase'; e.atkT = rand(1, 2); break; }
           e.x = nx; e.y = ny;
         }
-        if (e.t <= 0) { e.state = 'chase'; e.atkT = rand(d.cooldown[0], d.cooldown[1]); }
+        if (e.t <= 0) { e.state = 'chase'; e.atkT = rand(d.cooldown[0], d.cooldown[1]) * sk.cool; }
         continue;
       }
       // chase
       e.atkT -= dt;
       if (e.atkT <= 0 && !p.dead) {
         const inMelee = d.attack === 'melee' ? pd < d.radius + 0.95 : true;
-        if (inMelee && pd < d.range && losClear(e.x, e.y, p.x, p.y)) {
+        if (inMelee && pd < d.range && losClear(e.x, e.y, e.x + pdx, e.y + pdy)) {
           if (d.attack === 'charge') {
             e.state = 'attack-charge'; e.t = 1.3; e.vx = pdx / pd * 7; e.vy = pdy / pd * 7;
             Sfx.play.skull(pd); continue;
@@ -864,13 +1014,14 @@
       // move
       const keepDist = d.attack === 'melee' || d.attack === 'charge' ? d.radius + 0.55 : 1.4;
       if (pd > keepDist) {
-        const [mx, my] = enemyMoveDir(e);
-        const sp = d.speed * dt;
+        const [mx, my] = tg ? [pdx / pd, pdy / pd] : enemyMoveDir(e);
+        const sp = d.speed * sk.speed * dt;
         const nx = e.x + mx * sp, ny = e.y + my * sp;
         // open doors in the way
         const ti = Math.floor(ny) * L.mw + Math.floor(nx);
         if (L.grid[ti] === DOOR) { const dr = L.doors.get(ti); if (dr.open < 0.9 && !dr.secret) toggleDoor(dr, true); }
         if (!tryMove(e, mx * sp, my * sp, d.radius * 0.8)) e.atkT = Math.min(e.atkT, 0.1);
+        e.fz = floorAt(e.x, e.y);
       }
     }
     // keep monsters from stacking
@@ -893,7 +1044,7 @@
       const steps = 4;
       for (let i = 0; i < steps && !pr.done; i++) {
         const nx = pr.x + pr.vx * dt / steps, ny = pr.y + pr.vy * dt / steps;
-        if (opaqueAt(nx, ny)) { explode(pr); pr.done = true; break; }
+        if (opaqueAt(nx, ny) || pr.z < floorAt(nx, ny) - 0.02) { explode(pr); pr.done = true; break; }
         pr.x = nx; pr.y = ny;
         if (pr.owner !== 'player') {
           if (Math.hypot(p.x - pr.x, p.y - pr.y) < 0.3 + pr.def.size / 2) {
@@ -902,7 +1053,7 @@
         }
         for (const e of L.enemies) {
           if (e.dead || e === pr.owner) continue;
-          if (pr.owner !== 'player' && e.type !== 'barrel') continue; // no infighting
+          if (pr.owner !== 'player' && e.type !== 'barrel' && pr.owner.type === e.type) continue; // same kind don't hurt each other
           if (Math.hypot(e.x - pr.x, e.y - pr.y) < e.def.radius + pr.def.size / 2) {
             damageEnemy(e, irand(pr.def.dmg[0], pr.def.dmg[1]), pr.owner);
             if (pr.def.ignite && !e.dead) { e.burnT = Math.max(e.burnT || 0, pr.def.ignite); e.burnBy = pr.owner; }
@@ -968,7 +1119,7 @@
         if (along <= 0 || along > bestA + e.def.radius) continue;
         if (spriteHit(e, vy * c - vx * s, 0.08)) { best = e; bestA = along; }
       }
-      if (best) { damageEnemy(best, irand(w.damage[0], w.damage[1]), 'player'); Sfx.play.punch(); spawnFx('blood', best.x - c * 0.3, best.y - s * 0.3, best.z + best.def.h * 0.6, 0.12, 0.3); }
+      if (best) { damageEnemy(best, irand(w.damage[0], w.damage[1]) * (p.berserk ? 10 : 1), 'player'); if (p.berserk) shake = Math.max(shake, 2); Sfx.play.punch(); spawnFx('blood', best.x - c * 0.3, best.y - s * 0.3, best.z + best.def.h * 0.6, 0.12, 0.3); }
       else Sfx.play.swing();
     } else if (w.type === 'hitscan') {
       const accurate = w.pellets === 1 && p.refireT <= 0;
@@ -981,7 +1132,7 @@
 
   function updatePlayer(dt) {
     const p = player;
-    if (p.dead) { p.eyeZ = Math.max(0.12, p.eyeZ - dt * 0.6); return; }
+    if (p.dead) { p.eyeZ = Math.max(p.fz + 0.12, p.eyeZ - dt * 0.6); return; }
     // turning
     const turnSpeed = 2.8;
     if (keys.ArrowLeft) p.a -= turnSpeed * dt;
@@ -1004,10 +1155,16 @@
     const moving = Math.min(1, Math.hypot(fwd, str));
     p.move += (moving - p.move) * Math.min(1, dt * 8);
     p.bobT += dt * 9 * p.move;
-    p.eyeZ = 0.5 + Math.sin(p.bobT * 2) * 0.012 * p.move;
+    // climb stairs smoothly, ride lifts, and drop off ledges with a little gravity
+    const ground = floorAt(p.x, p.y);
+    if (ground > p.fz) { p.fz = Math.min(ground, p.fz + dt * 2.8); p.vz = 0; }
+    else if (ground < p.fz) { p.vz -= 9.8 * dt; p.fz = Math.max(ground, p.fz + p.vz * dt); if (p.fz <= ground) p.vz = 0; }
+    p.eyeZ = p.fz + 0.5 + Math.sin(p.bobT * 2) * 0.012 * p.move;
+    for (const k in p.pw) if (p.pw[k] > 0) { p.pw[k] -= dt; if (p.pw[k] <= 0) { p.pw[k] = 0; msg = { veil: 'The Shadow Veil fades.', shroud: 'The Night Shroud fades.', mask: 'The gas mask runs out.' }[k]; msgT = 2; } }
+    p.rageT = Math.max(0, p.rageT - dt);
 
     // toxic slime burns
-    if (L.slime[Math.floor(p.y) * L.mw + Math.floor(p.x)]) {
+    if (L.slime[Math.floor(p.y) * L.mw + Math.floor(p.x)] && p.pw.mask <= 0 && p.fz < 0.05) {
       p.slimeT -= dt;
       if (p.slimeT <= 0) { p.slimeT = 1; damagePlayer(5); }
     } else p.slimeT = 0.4;
@@ -1061,6 +1218,9 @@
     if (def.armor) {
       if (p.armor < def.armor) { p.armor = def.armor; p.armorType = def.armorType; used = true; }
     }
+    if (def.key) { p.keys[def.key] = true; used = true; }
+    if (def.power) { p.pw[def.power] = def.time; used = true; p.grinT = 1.5; }
+    if (def.berserk) { p.berserk = true; p.rageT = 10; p.health = Math.max(p.health, 100); used = true; switchWeapon('knuckles'); }
     if (def.weapon) {
       const w = weaponByKey(def.weapon);
       if (!p.weapons[def.weapon]) { p.weapons[def.weapon] = true; switchWeapon(def.weapon); p.grinT = 1.5; Sfx.play.weaponUp(); msg = `You got the ${w.name}!`; msgT = 3; used = true; }
@@ -1068,11 +1228,11 @@
     }
     if (def.ammo) {
       for (const [k, v] of Object.entries(def.ammo)) {
-        if (p.ammo[k] < AMMO_TYPES[k].max) { p.ammo[k] = Math.min(AMMO_TYPES[k].max, p.ammo[k] + v); used = true; }
+        if (p.ammo[k] < AMMO_TYPES[k].max) { p.ammo[k] = Math.min(AMMO_TYPES[k].max, p.ammo[k] + Math.max(1, Math.round(v * DIFFS[diff].ammo))); used = true; }
       }
     }
     if (used) {
-      if (!def.weapon) { Sfx.play.pickup(); msg = def.msg; msgT = 2.5; }
+      if (!def.weapon) { (def.power || def.berserk || def.key ? Sfx.play.weaponUp : Sfx.play.pickup)(); msg = def.msg; msgT = 2.5; }
     }
     return used;
   }
@@ -1090,10 +1250,49 @@
 
   // ------------------------------------------------------------------ game flow
   let carry = null, interStats = null;
+  // Progress is saved on this device at the start of every level, so the title screen can offer
+  // CONTINUE. (Browser storage can be unavailable, e.g. private windows - then it simply isn't offered.)
+  const SAVE_KEY = 'goffichick-save-v1', DIFF_KEY = 'goffichick-difficulty';
+  const store = {
+    get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
+    del(k) { try { localStorage.removeItem(k); } catch (e) {} },
+  };
+  { const d = store.get(DIFF_KEY); if (d === 0 || d === 1 || d === 2) diff = d; }
+  function saveProgress() { store.set(SAVE_KEY, { level: levelIndex, diff, carry }); }
+  function savedGame() { const s = store.get(SAVE_KEY); return s && LEVELS[s.level] ? s : null; }
+  function beginPlay() { state = 'playing'; Sfx.init(); Sfx.startMusic(); }
   function startGame() {
     levelIndex = 0; carry = null; god = false;
-    loadLevel(0, null); state = 'playing';
-    Sfx.init(); Sfx.startMusic();
+    loadLevel(0, null); saveProgress(); beginPlay();
+  }
+  function continueGame() {
+    const sv = savedGame(); if (!sv) return startGame();
+    levelIndex = sv.level; diff = sv.diff; carry = sv.carry; god = false;
+    loadLevel(levelIndex, carry); beginPlay();
+  }
+  // title menu
+  let menuSel = 0;
+  function menuItems() {
+    const items = [], sv = savedGame();
+    if (sv) items.push({ id: 'continue', text: `CONTINUE  -  ${LEVELS[sv.level].name.split(':')[0]}, ${DIFFS[sv.diff].name}` });
+    items.push({ id: 'new', text: 'NEW GAME' });
+    items.push({ id: 'diff', text: `DIFFICULTY   <  ${DIFFS[diff].name}  >` });
+    return items;
+  }
+  function menuActivate(item, dir = 1) {
+    if (item.id === 'continue') continueGame();
+    else if (item.id === 'new') startGame();
+    else { diff = (diff + dir + DIFFS.length) % DIFFS.length; store.set(DIFF_KEY, diff); Sfx.init(); Sfx.play.switch(); }
+    if (state === 'playing') lockPointer();
+  }
+  const MENU_Y = 108, MENU_DY = 13;
+  // a click / tap on the title screen: pick the menu row under it, or the highlighted one
+  function titleTap(gx, gy) {
+    const items = menuItems();
+    const row = Math.floor((gy - (MENU_Y - 9)) / MENU_DY);
+    if (gx !== undefined && gx < 330 && row >= 0 && row < items.length) { menuSel = row; menuActivate(items[row], 1); }
+    else menuActivate(items[Math.min(menuSel, items.length - 1)], 1);
   }
   function completeLevel() {
     if (state !== 'playing') return;
@@ -1102,6 +1301,8 @@
       secrets: L.totalSecrets ? Math.round(player.secrets / L.totalSecrets * 100) : 100, time: levelTime };
     carry = { health: player.health, armor: player.armor, armorType: player.armorType, ammo: player.ammo, weapons: player.weapons, cur: player.cur };
     state = levelIndex >= LEVELS.length - 1 ? 'victory' : 'intermission'; stateT = 0;
+    if (state === 'victory') store.del(SAVE_KEY);
+    else { levelIndex++; saveProgress(); levelIndex--; } // a CONTINUE now starts the next level
   }
   function nextLevel() {
     levelIndex++;
@@ -1118,6 +1319,7 @@
       levelTime += dt;
       updatePlayer(dt);
       updateDoors(dt);
+      updateLifts(dt);
       updateLights();
       updateEnemies(dt);
       updateProjectiles(dt);
@@ -1147,11 +1349,19 @@
     ctx.shadowColor = '#ff2d95'; ctx.shadowBlur = 14; ctx.fillStyle = '#ff4fb8'; ctx.fillText('GOFFICHICK', 16, 67);
     ctx.restore();
     label('THE WORLD IS TOO CHEERFUL. FIX IT.', 18, 86, '#c9a6c9', 'left', 8);
-    const blink = Math.sin(time * 5) > 0;
-    if (blink) label(state === 'loading' ? 'SUMMONING...' : 'CLICK OR PRESS ENTER TO BEGIN', 18, 122, '#ffffff', 'left', 10);
-    const lines = ['WASD / ARROWS  move', 'MOUSE          look (click to lock)', 'CLICK / CTRL   fire', 'E / SPACE      switches, secret walls',
-      '1-8 / Q / WHEEL  weapons', 'SHIFT run   TAB map   M music'];
-    lines.forEach((l, i) => label(l, 18, 150 + i * 11, '#b78ab7', 'left', 8));
+    if (state === 'loading') { if (Math.sin(time * 5) > 0) label('SUMMONING...', 18, MENU_Y, '#ffffff', 'left', 10); }
+    else {
+      const items = menuItems(); menuSel = Math.min(menuSel, items.length - 1);
+      items.forEach((it, i) => {
+        const sel = i === menuSel, y = MENU_Y + i * MENU_DY;
+        if (sel) { ctx.fillStyle = 'rgba(255,79,184,0.18)'; ctx.fillRect(12, y - 9, 300, 12); }
+        label((sel ? '> ' : '  ') + it.text, 16, y, sel ? '#ffffff' : '#ff9be0', 'left', 9);
+      });
+    }
+    const lines = ['WASD / ARROWS  move      MOUSE  look (click to lock)', 'CLICK / CTRL   fire      E / SPACE  switches, lifts, secrets',
+      '1-8 / Q / WHEEL  weapons   SHIFT run   TAB map   M music'];
+    lines.forEach((l, i) => label(l, 18, 163 + i * 11, '#b78ab7', 'left', 7));
+    label('Keys open coloured doors. Stairs and lifts take you up.', 18, 205, '#8a6a8a', 'left', 7);
     label('ON A PHONE? Left stick moves, drag right side to look.', 18, 225, '#7a5a7a', 'left', 7);
   }
 
@@ -1170,7 +1380,7 @@
       if (state === 'victory') {
         drawTitle();
         drawOverlayText('VICTORY', 'Wally Prime is unsubscribed. The world is safely gloomy again.', [
-          `KILLS  ${interStats.kills}%`, `ITEMS  ${interStats.items}%`, `TIME   ${fmtTime(interStats.time)}`, '', 'THANKS FOR PLAYING - CLICK TO PLAY AGAIN']);
+          `KILLS  ${interStats.kills}%`, `ITEMS  ${interStats.items}%`, `TIME   ${fmtTime(interStats.time)}`, `SKILL  ${DIFFS[diff].name}`, 'THANKS FOR PLAYING - CLICK TO PLAY AGAIN']);
       } else {
         drawOverlayText(interStats.name, 'FINISHED', [`KILLS  ${interStats.kills}%`, `ITEMS  ${interStats.items}%`, `SECRET ${interStats.secrets}%`, `TIME   ${fmtTime(interStats.time)}`, '', stateT > 1 ? 'CLICK OR PRESS ENTER' : '']);
       }
@@ -1178,11 +1388,18 @@
     }
     render3D();
     const sx = shake ? (Math.random() - 0.5) * shake * 2 : 0, sy = shake ? (Math.random() - 0.5) * shake * 2 : 0;
+    const pw = player.pw;
+    if (pw.shroud > 0 && (pw.shroud > 3 || Math.sin(time * 18) > 0)) { // Night Shroud: inverted greyscale, like the classic invulnerability
+      for (let i = 0, n = W * VIEW_H; i < n; i++) { const c = buf[i]; const v = 255 - (((c & 255) * 77 + (c >> 8 & 255) * 150 + (c >> 16 & 255) * 29) >> 8); buf[i] = 0xff000000 | (v << 16) | (v << 8) | v; }
+    }
     viewCtx.putImageData(img, 0, 0);
     ctx.imageSmoothingEnabled = false; ctx.drawImage(viewC, sx | 0, sy | 0); ctx.imageSmoothingEnabled = true;
     drawWeapon();
     if (painFlash > 0) { ctx.fillStyle = `rgba(255,0,0,${painFlash * 0.45})`; ctx.fillRect(0, 0, W, VIEW_H); }
     if (pickupFlash > 0) { ctx.fillStyle = `rgba(255,120,220,${pickupFlash * 0.4})`; ctx.fillRect(0, 0, W, VIEW_H); }
+    if (pw.mask > 0 && (pw.mask > 3 || Math.sin(time * 18) > 0)) { ctx.fillStyle = 'rgba(40,255,90,0.12)'; ctx.fillRect(0, 0, W, VIEW_H); }
+    if (player.rageT > 0) { ctx.fillStyle = `rgba(255,0,0,${Math.min(0.35, player.rageT * 0.04)})`; ctx.fillRect(0, 0, W, VIEW_H); }
+    if (pw.veil > 0) { const g = ctx.createRadialGradient(W / 2, HOR, 40, W / 2, HOR, W * 0.6); g.addColorStop(0, 'rgba(60,0,90,0)'); g.addColorStop(1, 'rgba(60,0,90,0.45)'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, VIEW_H); }
     if (automap) drawAutomap();
     drawMessages();
     drawHUD();
@@ -1203,9 +1420,18 @@
 
   // ------------------------------------------------------------------ input
   let paused = false;
-  function primaryAction() {
+  // convert a click / tap position into the game's own 480-wide coordinates
+  function gamePoint(cx, cy) {
+    const l = toLocal(cx, cy);
+    return { x: (l.x - canvas.offsetLeft) / canvas.offsetWidth * W, y: (l.y - canvas.offsetTop) / canvas.offsetHeight * H };
+  }
+  function primaryAction(ev) {
     Sfx.init();
-    if (state === 'title') { startGame(); lockPointer(); return true; }
+    if (state === 'title') {
+      if (ev && ev.clientX !== undefined) { const g = gamePoint(ev.clientX, ev.clientY); titleTap(g.x, g.y); }
+      else titleTap();
+      return true;
+    }
     if (state === 'dead' && stateT > 1) { restartLevel(); return true; }
     if (state === 'intermission' && stateT > 1) { nextLevel(); return true; }
     if (state === 'victory' && stateT > 2) { state = 'title'; return true; }
@@ -1218,6 +1444,12 @@
   window.addEventListener('keydown', e => {
     if (['Tab', 'Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault();
     keys[e.code] = true;
+    if (state === 'title') {
+      const items = menuItems();
+      if (e.code === 'ArrowUp') menuSel = (menuSel + items.length - 1) % items.length;
+      if (e.code === 'ArrowDown') menuSel = (menuSel + 1) % items.length;
+      if ((e.code === 'ArrowLeft' || e.code === 'ArrowRight') && items[menuSel].id === 'diff') menuActivate(items[menuSel], e.code === 'ArrowLeft' ? -1 : 1);
+    }
     if (e.code === 'Enter') primaryAction();
     if (state !== 'playing') return;
     if (e.key.length === 1) cheatKey(e.key.toLowerCase());
@@ -1233,7 +1465,7 @@
 
   canvas.addEventListener('mousedown', e => {
     if (isTouch) return;
-    if (primaryAction()) return;
+    if (primaryAction(e)) return;
     if (state === 'playing' && !locked()) lockPointer();
     if (e.button === 0) fireHeld = true;
   });
@@ -1276,11 +1508,11 @@
     const endStick = e => { if (e.pointerId !== stickId) return; stickId = null; touch.mx = touch.my = 0; knob.style.transform = ''; };
     stick.addEventListener('pointerup', endStick); stick.addEventListener('pointercancel', endStick);
     const look = document.getElementById('look'); let lookId = null, lx = 0;
-    look.addEventListener('pointerdown', e => { if (primaryAction()) return; lookId = e.pointerId; lx = toLocal(e.clientX, e.clientY).x; look.setPointerCapture(e.pointerId); });
+    look.addEventListener('pointerdown', e => { if (primaryAction(e)) return; lookId = e.pointerId; lx = toLocal(e.clientX, e.clientY).x; look.setPointerCapture(e.pointerId); });
     look.addEventListener('pointermove', e => { if (e.pointerId === lookId) { const x = toLocal(e.clientX, e.clientY).x; touch.turn += (x - lx) * 0.009; lx = x; } });
     const endLook = e => { if (e.pointerId === lookId) lookId = null; };
     look.addEventListener('pointerup', endLook); look.addEventListener('pointercancel', endLook);
-    const btn = (id, down, up) => { const b = document.getElementById(id); b.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); if (!primaryAction()) down(); }); if (up) { b.addEventListener('pointerup', up); b.addEventListener('pointercancel', up); b.addEventListener('pointerleave', up); } };
+    const btn = (id, down, up) => { const b = document.getElementById(id); b.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); if (!primaryAction(e)) down(); }); if (up) { b.addEventListener('pointerup', up); b.addEventListener('pointercancel', up); b.addEventListener('pointerleave', up); } };
     btn('bFire', () => { touch.fire = true; touch.fireTap = true; }, () => { touch.fire = false; });
     btn('bUse', () => state === 'playing' && useAction());
     btn('bWpn', () => state === 'playing' && cycleWeapon(1));
@@ -1288,7 +1520,7 @@
   }
   window.addEventListener('touchstart', () => setupTouch(), { once: true, passive: true });
   // the very first tap lands on the canvas (before the touch overlay exists): let it start the game
-  canvas.addEventListener('pointerdown', e => { if (e.pointerType === 'touch') { setupTouch(); tryFullscreen(); primaryAction(); } });
+  canvas.addEventListener('pointerdown', e => { if (e.pointerType === 'touch') { setupTouch(); tryFullscreen(); primaryAction(e); } });
   // Claim every touch gesture for the game. Without this, in-app browsers such as Facebook's
   // read a sideways look-drag as "swipe to go back / close", and a downward drag as "pull to close".
   const blockGesture = e => { if (e.cancelable) e.preventDefault(); };
@@ -1327,6 +1559,6 @@
     titleImg = photos.title;
     state = 'title';
     // expose a tiny debug hook for testing
-    window.GOFFI = { get state() { return state; }, get player() { return player; }, get level() { return L; }, start: startGame, completeLevel, setLevel: i => { levelIndex = i; loadLevel(i, null); state = 'playing'; } };
+    window.GOFFI = { get state() { return state; }, get player() { return player; }, get level() { return L; }, start: startGame, completeLevel, get diff() { return diff; }, set diff(v) { diff = v; }, continueGame, savedGame, setLevel: i => { levelIndex = i; loadLevel(i, null); state = 'playing'; } };
   });
 })();

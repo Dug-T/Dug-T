@@ -126,6 +126,20 @@ const Textures = (() => {
     rivets(g, [[3, 4], [59, 4], [3, 25], [59, 25], [3, 56], [59, 56], [31, 4], [31, 56]]);
   }, 10);
 
+  // 13-15: locked doors - steel with a coloured band and the key's emblem (bat / skull / coffin)
+  const lockedDoor = (col, dark, emblem) => make(g => {
+    steelPanel(g, 118);
+    g.fillStyle = '#2c2c30'; for (let y = 0; y < 64; y += 21) g.fillRect(0, y, 64, 2);
+    g.fillStyle = col; g.fillRect(0, 6, 64, 5); g.fillRect(0, 53, 64, 5);
+    g.fillStyle = dark; g.beginPath(); g.arc(32, 32, 13, 0, 7); g.fill();
+    g.fillStyle = col; g.beginPath(); g.arc(32, 32, 11, 0, 7); g.fill();
+    g.fillStyle = dark; emblem(g);
+    rivets(g, [[3, 16], [59, 16], [3, 46], [59, 46]]);
+  }, 8);
+  T[13] = lockedDoor('#e0283c', '#3a0008', g => { g.beginPath(); g.moveTo(32, 30); g.lineTo(23, 26); g.lineTo(25, 31); g.lineTo(21, 32); g.lineTo(27, 37); g.lineTo(32, 35); g.lineTo(37, 37); g.lineTo(43, 32); g.lineTo(39, 31); g.lineTo(41, 26); g.closePath(); g.fill(); });
+  T[14] = lockedDoor('#3d8bff', '#061a3a', g => { g.beginPath(); g.arc(32, 30, 6.5, 0, 7); g.fill(); g.fillRect(28, 33, 8, 6); g.fillStyle = '#3d8bff'; g.fillRect(28.5, 28, 3, 3); g.fillRect(32.5, 28, 3, 3); });
+  T[15] = lockedDoor('#ffcf3a', '#3a2a00', g => { g.beginPath(); g.moveTo(29, 22); g.lineTo(35, 22); g.lineTo(38, 28); g.lineTo(35, 42); g.lineTo(29, 42); g.lineTo(26, 28); g.closePath(); g.fill(); });
+
   // 6: exit switch (off) / 11: (on) - steel panel set into grey stone
   const switchTex = on => make(g => {
     stoneBlocks(g, 138, 22, '#55555a', 16, 4);
