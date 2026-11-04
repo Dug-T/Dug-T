@@ -999,8 +999,9 @@
       p.windupT -= dt;
       if (p.windupT <= 0) doFire(w);
     }
-    const trigger = fireHeld || keys.ControlLeft || keys.ControlRight || touch.fire;
+    const trigger = fireHeld || keys.ControlLeft || keys.ControlRight || touch.fire || touch.fireTap;
     if (trigger && p.cooldown <= 0 && p.switchT <= 0 && p.windupT <= 0) {
+      touch.fireTap = false;
       if (w.ammo && p.ammo[w.ammo] < w.cost) {
         Sfx.play.empty(); p.cooldown = 0.3;
         const b = bestWeapon(); if (b !== p.cur) switchWeapon(b);
@@ -1121,6 +1122,7 @@
       '1-8 / Q / WHEEL  weapons', 'SHIFT run   TAB map   M music'];
     lines.forEach((l, i) => label(l, 18, 150 + i * 11, '#b78ab7', 'left', 8));
     label('ON A PHONE? Left stick moves, drag right side to look.', 18, 225, '#7a5a7a', 'left', 7);
+    if (inAppBrowser) label('In Facebook? For the smoothest play tap  ...  then "Open in browser".', 18, 238, '#ff9be0', 'left', 7);
   }
 
   function drawOverlayText(title, sub, lines) {
@@ -1232,12 +1234,25 @@
     const endLook = e => { if (e.pointerId === lookId) lookId = null; };
     look.addEventListener('pointerup', endLook); look.addEventListener('pointercancel', endLook);
     const btn = (id, down, up) => { const b = document.getElementById(id); b.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); if (!primaryAction()) down(); }); if (up) { b.addEventListener('pointerup', up); b.addEventListener('pointercancel', up); b.addEventListener('pointerleave', up); } };
-    btn('bFire', () => { touch.fire = true; }, () => { touch.fire = false; });
+    btn('bFire', () => { touch.fire = true; touch.fireTap = true; }, () => { touch.fire = false; });
     btn('bUse', () => state === 'playing' && useAction());
     btn('bWpn', () => state === 'playing' && cycleWeapon(1));
     btn('bMap', () => { automap = !automap; });
   }
   window.addEventListener('touchstart', () => setupTouch(), { once: true, passive: true });
+  // the very first tap lands on the canvas (before the touch overlay exists): let it start the game
+  canvas.addEventListener('pointerdown', e => { if (e.pointerType === 'touch') { setupTouch(); primaryAction(); } });
+  // Claim every touch gesture for the game. Without this, in-app browsers such as Facebook's
+  // read a sideways look-drag as "swipe to go back / close", and a downward drag as "pull to close".
+  const blockGesture = e => { if (e.cancelable) e.preventDefault(); };
+  for (const ev of ['touchstart', 'touchmove']) {
+    document.addEventListener(ev, e => {
+      // let the title / end screens still receive normal taps; block everything that drags
+      if (ev === 'touchmove' || e.target.closest('#touch') || e.target === canvas) blockGesture(e);
+    }, { passive: false });
+  }
+  for (const ev of ['gesturestart', 'gesturechange', 'dblclick', 'contextmenu']) document.addEventListener(ev, blockGesture, { passive: false });
+  const inAppBrowser = /FBAN|FBAV|FB_IAB|FBIOS|Instagram|Messenger/i.test(navigator.userAgent);
 
   // ------------------------------------------------------------------ boot
   function loadImages(map) {
