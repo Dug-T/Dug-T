@@ -37,7 +37,8 @@
   };
 
   const PROJECTILES = {
-    skull: { speed: 11, dmg: [20, 60], splash: 1.7, splashDmg: 110, size: 0.22, fx: 'boom', fxSize: 1.0, sound: 'explode' },
+    skull: { speed: 11, dmg: [20, 60], splash: 1.7, splashDmg: 110, size: 0.22, fx: 'boom', fxSize: 1.0, sound: 'explode', trail: true },
+    rocket: { speed: 14, dmg: [20, 60], splash: 1.9, splashDmg: 128, size: 0.2, fx: 'boom', fxSize: 1.15, sound: 'explode', trail: true },
     hex: { speed: 15, dmg: [8, 22], size: 0.14, fx: 'hexHit', fxSize: 0.35, sound: 'hexHit' },
     gloom: { speed: 9, dmg: [100, 220], splash: 2.2, splashDmg: 120, size: 0.55, fx: 'gloomHit', fxSize: 1.6, sound: 'bfgBoom', bfg: true },
     memo: { speed: 6.5, dmg: [5, 18], size: 0.2, fx: 'boom', fxSize: 0.35, sound: 'hexHit' },
@@ -64,11 +65,11 @@
   function newPlayer(keep) {
     const p = {
       x: 0, y: 0, a: 0, health: 100, armor: 0, armorType: 0,
-      ammo: { bullets: 50, shells: 0, skulls: 0, souls: 0 },
+      ammo: { bullets: 50, shells: 0, skulls: 0, rockets: 0, souls: 0 },
       weapons: { knuckles: true, pistol: true }, cur: 'pistol', next: null,
       switchT: 0, cooldown: 0, firePhase: 0, fireT: 0, flashT: 0, windupT: 0,
       bobT: 0, move: 0, eyeZ: 0.5, refireT: 0, dead: false, faceLook: 0, faceT: 0, painT: 0, grinT: 0,
-      kills: 0, items: 0,
+      kills: 0, items: 0, secrets: 0, slimeT: 0,
     };
     if (keep) {
       p.health = keep.health; p.armor = keep.armor; p.armorType = keep.armorType;
@@ -86,7 +87,11 @@
     const grid = new Int16Array(mw * mh);
     const block = new Uint8Array(mw * mh);
     const seen = new Uint8Array(mw * mh);
-    L = { def, mw, mh, grid, block, seen, doors: new Map(), enemies: [], items: [], decor: [], projs: [], fx: [],
+    const slime = new Uint8Array(mw * mh);
+    const light = new Float32Array(mw * mh).fill(1);
+    for (const z of def.lights || []) for (let y = z.y; y < z.y + z.h; y++) for (let x = z.x; x < z.x + z.w; x++) if (x >= 0 && y >= 0 && x < mw && y < mh) light[y * mw + x] = z.level;
+    L = { def, mw, mh, grid, block, seen, slime, light, lightNow: new Float32Array(light), zones: (def.lights || []).map(z => ({ ...z, on: true })), totalSecrets: 0,
+      slimeTex: Textures.flats.slime.data, doors: new Map(), enemies: [], items: [], decor: [], projs: [], fx: [],
       totalKills: 0, totalItems: 0, exitT: -1, flow: null, flowFrom: -1, fog: def.fog,
       floor: Textures.flats[def.floor].data, ceil: Textures.flats[def.ceil].data };
     player = newPlayer(keep);
@@ -97,6 +102,8 @@
         const idx = y * mw + x;
         if (ch in WALL_CHARS) { grid[idx] = WALL_CHARS[ch]; continue; }
         if (ch === 'D') { grid[idx] = DOOR; continue; }
+        if (ch === '$') { grid[idx] = DOOR; L.secretAt = L.secretAt || new Set(); L.secretAt.add(idx); L.totalSecrets++; continue; }
+        if (ch === '~') { slime[idx] = 1; continue; }
         const cx = x + 0.5, cy = y + 0.5;
         if ('><^v'.includes(ch)) { player.x = cx; player.y = cy; player.a = { '>': 0, 'v': Math.PI / 2, '<': Math.PI, '^': -Math.PI / 2 }[ch]; }
         else if (ch in ENEMY_CHARS) { spawnEnemy(ENEMY_CHARS[ch], cx, cy); L.totalKills++; }
@@ -112,7 +119,10 @@
     for (let y = 0; y < mh; y++) for (let x = 0; x < mw; x++) {
       if (grid[y * mw + x] !== DOOR) continue;
       const solidNS = isWallTile(x, y - 1) && isWallTile(x, y + 1);
-      L.doors.set(y * mw + x, { x, y, open: 0, state: 'closed', t: 0, vertical: solidNS });
+      const secret = !!(L.secretAt && L.secretAt.has(y * mw + x));
+      // a secret door wears the texture of the wall next to it
+      const near = solidNS ? grid[(y - 1) * mw + x] : grid[y * mw + x - 1];
+      L.doors.set(y * mw + x, { x, y, open: 0, state: 'closed', t: 0, vertical: solidNS, secret, tex: secret ? (near > 0 && near !== DOOR ? near : 1) : 5 });
     }
     levelTime = 0; L.flowFrom = -1;
     msg = def.name; msgT = 4;
@@ -177,12 +187,12 @@
         const d = L.doors.get(idx);
         if (d.vertical) {
           const tt = (mx + 0.5 - px) / rdx; const hy = py + tt * rdy;
-          if (tt > 0 && Math.floor(hy) === my) { const u = hy - my; if (u >= d.open) { hit.dist = tt; hit.tex = 5; hit.u = u - d.open; hit.side = 0; hit.mx = mx; hit.my = my; return hit; } }
+          if (tt > 0 && Math.floor(hy) === my) { const u = hy - my; if (u >= d.open) { hit.dist = tt; hit.tex = d.tex; hit.u = u - d.open; hit.side = 0; hit.mx = mx; hit.my = my; return hit; } }
         } else {
           const tt = (my + 0.5 - py) / rdy; const hx = px + tt * rdx;
-          if (tt > 0 && Math.floor(hx) === mx) { const u = hx - mx; if (u >= d.open) { hit.dist = tt; hit.tex = 5; hit.u = u - d.open; hit.side = 1; hit.mx = mx; hit.my = my; return hit; } }
+          if (tt > 0 && Math.floor(hx) === mx) { const u = hx - mx; if (u >= d.open) { hit.dist = tt; hit.tex = d.tex; hit.u = u - d.open; hit.side = 1; hit.mx = mx; hit.my = my; return hit; } }
         }
-        prevDoor = true; continue;
+        prevDoor = !d.secret; continue;
       }
       const dist = side === 0 ? sdx - ddx : sdy - ddy;
       let u = side === 0 ? py + dist * rdy : px + dist * rdx; u -= Math.floor(u);
@@ -205,7 +215,8 @@
 
     // --- floor + ceiling
     const r0x = dirX - plX, r0y = dirY - plY, r1x = dirX + plX, r1y = dirY + plY;
-    const floorT = L.floor, ceilT = L.ceil;
+    const floorT = L.floor, ceilT = L.ceil, mh = L.mh;
+    const lightNow = L.lightNow, slimeMap = L.slime, slimeT = L.slimeTex, slimeShift = (time * 14) | 0;
     for (let y = 0; y < VIEW_H; y++) {
       const isFloor = y > HOR;
       const dy = isFloor ? (y + 0.5 - HOR) : (HOR - y - 0.5);
@@ -218,10 +229,17 @@
       const tex = isFloor ? floorT : ceilT;
       let o = y * W;
       for (let x = 0; x < W; x++, o++) {
-        const tx = (fx * 64) & 63, ty = (fy * 64) & 63;
+        const cx = fx | 0, cy = fy | 0;
+        let ls = 1, t = tex, sx = 0;
+        if (cx >= 0 && cy >= 0 && cx < mw && cy < mh) {
+          const ci = cy * mw + cx; ls = lightNow[ci];
+          if (isFloor && slimeMap[ci]) { t = slimeT; sx = slimeShift; ls = Math.max(ls, 0.9); }
+        }
+        const tx = (fx * 64 + sx) & 63, ty = (fy * 64) & 63;
         fx += stepX; fy += stepY;
-        const c = tex[ty * 64 + tx];
-        buf[o] = 0xff000000 | (((c >> 16 & 255) * s + ab) << 16) | (((c >> 8 & 255) * s + ag) << 8) | ((c & 255) * s + ar);
+        const c = t[ty * 64 + tx];
+        if (ls === 1) buf[o] = 0xff000000 | (((c >> 16 & 255) * s + ab) << 16) | (((c >> 8 & 255) * s + ag) << 8) | ((c & 255) * s + ar);
+        else { const q = s * ls, iq = 1 - q; buf[o] = 0xff000000 | (((c >> 16 & 255) * q + fb * iq) << 16) | (((c >> 8 & 255) * q + fg * iq) << 8) | ((c & 255) * q + fr * iq); }
       }
     }
 
@@ -237,7 +255,9 @@
       const y0 = Math.max(0, Math.ceil(top)), y1 = Math.min(VIEW_H, Math.ceil(bot));
       const tex = (walls[h.tex] || walls[1]).data;
       const tx = Math.min(63, (h.u * 64) | 0);
-      let s = clamp(1.12 - dist * 0.085 + boost, 0, 1) * (h.side ? 0.78 : 1);
+      const lx = (p.x + rdx * (h.dist - 0.02)) | 0, ly = (p.y + rdy * (h.dist - 0.02)) | 0;
+      const wl = (lx >= 0 && ly >= 0 && lx < mw && ly < L.mh) ? L.lightNow[ly * mw + lx] : 1;
+      let s = clamp(1.12 - dist * 0.085 + boost, 0, 1) * (h.side ? 0.78 : 1) * wl;
       if (h.tex === 7 || h.tex === 11) s = Math.max(s, 0.85); // glowing glass / lit switch
       const is = 1 - s, ar = fr * is, ag = fg * is, ab = fb * is;
       const texStep = 64 / (bot - top);
@@ -255,7 +275,8 @@
       const dx = x - p.x, dy = y - p.y;
       const depth = dx * dirX + dy * dirY;
       if (depth < minDepth) return;
-      list.push({ dx, dy, depth, spr, z, h, bright, wscale: wscale || 1 });
+      const li = (y | 0) * mw + (x | 0);
+      list.push({ dx, dy, depth, spr, z, h, bright, wscale: wscale || 1, light: L.lightNow[li] ?? 1 });
     };
     for (const d of L.decor) add(d.x, d.y, S.decor[d.def.sprite], 0, d.def.h, d.def.bright);
     for (const it of L.items) if (!it.taken) {
@@ -284,7 +305,7 @@
       if (x0 >= x1) continue;
       const y0 = Math.max(0, Math.ceil(top)), y1 = Math.min(VIEW_H, Math.ceil(bottom));
       if (y0 >= y1) continue;
-      let s = sp.bright ? 1 : clamp(1.12 - depth * 0.085 + boost, 0, 1);
+      let s = sp.bright ? 1 : clamp(1.12 - depth * 0.085 + boost, 0, 1) * sp.light;
       const is = 1 - s, ar = fr * is, ag = fg * is, ab = fb * is;
       const data = spr.data, sw = spr.w, sh = spr.h;
       const uStep = sw / wPx, vStep = sh / hPx;
@@ -388,12 +409,12 @@
     digits(Math.ceil(p.armor) + '%', 306, y0 + 33, 24, p.armorType === 2 ? '#b04cff' : '#e0115f');
     label('ARMOR', 306, y0 + 43);
     // ammo table
-    let yy = y0 + 13;
+    let yy = y0 + 11;
     for (const k of Object.keys(AMMO_TYPES)) {
       const isCur = w && w.ammo === k;
       label(AMMO_TYPES[k].name, 352, yy, isCur ? '#ffffff' : '#c9a6c9', 'left');
       label(`${p.ammo[k]}/${AMMO_TYPES[k].max}`, 474, yy, '#ffcf3a', 'right');
-      yy += 9;
+      yy += 8;
     }
   }
 
@@ -422,7 +443,9 @@
     for (let y = 0; y < L.mh; y++) for (let x = 0; x < L.mw; x++) {
       const idx = y * L.mw + x, t = L.grid[idx];
       if (!L.seen[idx] && !(god)) continue;
-      if (t === DOOR) ctx.fillStyle = '#ffcf3a';
+      if (t === DOOR && L.doors.get(idx).secret && L.doors.get(idx).open < 0.5) ctx.fillStyle = '#b0307a';
+      else if (t === DOOR) ctx.fillStyle = '#ffcf3a';
+      else if (L.slime[idx]) { ctx.fillStyle = '#5a1048'; }
       else if (t === 6 || t === 11) ctx.fillStyle = '#39ff6a';
       else if (t > 0) ctx.fillStyle = '#b0307a';
       else continue;
@@ -480,7 +503,11 @@
       const x = p.x + Math.cos(p.a) * d, y = p.y + Math.sin(p.a) * d;
       const mx = Math.floor(x), my = Math.floor(y);
       const idx = my * L.mw + mx, t = L.grid[idx];
-      if (t === DOOR) { toggleDoor(L.doors.get(idx)); return; }
+      if (t === DOOR) {
+        const d = L.doors.get(idx);
+        if (d.secret) { if (d.state === 'closed') { d.state = 'opening'; Sfx.play.door(); player.secrets++; msg = 'A secret is revealed!'; msgT = 3; } return; }
+        toggleDoor(d); return;
+      }
       if (t === 6) { L.grid[idx] = 11; Sfx.play.switch(); Sfx.play.exit(); L.exitT = 1.0; msg = 'Level complete!'; msgT = 2; return; }
       if (t > 0) { Sfx.play.oof(); return; }
     }
@@ -491,7 +518,11 @@
   }
   function updateDoors(dt) {
     for (const d of L.doors.values()) {
-      if (d.state === 'opening') { d.open += dt * 1.6; if (d.open >= 1) { d.open = 1; d.state = 'open'; d.t = 0; } }
+      // doors open by themselves when Goffichick walks up to them
+      if (!d.secret && (d.state === 'closed' || d.state === 'closing') && !player.dead &&
+          Math.hypot(player.x - (d.x + 0.5), player.y - (d.y + 0.5)) < 1.6) { if (d.state === 'closed') Sfx.play.door(); d.state = 'opening'; }
+      if (d.secret && d.state === 'open') continue; // secrets stay open
+      if (d.state === 'opening') { d.open += dt * 2.6; if (d.open >= 1) { d.open = 1; d.state = 'open'; d.t = 0; } }
       else if (d.state === 'open') {
         d.t += dt;
         if (d.t > 4) {
@@ -505,6 +536,18 @@
         if (occupied) d.state = 'opening';
         else { d.open -= dt * 1.6; if (d.open <= 0) { d.open = 0; d.state = 'closed'; } }
       }
+    }
+  }
+
+  // flickering light zones (broken fluorescent tubes, guttering crypt candles)
+  function updateLights() {
+    for (const z of L.zones) {
+      if (!z.flicker) continue;
+      const was = z.on;
+      if (z.on ? Math.random() < 0.025 : Math.random() < 0.25) z.on = !z.on;
+      if (was === z.on) continue;
+      const v = z.on ? z.level : z.level * 0.35;
+      for (let y = z.y; y < z.y + z.h; y++) for (let x = z.x; x < z.x + z.w; x++) if (x >= 0 && y >= 0 && x < L.mw && y < L.mh) L.lightNow[y * L.mw + x] = v;
     }
   }
 
@@ -656,6 +699,7 @@
         if (dist[ni] !== -1) continue;
         const tile = L.grid[ni];
         if ((tile > 0 && tile !== DOOR) || L.block[ni]) continue;
+        if (tile === DOOR && L.doors.get(ni).secret && L.doors.get(ni).open < 0.9) continue;
         dist[ni] = dist[c] + 1; q[t++] = ni;
       }
     }
@@ -686,7 +730,7 @@
     const z = e.z + d.h * 0.6;
     Sfx.play[d.atkSound] && Sfx.play[d.atkSound](pd);
     if (d.attack === 'hitscan') {
-      const acc = clamp(1 - pd / 18, 0.2, 0.85);
+      const acc = clamp(1 - pd / 16, 0.15, 0.6);
       if (Math.random() < acc && losClear(e.x, e.y, p.x, p.y)) damagePlayer(irand(d.dmg[0], d.dmg[1]), e.x, e.y);
       spawnFx('splash', e.x + Math.cos(ang) * 0.5, e.y + Math.sin(ang) * 0.5, z, 0.25, 0.25);
     } else if (d.attack === 'proj' || d.attack === 'melee') {
@@ -763,7 +807,7 @@
         const nx = e.x + mx * sp, ny = e.y + my * sp;
         // open doors in the way
         const ti = Math.floor(ny) * L.mw + Math.floor(nx);
-        if (L.grid[ti] === DOOR) { const dr = L.doors.get(ti); if (dr.open < 0.9) toggleDoor(dr, true); }
+        if (L.grid[ti] === DOOR) { const dr = L.doors.get(ti); if (dr.open < 0.9 && !dr.secret) toggleDoor(dr, true); }
         if (!tryMove(e, mx * sp, my * sp, d.radius * 0.8)) e.atkT = Math.min(e.atkT, 0.1);
       }
     }
@@ -802,7 +846,7 @@
           }
         }
       }
-      if (pr.kind === 'skull' && Math.random() < 0.5) spawnFx('puff', pr.x, pr.y, pr.z, 0.08, 0.3);
+      if (pr.def.trail && Math.random() < 0.6) spawnFx('puff', pr.x, pr.y, pr.z, 0.08, 0.3);
       if (pr.life <= 0) pr.done = true;
     }
     L.projs = L.projs.filter(pr => !pr.done);
@@ -839,7 +883,7 @@
   }
   function bestWeapon() {
     const p = player;
-    const order = ['gatling', 'shotgun', 'hexcaster', 'pistol', 'launcher', 'bfg', 'knuckles'];
+    const order = ['gatling', 'machinegun', 'coffin', 'shotgun', 'hexcaster', 'pistol', 'rocketlauncher', 'launcher', 'bfg', 'knuckles'];
     for (const k of order) { const w = weaponByKey(k); if (w && p.weapons[k] && (!w.ammo || p.ammo[w.ammo] >= w.cost)) return k; }
     return 'knuckles';
   }
@@ -897,6 +941,12 @@
     p.move += (moving - p.move) * Math.min(1, dt * 8);
     p.bobT += dt * 9 * p.move;
     p.eyeZ = 0.5 + Math.sin(p.bobT * 2) * 0.012 * p.move;
+
+    // toxic slime burns
+    if (L.slime[Math.floor(p.y) * L.mw + Math.floor(p.x)]) {
+      p.slimeT -= dt;
+      if (p.slimeT <= 0) { p.slimeT = 1; damagePlayer(5); }
+    } else p.slimeT = 0.4;
 
     // pickups
     for (const it of L.items) {
@@ -983,7 +1033,8 @@
   function completeLevel() {
     if (state !== 'playing') return;
     interStats = { name: L.def.name, kills: L.totalKills ? Math.round(player.kills / L.totalKills * 100) : 100,
-      items: L.totalItems ? Math.round(player.items / L.totalItems * 100) : 100, time: levelTime };
+      items: L.totalItems ? Math.round(player.items / L.totalItems * 100) : 100,
+      secrets: L.totalSecrets ? Math.round(player.secrets / L.totalSecrets * 100) : 100, time: levelTime };
     carry = { health: player.health, armor: player.armor, armorType: player.armorType, ammo: player.ammo, weapons: player.weapons, cur: player.cur };
     state = levelIndex >= LEVELS.length - 1 ? 'victory' : 'intermission'; stateT = 0;
   }
@@ -1002,6 +1053,7 @@
       levelTime += dt;
       updatePlayer(dt);
       updateDoors(dt);
+      updateLights();
       updateEnemies(dt);
       updateProjectiles(dt);
       if (L.exitT > 0) { L.exitT -= dt; if (L.exitT <= 0) completeLevel(); }
@@ -1032,7 +1084,7 @@
     label('THE WORLD IS TOO CHEERFUL. FIX IT.', 18, 86, '#c9a6c9', 'left', 8);
     const blink = Math.sin(time * 5) > 0;
     if (blink) label(state === 'loading' ? 'SUMMONING...' : 'CLICK OR PRESS ENTER TO BEGIN', 18, 122, '#ffffff', 'left', 10);
-    const lines = ['WASD / ARROWS  move', 'MOUSE          look (click to lock)', 'CLICK / CTRL   fire', 'E / SPACE      open doors, hit switches',
+    const lines = ['WASD / ARROWS  move', 'MOUSE          look (click to lock)', 'CLICK / CTRL   fire', 'E / SPACE      switches, secret walls',
       '1-7 / Q / WHEEL  weapons', 'SHIFT run   TAB map   M music'];
     lines.forEach((l, i) => label(l, 18, 150 + i * 11, '#b78ab7', 'left', 8));
     label('ON A PHONE? Left stick moves, drag right side to look.', 18, 225, '#7a5a7a', 'left', 7);
@@ -1054,7 +1106,7 @@
         drawOverlayText('VICTORY', 'Wally Prime is unsubscribed. The world is safely gloomy again.', [
           `KILLS  ${interStats.kills}%`, `ITEMS  ${interStats.items}%`, `TIME   ${fmtTime(interStats.time)}`, '', 'THANKS FOR PLAYING - CLICK TO PLAY AGAIN']);
       } else {
-        drawOverlayText(interStats.name, 'FINISHED', [`KILLS  ${interStats.kills}%`, `ITEMS  ${interStats.items}%`, `TIME   ${fmtTime(interStats.time)}`, '', stateT > 1 ? 'CLICK OR PRESS ENTER' : '']);
+        drawOverlayText(interStats.name, 'FINISHED', [`KILLS  ${interStats.kills}%`, `ITEMS  ${interStats.items}%`, `SECRET ${interStats.secrets}%`, `TIME   ${fmtTime(interStats.time)}`, '', stateT > 1 ? 'CLICK OR PRESS ENTER' : '']);
       }
       return;
     }

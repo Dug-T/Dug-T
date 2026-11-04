@@ -16,7 +16,7 @@ Open `goffichick/index.html` in a browser (double-click works, since all art is 
 | WASD / arrow keys | Move / turn |
 | Mouse | Look (click the game to lock the mouse) |
 | Left click / Ctrl | Fire |
-| E / Space | Open doors, press switches |
+| E / Space | Press switches, open secret walls (doors open by themselves) |
 | 1-7, Q, mouse wheel | Change weapon |
 | Shift | Run |
 | Tab | Automap |
@@ -53,15 +53,24 @@ flinches when hit, and her eyes glow pink when she picks up a new weapon.
 |---|---|---|---|
 | 1 | **Spiked Knuckles** | none | Melee |
 | 2 | **Hex Pistol** | bullets | First shot is pinpoint accurate |
-| 3 | **Coffin Shotgun** | shells | 7 pellets, coffin-shaped pump with a silver bat |
+| 3 | **Shotgun** | shells | Pump-action, 7 pellets |
+| 3 | **Coffin Shotgun** | 2 shells | Double barrel, 20 pellets, coffin-shaped stock with a silver bat |
+| 4 | **Machine Gun** | bullets | Fast, fully automatic |
 | 4 | **Bone Gatling** | bullets | Rotating bone barrels |
-| 5 | **Skull Launcher** | skulls | Explosive flaming skulls (splash damage, including to you) |
+| 5 | **Rocket Launcher** | rockets | Big splash damage, including to you |
+| 5 | **Skull Launcher** | skulls | Explosive flaming skulls |
 | 6 | **Hexcaster** | souls | Rapid-fire purple plasma |
 | 7 | **B.F.G. (Big Freakin' Gloom)** | 40 souls | Charges, then fires a gloom orb. On impact it also hits everything in front of you |
 
 ## Levels
 
-1. **E1M1: The Cemetery Gates** — crypts, tombstones and the start of the hunt
+Press a number again to swap between two weapons in the same slot.
+
+Levels have doors that open as you approach, secret walls (press USE on suspicious walls), toxic
+glitter-slime that burns, and dark rooms with flickering lights.
+
+
+1. **E1M1: The Cemetery Gates** — start room, zig-zag hall, a big courtyard with a slime pool and armor on an island, a dark crypt with ambush alcoves, a stained-glass chapel, a hidden machine-gun stash, and a winding route to the exit
 2. **E1M2: Cubicle Hell** — an office of smiley-face wallpaper and motivational posters
 3. **E1M3: Wally's Penthouse** — marble, Wally shrines and the boss fight
 

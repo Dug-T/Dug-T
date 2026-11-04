@@ -27,6 +27,7 @@ const AMMO_TYPES = {
   bullets: { name: 'BULLETS', max: 200 },
   shells: { name: 'SHELLS', max: 50 },
   skulls: { name: 'SKULLS', max: 50 },
+  rockets: { name: 'ROCKETS', max: 50 },
   souls: { name: 'SOULS', max: 300 },
 };
 
@@ -100,8 +101,29 @@ const WEAPONS = [
     },
   },
   {
-    slot: 3, key: 'shotgun', name: 'COFFIN SHOTGUN', ammo: 'shells', cost: 1, cooldown: 0.95,
-    type: 'hitscan', damage: [5, 15], pellets: 7, spread: 0.1, sound: 'shotgun', after: 'shotgunPump', kick: 3,
+    slot: 3, key: 'shotgun', name: 'SHOTGUN', ammo: 'shells', cost: 1, cooldown: 0.9,
+    type: 'hitscan', damage: [5, 15], pellets: 7, spread: 0.09, sound: 'shotgun', after: 'shotgunPump', kick: 3,
+    draw(g, cx, by, phase, flash) {
+      const { P, R, E, glow, arm } = WDraw;
+      const rec = phase > 0 ? Math.sin(Math.min(1, phase * 2.2) * Math.PI) * 12 : 0;
+      const pump = phase > 0.3 && phase < 0.9 ? Math.sin((phase - 0.3) / 0.6 * Math.PI) * 22 : 0;
+      const x = cx + 4, y = by - 86 + rec;
+      if (flash) { glow(g, x, y - 14, 44, 'rgba(255,240,200,1)', 'rgba(255,100,40,0)'); E(g, '#fff', x, y - 10, 8, 9); }
+      // single long barrel + magazine tube
+      R(g, '#18181d', x - 7, y - 10, 14, 96); R(g, '#2c2c36', x - 5, y - 10, 3, 96);
+      E(g, '#000', x, y - 9, 5, 3);
+      R(g, '#22222a', x - 6, y + 18, 12, 60);
+      R(g, '#ff3fa8', x - 1, y - 6, 2, 4); // pink front sight
+      // pump grip (black leather with silver studs)
+      g.fillStyle = '#121014'; g.beginPath(); g.roundRect(x - 18, y + 36 + pump, 36, 34, 6); g.fill();
+      for (let i = 0; i < 4; i++) { E(g, '#cfcfd8', x - 12 + i * 8, y + 42 + pump, 2, 2); E(g, '#cfcfd8', x - 12 + i * 8, y + 64 + pump, 2, 2); }
+      arm(g, x - 22, y + 62 + pump, -1, 1.15);
+      arm(g, x + 30, y + 96, 1, 1.15);
+    },
+  },
+  {
+    slot: 3, key: 'coffin', name: 'COFFIN SHOTGUN (double barrel)', ammo: 'shells', cost: 2, cooldown: 1.35,
+    type: 'hitscan', damage: [5, 15], pellets: 20, spread: 0.19, sound: 'shotgun', after: 'shotgunPump', kick: 5,
     draw(g, cx, by, phase, flash) {
       const { P, R, E, glow, arm } = WDraw;
       const rec = phase > 0 ? Math.sin(Math.min(1, phase * 2) * Math.PI) * 16 : 0;
@@ -119,6 +141,31 @@ const WEAPONS = [
       P(g, '#d0d0dc', [x, y + 56 + pump, x - 11, y + 52 + pump, x - 8, y + 58 + pump, x - 13, y + 59 + pump, x - 5, y + 64 + pump, x, y + 62 + pump, x + 5, y + 64 + pump, x + 13, y + 59 + pump, x + 8, y + 58 + pump, x + 11, y + 52 + pump]);
       arm(g, x - 26, y + 70 + pump, -1, 1.2);
       arm(g, x + 30, y + 90, 1, 1.2);
+    },
+  },
+  {
+    slot: 4, key: 'machinegun', name: 'MACHINE GUN', ammo: 'bullets', cost: 1, cooldown: 0.085,
+    type: 'hitscan', damage: [5, 14], pellets: 1, spread: 0.035, sound: 'pistol', kick: 1, auto: true,
+    draw(g, cx, by, phase, flash) {
+      const { P, R, E, glow, arm } = WDraw;
+      const jit = phase > 0 ? (Math.random() - 0.5) * 3 : 0;
+      const x = cx + 14 + jit, y = by - 92 + (phase > 0 ? 3 + Math.random() * 3 : 0);
+      g.save(); g.translate(x, by); g.scale(1.5, 1.2); g.translate(-x, -by); // chunkier on screen
+      if (flash) { glow(g, x, y - 12, 36, 'rgba(255,250,220,1)', 'rgba(255,140,40,0)'); P(g, '#fff', [x, y - 30, x - 6, y - 10, x, y - 14, x + 6, y - 10]); }
+      // barrel with perforated shroud
+      R(g, '#141418', x - 4, y - 10, 8, 40);
+      R(g, '#26262e', x - 9, y + 8, 18, 40);
+      for (let i = 0; i < 4; i++) E(g, '#0a0a0c', x, y + 14 + i * 9, 3, 2);
+      // receiver + carry handle with glowing pink sight
+      R(g, '#1c1c22', x - 15, y + 44, 30, 46);
+      R(g, '#101014', x - 10, y + 30, 4, 16); R(g, '#101014', x + 6, y + 30, 4, 16); R(g, '#101014', x - 10, y + 28, 20, 4);
+      E(g, '#ff3fa8', x, y + 30, 2, 2);
+      // curved magazine
+      P(g, '#2a2430', [x - 22, y + 62, x - 14, y + 60, x - 20, y + 100, x - 30, y + 98]);
+      R(g, '#9c27b0', x - 14, y + 70, 28, 2);
+      arm(g, x - 26, y + 92, -1, 1.15);
+      arm(g, x + 20, y + 104, 1, 1.2);
+      g.restore();
     },
   },
   {
@@ -145,6 +192,25 @@ const WEAPONS = [
       E(g, '#ece5d4', x, y + 82, 12, 12); R(g, '#000', x - 7, y + 78, 5, 5); R(g, '#000', x + 2, y + 78, 5, 5); R(g, '#000', x - 5, y + 88, 10, 2);
       arm(g, x - 34, y + 100, -1, 1.2);
       arm(g, x + 36, y + 100, 1, 1.2);
+    },
+  },
+  {
+    slot: 5, key: 'rocketlauncher', name: 'ROCKET LAUNCHER', ammo: 'rockets', cost: 1, cooldown: 0.8,
+    type: 'projectile', projectile: 'rocket', sound: 'launcher', kick: 4,
+    draw(g, cx, by, phase, flash, t, ammoLeft) {
+      const { P, R, E, glow, arm } = WDraw;
+      const rec = phase > 0 ? Math.sin(Math.min(1, phase * 1.6) * Math.PI) * 20 : 0;
+      const x = cx - 4, y = by - 100 + rec;
+      if (flash) glow(g, x, y + 4, 60, 'rgba(255,230,150,1)', 'rgba(255,80,0,0)');
+      // wide tube, dark gunmetal with hazard stripes
+      R(g, '#23252b', x - 32, y + 6, 64, 110); R(g, '#33363e', x - 26, y + 6, 10, 110);
+      for (let i = 0; i < 6; i++) P(g, i % 2 ? '#111' : '#ffcf3a', [x - 32 + i * 11, y + 50, x - 24 + i * 11, y + 50, x - 30 + i * 11, y + 60, x - 38 + i * 11, y + 60]);
+      E(g, '#3c3f48', x, y + 6, 32, 12); E(g, '#08080a', x, y + 6, 24, 8);
+      // the next rocket's pink warhead peeks out when loaded
+      if (phase === 0 || phase > 0.7) { E(g, '#ff3fa8', x, y + 6, 12, 6); E(g, '#ffd0ec', x - 3, y + 4, 4, 2); }
+      R(g, '#18181c', x - 46, y + 70, 16, 28); // side grip
+      arm(g, x - 40, y + 104, -1, 1.25);
+      arm(g, x + 40, y + 108, 1, 1.25);
     },
   },
   {

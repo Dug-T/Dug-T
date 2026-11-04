@@ -197,5 +197,12 @@ const Textures = (() => {
     g.fillStyle = '#ffd86b'; g.beginPath(); g.arc(32, 32, 5, 0, 7); g.fill();
   });
 
+  // toxic glitter-slime (animated by scrolling in the renderer)
+  F.slime = make(g => {
+    g.fillStyle = '#b0128a'; g.fillRect(0, 0, 64, 64);
+    for (let i = 0; i < 26; i++) { g.fillStyle = ['#d81b9a', '#8a0f70', '#ff4fd0'][(rnd() * 3) | 0]; g.beginPath(); g.ellipse(rnd() * 64, rnd() * 64, 3 + rnd() * 8, 2 + rnd() * 5, rnd() * 3, 0, 7); g.fill(); }
+    speckle(g, 90, ['#ffffff', '#ffd0f4'], 1);
+  });
+
   return { walls: T, flats: F };
 })();
