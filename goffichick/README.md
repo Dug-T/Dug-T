@@ -21,6 +21,7 @@ Open `goffichick/index.html` in a browser (double-click works, since all art is 
 | Shift | Run |
 | Tab | Automap |
 | M | Music on/off |
+| V | Goffichick's voice on/off |
 | Esc / P | Pause |
 
 On a phone or tablet, touch controls appear: the left stick moves, drag on the right side to look,
@@ -48,6 +49,13 @@ flinches when hit, and her eyes glow pink when she picks up a new weapon.
   - **Gas Mask:** toxic sludge is harmless (60s).
   - **Rage Heart:** your fists hit 10 times harder for the rest of the level.
 - **Monster infighting:** monsters that get hit by a different kind of monster turn on each other.
+- **Goffichick's voice:** she comments on level starts, kills, bosses, pickups, secrets and getting hurt.
+  The lines are spoken with the browser's speech voice and shown as subtitles. Press **V**, or use the title menu,
+  to turn it off. To use **your own recordings**, put audio files in `assets/voice/` and list them in
+  `VOICE_FILES` at the top of `js/voice.js`.
+- **Scores and records:** every level is scored for kills, items, secrets and beating its par time, multiplied by
+  difficulty. Your best time on each level is remembered. Finish the game to sign the top-10 **High Scores**
+  table with your initials. High scores are kept on each device.
 
 ## Enemies
 
@@ -133,6 +141,7 @@ js/sprites.js       enemy / item / decoration / effect art (canvas-drawn) + Wall
 js/textures.js      wall, floor and ceiling textures
 js/levels.js        maps and the map legend
 js/audio.js         synthesized sound effects and music (WebAudio)
+js/voice.js         Goffichick's voice lines (browser speech, or your own recordings)
 js/photo-data.js    the two photos, processed and embedded so the game works from file://
 assets/             the processed photo assets (Wally Man cut-out, HUD faces, title image)
 ```
