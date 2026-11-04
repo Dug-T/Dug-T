@@ -10,9 +10,9 @@
 //  Enemies: z latte zombie   m middle manager   w WALLY MAN   b gym brute
 //           i influencer skull   h smiley orb   K WALLY PRIME (boss)
 //  Items:  + health vial   * black heart   o soul orb   a leather jacket   A spiked corset
-//          c bullets   s shells   r skulls   u rockets   e soul jar
+//          c bullets   s shells   r skulls   u rockets   n fuel   e soul jar
 //  Weapons: 3 coffin shotgun  4 bone gatling  5 skull launcher  6 hexcaster  7 BFG
-//           8 machine gun   9 shotgun   0 rocket launcher
+//           8 machine gun   9 shotgun   0 rocket launcher   F flamethrower
 //  Decor:  T candelabra  R tombstone  L torch pillar  p office plant  q water cooler
 //          y pumpkin-spice barrel (explodes!)  k skull pile  j blood pool
 'use strict';
@@ -32,6 +32,7 @@ const ITEM_TYPES = {
   'r': { sprite: 'skullsAmmo', ammo: { skulls: 4 }, msg: 'Picked up some flaming skulls.' },
   'e': { sprite: 'souls', ammo: { souls: 60 }, msg: 'Picked up a jar of souls.' },
   'u': { sprite: 'rockets', ammo: { rockets: 4 }, msg: 'Picked up some rockets.' },
+  'n': { sprite: 'fuel', ammo: { fuel: 60 }, msg: 'Picked up a can of fuel.' },
   '3': { sprite: 'w3', weapon: 'coffin', ammo: { shells: 8 } },
   '4': { sprite: 'w4', weapon: 'gatling', ammo: { bullets: 40 } },
   '5': { sprite: 'w5', weapon: 'launcher', ammo: { skulls: 5 } },
@@ -40,6 +41,7 @@ const ITEM_TYPES = {
   '8': { sprite: 'w8', weapon: 'machinegun', ammo: { bullets: 40 } },
   '9': { sprite: 'w9', weapon: 'shotgun', ammo: { shells: 8 } },
   '0': { sprite: 'w0', weapon: 'rocketlauncher', ammo: { rockets: 4 } },
+  'F': { sprite: 'wF', weapon: 'flamethrower', ammo: { fuel: 80 } },
 };
 
 const DECOR_TYPES = {
@@ -70,7 +72,7 @@ const LEVELS = [
       '##.z.#####.z.###############################',
       '##...#####...####################GGG#GGG#GG#',
       '##...........###################G.........G#',
-      '##..z.....m..###################G....w....G#',
+      '##..z.n...m..###################G....w....G#',
       '##...........#..................G.........G#',
       '##.%..%..%...#....R...m....R....G..T...T..G#',
       '##...........#..L............L..G.........G#',
@@ -81,7 +83,7 @@ const LEVELS = [
       '##..k..*..s..#...9.~~~~~~~~.....G.........G#',
       '##...........#.....~~~~~~~~.%...G.........G#',
       '############....................G..T...T..G#',
-      '############.+..L............L..G.........G#',
+      '############.+..L........F...L..G.........G#',
       '############......R...i....R....G....m....G#',
       '############....................G.........G#',
       '######...z....###########D#######GGG#GGG#GG#',
@@ -94,7 +96,7 @@ const LEVELS = [
       '##..........#.c..##..#######################',
       '##..T....T..#....##..#######################',
       '##..........$..8a##...........#...........##',
-      '##..........#....##....y.....c#...k...T...##',
+      '##..........#....##....y..n..c#...k...T...##',
       '##..T....T..#.c..##......m....#.....w.....##',
       '##....^.....#########.~~~.....D...........X#',
       '##.c......+.#########......z..#........*..##',
@@ -114,7 +116,7 @@ const LEVELS = [
       'WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW',
       'W>.....W.........q.....W........W',
       'W......W..OO..OO..OO...W..m..b..W',
-      'W..c...D...z.......m...D........W',
+      'W..c...D...z.......m...D......n.W',
       'W......W..OO..OO..OO...W..OOOO..W',
       'W..p...W...........w...W..OOOO..W',
       'WWWDWWWW..OO..OO..OO...W..r...4.W',
@@ -125,7 +127,7 @@ const LEVELS = [
       'W......W...........y...W...y....W',
       'WWWWDWWWWWWWWWWWWWDWWWWW........W',
       'W........OOOOOOO.......W...u.5..W',
-      'W..w.....O..*..O...m...W........W',
+      'W..w.....O..*..O...mn..W........W',
       'W........O..a..O.......WWWWDWWWWW',
       'W..z.....OOODOOO..z....W........W',
       'W..........b...........W..w..wu.W',
@@ -151,11 +153,11 @@ const LEVELS = [
       'MMMDMMMMMMMMDMMMMMMMM.M..e..M...M',
       'M.......Y...........M.MMMDMMM...M',
       'M..wu...Y..i....i...M...........M',
-      'M.......D...........D.....h.....M',
+      'M.......D...........D.....h...n.M',
       'M..z....Y..m....m...M...........M',
       'M..+....Y...........MMMMMMDMMMMMM',
       'MMDMMMMMMMMMMMDMMMMMM...........M',
-      'M.......u.................b.....M',
+      'M.......u...........n.....b.....M',
       'M..o....7......r.....s....e.....M',
       'MMMMMMMMMMMMMMMMDMMMMMMMMMMMMMMMM',
       'CCCCCC.....................CCCCCC',

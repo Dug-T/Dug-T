@@ -60,6 +60,7 @@ const Sfx = (() => {
     hexHit: (d) => { tone(600, 0.15, 'triangle', 0.2 * vol(d), 150); },
     bfgCharge: () => { tone(80, 0.9, 'sawtooth', 0.3, 900); tone(120, 0.9, 'square', 0.12, 1300); },
     bfgBoom: (d) => { const v = vol(d); noise(1.6, 3000, 1.0, 'lowpass', v, 50); tone(50, 1.4, 'sine', 0.9 * v, 20); tone(400, 0.8, 'sawtooth', 0.3 * v, 40); },
+    flame: () => { noise(0.16, 700, 0.32, 'bandpass', 1, 1600); noise(0.12, 260, 0.25, 'lowpass'); },
     empty: () => tone(1800, 0.03, 'square', 0.1),
     pickup: () => { tone(660, 0.06, 'square', 0.15); tone(990, 0.09, 'square', 0.15, null, 0.06); },
     weaponUp: () => { tone(330, 0.08, 'square', 0.2); tone(495, 0.08, 'square', 0.2, null, 0.08); tone(660, 0.18, 'square', 0.2, null, 0.16); },
