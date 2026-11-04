@@ -17,13 +17,6 @@
   #screen { display: block; cursor: crosshair; } /* the game sizes the canvas to fill the screen */
   #stage { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
   #touch { display: none; position: absolute; inset: 0; pointer-events: none; }
-  #inapp { position: fixed; inset: 0; z-index: 10; background: rgba(7,3,10,0.94); display: flex; align-items: center; justify-content: center; padding: 16px; touch-action: auto; }
-  #inapp[hidden] { display: none; }
-  #inapp .card { max-width: 340px; text-align: center; color: #ffd0ec; font: 15px/1.45 system-ui, sans-serif; }
-  #inapp h1 { font: 40px "Metal Mania", Impact, serif; color: #ff4fb8; margin: 0 0 10px; text-shadow: 0 0 12px #ff2d95; }
-  #inapp .go { display: block; margin: 18px 0 8px; padding: 14px; border-radius: 10px; background: #ff2d95; color: #fff; font-weight: 700; font-size: 18px; text-decoration: none; }
-  #inapp button { margin-top: 14px; padding: 10px 18px; border-radius: 10px; border: 2px solid #ff4fb8; background: transparent; color: #ffd0ec; font: 600 15px system-ui, sans-serif; }
-  #inapp .small { font-size: 13px; color: #c9a6c9; }
   #touch > * { pointer-events: auto; position: absolute; }
   #look { right: 0; top: 0; width: 60%; height: 100%; }
   #stick { left: max(40px, env(safe-area-inset-left, 0px)); bottom: 22px; width: 120px; height: 120px; border-radius: 50%; background: rgba(255,79,184,0.12); border: 2px solid rgba(255,79,184,0.45); }
@@ -46,16 +39,6 @@
   <div class="btn" id="bWpn">WPN</div>
   <div class="btn" id="bMap">MAP</div>
 </div>
-</div>
-<div id="inapp" hidden>
-  <div class="card">
-    <h1>GOFFICHICK</h1>
-    <p>You're in Facebook's built-in browser, which won't turn sideways or go full screen.</p>
-    <a class="go" id="inappOpen" href="#">Open in browser</a>
-    <p class="small" id="inappHow">Or tap <b>&middot;&middot;&middot;</b> in the top corner, then <b>Open in external browser</b>.</p>
-    <button type="button" id="inappStay">Play here anyway</button>
-    <p class="small">Playing here? Turn your phone sideways: the game turns with it.</p>
-  </div>
 </div>
 <script src="js/photo-data.js"></script>
 <script src="js/audio.js"></script>
