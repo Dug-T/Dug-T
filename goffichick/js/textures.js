@@ -140,6 +140,40 @@ const Textures = (() => {
   T[14] = lockedDoor('#3d8bff', '#061a3a', g => { g.beginPath(); g.arc(32, 30, 6.5, 0, 7); g.fill(); g.fillRect(28, 33, 8, 6); g.fillStyle = '#3d8bff'; g.fillRect(28.5, 28, 3, 3); g.fillRect(32.5, 28, 3, 3); });
   T[15] = lockedDoor('#ffcf3a', '#3a2a00', g => { g.beginPath(); g.moveTo(29, 22); g.lineTo(35, 22); g.lineTo(38, 28); g.lineTo(35, 42); g.lineTo(29, 42); g.lineTo(26, 28); g.closePath(); g.fill(); });
 
+  // ---- Episode 2 walls ----
+  // 16: hedge (Sunshine Park)
+  T[16] = make(g => {
+    g.fillStyle = '#2f6a1e'; g.fillRect(0, 0, 64, 64);
+    for (let i = 0; i < 160; i++) { g.fillStyle = ['#3d8a26', '#24561a', '#4fa032', '#1d4a14'][(rnd() * 4) | 0]; g.beginPath(); g.ellipse(rnd() * 64, rnd() * 64, 2 + rnd() * 3, 1.5 + rnd() * 2, rnd() * 3, 0, 7); g.fill(); }
+    for (let i = 0; i < 5; i++) { g.fillStyle = ['#ffd21f', '#ff7eb3', '#ffffff'][i % 3]; g.beginPath(); g.arc(rnd() * 64, rnd() * 64, 1.5, 0, 7); g.fill(); }
+  }, 14);
+  // 17: shop window (Shopping Maul) - glass, a SALE banner and a mannequin
+  T[17] = make(g => {
+    g.fillStyle = '#d8d0c4'; g.fillRect(0, 0, 64, 64);
+    const gl = g.createLinearGradient(0, 8, 64, 56); gl.addColorStop(0, '#9fd8f0'); gl.addColorStop(0.5, '#d8f2ff'); gl.addColorStop(1, '#7ab8d8');
+    g.fillStyle = gl; g.fillRect(4, 10, 56, 46);
+    g.fillStyle = '#e8e0d4'; E2(g, 32, 34, 5, 6); g.fillRect(28, 38, 8, 16); g.fillStyle = '#ff7eb3'; g.fillRect(27, 40, 10, 9); // mannequin
+    g.fillStyle = 'rgba(255,255,255,0.45)'; g.beginPath(); g.moveTo(8, 54); g.lineTo(22, 12); g.lineTo(27, 12); g.lineTo(13, 54); g.fill();
+    g.fillStyle = '#ff2d95'; g.fillRect(0, 0, 64, 9); g.fillStyle = '#fff'; g.font = 'bold 8px sans-serif'; g.textAlign = 'center'; g.fillText('SALE! 50%', 32, 7.5);
+    g.fillStyle = '#8a8274'; g.fillRect(0, 56, 64, 8); g.fillRect(0, 9, 4, 47); g.fillRect(60, 9, 4, 47);
+  }, 6);
+  function E2(g, x, y, rx, ry) { g.beginPath(); g.ellipse(x, y, rx, ry, 0, 0, 7); g.fill(); }
+  // 18: gym wall - padded panels and a mirror strip (Gains Gym)
+  T[18] = make(g => {
+    g.fillStyle = '#2a2a30'; g.fillRect(0, 0, 64, 64);
+    for (let x = 0; x < 64; x += 16) { const gr = g.createLinearGradient(x, 0, x + 16, 0); gr.addColorStop(0, '#3a3a44'); gr.addColorStop(0.5, '#52525e'); gr.addColorStop(1, '#2c2c34'); g.fillStyle = gr; g.fillRect(x + 1, 30, 14, 34); }
+    const mr = g.createLinearGradient(0, 2, 64, 28); mr.addColorStop(0, '#b8c4d0'); mr.addColorStop(0.5, '#e8f0f8'); mr.addColorStop(1, '#a0acb8');
+    g.fillStyle = mr; g.fillRect(0, 2, 64, 26);
+    g.fillStyle = 'rgba(255,255,255,0.5)'; g.beginPath(); g.moveTo(10, 28); g.lineTo(20, 2); g.lineTo(24, 2); g.lineTo(14, 28); g.fill();
+    g.fillStyle = '#ff2a2a'; g.fillRect(0, 28, 64, 2);
+  }, 8);
+  // 19: fairground candy stripes with light bulbs (Sunshine Park)
+  T[19] = make(g => {
+    for (let x = -64; x < 64; x += 16) { g.fillStyle = '#e8283c'; g.beginPath(); g.moveTo(x, 64); g.lineTo(x + 8, 64); g.lineTo(x + 72, 0); g.lineTo(x + 64, 0); g.fill(); g.fillStyle = '#fff4e0'; g.beginPath(); g.moveTo(x + 8, 64); g.lineTo(x + 16, 64); g.lineTo(x + 80, 0); g.lineTo(x + 72, 0); g.fill(); }
+    g.fillStyle = '#d4af37'; g.fillRect(0, 0, 64, 6); g.fillRect(0, 58, 64, 6);
+    for (let x = 4; x < 64; x += 8) { g.fillStyle = '#fff6a8'; g.beginPath(); g.arc(x, 3, 2, 0, 7); g.fill(); g.beginPath(); g.arc(x, 61, 2, 0, 7); g.fill(); }
+  }, 4);
+
   // 6: exit switch (off) / 11: (on) - steel panel set into grey stone
   const switchTex = on => make(g => {
     stoneBlocks(g, 138, 22, '#55555a', 16, 4);
@@ -255,6 +289,20 @@ const Textures = (() => {
   });
 
   // toxic glitter-slime (animated by scrolling in the renderer)
+  F.rubber = make(g => { // gym floor
+    g.fillStyle = '#2c2c30'; g.fillRect(0, 0, 64, 64);
+    speckle(g, 700, ['#3a3a40', '#222226', '#ff4fb8', '#3d8bff', '#ffcf3a'], 1);
+    g.fillStyle = '#1a1a1e'; g.fillRect(0, 0, 64, 1); g.fillRect(0, 0, 1, 64);
+  }, 6);
+  F.grass = make(g => {
+    g.fillStyle = '#4a9a2e'; g.fillRect(0, 0, 64, 64);
+    for (let i = 0; i < 500; i++) { g.fillStyle = ['#5ab43a', '#3d8226', '#6cc248', '#357020'][(rnd() * 4) | 0]; g.fillRect(rnd() * 64, rnd() * 64, 1, 2 + rnd() * 2); }
+    for (let i = 0; i < 6; i++) { g.fillStyle = ['#ffffff', '#ffd21f'][i % 2]; g.beginPath(); g.arc(rnd() * 64, rnd() * 64, 1, 0, 7); g.fill(); }
+  }, 10);
+  F.sky = make(g => {
+    g.fillStyle = '#7ec8ff'; g.fillRect(0, 0, 64, 64);
+    for (let i = 0; i < 4; i++) { const x = rnd() * 64, y = rnd() * 64; g.fillStyle = 'rgba(255,255,255,0.85)'; for (let k = 0; k < 5; k++) { g.beginPath(); g.ellipse(x + k * 4 - 8, y + Math.sin(k) * 2, 6, 4, 0, 0, 7); g.fill(); } }
+  }, 4);
   // toxic green sludge, 4 animation frames: swirling ripples and bubbles that swell and pop
   const blobs = Array.from({ length: 22 }, () => ({ x: rnd() * 64, y: rnd() * 64, rx: 3 + rnd() * 9, ry: 2 + rnd() * 5, r: rnd() * 3, c: (rnd() * 3) | 0 }));
   const bubbles = Array.from({ length: 9 }, () => ({ x: 4 + rnd() * 56, y: 4 + rnd() * 56, t: rnd() * 4 | 0, s: 1.5 + rnd() * 2 }));

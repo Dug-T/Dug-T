@@ -319,6 +319,69 @@ const Sprites = (() => {
     R(g, 'rgba(255,255,255,0.6)', 6, 2, 2, 2);
   }
 
+  // --- YOGA INSTRUCTOR: serene, bendy, and very hard to hit. Throws calming chakra orbs.
+  function yoga(pose) {
+    return mk(60, 86, g => {
+      const step = pose === 1, atk = pose === 2;
+      // legs in pastel leggings
+      R(g, '#5fd4c4', 23 + (step ? -3 : 2), 52, 6, 32); R(g, '#5fd4c4', 31 + (step ? 3 : -2), 52, 6, 32);
+      R(g, '#f0e6dc', 22 + (step ? -3 : 2), 82, 8, 4); R(g, '#f0e6dc', 30 + (step ? 3 : -2), 82, 8, 4);
+      // crop top + bare midriff
+      P(g, '#ff9ccf', [21, 26, 39, 26, 38, 42, 22, 42]); R(g, '#f3c9a8', 22, 42, 16, 10);
+      if (atk) { // tree pose: arms up, glowing chakra between the hands
+        P(g, '#f3c9a8', [21, 28, 24, 28, 26, 4, 23, 4]); P(g, '#f3c9a8', [36, 28, 39, 28, 37, 4, 34, 4]);
+        glow(g, 30, 4, 9, 'rgba(120,255,240,1)', 'rgba(0,200,255,0)'); E(g, '#e8fffb', 30, 4, 3, 3);
+      } else {
+        P(g, '#f3c9a8', [20, 28, 23, 28, 19 + (step ? 2 : -2), 50, 16 + (step ? 2 : -2), 49]);
+        P(g, '#f3c9a8', [37, 28, 40, 28, 44 + (step ? -2 : 2), 49, 41 + (step ? -2 : 2), 50]);
+      }
+      // head: serene smile, headband, top knot
+      E(g, '#f3c9a8', 30, 17, 7, 8);
+      E(g, '#7a4a2a', 30, 11, 7, 4); E(g, '#7a4a2a', 30, 6, 4, 3); R(g, '#5fd4c4', 23, 12, 14, 2);
+      R(g, '#2a1a10', 27, 16, 2, 1); R(g, '#2a1a10', 32, 16, 2, 1);
+      g.strokeStyle = '#a0404a'; g.lineWidth = 1; g.beginPath(); g.arc(30, 19, 2.5, 0.3, Math.PI - 0.3); g.stroke();
+      E(g, '#ff9ccf', 26, 20, 1.5, 1); E(g, '#ff9ccf', 34, 20, 1.5, 1);
+    });
+  }
+  // --- LIFE COACH: blinding grin, headset, megaphone. His shouts slow you down.
+  function coach(pose) {
+    return mk(64, 88, g => {
+      const step = pose === 1, atk = pose === 2;
+      R(g, '#e8e2d0', 22 + (step ? -2 : 2), 58, 9, 26); R(g, '#e8e2d0', 34 + (step ? 2 : -2), 58, 9, 26);
+      R(g, '#6a3a1a', 21 + (step ? -2 : 2), 83, 11, 5); R(g, '#6a3a1a', 33 + (step ? 2 : -2), 83, 11, 5);
+      P(g, '#1d6fff', [14, 28, 50, 28, 48, 60, 16, 60]); P(g, '#ffffff', [27, 28, 37, 28, 32, 46]); P(g, '#ffcf3a', [31, 30, 33, 30, 34, 44, 32, 47, 30, 44]);
+      P(g, '#1d6fff', [10, 30, 17, 30, 15, 54, 8, 52]); E(g, '#e8b48a', 11, 55, 3, 3);
+      if (atk) { // megaphone up, sound blasting out
+        P(g, '#1d6fff', [47, 30, 54, 30, 56, 18, 50, 16]);
+        P(g, '#f4f1e6', [44, 12, 56, 6, 62, 18, 50, 20]); P(g, '#ff2a2a', [55, 6, 63, 3, 64, 21, 61, 19]);
+        g.strokeStyle = '#fff6a8'; g.lineWidth = 1.5; for (let i = 0; i < 3; i++) { g.beginPath(); g.arc(62, 12, 4 + i * 4, -0.8, 0.8); g.stroke(); }
+      } else {
+        P(g, '#1d6fff', [47, 30, 54, 30, 56, 54, 49, 54]); P(g, '#f4f1e6', [48, 50, 58, 46, 60, 56, 50, 58]); P(g, '#ff2a2a', [57, 45, 61, 43, 62, 58, 59, 57]);
+      }
+      // head: tan, perfect hair, enormous white grin, headset mic
+      E(g, '#e8b48a', 32, 16, 10, 11);
+      P(g, '#3a2410', [21, 12, 26, 3, 40, 3, 43, 12, 39, 8, 25, 8]);
+      R(g, '#1a1a1a', 26, 14, 3, 2); R(g, '#1a1a1a', 35, 14, 3, 2);
+      P(g, '#ffffff', [24, 20, 40, 20, 37, 26, 27, 26]); g.strokeStyle = '#c8c8c8'; g.lineWidth = 0.5; for (let x = 27; x < 38; x += 2.5) { g.beginPath(); g.moveTo(x, 20); g.lineTo(x, 26); g.stroke(); }
+      g.strokeStyle = '#222'; g.lineWidth = 1.2; g.beginPath(); g.arc(32, 14, 12, Math.PI * 1.05, Math.PI * 1.95); g.stroke();
+      g.beginPath(); g.moveTo(21, 16); g.quadraticCurveTo(20, 24, 26, 23); g.stroke(); E(g, '#222', 26, 23, 1.5, 1.5);
+    });
+  }
+  // Recolour every frame of an enemy set: fn(r, g, b) -> [r, g, b]
+  function recolorSet(set, fn) {
+    const one = spr => {
+      const c = document.createElement('canvas'); c.width = spr.w; c.height = spr.h;
+      const g = c.getContext('2d'); g.drawImage(spr.canvas, 0, 0);
+      const d = g.getImageData(0, 0, spr.w, spr.h);
+      for (let i = 0; i < d.data.length; i += 4) { if (!d.data[i + 3]) continue; const [r, gg, b] = fn(d.data[i], d.data[i + 1], d.data[i + 2]); d.data[i] = r; d.data[i + 1] = gg; d.data[i + 2] = b; }
+      g.putImageData(d, 0, 0); return fromCanvas(c);
+    };
+    const out = {};
+    for (const k of Object.keys(set)) out[k] = Array.isArray(set[k]) ? set[k].map(one) : set[k];
+    return out;
+  }
+  const lum = (r, g, b) => r * 0.3 + g * 0.59 + b * 0.11;
+
   // ===================== PROJECTILES & EFFECTS =====================
   const ball = (r, inner, outer) => mk(r * 2, r * 2, g => { glow(g, r, r, r, inner, outer); E(g, '#fff', r, r, r * 0.3, r * 0.3); });
 
@@ -331,7 +394,19 @@ const Sprites = (() => {
       orb: enemySet(orb(0), orb(1), orb(2)),
       wally: wallyFrames(photos.wallyman, false),
       boss: wallyFrames(photos.wallyman, true),
+      yoga: enemySet(yoga(0), yoga(1), yoga(2)),
+      coach: enemySet(coach(0), coach(1), coach(2)),
     };
+    const E_ = S.enemy;
+    // Wally Man FIT: red suit, yellow trim.   Wally Man DELUXE: black suit, gold trim.
+    const blueSuit = (r, g, b) => b > r + 40 && b > g + 10, orangeTrim = (r, g, b) => r > 150 && r > b + 70 && g < 170;
+    E_.wallyfit = recolorSet(E_.wally, (r, g, b) => blueSuit(r, g, b) ? [Math.min(255, b * 1.25), g * 0.35, g * 0.3] : orangeTrim(r, g, b) ? [255, Math.min(255, r * 0.85), 40] : [r, g, b]);
+    E_.wallydeluxe = recolorSet(E_.wally, (r, g, b) => { if (blueSuit(r, g, b)) { const v = lum(r, g, b) * 0.45; return [v, v, v + 6]; } if (orangeTrim(r, g, b)) { const v = lum(r, g, b); return [Math.min(255, v * 1.4), Math.min(255, v * 1.15), v * 0.35]; } return [r, g, b]; });
+    // Bubbly / Mini orbs: bubblegum pink.   Mega Smiley: hot orange.
+    E_.bubbly = recolorSet(E_.orb, (r, g, b) => (r > 200 && g > 160 && b < 120) ? [255, Math.max(90, g * 0.55), Math.min(255, 140 + b)] : [r, g, b]);
+    E_.mini = E_.bubbly;
+    E_.megaorb = recolorSet(E_.orb, (r, g, b) => (r > 200 && g > 160 && b < 120) ? [255, Math.max(80, g * 0.6), 20] : [r, g, b]);
+    for (const k of ['wallyfit', 'wallydeluxe']) { E_[k].walkFps = E_.wally.walkFps; }
 
     S.proj = {
       skull: [mk(20, 20, g => { flame(g, 4, 12, 4); E(g, '#f2eee6', 12, 10, 7, 7); R(g, '#000', 8, 8, 3, 3); R(g, '#000', 13, 8, 3, 3); R(g, '#000', 9, 14, 6, 1); })],
@@ -349,6 +424,8 @@ const Sprites = (() => {
         for (let i = 0; i < 5; i++) { const a = k * 1.3 + i * 1.26; flame(g, 16 + Math.cos(a) * 6, 22 + Math.sin(a) * 3, 4 + (i % 2) * 2, '#fff2a0', '#ff6a10'); }
         E(g, '#fffbe0', 16, 18, 4, 4);
       })),
+      chakra: [0, 1].map(k => mk(22, 22, g => { glow(g, 11, 11, 11, 'rgba(140,255,240,1)', 'rgba(0,180,255,0)'); for (let i = 0; i < 6; i++) { const a = i * Math.PI / 3 + k * 0.5; E(g, '#e8fffb', 11 + Math.cos(a) * 5, 11 + Math.sin(a) * 5, 2.5, 1.2, a); } E(g, '#ffffff', 11, 11, 2.5, 2.5); })),
+      shout: [0, 1].map(k => mk(30, 30, g => { g.strokeStyle = k ? '#fff6a8' : '#ffffff'; g.lineWidth = 3; for (let i = 0; i < 3; i++) { g.globalAlpha = 1 - i * 0.3; g.beginPath(); g.arc(15, 15, 5 + i * 4.5, 0, Math.PI * 2); g.stroke(); } g.globalAlpha = 1; g.fillStyle = '#ff2a2a'; g.font = 'bold 12px sans-serif'; g.textAlign = 'center'; g.fillText('!', 15, 19); })),
       phone: [mk(22, 22, g => { glow(g, 11, 11, 11, 'rgba(255,200,60,0.9)', 'rgba(255,60,0,0)'); R(g, '#111', 7, 3, 8, 16); R(g, '#7fd0ff', 8, 5, 6, 11); })],
     };
 
