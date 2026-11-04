@@ -339,11 +339,11 @@
   function enemySprite(e) {
     if (e.type === 'barrel') return e.dead ? null : S.decor.barrel;
     const set = S.enemy[e.type];
-    if (e.dead) return set.die[Math.min(2, e.frame)];
+    if (e.dead) return set.die[Math.min(set.die.length - 1, e.frame)];
     if (e.state === 'pain') return set.pain[0];
-    if (e.state === 'attack') return set.attack[0];
-    if (e.state === 'idle') return set.walk[0];
-    return set.walk[((e.animT * 4) | 0) % 2];
+    if (e.state === 'attack') return set.attack[e.fired ? set.attack.length - 1 : 0];
+    if (e.state === 'idle') return set.idle ? set.idle[((e.animT * 2.5) | 0) % set.idle.length] : set.walk[0];
+    return set.walk[((e.animT * (set.walkFps || 4)) | 0) % set.walk.length];
   }
 
   // ------------------------------------------------------------------ weapon + HUD drawing
@@ -782,12 +782,12 @@
     for (const e of L.enemies) {
       e.animT += dt;
       if (e.dead) {
-        if (e.type !== 'barrel' && e.frame < 2) { e.t += dt; if (e.t > 0.14) { e.t = 0; e.frame++; } }
+        if (e.type !== 'barrel' && e.frame < S.enemy[e.type].die.length - 1) { e.t += dt; if (e.t > 0.12) { e.t = 0; e.frame++; } }
         continue;
       }
       if (e.burnT > 0) { // on fire: damage ticks and flickering flames
         e.burnT -= dt; e.burnTick = (e.burnTick || 0) - dt;
-        if (e.burnTick <= 0) { e.burnTick = 0.3; damageEnemy(e, irand(2, 5), e.burnBy || 'player'); spawnFx('flameHit', e.x + rand(-0.15, 0.15), e.y + rand(-0.15, 0.15), e.z + e.def.h * rand(0.3, 0.8), 0.3, 0.3); }
+        if (e.burnTick <= 0) { e.burnTick = 0.3; Sfx.play.burn(Math.hypot(e.x - player.x, e.y - player.y)); damageEnemy(e, irand(2, 5), e.burnBy || 'player'); spawnFx('flameHit', e.x + rand(-0.15, 0.15), e.y + rand(-0.15, 0.15), e.z + e.def.h * rand(0.3, 0.8), 0.3, 0.3); }
         if (e.dead) continue;
       }
       if (e.state === 'static') continue;
