@@ -561,6 +561,22 @@
 
   function spawnFx(kind, x, y, z, size, life = 0.35) { L.fx.push({ x, y, z, frames: S.fx[kind], size, t: 0, life }); }
 
+  // Pixel-accurate hit test: does a ray passing `lateral` world units to the side of the
+  // enemy's centre go through a solid column of the sprite exactly as it is drawn?
+  function spriteHit(e, lateral, slack = 0) {
+    const spr = enemySprite(e);
+    if (!spr) return Math.abs(lateral) < e.def.radius;
+    if (!spr.cols) { // which columns of this frame contain any solid pixels
+      spr.cols = new Uint8Array(spr.w);
+      for (let x = 0; x < spr.w; x++) for (let y = 0; y < spr.h; y++) if (spr.data[y * spr.w + x]) { spr.cols[x] = 1; break; }
+    }
+    const worldW = e.def.h * spr.w / spr.h;
+    const pad = Math.ceil(slack / worldW * spr.w);
+    const col = Math.floor((0.5 - lateral / worldW) * spr.w);
+    for (let x = col - pad; x <= col + pad; x++) if (x >= 0 && x < spr.w && spr.cols[x]) return true;
+    return false;
+  }
+
   function hitscan(ox, oy, ang, dmg, range, fromEnemy) {
     const c = Math.cos(ang), s = Math.sin(ang);
     const wh = cast(ox, oy, c, s);
@@ -571,8 +587,8 @@
       const vx = e.x - ox, vy = e.y - oy;
       const along = vx * c + vy * s;
       if (along <= 0 || along >= bestA) continue;
-      const perp = Math.abs(vx * s - vy * c);
-      if (perp < e.def.radius + 0.06) { best = e; bestA = along; }
+      const lateral = vy * c - vx * s; // + means the enemy is to the right of the shot
+      if (Math.abs(lateral) < e.def.h * 1.2 && spriteHit(e, lateral)) { best = e; bestA = along; }
     }
     if (best) {
       damageEnemy(best, dmg, fromEnemy || 'player');
@@ -907,7 +923,7 @@
       for (const e of shootables()) {
         const vx = e.x - p.x, vy = e.y - p.y, along = vx * c + vy * s;
         if (along <= 0 || along > bestA + e.def.radius) continue;
-        if (Math.abs(vx * s - vy * c) < e.def.radius + 0.25) { best = e; bestA = along; }
+        if (spriteHit(e, vy * c - vx * s, 0.08)) { best = e; bestA = along; }
       }
       if (best) { damageEnemy(best, irand(w.damage[0], w.damage[1]), 'player'); Sfx.play.punch(); spawnFx('blood', best.x - c * 0.3, best.y - s * 0.3, best.z + best.def.h * 0.6, 0.12, 0.3); }
       else Sfx.play.swing();

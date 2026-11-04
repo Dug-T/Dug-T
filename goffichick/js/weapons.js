@@ -254,7 +254,7 @@ const WEAPONS = [
   },
   {
     slot: 4, key: 'machinegun', name: 'MACHINE GUN', ammo: 'bullets', cost: 1, cooldown: 0.085,
-    type: 'hitscan', damage: [5, 14], pellets: 1, spread: 0.035, sound: 'pistol', kick: 1, auto: true,
+    type: 'hitscan', damage: [5, 14], pellets: 1, spread: 0.022, sound: 'pistol', kick: 1, auto: true,
     draw(g, cx, by, phase, flash) {
       const { lin, poly, ell, rr, tube, bore, metal, flash: fl, gripHand, supportHand, supportFingers } = WDraw;
       const jit = phase > 0 ? (Math.random() - 0.5) * 3 : 0;
@@ -288,7 +288,7 @@ const WEAPONS = [
   },
   {
     slot: 4, key: 'gatling', name: 'GATLING GUN', ammo: 'bullets', cost: 1, cooldown: 0.1,
-    type: 'hitscan', damage: [6, 15], pellets: 1, spread: 0.045, sound: 'gatling', kick: 1, auto: true,
+    type: 'hitscan', damage: [6, 15], pellets: 1, spread: 0.03, sound: 'gatling', kick: 1, auto: true,
     draw(g, cx, by, phase, flash, t) {
       const { lin, poly, ell, rr, metal, bore, flash: fl, fist, PAL } = WDraw;
       const spin = (t || 0) * (phase > 0 ? 30 : 0.6);
