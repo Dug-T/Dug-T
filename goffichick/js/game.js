@@ -1472,6 +1472,7 @@
     let list = world ? (Leaderboard.list || []) : highScores();
     if (world && Leaderboard.status === 'loading') label('Loading the world leaderboard...', W / 2, 135, '#ffd0ec', 'center', 9);
     else if (world && Leaderboard.status === 'error') label("Couldn't reach the online leaderboard. Check your connection.", W / 2, 135, '#ffd0ec', 'center', 9);
+    else if (world && Leaderboard.status === 'missing') label("The online leaderboard isn't set up yet (the scores table is missing).", W / 2, 135, '#ffd0ec', 'center', 9);
     else if (!list.length) label('No scores yet. Finish the game to get on the board!', W / 2, 135, '#ffd0ec', 'center', 9);
     if (postStatus) label(postStatus, W / 2, 240, '#ffcf3a', 'center', 8);
     let marked = false;
