@@ -151,7 +151,7 @@ const LEVELS = [
       'W......W..OO..OO..OO...W..m..b..W',
       'W..c...D...z.......m...D......n.W',
       'W......W..OO..OO..OO...W..OOOO..W',
-      'W..p...W...........w...W..OOOO..W',
+      'W.....pW...........w...W..OOOO..W',
       'WWWDWWWW..OO..OO..OO...W..r...4.W',
       'W......W....z..........WWWWDWWWWW',
       'W..+...WWWWWWWWDWWWWWWWW........W',
