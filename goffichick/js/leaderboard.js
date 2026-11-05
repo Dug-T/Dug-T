@@ -2,18 +2,22 @@
 //
 // Fill in the two values from your Supabase project (Project Settings > API):
 //   SUPABASE_URL      e.g. 'https://abcdefghijkl.supabase.co'
-//   SUPABASE_ANON_KEY the "anon public" key (safe to put in a web page - the database's
-//                     security rules decide what it may do: read scores and add new ones only)
+//   SUPABASE_ANON_KEY the "publishable" key (sb_publishable_...) or the older "anon public" key.
+//                     Both are safe to put in a web page - the database's security rules decide
+//                     what it may do: read scores and add new ones only.
 // While either is empty the game simply keeps high scores on each device, as before.
 'use strict';
 
-const SUPABASE_URL = '';
-const SUPABASE_ANON_KEY = '';
+const SUPABASE_URL = 'https://rlebmmqfmkpyvnxyhqeb.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable__YdLXvcL6uns_n2hu54bXw_0KZqA_ly';
 
 const Leaderboard = (() => {
   const enabled = !!(SUPABASE_URL && SUPABASE_ANON_KEY);
   const base = SUPABASE_URL.replace(/\/+$/, '') + '/rest/v1/scores';
-  const headers = { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json' };
+  // New-style keys (sb_publishable_...) go only in the apikey header; older anon keys are JWTs
+  // and are also sent as a Bearer token.
+  const headers = { apikey: SUPABASE_ANON_KEY, 'Content-Type': 'application/json' };
+  if (!SUPABASE_ANON_KEY.startsWith('sb_')) headers.Authorization = 'Bearer ' + SUPABASE_ANON_KEY;
   let list = null, status = enabled ? 'idle' : 'off', lastFetch = 0;
 
   const withTimeout = (p, ms = 8000) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms))]);
@@ -25,10 +29,11 @@ const Leaderboard = (() => {
     lastFetch = Date.now(); if (!list) status = 'loading';
     try {
       const r = await withTimeout(fetch(`${base}?select=name,score,difficulty,created_at&order=score.desc&limit=10`, { headers }));
+      if (r.status === 404) { status = 'missing'; return null; } // the scores table hasn't been created yet
       if (!r.ok) throw new Error('HTTP ' + r.status);
       list = (await r.json()).map(e => ({ name: e.name, score: e.score, diff: e.difficulty, date: (e.created_at || '').slice(0, 10) }));
       status = 'ok';
-    } catch (e) { status = list ? 'ok' : 'error'; }
+    } catch (e) { if (status !== 'missing') status = list ? 'ok' : 'error'; }
     return list;
   }
 
