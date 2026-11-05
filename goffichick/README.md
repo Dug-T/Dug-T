@@ -55,7 +55,32 @@ flinches when hit, and her eyes glow pink when she picks up a new weapon.
   `VOICE_FILES` at the top of `js/voice.js`.
 - **Scores and records:** every level is scored for kills, items, secrets and beating its par time, multiplied by
   difficulty. Your best time on each level is remembered. Finish the game to sign the top-10 **High Scores**
-  table with your initials. High scores are kept on each device.
+  table with your initials.
+- **World leaderboard:** once the online leaderboard is set up (below), finished games are posted to a shared
+  table, so friends anywhere can compete. The High Scores screen has **WORLD** and **THIS DEVICE** tabs.
+
+## Setting up the world leaderboard (Supabase, free)
+
+1. Create a free account at [supabase.com](https://supabase.com) and a **New project** (any name and region).
+2. Open **SQL Editor** in the project, paste this in and press **Run**:
+
+   ```sql
+   create table public.scores (
+     id bigint generated always as identity primary key,
+     name text not null check (name ~ '^[A-Z0-9 ?]{1,3}$'),
+     score integer not null check (score between 1 and 100000),
+     difficulty smallint not null default 1 check (difficulty between 0 and 2),
+     created_at timestamptz not null default now()
+   );
+   alter table public.scores enable row level security;
+   create policy "Anyone can read scores" on public.scores for select to anon using (true);
+   create policy "Anyone can add a score" on public.scores for insert to anon with check (true);
+   ```
+
+   Players can only read scores and add new ones; nobody can edit or delete them from the game. You can
+   remove silly entries yourself in Supabase's **Table Editor**.
+3. In **Project Settings → API**, copy the **Project URL** and the **anon public** key into
+   `SUPABASE_URL` and `SUPABASE_ANON_KEY` at the top of `js/leaderboard.js`.
 
 ## Enemies
 
@@ -142,6 +167,7 @@ js/textures.js      wall, floor and ceiling textures
 js/levels.js        maps and the map legend
 js/audio.js         synthesized sound effects and music (WebAudio)
 js/voice.js         Goffichick's voice lines (browser speech, or your own recordings)
+js/leaderboard.js   the shared world leaderboard (Supabase)
 js/photo-data.js    the two photos, processed and embedded so the game works from file://
 assets/             the processed photo assets (Wally Man cut-out, HUD faces, title image)
 ```

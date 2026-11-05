@@ -1319,7 +1319,10 @@
   const SCORES_KEY = 'goffichick-scores', TIMES_KEY = 'goffichick-best-times', DIFF_MUL = [0.6, 1, 1.5];
   let runScore = 0, lastEntry = -1;
   const highScores = () => store.get(SCORES_KEY) || [];
-  const qualifies = sc => sc > 0 && (highScores().length < 10 || sc > highScores()[highScores().length - 1].score);
+  // with the online leaderboard on, every finished game can be posted; otherwise only device top-10s
+  const qualifies = sc => sc > 0 && (Leaderboard.enabled || highScores().length < 10 || sc > highScores()[highScores().length - 1].score);
+  let scoresTab = Leaderboard.enabled ? 'world' : 'device', posted = null, postStatus = '';
+  function openScores() { state = 'scores'; stateT = 0; scoresTab = Leaderboard.enabled ? 'world' : 'device'; Leaderboard.refresh(); }
   const ALPHA = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 ';
   let initials = [6, 14, 5], initCur = 0; // "GOF"
   function saveHighScore() {
@@ -1327,7 +1330,11 @@
     const list = highScores(); const entry = { name, score: runScore, diff, date: new Date().toISOString().slice(0, 10) };
     list.push(entry); list.sort((a, b) => b.score - a.score);
     lastEntry = list.indexOf(entry); store.set(SCORES_KEY, list.slice(0, 10));
-    state = 'scores'; stateT = 0;
+    openScores();
+    if (Leaderboard.enabled) {
+      posted = { name, score: runScore }; postStatus = 'Posting your score to the world leaderboard...';
+      Leaderboard.submit(entry).then(ok => { postStatus = ok ? 'Your score is on the world leaderboard!' : "Couldn't post online (no connection?). It's saved on this device."; });
+    }
   }
   function savedGame() { const s = store.get(SAVE_KEY); return s && LEVELS[s.level] ? s : null; }
   function beginPlay() { state = 'playing'; Sfx.init(); Sfx.startMusic(); }
@@ -1354,7 +1361,7 @@
   function menuActivate(item, dir = 1) {
     if (item.id === 'continue') continueGame();
     else if (item.id === 'new') startGame();
-    else if (item.id === 'scores') { state = 'scores'; stateT = 0; lastEntry = -1; }
+    else if (item.id === 'scores') { openScores(); lastEntry = -1; posted = null; postStatus = ''; }
     else if (item.id === 'voice') { Voice.toggle(); Sfx.init(); Sfx.play.switch(); if (Voice.on) Voice.say('levelStart', 1, true); }
     else { diff = (diff + dir + DIFFS.length) % DIFFS.length; store.set(DIFF_KEY, diff); Sfx.init(); Sfx.play.switch(); }
     if (state === 'playing') lockPointer();
@@ -1453,17 +1460,29 @@
     label(sub, W / 2, 80, '#c9a6c9', 'center', 9);
     (lines || []).forEach((l, i) => label(l, W / 2, 108 + i * dy, /NEW/.test(l) ? '#ffcf3a' : '#ffffff', 'center', 10));
   }
+  const SCORE_TABS = () => [{ id: 'world', x: W / 2 - 75, text: 'WORLD' }, { id: 'device', x: W / 2 + 15, text: 'THIS DEVICE' }];
   function drawScores() {
-    drawTitle(); drawOverlayText('HIGH SCORES', 'The gloomiest players on this device', []);
-    const list = highScores();
-    if (!list.length) label('No scores yet. Finish the game to get on the board!', W / 2, 130, '#ffd0ec', 'center', 9);
+    const world = scoresTab === 'world';
+    drawTitle(); drawOverlayText('HIGH SCORES', world ? 'The gloomiest players anywhere' : 'The gloomiest players on this device', []);
+    if (Leaderboard.enabled) for (const t of SCORE_TABS()) {
+      const on = t.id === scoresTab;
+      ctx.fillStyle = on ? 'rgba(255,79,184,0.35)' : 'rgba(255,255,255,0.06)'; ctx.fillRect(t.x, 86, 70, 12);
+      label(t.text, t.x + 35, 95, on ? '#ffffff' : '#b78ab7', 'center', 8);
+    }
+    let list = world ? (Leaderboard.list || []) : highScores();
+    if (world && Leaderboard.status === 'loading') label('Loading the world leaderboard...', W / 2, 135, '#ffd0ec', 'center', 9);
+    else if (world && Leaderboard.status === 'error') label("Couldn't reach the online leaderboard. Check your connection.", W / 2, 135, '#ffd0ec', 'center', 9);
+    else if (!list.length) label('No scores yet. Finish the game to get on the board!', W / 2, 135, '#ffd0ec', 'center', 9);
+    if (postStatus) label(postStatus, W / 2, 240, '#ffcf3a', 'center', 8);
+    let marked = false;
     list.forEach((e, i) => {
-      const y = 104 + i * 13, col = i === lastEntry ? '#ffcf3a' : '#ffffff';
+      const mine = world ? (!marked && posted && e.name === posted.name && e.score === posted.score && (marked = true)) : i === lastEntry;
+      const y = 112 + i * 12, col = mine ? '#ffcf3a' : '#ffffff';
       label(`${String(i + 1).padStart(2)}.  ${e.name.padEnd(3)}`, W / 2 - 120, y, col, 'left', 10);
       label(e.score.toLocaleString(), W / 2 + 20, y, col, 'right', 10);
       label(`${DIFFS[e.diff] ? DIFFS[e.diff].name : ''}  ${e.date || ''}`, W / 2 + 34, y, '#b78ab7', 'left', 8);
     });
-    if (stateT > 0.5) label('CLICK OR PRESS ENTER', W / 2, 250, '#c9a6c9', 'center', 8);
+    if (stateT > 0.5) label(Leaderboard.enabled ? 'TAP A TAB OR USE LEFT / RIGHT  -  CLICK ELSEWHERE TO GO BACK' : 'CLICK OR PRESS ENTER', W / 2, 254, '#c9a6c9', 'center', 8);
   }
   // arcade-style initials: three letter boxes and an OK button
   const NAME_BOX = i => ({ x: W / 2 - 75 + i * 40, y: 112, w: 32, h: 40 }), NAME_OK = () => ({ x: W / 2 + 55, y: 120, w: 44, h: 24 });
@@ -1500,7 +1519,7 @@
         drawTitle();
         drawOverlayText('VICTORY', 'The cheerfulness is defeated. The world is safely gloomy again.', [
           `LAST LEVEL  +${interStats.score}`, `FINAL SCORE  ${runScore.toLocaleString()}`, `SKILL  ${DIFFS[diff].name}`, '',
-          stateT > 2 ? (qualifies(runScore) ? 'A NEW HIGH SCORE! CLICK TO SIGN YOUR NAME' : 'THANKS FOR PLAYING - CLICK TO CONTINUE') : ''], 15);
+          stateT > 2 ? (Leaderboard.enabled ? 'CLICK TO SIGN YOUR NAME ON THE WORLD LEADERBOARD' : qualifies(runScore) ? 'A NEW HIGH SCORE! CLICK TO SIGN YOUR NAME' : 'THANKS FOR PLAYING - CLICK TO CONTINUE') : ''], 15);
       } else {
         const st = interStats;
         drawOverlayText(st.name, 'FINISHED', [`KILLS  ${st.kills}%     ITEMS  ${st.items}%     SECRETS  ${st.secrets}%`,
@@ -1565,8 +1584,15 @@
     }
     if (state === 'dead' && stateT > 1) { restartLevel(); return true; }
     if (state === 'intermission' && stateT > 1) { nextLevel(); return true; }
-    if (state === 'victory' && stateT > 2) { if (qualifies(runScore)) { state = 'enterName'; initCur = 0; } else { state = 'scores'; lastEntry = -1; } stateT = 0; return true; }
-    if (state === 'scores' && stateT > 0.3) { state = 'title'; return true; }
+    if (state === 'victory' && stateT > 2) { if (qualifies(runScore)) { state = 'enterName'; initCur = 0; stateT = 0; } else { openScores(); lastEntry = -1; } return true; }
+    if (state === 'scores' && stateT > 0.3) {
+      if (Leaderboard.enabled && ev && ev.clientX !== undefined) { // tapping a tab switches it
+        const g = gamePoint(ev.clientX, ev.clientY);
+        const tab = SCORE_TABS().find(t => g.x >= t.x && g.x <= t.x + 70 && g.y >= 82 && g.y <= 102);
+        if (tab) { scoresTab = tab.id; if (tab.id === 'world') Leaderboard.refresh(); return true; }
+      }
+      state = 'title'; return true;
+    }
     if (state === 'enterName') { if (ev && ev.clientX !== undefined) { const g = gamePoint(ev.clientX, ev.clientY); enterNameTap(g.x, g.y); } else saveHighScore(); return true; }
     if (paused) { paused = false; lockPointer(); return true; }
     return false;
@@ -1593,6 +1619,7 @@
       if (e.code === 'Enter') saveHighScore();
       return;
     }
+    if (state === 'scores' && Leaderboard.enabled && (e.code === 'ArrowLeft' || e.code === 'ArrowRight')) { scoresTab = scoresTab === 'world' ? 'device' : 'world'; if (scoresTab === 'world') Leaderboard.refresh(); return; }
     if (e.code === 'Enter') primaryAction();
     if (state !== 'playing') return;
     if (e.code === 'KeyV') { msg = Voice.toggle() ? "Goffichick's voice on" : "Goffichick's voice off"; msgT = 1.5; }
