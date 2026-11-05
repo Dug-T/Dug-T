@@ -1368,8 +1368,48 @@
   }
   const MENU_Y = 108, MENU_DY = 13;
   // a click / tap on the title screen: pick the menu row under it, or the highlighted one
+  // On-screen arrow pad for the title menu (phones have no arrow keys): up / down move the
+  // highlight, left / right change the difficulty, OK chooses the highlighted option.
+  function titlePad() {
+    const cx = W - 62, cy = 196, s = 26, g = 30;
+    return [
+      { id: 'up', x: cx - s / 2, y: cy - g - s / 2, w: s, h: s, glyph: 'up' },
+      { id: 'down', x: cx - s / 2, y: cy + g - s / 2, w: s, h: s, glyph: 'down' },
+      { id: 'left', x: cx - g - s / 2, y: cy - s / 2, w: s, h: s, glyph: 'left' },
+      { id: 'right', x: cx + g - s / 2, y: cy - s / 2, w: s, h: s, glyph: 'right' },
+      { id: 'ok', x: cx - s / 2, y: cy - s / 2, w: s, h: s, glyph: 'OK' },
+    ];
+  }
+  function drawTitlePad() {
+    for (const b of titlePad()) {
+      const cx = b.x + b.w / 2, cy = b.y + b.h / 2, r = b.w / 2;
+      ctx.fillStyle = b.id === 'ok' ? 'rgba(255,45,149,0.75)' : 'rgba(20,0,24,0.7)';
+      ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#ff4fb8'; ctx.lineWidth = 1.5; ctx.stroke();
+      ctx.fillStyle = '#ffffff';
+      if (b.id === 'ok') { label('OK', cx, cy + 3.5, '#ffffff', 'center', 9); continue; }
+      const a = { up: -Math.PI / 2, down: Math.PI / 2, left: Math.PI, right: 0 }[b.id];
+      ctx.beginPath();
+      ctx.moveTo(cx + Math.cos(a) * 7, cy + Math.sin(a) * 7);
+      ctx.lineTo(cx + Math.cos(a + 2.4) * 6, cy + Math.sin(a + 2.4) * 6);
+      ctx.lineTo(cx + Math.cos(a - 2.4) * 6, cy + Math.sin(a - 2.4) * 6);
+      ctx.closePath(); ctx.fill();
+    }
+  }
+  function menuMove(dir) { const n = menuItems().length; menuSel = (menuSel + dir + n) % n; Sfx.init(); Sfx.play.switch(); }
   function titleTap(gx, gy) {
     const items = menuItems();
+    if (gx !== undefined) { // the arrow pad
+      const pb = titlePad().find(b => gx >= b.x - 4 && gx <= b.x + b.w + 4 && gy >= b.y - 4 && gy <= b.y + b.h + 4);
+      if (pb) {
+        const it = items[Math.min(menuSel, items.length - 1)];
+        if (pb.id === 'up') menuMove(-1);
+        else if (pb.id === 'down') menuMove(1);
+        else if (pb.id === 'left' || pb.id === 'right') { if (it.id === 'diff') menuActivate(it, pb.id === 'left' ? -1 : 1); else menuMove(pb.id === 'left' ? -1 : 1); }
+        else menuActivate(it, 1);
+        return;
+      }
+    }
     const row = Math.floor((gy - (MENU_Y - 9)) / MENU_DY);
     if (gx !== undefined && gx > 8 && gx < 215 && row >= 0 && row < items.length) { menuSel = row; menuActivate(items[row], 1); }
     else menuActivate(items[Math.min(menuSel, items.length - 1)], 1);
@@ -1445,6 +1485,7 @@
         if (sel) { ctx.fillStyle = 'rgba(255,79,184,0.18)'; ctx.fillRect(12, y - 9, 203, 12); }
         label((sel ? '> ' : '  ') + it.text, 16, y, sel ? '#ffffff' : '#ff9be0', 'left', 9);
       });
+      if (state === 'title') drawTitlePad();
     }
     const lines = ['WASD / ARROWS  move      MOUSE  look (click to lock)', 'CLICK / CTRL   fire      E / SPACE  switches, lifts, secrets',
       '1-8 / Q / WHEEL  weapons   SHIFT run   TAB map   M music'];
@@ -1712,8 +1753,13 @@
   }
 
   let last = performance.now();
+  let touchShown = null;
   function frame(now) {
     const dt = Math.min(0.05, (now - last) / 1000); last = now;
+    if (isTouch) { // in-game touch controls only while actually playing
+      const show = state === 'playing' && !paused;
+      if (show !== touchShown) { touchShown = show; document.getElementById('touch').style.display = show ? 'block' : 'none'; }
+    }
     if (!paused) update(dt); else time += dt;
     draw();
     requestAnimationFrame(frame);
