@@ -540,3 +540,71 @@ const SQ_DX = 18, SQ_DY = 15;
     for (const e of this.ents) if (e.type === 'squad' && e.alive && e.entered) for (const a of aliens(e)) if (e.alive && Math.hypot(a.x + 6 - x, a.y + 5 - y) < 96) this.zapAlien(e, a);
   };
 }
+
+// ---------------- Beam-down aliens: UFOs drop little alien troopers in a tractor beam ----------------
+{
+  const r0 = ['....K....K......', '....KgK.KgK.....', '.....KgKgK......', '...KKggggggKK...', '..KggggggggggK..', '..KgwwKggwwKgK..', '..KgwKKggKKwgK..', '..KggggggggggK..', '...KggKKKKggK...', '....KKmmmmKK....', '...KsKmmmmKsK...', '...KsKmmmmKsK...', '....KKmmmmKK....', '....KgK..KgK....', '...KggK..KggK...', '...KKKK..KKKK...'];
+  const r1 = r0.slice(0, 13).concat(['....KgK...KgK...', '...KggK...KggK..', '...KKKK...KKKK..']);
+  const pal = { K: '#1a1020', g: '#7ae040', w: '#ffffff', m: '#c040e0', s: '#d0d8e8' };
+  Sprites.beamling = [r0, r1].map((r) => Sprites.fromRows(r, pal));
+  Sprites.beamlingL = Sprites.beamling.map(Sprites.flip);
+}
+const starIsle = (pl) => ['volcano', 'factory', 'candy', 'moon'].includes(pl.def.theme);
+{
+  const _uu = Play.prototype.updateUfo;
+  Play.prototype.updateUfo = function (e) {
+    _uu.call(this, e);
+    if (!e.alive || e.dying || this.freezeT > 0) return;
+    const kids = this.ents.filter((k) => k.type === 'beamling' && k.alive && !k.dying && k.owner === e).length, max = starIsle(this) ? 3 : 2;
+    if (e.beamCool === undefined) e.beamCool = 90;
+    if (e.tractor > 0) { // tractor beam: an alien slides down it
+      e.tractor--;
+      e.beamTop = e.y + 12; e.tractorX = e.x + e.w / 2; e.tractorEnd = this.beamEnd(e.tractorX, e.beamTop);
+      if (e.tractor === 50 && this.state === 'play') {
+        this.ents.push({ type: 'beamling', alive: true, t: 0, x: e.tractorX - 6, y: e.beamTop, w: 12, h: 14, vx: 0, vy: 0, enemy: false, stomp: true, state: 'beam', owner: e, face: this.p.x < e.x ? -1 : 1 });
+        Audio8.sfx('secret');
+      }
+      return;
+    }
+    if (e.state === 'hover' && this.state === 'play' && kids < max && --e.beamCool <= 0 && e.timer > 50) {
+      e.tractor = 80; e.beamCool = starIsle(this) ? 230 : 380; Audio8.sfx('lasercharge');
+    }
+  };
+  const _du = Play.prototype.drawUfo;
+  Play.prototype.drawUfo = function (e, x, y) {
+    if (e && e.tractor > 0 && this && this.cam) {
+      const bx = Math.round(x + 14), top = y + 12, bot = Math.min(VH, e.tractorEnd || VH), grow = Math.min(1, (80 - e.tractor) / 12);
+      for (let yy = top; yy < bot; yy++) { const w = Math.round((6 + (yy - top) * 0.28) * grow); ctx.fillStyle = ((yy + frame) >> 2) % 3 === 0 ? 'rgba(160,255,140,0.34)' : 'rgba(120,240,120,0.22)'; ctx.fillRect(bx - w, yy, w * 2, 1); }
+      ctx.fillStyle = 'rgba(200,255,190,0.5)'; for (let k = 0; k < 6; k++) { const yy = top + ((frame * 2 + k * 23) % Math.max(1, bot - top)); ctx.fillRect(bx - 1 + ((k * 7) % 9) - 4, yy, 2, 2); }
+    }
+    return _du.call(this, e, x, y);
+  };
+  const _ue2 = Play.prototype.updateEnt;
+  Play.prototype.updateEnt = function (e) {
+    if (e.type === 'beamling' && !e.dying && !e.iced && !(this.freezeT > 0) && !this._p2ctx) {
+      e.t++;
+      const p = this.p;
+      if (e.state === 'beam') {
+        e.y += 1.3; e.x += Math.sin(e.t * 0.2) * 0.3;
+        const ty = Math.floor((e.y + e.h + 1) / TS), tx = Math.floor((e.x + e.w / 2) / TS);
+        if (SOLID.has(this.tile(tx, ty)) || this.tile(tx, ty) === '=' || e.y > VH) { e.state = 'walk'; e.enemy = true; e.vx = (p.x < e.x ? -1 : 1) * 0.7 * DIFF[this.diff].speed * (this.speedMul || 1); this.parts.push({ k: 'dust', x: e.x + 6, y: e.y + e.h, vx: 0, vy: -0.3, life: 14 }); }
+      } else {
+        e.vy = Math.min(5, e.vy + 0.3);
+        if (e.onGround && e.t % 100 === 0) { e.vy = -4.2; e.vx = (p.x < e.x ? -1 : 1) * Math.abs(e.vx || 0.7); }
+        this.move(e, true);
+        if (e.hitWall) e.vx = -e.hitWall * Math.abs(e.vx);
+        if (e.vx) e.face = e.vx < 0 ? -1 : 1;
+      }
+    }
+    return _ue2.call(this, e);
+  };
+  const _de2 = Play.prototype.drawEnt;
+  Play.prototype.drawEnt = function (e, cx) {
+    if (e.type !== 'beamling') return _de2.call(this, e, cx);
+    const img = (e.face < 0 ? Sprites.beamlingL : Sprites.beamling)[e.state === 'beam' ? 0 : (e.t >> 3) & 1], x = Math.round(e.x - cx) - 2, y = Math.round(e.y) - 2;
+    if (e.dying === 'flip') { ctx.save(); ctx.translate(x + 8, y + 8); ctx.scale(1, -1); ctx.drawImage(img, -8, -8); ctx.restore(); return; }
+    if (e.dying === 'squish') { ctx.drawImage(img, 0, 8, 16, 8, x, y + 8, 16, 8); return; }
+    if (e.state === 'beam') { ctx.save(); ctx.globalAlpha = 0.55 + 0.35 * Math.sin(e.t * 0.4); ctx.drawImage(img, x, y); ctx.restore(); return; }
+    ctx.drawImage(img, x, y);
+  };
+}

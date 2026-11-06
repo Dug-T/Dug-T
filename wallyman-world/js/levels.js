@@ -252,8 +252,9 @@ const LEVELS = [
   },
   // ---------------- Star Isle (reached by rocket after beating Baron Static) ----------------
   {
-    name: 'MOLTEN PEAK', theme: 'volcano', music: 'volcano', width: 200, dino: 'red',
-    extras: [['c', 40], ['t', 75], ['h', 110], ['g', 130], ['t', 160], ['c', 180], ['u', 88]],
+    name: 'MOLTEN PEAK', theme: 'volcano', music: 'volcano', width: 200, dino: 'red', squad: { x: 118, rows: 2, cols: 5 },
+    powerups: [['E', 30], ['N', 70], ['T', 100], ['V', 150], ['P', 170]],
+    extras: [['u', 14], ['c', 40], ['p', 50], ['t', 75], ['g', 84], ['u', 88], ['h', 110], ['b', 118], ['g', 130], ['p', 136], ['u', 145], ['t', 160], ['h', 166], ['c', 180]],
     build(b) {
       b.ground(0, 22).set(2, 11, '@').row(8, 8, 'BWB');
       b.fill(23, 13, 28, 13, 'L').set(25, 12, 'l');
@@ -268,8 +269,9 @@ const LEVELS = [
     },
   },
   {
-    name: 'GEAR WORKS', theme: 'factory', music: 'factory', width: 200,
-    extras: [['t', 30], ['c', 60], ['t', 100], ['g', 140], ['t', 150], ['c', 175]],
+    name: 'GEAR WORKS', theme: 'factory', music: 'factory', width: 200, squad: { x: 66, rows: 2, cols: 6 },
+    powerups: [['N', 20], ['E', 60], ['Q', 95], ['T', 130], ['P', 160]],
+    extras: [['u', 12], ['t', 30], ['g', 36], ['c', 60], ['h', 72], ['u', 80], ['p', 94], ['t', 100], ['z', 115], ['g', 140], ['t', 150], ['u', 158], ['c', 175], ['h', 185]],
     build(b) {
       b.ground(0, 40).set(2, 11, '@').row(12, 12, '>>>>>>>>>>').row(26, 8, 'BWB');
       b.ground(45, 80).row(50, 12, '<<<<<<<<<<<<').row(64, 8, '>>>>');
@@ -283,8 +285,9 @@ const LEVELS = [
     },
   },
   {
-    name: 'CANDY COVE', theme: 'candy', music: 'candy', width: 200,
-    extras: [['g', 25], ['h', 65], ['p', 100], ['g', 120], ['h', 155], ['z', 140]],
+    name: 'CANDY COVE', theme: 'candy', music: 'candy', width: 200, squad: { x: 100, rows: 3, cols: 5 },
+    powerups: [['N', 15], ['E', 55], ['T', 90], ['V', 130], ['O', 170]],
+    extras: [['u', 16], ['g', 25], ['z', 40], ['p', 52], ['h', 65], ['u', 78], ['c', 88], ['p', 100], ['g', 120], ['u', 128], ['z', 140], ['h', 155], ['c', 170], ['g', 182]],
     build(b) {
       b.ground(0, 30).set(2, 11, '@').coins(6, 9, 4).set(20, 11, 'J').row(24, 7, '=====').coins(24, 5, 5);
       b.row(33, 9, '==');
@@ -301,7 +304,8 @@ const LEVELS = [
   {
     squad: { x: 58, rows: 3, cols: 6 }, name: 'MOON BASE', theme: 'moon', music: 'moon', width: 200, lowGrav: true, boss: true, bossHp: 8, bossName: 'MOTHERSHIP MK II',
     bossMsg: ['THE MK II IS DOWN!', '', 'STAR ISLE IS SAFE AND', 'THE WHOLE GALAXY HAS', 'FULL SIGNAL AGAIN!', '', 'YOU ARE A LEGEND!'],
-    extras: [['u', 40], ['t', 80], ['u', 120], ['c', 150], ['t', 160]],
+    powerups: [['E', 20], ['N', 60], ['P', 110], ['T', 130], ['Q', 150]],
+    extras: [['u', 14], ['g', 30], ['u', 40], ['h', 50], ['c', 75], ['t', 80], ['u', 100], ['p', 110], ['u', 120], ['g', 128], ['c', 150], ['t', 160]],
     build(b) {
       b.ground(0, 25).set(2, 11, '@');
       b.ground(34, 60, 11).row(44, 6, 'BWB');
@@ -378,6 +382,7 @@ function buildLevel(i) {
     }
   };
   swap(12, 'D'); swap(105, 'V'); swap(20, 'Q');
+  for (const [c, x] of def.powerups || []) swap(x, c);
   // batch D power-ups: Magnet, Shrink Ray (tiny hero) and Bubble Shield
   swap(30 + (i * 7) % 40, 'N'); swap(80 + (i * 11) % 30, 'E'); swap(130 + (i * 5) % 30, 'T');
   // Warp pipe: press Down on top to skip ahead
