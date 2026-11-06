@@ -21,7 +21,7 @@ LevelBuilder.prototype = {
 const LEVELS = [
   {
     name: "WALLY'S BACKYARD", theme: 'grass', music: 'grass', time: 300, width: 200, warp: { x: 118, to: 2 }, squad: { x: 5, rows: 2, cols: 5 },
-    extras: [['u', 12], ['c', 58], ['t', 96], ['u', 108], ['g', 134], ['p', 166], ['h', 45]],
+    extras: [['u', 12], ['c', 58], ['t', 96], ['u', 108], ['g', 134], ['p', 166], ['h', 45], ['4', 150]],
     build(b) {
       b.ground(0, 38).set(3, 11, '@');
       b.coins(8, 9, 4);
@@ -51,7 +51,7 @@ const LEVELS = [
     },
   },
   {
-    name: 'CAVERN COMMUTE', theme: 'cave', music: 'cave', time: 300, width: 190,
+    key: { x: 120, y: 3, n: 0 }, name: 'CAVERN COMMUTE', theme: 'cave', music: 'cave', time: 300, width: 190,
     secret: { to: 8, x: 176, y: 5, prep: (b) => b.fill(176, 6, 176, 11, 'X').fill(174, 10, 174, 11, 'X') },
     extras: [['b', 20], ['b', 56], ['t', 98], ['c', 136], ['b', 148], ['b', 172], ['g', 86]],
     build(b) {
@@ -269,7 +269,7 @@ const LEVELS = [
     },
   },
   {
-    name: 'GEAR WORKS', theme: 'factory', music: 'factory', width: 200, squad: { x: 66, rows: 2, cols: 6 },
+    key: { x: 100, y: 3, n: 1 }, name: 'GEAR WORKS', theme: 'factory', music: 'factory', width: 200, squad: { x: 66, rows: 2, cols: 6 },
     powerups: [['N', 20], ['E', 60], ['Q', 95], ['T', 130], ['P', 160]],
     extras: [['u', 12], ['t', 30], ['g', 36], ['c', 60], ['h', 72], ['u', 80], ['p', 94], ['t', 100], ['z', 115], ['g', 140], ['t', 150], ['u', 158], ['c', 175], ['h', 185]],
     build(b) {
@@ -316,10 +316,120 @@ const LEVELS = [
       b.set(191, 3, 'k');
     },
   },
+  // ================= Carnival Isle (world 3) =================
+  {
+    name: 'FUNFAIR MIDWAY', theme: 'carnival', music: 'carnival', width: 190,
+    powerups: [['H', 60], ['E', 100], ['N', 150]],
+    extras: [['g', 20], ['3', 58], ['u', 100], ['h', 150], ['3', 168], ['p', 112]],
+    build(b) {
+      b.ground(0, 30).set(2, 11, '@').row(10, 8, 'BWB');
+      b.set(37, 7, '5');
+      b.ground(45, 80).set(55, 11, '4').set(62, 11, '2').row(66, 8, 'WHW').set(73, 8, '1');
+      b.set(84, 4, '%').set(91, 4, '%');
+      b.ground(97, 125).set(100, 11, 'C').set(110, 11, '4').set(118, 11, '2');
+      b.set(132, 7, '5');
+      b.ground(140, 189).row(150, 8, 'B1B').set(160, 11, '4').stairsUp(170, 4);
+      b.set(182, 11, 'G');
+    },
+  },
+  {
+    name: 'COASTER CHAOS', theme: 'carnival', music: 'carnival', width: 190,
+    coasters: [[[17, 11], [26, 7], [36, 9], [46, 5], [56, 8], [64, 11]], [[99, 11], [108, 6], [118, 3], [128, 7], [140, 11]]],
+    key: { x: 46, y: 2, n: 2 },
+    powerups: [['H', 70], ['T', 150]],
+    extras: [['c', 70], ['2', 82], ['u', 90], ['4', 150], ['3', 160], ['g', 170]],
+    build(b) {
+      b.ground(0, 18).set(2, 11, '@').set(17, 11, '6');
+      b.ground(65, 100).set(80, 9, 'C').row(86, 8, 'WSW').set(99, 11, '6');
+      b.ground(141, 189).row(152, 8, 'BWB').set(156, 4, '%').stairsUp(168, 3);
+      b.set(182, 11, 'G');
+    },
+  },
+  {
+    name: 'MINECART MAYHEM', theme: 'cave', music: 'factory', width: 230, minecart: true,
+    build(b) {
+      b.fill(0, 0, 229, 1, '#').ground(0, 229).set(3, 11, '@');
+      const feats = 'g.b.g..bc.g.bb.gc..b.g.gb.cg.b.bg.c.g.bb.g.gc..b';
+      for (let k = 0; k < feats.length; k++) {
+        const x = 18 + k * 4; if (x > 214) break;
+        const f = feats[k];
+        if (f === 'g') b.fill(x, 12, x + (k > 24 ? 2 : 1), 13, '.');
+        if (f === 'b') b.fill(x, 9, x + 1, 10, 'X');
+        if (f === 'c') b.coins(x, 8, 3);
+      }
+      for (let x = 0; x < 230; x++) if (b.g[12][x] === '#') b.set(x, 11, '_');
+      b.set(222, 11, 'G');
+    },
+  },
+  {
+    name: 'MIRROR MAZE', theme: 'carnival', music: 'haunted', width: 170,
+    powerups: [['E', 40], ['H', 110]],
+    extras: [['4', 30], ['1', 60], ['2', 95], ['4', 130], ['3', 145]],
+    build(b) {
+      b.fill(0, 0, 169, 1, 'X').ground(0, 169).set(2, 11, '@');
+      for (const [x, gapY] of [[20, 9], [38, 5], [56, 9], [74, 4], [92, 8], [110, 5], [128, 9], [146, 6]]) {
+        b.fill(x, 2, x + 1, 11, 'X'); b.fill(x, gapY, x + 1, gapY + 2, '.');
+        if (gapY < 8) { b.row(x - 6, gapY + 3, '====='); b.row(x - 10, gapY + 6, '===='); }
+      }
+      for (const [x0, x1] of [[24, 34], [78, 88], [132, 142]]) for (let x = x0; x <= x1; x++) for (let y = 2; y <= 11; y++) if (b.g[y][x] === '.') b.g[y][x] = '!';
+      b.set(60, 9, 'C').row(100, 8, 'WOW');
+      b.set(162, 11, 'G');
+    },
+  },
+  {
+    name: 'ASTEROID ALLEY', theme: 'moon', music: 'airship', width: 220, shmup: true, autoscroll: 0.9,
+    build(b) {
+      b.set(3, 7, '@');
+      const rows = [3, 7, 10, 5, 9, 2, 11, 6, 4, 8];
+      for (let k = 0; k < 46; k++) { const x = 20 + k * 4 + (k % 3); if (x > 206) break; b.set(x, rows[k % rows.length], '7'); }
+      for (const x of [40, 80, 120, 160, 190]) b.set(x, 2, 'u');
+      for (let k = 0; k < 12; k++) b.coins(28 + k * 15, 2 + (k * 5) % 10, 2);
+      b.set(214, 11, 'G');
+    },
+  },
+  {
+    name: 'BIG TOP', theme: 'carnival', music: 'carnival', width: 170, boss: true, bossHp: 6, bossName: 'RINGMASTER', talk: 'ringmaster',
+    bossMsg: ['THE RINGMASTER BOWS OUT!', '', 'THE CARNIVAL LIGHTS', 'TWINKLE WITH FULL SIGNAL', 'ACROSS ALL THREE ISLES.', '', 'WHAT A SHOW!'],
+    powerups: [['H', 40], ['E', 90]],
+    extras: [['4', 30], ['2', 60], ['3', 75], ['1', 95], ['4', 110], ['2', 125]],
+    build(b) {
+      b.ground(0, 40).set(2, 11, '@').set(20, 11, 'J');
+      b.row(42, 7, '======').set(47, 4, '%');
+      b.ground(52, 90).set(60, 9, 'C').row(70, 8, 'BWB').set(84, 11, 'J');
+      b.row(92, 6, '=====').set(97, 3, '%').row(100, 8, '====');
+      b.ground(106, 169).row(120, 8, 'B1B').set(164, 10, 'r');
+    },
+  },
+  {
+    name: 'SECRET ROOM 1', theme: 'castle', music: 'castle', width: 80, secretRoom: true,
+    build(b) {
+      b.fill(0, 0, 79, 1, '#').ground(0, 79).set(2, 11, '@');
+      for (let x = 8; x < 66; x += 7) { b.coins(x, 5, 4); b.fill(x + 2, 11, x + 2, 11, '^'); }
+      b.row(14, 7, 'OWOWO').row(40, 7, 'WOW').set(30, 9, 'm').set(52, 8, 'n');
+      b.set(72, 11, 'G');
+    },
+  },
+  {
+    name: 'SECRET ROOM 2', theme: 'factory', music: 'factory', width: 80, secretRoom: true,
+    build(b) {
+      b.ground(0, 79).set(2, 11, '@').row(8, 11, '>>>>>>>>>>>>').row(26, 8, '<<<<<<<<').row(44, 11, '>>>>>>>>>>');
+      for (let x = 6; x < 66; x += 5) b.coins(x, 4 + (x % 3), 3);
+      b.row(20, 5, 'OWO').row(58, 6, 'OVO');
+      b.set(72, 11, 'G');
+    },
+  },
+  {
+    name: 'SECRET ROOM 3', theme: 'carnival', music: 'carnival', width: 80, secretRoom: true,
+    build(b) {
+      b.ground(0, 12).set(2, 11, '@').set(18, 7, '5').ground(26, 40).set(32, 11, 'J').coins(28, 3, 10);
+      b.set(46, 4, '%').set(54, 4, '%').ground(60, 79).row(62, 8, 'OWOWO');
+      b.set(72, 11, 'G');
+    },
+  },
 ];
 
 function buildLevel(i) {
-  const def = i === 99 ? window.CUSTOM_LEVEL : i === 98 ? window.RUSH_LEVEL : LEVELS[i], b = new LevelBuilder(def.width);
+  const def = i === 99 ? window.CUSTOM_LEVEL : i === 98 ? window.RUSH_LEVEL : i === 97 ? window.ENDLESS_LEVEL : LEVELS[i], b = new LevelBuilder(def.width);
   def.build(b);
   if (def.secret) { if (def.secret.prep) def.secret.prep(b); b.set(def.secret.x, def.secret.y, 'Z'); }
   if (def.yeti) b.set(def.yeti[0], def.yeti[1], 'y');
@@ -355,7 +465,7 @@ function buildLevel(i) {
   }
   // Extra enemies, placed on the nearest safe spot: ground walkers on solid ground,
   // bats under a ceiling, UFOs in open sky.
-  const SOLIDS = '#BXUWPSOAJNTEY';
+  const SOLIDS = '#BXUWPSOAJNTEYH';
   const ground = (x0) => {
     for (let x = x0; x < Math.min(b.w - 18, x0 + 14); x++) {
       for (let y = 3; y < 14; y++) {
@@ -397,7 +507,7 @@ function buildLevel(i) {
   }
   // Five Wally Medals per level, tucked up high: on top of blocks, platforms and ledges,
   // one in each fifth of the level (floating above the ground if a fifth has no ledge).
-  const firm = '#BXUW=PSOAVQDJNTEY';
+  const firm = '#BXUW=PSOAVQDJNTEYH';
   const seg = (b.w - 32) / 5;
   for (let k = 0; k < 5; k++) {
     const x0 = 10 + Math.floor(k * seg), x1 = 10 + Math.floor((k + 1) * seg);
@@ -430,7 +540,12 @@ function buildLevel(i) {
   }
   }
   if (def.squad) b.set(def.squad.x, 2, 'i');
-  const ENT = 'gpzhmnCGKabctuMfjeykZsqwvlxi';
+  if (def.key) { // a hidden map key: the highest free nook near the given spot
+    let kx = def.key.x, ky = def.key.y;
+    if (b.g[ky][kx] !== '.') { let best = null; for (let x = kx - 12; x <= kx + 12; x++) for (let y = 2; y <= 9; y++) if (x > 0 && x < b.w && b.g[y][x] === '.' && b.g[y - 1][x] === '.' && firm.includes(b.g[y + 1][x]) && (!best || y < best[1])) best = [x, y]; if (best) [kx, ky] = best; }
+    b.g[ky][kx] = '&';
+  }
+  const ENT = 'gpzhmnCGKabctuMfjeykZsqwvlxi1234567&r';
   for (let y = 0; y < 14; y++) for (let x = 0; x < b.w; x++) {
     const c = b.g[y][x];
     if (c === '@') { start = { x, y }; b.g[y][x] = '.'; } else if (ENT.includes(c)) {

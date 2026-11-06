@@ -172,6 +172,12 @@ const Audio8 = (() => {
       chords: 'C Am F G C Am F C',
       mel: 'E5/4 G5/4 C6/4 B5/4 | A5/6 G5/2 E5/8 | F5/4 A5/4 C6/4 E6/4 | D6/12 r/4 | E5/4 G5/4 C6/4 D6/4 | E6/6 D6/2 C6/8 | A5/4 G5/4 F5/4 A5/4 | G5/16',
     },
+    carnival: {
+      bpm: 168, swing: 0.4, bass: 'bounce', harm: 'stab', drums: 'k.hsk.hsk.hsk.hs', lead: 'p25',
+      chords: 'C G G C C G G C F C G C',
+      mel: 'G5/2 F#5/2 G5/2 E5/2 C5/4 E5/4 | D5/2 C#5/2 D5/2 B4/2 G4/4 B4/4 | D5/2 F5/2 A5/2 G5/2 F5/2 D5/2 B4/2 D5/2 | C5/4 E5/4 G5/4 C6/4 |' +
+        'G5/2 F#5/2 G5/2 E5/2 C5/4 E5/4 | F5/2 E5/2 F5/2 D5/2 B4/4 D5/4 | A5/2 G5/2 F5/2 E5/2 D5/2 C5/2 B4/2 D5/2 | C5/12 r/4',
+    },
     beach: {
       bpm: 152, swing: 0.32, bass: 'bounce', harm: 'stab', drums: 'k.hsh.hsk.hsh.hh', lead: 'p25',
       chords: 'G C D G G C D G Em C A D',

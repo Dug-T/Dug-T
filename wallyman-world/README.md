@@ -37,6 +37,23 @@ Open `index.html` in any modern browser — or enable **GitHub Pages** for this 
 - **Signal Bars** – three per level, tucked away in the highest nooks. They're saved when you clear the level and shown in the HUD; collect all three for **FULL SIGNAL**: +3 specials, a 1-UP and a trophy.
 - **Time Attack ghost** – your best run in each level is recorded, and a see-through ghost of it races you next time.
 - **Level Maker** (Extras → Level Maker) – build your own 120-tile course in any of the 13 themes, with every block, hazard, enemy and item. D-pad moves the cursor, A places (hold to paint), B erases, S picks the next item (B+S the previous one), START opens the menu (Play Test, Save, Theme, Clear All, Save and Exit). Three courses are kept on your device, and play-testing drops you straight back into the editor. New tools: **water zones** (swim inside them), **dark zones**, a **boss at the end** (any boss or mini-boss), **COPY AREA** then paste with A, and **share codes**: SHARE CODE shows a short text code to send to friends, LOAD CODE plays theirs.
+- **Carnival Isle** – a third island, reached by ferry from Star Isle after beating the Mothership MK II (with a comic cutscene the first time you visit each new island):
+  - **Funfair Midway** – ride rotating **Ferris wheel** gondolas and swing on grappling rings.
+  - **Coaster Chaos** – hop in a **rollercoaster cart** that races along its track over huge gaps.
+  - **Minecart Mayhem** – the cart never stops: jump the gaps and hold Down to **duck under low beams**.
+  - **Mirror Maze** – purple **mirror zones** swap left and right.
+  - **Asteroid Alley** – a **shoot-'em-up**: fly a jet (D-pad moves, B fires) through asteroids and UFOs.
+  - **Big Top** – tightropes and trampolines, then the **Ringmaster** boss, who juggles bouncing balls, cracks his whip and leaps at you.
+- **New enemies**: **Mimic blocks** that look like ? blocks until you get close, **Boomerang Bros**, **Magnet Drones** that pull you toward them, and **Splitter Slimes** that split in two when stomped.
+- **Grappling hook** power-up – jump near a metal ring in mid-air to latch on, swing (left/right to pump), and press Jump to let go.
+- **Secret keys and doors** – three keys are hidden in Cavern Commute, Gear Works and Coaster Chaos. Each unlocks a locked door on one of the maps, leading to a **Secret Room** packed with coins and 1-UPs.
+- **Pets** – each hero has a little companion (a pup, a bat, a cat, a drone or a penguin) that follows you, grabs nearby coins and **takes one hit for you** (it comes back after 20 seconds). Toggle it in Options.
+- **Dino's House** (Wally's House on the map) – **Dino's Shop**, the **Upgrade Tree** (Dash and Air Dash by double-tapping left/right, Wall Jump and Wall Climb for every hero, Heart+, Ammo+, Special+ and Pet Range), **Mini-games** (Lucky Dino Slots and Memory Match), **File Stats** (play time, enemies defeated, deaths, coins, bosses, favourite hero and more) and **New Game+**.
+- **Medal Missions** – three goals per level (defeat a number of foes, grab a number of coins, finish without specials), shown on the level intro. Each new mission pays 10 coins; all three give a 1-UP.
+- **New Game+** – after beating Baron Static, start again keeping your lives, coins, upgrades and hats; enemies are faster, there are more of them, and bosses take extra hits.
+- **Endless Run** (Challenges) – a new random course every run that scrolls faster and faster, with a longest-runs table.
+- **Star Isle weather** – ash storms on Molten Peak and meteor showers on Moon Base (watch for the red warning marks).
+- **Art Gallery** (Extras) – eight concept-art scenes unlocked as you earn trophies.
 - **Beam-down aliens** – UFOs now shine a green tractor beam and drop little alien troopers that land, chase you and hop; stomp them like any enemy. Each UFO keeps up to 2 aliens around (3 on Star Isle).
 - **Busier Star Isle** – Molten Peak, Gear Works, Candy Cove and Moon Base now have about twice as many enemies, 3–4 UFOs each, an alien squadron, and extra power-up blocks (Bubble Shield, Coin Magnet, Shrink Ray, Super Charge, Jet Boots, drinks and a 1-UP).
 - **Zappling Squadron** – an alien formation is waiting right at the start of Wally's Backyard, and hovers over Cloudtop Climb, Sky Armada and Moon Base. It marches side to side, steps down each time it reaches an edge, speeds up as you thin it out and drops zig-zag bolts. Stomp them, lob cannonballs up (Up + B), use pings, bats, Dino fire or specials; clearing the whole squadron pays 2000 points and 5 coins. You can place squadrons in the Level Maker too.
@@ -58,7 +75,7 @@ Open `index.html` in any modern browser — or enable **GitHub Pages** for this 
 - **Costumes** – visit the **Wardrobe** in Dino's Shop at Wally's House. Seven outfits: Classic, Wally Jr, Golden (find 20 Wally Medals), Ice (clear Frosty Peaks), Dino Suit (clear Coral Depths), Shadow (clear Haunted Manor) and Fire (beat Baron Static).
 - **Difficulty** (Extras → Options): Easy (3 hearts, 50% more time, slower enemies, weaker bosses), Normal, or Hard (1 heart, less time, faster enemies, tougher bosses).
 - **Star rankings** – up to 3 stars per level: finish with 40% of the time left, have all 5 medals, and take no hits. Stars show on the clear screen, the map and the level intro.
-- **Trophies** – 27 achievements (first clear, flawless boss, Dino rider, UFO hunter, secret exits, three stars and more) with pop-up notifications and a **Trophy Room**.
+- **Trophies** – 32 achievements (first clear, flawless boss, Dino rider, UFO hunter, secret exits, three stars and more) with pop-up notifications and a **Trophy Room**.
 - **Extras menu** – Trophy Room, **Jukebox** (play every song), **Gallery** (heroes, enemies, bosses and items) and **Options** (difficulty, music/sound volume, sound on/off, **CRT retro-TV filter**, screen shake).
 - **Hidden secrets** – an invisible block in most levels (jump into empty air to find a 1-UP) and cracked walls that crumble into coins when blasted, chomped, shocked or ground-pounded.
 - **High score table** – when a run ends (game over or beating the game) a top-10 score lets you enter your name arcade-style (D-pad + A, or just type). Scores are kept in the browser; when the game runs as a claude.ai artifact they are also shared through its database for players allowed to save there.
@@ -107,5 +124,6 @@ firestore.rules     security rules to paste into Firebase
 js/game.js          engine: input, physics, enemies, scenes, HUD
 js/maker.js         the Level Maker editor
 js/extra.js         challenges, cutscenes, splits, day/night and 2-player co-op
+js/batche.js        Carnival Isle, new enemies, pets, upgrades, Dino's House, mini-games, missions, Endless Run, art
 assets/             pixelated WallyMan, GothChick and Doug Thomson portraits (title, character select, ending)
 ```
