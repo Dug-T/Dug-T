@@ -919,3 +919,62 @@ function pickWeather(theme, not) {
     else if (k !== 'clear') { ctx.fillStyle = '#c8d0e0'; ctx.fillRect(x + 1, y + 2, 10, 4); ctx.fillRect(x + 3, y, 6, 2); ctx.fillStyle = k === 'thunder' ? '#ffe040' : '#80b8ff'; if (k === 'thunder') { ctx.fillRect(x + 5, y + 6, 2, 2); ctx.fillRect(x + 4, y + 8, 2, 2); } else { ctx.fillRect(x + 2, y + 7, 1, 2); ctx.fillRect(x + 6, y + 8, 1, 2); ctx.fillRect(x + 9, y + 7, 1, 2); } }
   };
 }
+
+// ---------- snow builds up on the ground and slows you down ----------
+const SNOW_MAX = 9;
+{
+  const isTop = (pl, tx, ty) => SOLID.has(pl.tile(tx, ty)) && !SOLID.has(pl.tile(tx, ty - 1)) && pl.tile(tx, ty - 1) !== '=';
+  const _upd = Play.prototype.update;
+  Play.prototype.update = function () {
+    _upd.call(this);
+    const w = this.wx;
+    if (!w || this.paused || this.talk) return;
+    if (!this.snowD) this.snowD = new Float32Array(this.lv.w);
+    this.def.ice = w.baseIce; // deep snow is sticky rather than slippery
+    const snowing = w.cur === 'snow' ? w.amt : 0, t0 = Math.max(0, Math.floor(this.cam.x / TS) - 24), t1 = Math.min(this.lv.w - 1, t0 + 64);
+    for (let tx = t0; tx <= t1; tx++) {
+      const d = this.snowD[tx];
+      if (snowing > 0.3) this.snowD[tx] = Math.min(SNOW_MAX, d + 0.0055 * snowing * (0.8 + ((tx * 37) % 10) / 25));
+      else if (d > 0) this.snowD[tx] = Math.max(0, d - (w.cur === 'rain' || w.cur === 'thunder' ? 0.012 : 0.006));
+    }
+  };
+  Play.prototype.snowAt = function (b) { // depth of snow under a body standing on the ground
+    if (!this.snowD || !b.onGround) return 0;
+    const tx = Math.floor((b.x + b.w / 2) / TS), ty = Math.floor((b.y + b.h + 1) / TS);
+    return isTop(this, tx, ty) ? this.snowD[tx] || 0 : 0;
+  };
+  const _up = Play.prototype.updatePlayer;
+  Play.prototype.updatePlayer = function () {
+    _up.call(this);
+    const p = this.p, d = this.snowAt(p);
+    if (d > 0.5 && !p.riding && !(p.dashT > 0) && !(p.charge > 0)) {
+      p.vx *= 1 - 0.15 * (d / SNOW_MAX); // wading through deep snow
+      if (Math.abs(p.vx) > 0.3 && frame % 5 === 0) this.parts.push({ k: 'dust', x: p.x + p.w / 2 - p.face * 4, y: p.y + p.h - 2, vx: -p.face * 0.4, vy: -0.6, life: 14 });
+      if (d > SNOW_MAX * 0.7 && this.state === 'play' && !p.snowTip) { p.snowTip = true; this.parts.push({ k: 'text', s: 'DEEP SNOW! JUMP OR DASH', x: p.x - 40, y: p.y - 18, vy: -0.4, life: 90 }); }
+    }
+    if (p.riding && d > 0.5 && frame % 6 === 0) this.parts.push({ k: 'dust', x: p.x + p.w / 2, y: p.y + p.h - 2, vx: 0, vy: -0.5, life: 12 }); // Dino ploughs through
+  };
+  const clearSnow = (pl, x, r) => { if (!pl.snowD) return; for (let tx = Math.floor((x - r) / TS); tx <= Math.floor((x + r) / TS); tx++) if (tx >= 0 && tx < pl.lv.w) pl.snowD[tx] = 0; };
+  const _ex = Play.prototype.explode;
+  Play.prototype.explode = function (x, y) { _ex.call(this, x, y); clearSnow(this, x, 36); };
+  const _uf = Play.prototype.updateFires;
+  Play.prototype.updateFires = function () { _uf.call(this); for (const f of this.fires) if (!f.frost) clearSnow(this, f.x + 4, 8); };
+  const _dp = Play.prototype.drawPlayer;
+  Play.prototype.drawPlayer = function (cx) {
+    _dp.call(this, cx);
+    if (!this.snowD) return;
+    // snow drifts on every exposed ground top, drawn over feet so you wade through it
+    const t0 = Math.floor(cx / TS), shade = (frame >> 4) & 1;
+    for (let tx = t0; tx <= t0 + 16 && tx < this.lv.w; tx++) {
+      const d = this.snowD[tx]; if (!d || d < 0.4) continue;
+      const dl = this.snowD[tx - 1] || 0, dr = this.snowD[tx + 1] || 0, X = tx * TS - cx;
+      for (let ty = 1; ty < 14; ty++) {
+        if (!isTop(this, tx, ty)) continue;
+        const Y = ty * TS;
+        for (let i = 0; i < 16; i += 2) { const h = Math.round(d + (i < 8 ? (dl - d) * (8 - i) / 16 : (dr - d) * (i - 8) / 16) + Math.sin((tx * 16 + i) * 0.7) * 0.8); if (h <= 0) continue; ctx.fillStyle = '#f4f8ff'; ctx.fillRect(X + i, Y - h, 2, h); ctx.fillStyle = '#ffffff'; ctx.fillRect(X + i, Y - h, 2, 1); }
+        ctx.fillStyle = '#c8d8f0'; ctx.fillRect(X, Y - 1, 16, 1);
+        if (d > 5 && (tx + shade) % 5 === 0) { ctx.fillStyle = '#ffffff'; ctx.fillRect(X + 6, Y - Math.round(d) - 1, 2, 1); }
+      }
+    }
+  };
+}
