@@ -441,7 +441,7 @@ function GalleryScene() {
 }
 function OptionsScene() {
   const order = ['easy', 'normal', 'hard'];
-  const rows = ['DIFFICULTY', 'MUSIC', 'SOUND FX', 'SOUND', 'CRT FILTER', 'SCREEN SHAKE', 'RUMBLE', 'PET', 'BACK'];
+  const rows = ['DIFFICULTY', 'MUSIC', 'SOUND FX', 'SOUND', 'CRT FILTER', 'SCREEN SHAKE', 'RUMBLE', 'PET', 'WEATHER', 'BACK'];
   let sel = 0, t = 0;
   return {
     enter() { Audio8.play('menu'); },
@@ -457,15 +457,16 @@ function OptionsScene() {
       if (sel === 5 && tog) { Settings.set('shake', !Settings.get('shake')); Audio8.sfx('coin'); }
       if (sel === 6 && tog) { Settings.set('rumble', Settings.get('rumble') === false); Audio8.sfx('coin'); if (Settings.get('rumble') !== false) rumble(0.7, 200); }
       if (sel === 7 && tog) { Settings.set('pet', Settings.get('pet') === false); Audio8.sfx('coin'); }
-      if (Input.pressed('back') || (sel === 8 && (Input.pressed('jump') || Input.pressed('start')))) go(() => ExtrasScene());
+      if (sel === 8 && tog) { Settings.set('weather', Settings.get('weather') === false); Audio8.sfx('coin'); }
+      if (Input.pressed('back') || (sel === 9 && (Input.pressed('jump') || Input.pressed('start')))) go(() => ExtrasScene());
     },
     draw() {
       drawParallax('sky', t * 0.3);
       drawWindow(20, 20, 216, 180);
       txt('OPTIONS', 128, 28, '#ffe040', { align: 'center' });
-      const vals = [`< ${DIFF[Settings.get('difficulty')].name} >`, null, null, Audio8.isEnabled() ? 'ON' : 'OFF', Settings.get('crt') ? 'ON' : 'OFF', Settings.get('shake') ? 'ON' : 'OFF', Settings.get('rumble') !== false ? 'ON' : 'OFF', Settings.get('pet') !== false ? 'ON' : 'OFF', ''];
+      const vals = [`< ${DIFF[Settings.get('difficulty')].name} >`, null, null, Audio8.isEnabled() ? 'ON' : 'OFF', Settings.get('crt') ? 'ON' : 'OFF', Settings.get('shake') ? 'ON' : 'OFF', Settings.get('rumble') !== false ? 'ON' : 'OFF', Settings.get('pet') !== false ? 'ON' : 'OFF', Settings.get('weather') !== false ? 'ON' : 'OFF', ''];
       rows.forEach((r, i) => {
-        const y = 46 + i * 15, on = i === sel;
+        const y = 44 + i * 14, on = i === sel;
         if (on) txt('>', 30 + ((t >> 3) & 1), y, '#ffe040');
         txt(r, 40, y, on ? '#ffe040' : '#fff');
         if (i === 1 || i === 2) { const v = Math.round(Audio8.getVolume(i === 1 ? 'music' : 'sfx') * 5); for (let k = 0; k < 5; k++) { ctx.fillStyle = k < v ? '#5ff0ff' : '#3a3a58'; ctx.fillRect(150 + k * 9, y + 6 - k, 7, 2 + k); } } else if (vals[i]) txt(vals[i], 156, y, '#5ff0ff');

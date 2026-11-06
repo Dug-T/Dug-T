@@ -837,3 +837,85 @@ function ArtScene() {
     },
   };
 }
+
+// ---------- changing weather: clear, rain, thunderstorms and snow come and go ----------
+const WX_THEMES = ['grass', 'sky', 'beach', 'snow', 'candy', 'carnival', 'airship'];
+const WX_MSG = { clear: 'THE SKY CLEARS UP', rain: 'IT STARTS TO RAIN!', thunder: 'THUNDERSTORM!', snow: "IT'S SNOWING!" };
+function pickWeather(theme, not) {
+  const w = { clear: 3, rain: 3, thunder: 2, snow: theme === 'snow' ? 5 : theme === 'beach' ? 1 : 2 };
+  if (not) delete w[not];
+  let r = Math.random() * Object.values(w).reduce((a, b) => a + b, 0);
+  for (const k of Object.keys(w)) { r -= w[k]; if (r <= 0) return k; }
+  return 'clear';
+}
+{
+  const _upd = Play.prototype.update;
+  Play.prototype.update = function () {
+    if (this.wx === undefined) {
+      const on = Settings.get('weather') !== false && !this.def.weather && WX_THEMES.includes(this.def.theme) && !this.ta && !this.rush && !this.def.shmup && !this.def.minecart;
+      this.wx = on ? { cur: pickWeather(this.def.theme), amt: 0, want: null, timer: 600 + Math.floor(Math.random() * 900), flash: 0, baseIce: !!this.def.ice } : null;
+      if (this.wx) { this.def = Object.assign({}, this.def); this.wx.amt = this.wx.cur === 'clear' ? 0 : 1; }
+    }
+    _upd.call(this);
+    const w = this.wx;
+    if (!w || this.paused || this.talk) return;
+    // change every 15-30 seconds: fade the old weather out, then the new one in
+    if (this.state === 'play' && --w.timer <= 0 && !w.want) { w.want = pickWeather(this.def.theme, w.cur); w.timer = 900 + Math.floor(Math.random() * 900); }
+    if (w.want) { w.amt -= 0.012; if (w.amt <= 0) { w.amt = 0; w.cur = w.want; w.want = null; this.wxMsg = { s: WX_MSG[w.cur], t: 130 }; if (w.cur === 'thunder') Audio8.sfx('thunder'); } }
+    else if (w.cur !== 'clear' && w.amt < 1) w.amt = Math.min(1, w.amt + 0.012);
+    this.def.ice = w.baseIce || (w.cur === 'snow' && w.amt > 0.6);
+    // thunderstorms: flashes, and the odd lightning bolt striking near you (watch the warning)
+    if (w.flash > 0) w.flash--;
+    if (w.cur === 'thunder' && w.amt > 0.7 && this.state === 'play') {
+      if (frame % 260 === 0) { w.flash = 12; Audio8.sfx('thunder'); rumble(0.3, 150); }
+      if (frame % 420 === 210 && !this.bossLock && !this.arena) { const x = this.p.x + ((frame * 53) % 140) - 60; this.ents.push({ type: 'bolt', alive: true, t: 0, x, y: 0, w: 8, h: 8 }); }
+    }
+  };
+  const _rn = Play.prototype.rainNow;
+  Play.prototype.rainNow = function () { const w = this.wx; if (w) return w.cur === 'rain' || w.cur === 'thunder' ? w.amt * (w.cur === 'thunder' ? 1 : 0.8) : 0; return _rn.call(this); };
+  const _ue = Play.prototype.updateEnt;
+  Play.prototype.updateEnt = function (e) {
+    if (e.type !== 'bolt') return _ue.call(this, e);
+    if (this._p2ctx) return;
+    e.t++;
+    if (e.t === 1) { let y = 0; while (y < 13 && !SOLID.has(this.tile(Math.floor((e.x + 4) / TS), y))) y++; e.gy = y * TS; }
+    if (e.t === 60) {
+      Audio8.sfx('thunder'); this.shake = Math.max(this.shake, 8); if (this.wx) this.wx.flash = 8; rumble(0.6, 200);
+      for (let i = 0; i < 6; i++) this.parts.push({ k: 'spark', x: e.x + 4 + (i - 3) * 3, y: e.gy - 4, life: 14 });
+      const p = this.p; if (this.state === 'play' && Math.abs(p.x + p.w / 2 - (e.x + 4)) < 14 && p.y + p.h > e.gy - 60) this.hurt();
+    }
+    if (e.t > 72) e.alive = false;
+  };
+  const _de = Play.prototype.drawEnt;
+  Play.prototype.drawEnt = function (e, cx) {
+    if (e.type !== 'bolt') return _de.call(this, e, cx);
+    const x = Math.round(e.x - cx) + 4, gy = e.gy || 192;
+    if (e.t < 60) { if ((e.t >> 2) & 1) { ctx.fillStyle = 'rgba(255,240,120,0.8)'; ctx.fillRect(x - 7, gy - 2, 14, 2); ctx.fillRect(x - 1, gy - 8, 2, 4); } return; }
+    ctx.fillStyle = '#ffffff'; let bx = x;
+    for (let y = 0; y < gy; y += 6) { const nx = x + (((y * 7 + e.t) % 9) - 4); ctx.fillRect(Math.min(bx, nx), y, Math.abs(nx - bx) + 2, 6); bx = nx; }
+    ctx.fillStyle = 'rgba(255,255,160,0.6)'; ctx.fillRect(x - 3, 0, 6, gy);
+  };
+  const _dw = Play.prototype.drawWeather;
+  Play.prototype.drawWeather = function (cx) {
+    _dw.call(this, cx);
+    const w = this.wx; if (!w) return;
+    if (w.cur === 'thunder') { ctx.fillStyle = `rgba(10,10,30,${0.25 * w.amt})`; ctx.fillRect(0, 0, VW, VH); }
+    if (w.cur === 'snow' && w.amt > 0) {
+      ctx.save(); ctx.globalAlpha = w.amt; drawSnow(cx); ctx.fillStyle = 'rgba(230,240,255,0.12)'; ctx.fillRect(0, 0, VW, VH);
+      ctx.fillStyle = '#ffffff'; for (let i = 0; i < 30; i++) { const x = (((i * 89 - cx * 0.9 + Math.sin(frame * 0.03 + i) * 8) % VW) + VW) % VW, y = (i * 61 + frame * (0.6 + (i % 4) * 0.25)) % VH; ctx.fillRect(Math.round(x), Math.round(y), 2, 2); }
+      ctx.restore();
+    }
+    if (w.flash > 0) { ctx.fillStyle = `rgba(255,255,255,${w.flash / 16})`; ctx.fillRect(0, 0, VW, VH); }
+  };
+  const _dh = Play.prototype.drawHUD;
+  Play.prototype.drawHUD = function () {
+    _dh.call(this);
+    const w = this.wx; if (!w) return;
+    if (this.wxMsg && this.wxMsg.t > 0) { this.wxMsg.t--; txt(this.wxMsg.s, 128, 64, w.cur === 'thunder' ? '#ffe060' : w.cur === 'snow' ? '#e0f0ff' : w.cur === 'rain' ? '#a0c8ff' : '#ffe8a0', { align: 'center', outline: '#101848' }); }
+    if (w.cur === 'clear' && !w.want) return;
+    const x = 238, y = 26, k = w.want ? w.cur : w.cur;
+    ctx.fillStyle = 'rgba(16,24,72,0.7)'; ctx.fillRect(x - 2, y - 1, 16, 12);
+    if (k === 'snow') { ctx.fillStyle = '#ffffff'; ctx.fillRect(x + 5, y, 2, 9); ctx.fillRect(x + 1, y + 4, 10, 2); ctx.fillRect(x + 2, y + 1, 2, 2); ctx.fillRect(x + 8, y + 7, 2, 2); ctx.fillRect(x + 8, y + 1, 2, 2); ctx.fillRect(x + 2, y + 7, 2, 2); }
+    else if (k !== 'clear') { ctx.fillStyle = '#c8d0e0'; ctx.fillRect(x + 1, y + 2, 10, 4); ctx.fillRect(x + 3, y, 6, 2); ctx.fillStyle = k === 'thunder' ? '#ffe040' : '#80b8ff'; if (k === 'thunder') { ctx.fillRect(x + 5, y + 6, 2, 2); ctx.fillRect(x + 4, y + 8, 2, 2); } else { ctx.fillRect(x + 2, y + 7, 1, 2); ctx.fillRect(x + 6, y + 8, 1, 2); ctx.fillRect(x + 9, y + 7, 1, 2); } }
+  };
+}
