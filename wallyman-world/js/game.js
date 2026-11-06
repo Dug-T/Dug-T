@@ -1896,7 +1896,7 @@ class Play {
     if (this.rush) { if (t === 110) go(() => RushResult(false)); return; }
     if (this.daily) { if (t === 110) go(() => DailyResult(false, 0)); return; }
     if (t === 200 && !this.ta) {
-      game.lives--; Save.persist();
+      game.lives--; game.coins = 0; Save.persist();
       if (game.lives < 0) go(() => GameOverScene());
       else if (game.players === 2 && game.other && !game.other.out) go(() => nextTurn(() => MapScene()));
       else { const li = this.li, cp = this.cpHit; go(() => IntroScene(li, cp)); }
