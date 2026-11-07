@@ -18,18 +18,34 @@ function wrapText(s, n) {
 }
 
 // ---------------- Ko-fi tip jar button on the title screen ----------------
-const KOFI_RECT = { x: 186, y: 204, w: 68, h: 18 };
+const KOFI_RECT = { x: 180, y: 200, w: 68, h: 18 };
 const kofiName = () => String(window.WALLYMAN_KOFI || '').trim().replace(/^https?:\/\/(www\.)?ko-fi\.com\//i, '').replace(/[^A-Za-z0-9_-]/g, '');
 function drawTipJar(t) {
   if (!kofiName()) return;
-  const { x, y, w, h } = KOFI_RECT, hover = (t >> 4) & 1;
-  ctx.fillStyle = '#1a1020'; ctx.fillRect(x - 1, y - 1, w + 2, h + 2);
-  ctx.fillStyle = hover ? '#ff6a6a' : '#ff5e5b'; ctx.fillRect(x, y, w, h); ctx.fillStyle = '#ffffff'; ctx.fillRect(x, y, w, 1);
-  // coffee cup with a heart
+  const { x, y, w, h } = KOFI_RECT, cx = x + w / 2, cy = y + h / 2;
+  // gentle pulse: grows a little every 2 seconds, then eases back to normal size
+  const ph = t % 120, s = ph < 40 ? 1 + 0.12 * Math.sin((Math.PI * ph) / 40) : 1, glow = 0.35 + 0.25 * Math.sin(t * 0.1);
+  ctx.save();
+  ctx.translate(cx, cy); ctx.scale(s, s); ctx.translate(-cx, -cy);
+  // soft golden glow around the button
+  for (let k = 3; k >= 1; k--) { ctx.fillStyle = `rgba(255,220,90,${(glow * (4 - k)) / 8})`; ctx.fillRect(x - 1 - k * 2, y - 1 - k * 2, w + 2 + k * 4, h + 2 + k * 4); }
+  ctx.fillStyle = '#1a1020'; ctx.fillRect(x - 2, y - 2, w + 4, h + 4);
+  ctx.fillStyle = (t >> 3) & 1 ? '#ffe060' : '#ffc030'; ctx.fillRect(x - 1, y - 1, w + 2, h + 2);
+  const g = ctx.createLinearGradient(0, y, 0, y + h); g.addColorStop(0, '#ff8a80'); g.addColorStop(0.5, '#ff5e5b'); g.addColorStop(1, '#d83c40');
+  ctx.fillStyle = g; ctx.fillRect(x, y, w, h);
+  ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.fillRect(x + 1, y + 1, w - 2, 1);
+  // a shine that sweeps across the button
+  const sweep = (t * 2) % 200 - 30;
+  if (sweep < w + 20) { ctx.save(); ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip(); for (let yy = 0; yy < h; yy++) { ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.fillRect(x + sweep - yy * 0.6, y + yy, 6, 1); ctx.fillStyle = 'rgba(255,255,255,0.25)'; ctx.fillRect(x + sweep + 8 - yy * 0.6, y + yy, 3, 1); } ctx.restore(); }
+  // coffee cup with a heart, and rising steam
   ctx.fillStyle = '#ffffff'; ctx.fillRect(x + 4, y + 5, 10, 9); ctx.fillRect(x + 14, y + 7, 3, 1); ctx.fillRect(x + 16, y + 7, 1, 4); ctx.fillRect(x + 14, y + 10, 3, 1);
   ctx.fillStyle = '#ff5e5b'; ctx.fillRect(x + 6, y + 7, 2, 2); ctx.fillRect(x + 9, y + 7, 2, 2); ctx.fillRect(x + 6, y + 9, 5, 1); ctx.fillRect(x + 7, y + 10, 3, 1); ctx.fillRect(x + 8, y + 11, 1, 1);
-  if ((t >> 3) % 4 === 0) { ctx.fillStyle = '#ffffff'; ctx.fillRect(x + 7, y + 2, 1, 2); ctx.fillRect(x + 10, y + 1, 1, 2); }
-  txt('TIP JAR', x + 21, y + 6, '#fff', { shadow: '#a02020' });
+  const st = (t >> 3) % 4; ctx.fillStyle = '#ffffff'; ctx.fillRect(x + 7, y + 3 - (st & 1), 1, 2); ctx.fillRect(x + 10, y + 2 - ((st >> 1) & 1), 1, 2);
+  txt('TIP JAR', x + 21, y + 6, '#ffffff', { shadow: '#801820' });
+  ctx.restore();
+  // twinkling sparkles around the edges
+  const spark = (sx, sy, on) => { if (!on) return; ctx.fillStyle = '#fffbe0'; ctx.fillRect(sx, sy - 2, 1, 5); ctx.fillRect(sx - 2, sy, 5, 1); ctx.fillStyle = '#ffffff'; ctx.fillRect(sx, sy, 1, 1); };
+  spark(x - 4, y + 2, (t >> 4) % 3 === 0); spark(x + w + 3, y + h - 3, (t >> 4) % 3 === 1); spark(x + w - 10, y - 4, (t >> 4) % 3 === 2); spark(x + 12, y + h + 3, (t >> 4) % 3 === 1);
 }
 function openTipJar() {
   const name = kofiName(); if (!name) return;

@@ -109,7 +109,7 @@ With those set the table title reads **WORLD HIGH SCORES**. Without them (or off
 
 ## Tip jar (Ko-fi)
 
-Put your Ko-fi page name in `js/online-config.js` (`window.WALLYMAN_KOFI = 'yourname';`) and a **TIP JAR** button appears in the corner of the title screen. Clicking or tapping it opens `https://ko-fi.com/yourname` in a new tab. Leave it empty to hide the button.
+Put your Ko-fi page name in `js/online-config.js` (`window.WALLYMAN_KOFI = 'yourname';`) and a shiny, gently pulsing **TIP JAR** button appears in the corner of the title screen. Clicking or tapping it opens `https://ko-fi.com/yourname` in a new tab. Leave it empty to hide the button.
 
 ## Code layout
 
