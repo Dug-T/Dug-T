@@ -17,5 +17,20 @@ service cloud.firestore {
         && request.resource.data.done is bool;
       allow update, delete: if false;
     }
+    // Level Maker courses shared in Course World: anyone can read, upload a
+    // valid course, or add exactly one like; nobody can edit or delete.
+    match /levels/{id} {
+      allow read: if true;
+      allow create: if request.resource.data.keys().hasOnly(['name', 'author', 'code', 'likes', 'ts'])
+        && request.resource.data.name is string && request.resource.data.name.size() <= 16
+        && request.resource.data.author is string && request.resource.data.author.size() <= 10
+        && request.resource.data.code is string && request.resource.data.code.size() <= 6000
+        && request.resource.data.code.matches('^WMW1-[A-Za-z0-9+/]+$')
+        && request.resource.data.likes == 0
+        && request.resource.data.ts is int;
+      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes'])
+        && request.resource.data.likes == resource.data.likes + 1;
+      allow delete: if false;
+    }
   }
 }

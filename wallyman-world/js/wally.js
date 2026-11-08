@@ -354,7 +354,7 @@ const Wally = (() => {
     if (c) return c;
     if (variant === 'n') {
       const cos = hero === 'robo' ? 'robo' : hero === 'frost' ? 'frost' : costume;
-      if (face > 0) c = outline(hero === 'goth' || hero === 'frost' ? rigGoth(POSES[pose], capeF, signal, cos) : hero === 'doug' ? rigDoug(POSES[pose], capeF, signal, cos) : rig(POSES[pose], capeF, signal, cos), PAL0.ink);
+      if (face > 0) c = outline(api.extraHero && (hero === 'dino' || hero === 'baron') ? api.extraHero(hero, pose, capeF) : hero === 'goth' || hero === 'frost' ? rigGoth(POSES[pose], capeF, signal, cos) : hero === 'doug' ? rigDoug(POSES[pose], capeF, signal, cos) : rig(POSES[pose], capeF, signal, cos), PAL0.ink);
       else c = Sprites.flip(frame(pose, capeF, signal, 1, 'n', costume, hero));
     } else c = tint(frame(pose, capeF, signal, face, 'n', costume, hero), variant === 'w' ? '#ffffff' : variant === 'k' ? '#1a1020' : '#5ff0ff');
     cache.set(key, c);

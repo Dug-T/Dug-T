@@ -119,7 +119,7 @@ function LevelMakerScene(resume) {
   const P = Maker.PALETTE, W = Maker.W, H = Maker.H;
   let mode = resume ? 'edit' : 'slots', slot = resume ? resume.slot : 0, t = 0, msg = '', msgT = 0, menuSel = 0, held = {};
   let lv = resume ? Maker.slots[slot] : null, cur = resume ? resume.cur : { x: 2, y: 10, pal: 0 }, camX = resume ? resume.camX : 0;
-  const MENU = ['PLAY TEST', 'SAVE', 'THEME', 'BOSS', 'COPY AREA', 'SHARE CODE', 'LOAD CODE', 'CLEAR ALL', 'SAVE AND EXIT'];
+  const MENU = ['PLAY TEST', 'SAVE', 'THEME', 'BOSS', 'COPY AREA', 'SHARE CODE', 'LOAD CODE', 'UPLOAD ONLINE', 'CLEAR ALL', 'SAVE AND EXIT'];
   let selA = null;
   const TILESET = '#BWPSOAVQDXR=^LJ<>oNTEY~';
   const say = (s) => { msg = s; msgT = 120; };
@@ -167,7 +167,7 @@ function LevelMakerScene(resume) {
         const lr = (Input.pressed('right') ? 1 : 0) - (Input.pressed('left') ? 1 : 0);
         if (menuSel === 2 && lr) { const L = Maker.THEME_LIST, i = L.indexOf(lv.theme); lv.theme = L[(i + lr + L.length) % L.length]; Audio8.play(lv.theme); Audio8.sfx('select'); }
         if (menuSel === 3 && lr) { const B = Maker.BOSSES, i = Math.max(0, B.findIndex((b) => b[0] === (lv.boss || ''))); lv.boss = B[(i + lr + B.length) % B.length][0]; Audio8.sfx('select'); }
-        if (Input.pressed('back') || (Input.pressed('start') && ![0, 8].includes(menuSel))) { mode = 'edit'; return; }
+        if (Input.pressed('back') || (Input.pressed('start') && ![0, 9].includes(menuSel))) { mode = 'edit'; return; }
         if (Input.pressed('jump') || Input.pressed('start')) {
           const S = MENU[menuSel];
           if (S === 'PLAY TEST') { mode = 'edit'; playTest(); } else if (S === 'SAVE') { save(); say('SAVED!'); Audio8.sfx('check'); mode = 'edit'; } else if (S === 'THEME') {
@@ -176,6 +176,12 @@ function LevelMakerScene(resume) {
           else if (S === 'COPY AREA') { mode = 'sel'; selA = null; say('A: PICK ONE CORNER'); }
           else if (S === 'SHARE CODE') { mode = 'dom'; codeBox('LEVEL CODE - SHARE IT!', Maker.encode(lv), null, () => { mode = 'edit'; }); }
           else if (S === 'LOAD CODE') { mode = 'dom'; codeBox('PASTE A LEVEL CODE', '', (code) => { const d = Maker.decode(code); if (!d) return false; lv = d; Audio8.play(lv.theme); say('LEVEL LOADED!'); return true; }, () => { mode = 'edit'; }); }
+          else if (S === 'UPLOAD ONLINE') {
+            if (!OnlineCourses.on) { say('NEEDS FIREBASE SETUP'); mode = 'edit'; Audio8.sfx('bump'); } else if (count('G') === 0 && lv.boss !== 'K' && lv.boss !== 'k') { say('PLACE A GOAL FIRST!'); mode = 'edit'; } else {
+              mode = 'dom'; save();
+              textBox('NAME YOUR COURSE', 'MY COOL COURSE', (name) => { mode = 'edit'; if (!name) return; say('UPLOADING...'); OnlineCourses.upload(Maker.encode(lv), name, localStorage.getItem('wallyman-world-lastname') || HEROES[heroOf()].short || 'PLAYER').then(() => { say('UPLOADED! SEE COURSE WORLD'); Audio8.sfx('oneup'); }, () => { say('UPLOAD FAILED'); Audio8.sfx('bump'); }); });
+            }
+          }
           else if (S === 'CLEAR ALL') { const th = lv.theme; lv = Maker.blank(th); say('ALL CLEAR!'); mode = 'edit'; } else { save(); go(() => ExtrasScene()); }
         }
         return;
@@ -254,10 +260,10 @@ function LevelMakerScene(resume) {
       txt(lv.theme.toUpperCase(), 170, 3, '#80e0ff', { align: 'right' });
       if (msgT > 0) { drawWindow(40, 96, 176, 24); txt(msg, 128, 104, '#fff', { align: 'center' }); }
       if (mode === 'menu') {
-        drawWindow(44, 30, 168, 140);
+        drawWindow(44, 26, 168, 154);
         txt('MAKER MENU', 128, 37, '#ffe040', { align: 'center' });
         MENU.forEach((s, i) => {
-          const y = 52 + i * 12, label = i === 2 ? `THEME: ${lv.theme.toUpperCase()}` : i === 3 ? `BOSS: ${Maker.BOSSES.find((b) => b[0] === (lv.boss || ''))[1]}` : s;
+          const y = 48 + i * 12, label = i === 2 ? `THEME: ${lv.theme.toUpperCase()}` : i === 3 ? `BOSS: ${Maker.BOSSES.find((b) => b[0] === (lv.boss || ''))[1]}` : s;
           txt(label, 64, y, i === menuSel ? '#ffe040' : '#fff');
           if (i === menuSel) txt('>', 54 + ((t >> 3) & 1), y, '#ffe040');
         });

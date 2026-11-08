@@ -37,6 +37,22 @@ Open `index.html` in any modern browser — or enable **GitHub Pages** for this 
 - **Signal Bars** – three per level, tucked away in the highest nooks. They're saved when you clear the level and shown in the HUD; collect all three for **FULL SIGNAL**: +3 specials, a 1-UP and a trophy.
 - **Time Attack ghost** – your best run in each level is recorded, and a see-through ghost of it races you next time.
 - **Level Maker** (Extras → Level Maker) – build your own 120-tile course in any of the 13 themes, with every block, hazard, enemy and item. D-pad moves the cursor, A places (hold to paint), B erases, S picks the next item (B+S the previous one), START opens the menu (Play Test, Save, Theme, Clear All, Save and Exit). Three courses are kept on your device, and play-testing drops you straight back into the editor. New tools: **water zones** (swim inside them), **dark zones**, a **boss at the end** (any boss or mini-boss), **COPY AREA** then paste with A, and **share codes**: SHARE CODE shows a short text code to send to friends, LOAD CODE plays theirs.
+- **The Lost Lands** – a fourth island, reached by boat from Carnival Isle after beating the Ringmaster:
+  - **Vine Temple** – climb vines (press Up), ride a **zipline**, dodge **dart traps**, get fired from a **barrel cannon** (press Jump to launch), then outrun a **giant rolling boulder**.
+  - **Golem Sanctum** – **on/off switch blocks** (hit the switch to swap which coloured blocks are solid), then the **Stone Golem**, who slams the ground (jump the shockwaves) and throws rocks; stomp the glowing gem on its head while it is stunned.
+  - **Dune Drift** – **sandstorms** that push you around, **quicksand** that slowly sinks you (mash Jump to struggle out), **cacti** that fire needles, and a **portal** pair.
+  - **Sandworm Pit** – the **Sandworm** burrows after you, bursts out of the sand and spits sand balls; stomp its head while it is up.
+  - **Lava Tower** and **Flood Tower** – vertical climbs, room by room, while lava or floodwater rises behind you. Underwater you can swim, but watch your air bubbles.
+- **The Static Dimension** – a glitching secret world on the Lost Lands map, unlocked by finding **all 3 secret keys** and earning **25 stars**. It has **gravity-flip zones** (you fall upward and walk on the ceiling – press Jump to drop), switches, portals, ziplines, and the true final boss, the **Static Emperor**, who uses lightning strikes, a sweeping laser, ground-pound shockwaves and bouncing balls. Stomp him when he is dizzy.
+- **Two more secret heroes**: **Dino** (unlock by beating Baron Static at the Static Tower) – B is a tongue-grab and holding Jump makes him flutter; and **Baron Static** himself (unlock by beating him in New Game+) – he hovers on static and his special zaps the three nearest enemies.
+- **Versus mode** (Challenges) – **Race**: a split-screen dash to the goal with a progress bar; **Battle**: a one-screen arena where cannonball blasts and head-stomps knock hearts off your rival. Player 2 uses WASD + F G H or a second gamepad.
+- **Course World** (Extras) – upload Level Maker courses (Maker menu → UPLOAD ONLINE), browse the newest or most-liked courses, play them and like them. This switches on with the same Firebase settings as the worldwide high scores (see the new `levels` rules in `firestore.rules`).
+- **Save codes** – Dino's House → SAVE CODE gives a code with your whole save file; Extras → IMPORT SAVE loads it into any file on another device.
+- **New mini-games** in Dino's House: **Fishing** (time your cast, hook on the bite, then hold A to reel while keeping the line tension in the green – look out for the Golden Carp) and a **Kart Race** around Wally Island against three rivals.
+- **Photo mode** – pause → PHOTO MODE: place stickers (A), switch sticker (S), choose a frame (B), and press START to save a picture.
+- **Seasonal events** – Halloween (pumpkins, bats and witch hats on Grumbles), Christmas (snowfall, Santa hats and presents instead of ? blocks) and WallyMan's birthday on 2 November (confetti and a cake). Options → EVENTS turns them off.
+- **Assist mode** (Options → ASSIST): SLOW (75% speed), HEARTS (never run out of hearts, and a safe catch if you fall into a pit), WIDE (wider platforms and narrower gaps), or ALL.
+- **Control remapping** (Options → CONTROLS) – press A on an action and then the key you want, or S and a gamepad button; RESET TO DEFAULTS puts everything back.
 - **Changing weather** – outdoor levels (grassland, sky, beach, snow, candy, carnival and airship worlds) randomly switch between clear skies, **rain**, **thunderstorms** and **snow** every 15–30 seconds, with a banner and a weather icon in the corner. Thunderstorms darken the sky with lightning flashes and the odd **lightning bolt** that strikes near you (a yellow mark flashes on the ground first – move!). Snow **piles up on the ground** as it falls (each patch of ground fills up a little differently); deep snow makes walking slow and heavy, so jump, dash or ride Dino through it. Rain melts it, and cannonball blasts and Fire Dino's fireballs clear it away. Turn it off in Options → WEATHER.
 - **Carnival Isle** – a third island, reached by ferry from Star Isle after beating the Mothership MK II (with a comic cutscene the first time you visit each new island):
   - **Funfair Midway** – ride rotating **Ferris wheel** gondolas and swing on grappling rings.
@@ -76,7 +92,7 @@ Open `index.html` in any modern browser — or enable **GitHub Pages** for this 
 - **Costumes** – visit the **Wardrobe** in Dino's Shop at Wally's House. Seven outfits: Classic, Wally Jr, Golden (find 20 Wally Medals), Ice (clear Frosty Peaks), Dino Suit (clear Coral Depths), Shadow (clear Haunted Manor) and Fire (beat Baron Static).
 - **Difficulty** (Extras → Options): Easy (3 hearts, 50% more time, slower enemies, weaker bosses), Normal, or Hard (1 heart, less time, faster enemies, tougher bosses).
 - **Star rankings** – up to 3 stars per level: finish with 40% of the time left, have all 5 medals, and take no hits. Stars show on the clear screen, the map and the level intro.
-- **Trophies** – 32 achievements (first clear, flawless boss, Dino rider, UFO hunter, secret exits, three stars and more) with pop-up notifications and a **Trophy Room**.
+- **Trophies** – 39 achievements (first clear, flawless boss, Dino rider, UFO hunter, secret exits, three stars and more) with pop-up notifications and a **Trophy Room**.
 - **Extras menu** – Trophy Room, **Jukebox** (play every song), **Gallery** (heroes, enemies, bosses and items) and **Options** (difficulty, music/sound volume, sound on/off, **CRT retro-TV filter**, screen shake).
 - **Hidden secrets** – an invisible block in most levels (jump into empty air to find a 1-UP) and cracked walls that crumble into coins when blasted, chomped, shocked or ground-pounded.
 - **High score table** – when a run ends (game over or beating the game) a top-10 score lets you enter your name arcade-style (D-pad + A, or just type). Scores are kept in the browser; when the game runs as a claude.ai artifact they are also shared through its database for players allowed to save there.
@@ -126,5 +142,7 @@ js/game.js          engine: input, physics, enemies, scenes, HUD
 js/maker.js         the Level Maker editor
 js/extra.js         challenges, cutscenes, splits, day/night and 2-player co-op
 js/batche.js        Carnival Isle, new enemies, pets, upgrades, Dino's House, mini-games, missions, Endless Run, art
+js/batchf.js        Lost Lands, Static Dimension, vines, ziplines, cannons, portals, towers, new bosses and heroes, events, assist
+js/batchf2.js       photo mode, versus, fishing, kart racing, Course World, save codes, options and controls
 assets/             pixelated WallyMan, GothChick and Doug Thomson portraits (title, character select, ending)
 ```

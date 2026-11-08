@@ -172,6 +172,24 @@ const Audio8 = (() => {
       chords: 'C Am F G C Am F C',
       mel: 'E5/4 G5/4 C6/4 B5/4 | A5/6 G5/2 E5/8 | F5/4 A5/4 C6/4 E6/4 | D6/12 r/4 | E5/4 G5/4 C6/4 D6/4 | E6/6 D6/2 C6/8 | A5/4 G5/4 F5/4 A5/4 | G5/16',
     },
+    jungle: {
+      bpm: 132, swing: 0.25, bass: 'bounce', harm: 'stab', drums: 'k..sk.s.k..sk.ss', lead: 'p25',
+      chords: 'Am Am G G F F G E',
+      mel: 'A4/2 C5/2 E5/2 A5/2 G5/4 E5/4 | D5/2 E5/2 G5/2 D5/2 B4/8 | C5/2 F5/2 A5/2 C6/2 B5/4 A5/4 | G5/4 E5/4 G#5/8 |' +
+        'A5/2 G5/2 E5/2 C5/2 D5/2 E5/2 A4/4 | G4/2 B4/2 D5/2 G5/2 F5/4 D5/4 | C5/2 E5/2 F5/2 A5/2 G5/2 F5/2 E5/4 | E5/12 r/4',
+    },
+    desert: {
+      bpm: 120, swing: 0.15, bass: 'sparse', harm: 'pad', drums: 'k...s.k.k...s...', lead: 'p25',
+      chords: 'Dm Dm C C Bb Bb A A',
+      mel: 'D5/2 E5/2 F5/2 A5/2 G#5/4 A5/4 | F5/2 E5/2 D5/2 C#5/2 D5/8 | A4/2 D5/2 F5/2 G5/2 A5/4 Bb5/4 | A5/4 G5/4 F5/2 E5/2 C#5/4 |' +
+        'D5/2 F5/2 A5/2 D6/2 C6/4 Bb5/4 | A5/2 G5/2 F5/2 E5/2 F5/8 | G5/2 F5/2 E5/2 D5/2 C#5/2 E5/2 A4/4 | D5/12 r/4',
+    },
+    static: {
+      bpm: 176, swing: 0, bass: 'drive', harm: 'stab', drums: 'kshskshskshskhss', lead: 'p12',
+      chords: 'Em Em C D Em Em C B',
+      mel: 'E5/1 E5/1 G5/2 B5/2 E6/2 D6/2 B5/2 G5/4 | A5/2 C6/2 B5/2 A5/2 G5/4 F#5/4 | E5/2 G5/2 B5/2 E6/2 F#6/2 E6/2 D6/2 B5/2 | C6/4 B5/4 A5/4 F#5/4 |' +
+        'G5/2 B5/2 E6/2 B5/2 G5/2 E5/2 B4/4 | C5/2 E5/2 A5/2 C6/2 B5/4 A5/4 | G5/2 F#5/2 E5/2 D5/2 C5/2 B4/2 C5/2 D5/2 | E5/12 r/4',
+    },
     carnival: {
       bpm: 168, swing: 0.4, bass: 'bounce', harm: 'stab', drums: 'k.hsk.hsk.hsk.hs', lead: 'p25',
       chords: 'C G G C C G G C F C G C',

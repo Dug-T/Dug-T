@@ -183,6 +183,9 @@ const Sprites = (() => {
     factory: { top: ['#9aa0b0', '#5a6070', '#d0d4e0'], dirt: ['#5a6070', '#3a4050', '#7a8090'], brick: ['#c08030', '#6a4010', '#f0b050'], solid: ['#7a8090', '#3a4050', '#b0b8c8'], plank: ['#e0b030', '#6a5010', '#fff070'] },
     candy: { top: ['#ff90c8', '#d04890', '#ffd8ec'], dirt: ['#b06838', '#7a4018', '#d89058'], brick: ['#ff6080', '#c02850', '#ffb0c0'], solid: ['#80d8ff', '#3a90c8', '#d0f0ff'], plank: ['#ffffff', '#ff70a0', '#ffffff'] },
     moon: { top: ['#d0d0d8', '#80808e', '#f4f4fa'], dirt: ['#9a9aa8', '#6a6a78', '#b8b8c4'], brick: ['#7a7a90', '#4a4a5a', '#a8a8c0'], solid: ['#a0a8c0', '#5a6078', '#d0d8f0'], plank: ['#8890a8', '#4a5068', '#c0c8e0'] },
+    jungle: { top: ['#4ac040', '#1e7a28', '#9af07a'], dirt: ['#7a5a3a', '#4a3420', '#9a7a50'], brick: ['#8a8a6a', '#4a4a38', '#b8b890'], solid: ['#7a8a6a', '#3a4a30', '#a8b890'], plank: ['#9a6a3a', '#5a3a1a', '#c09050'] },
+    desert: { top: ['#f0c870', '#c09040', '#fff0b0'], dirt: ['#d8a058', '#a87030', '#f0c080'], brick: ['#c87848', '#884020', '#f0a070'], solid: ['#c8a878', '#8a6a40', '#f0d8a8'], plank: ['#a07040', '#604020', '#c89050'] },
+    static: { top: ['#a040ff', '#40108a', '#e0a0ff'], dirt: ['#2a1a4a', '#140a28', '#4a2a7a'], brick: ['#30d0c0', '#106a70', '#a0fff0'], solid: ['#5a5a7a', '#2a2a40', '#a0a0c8'], plank: ['#ff40a0', '#8a1050', '#ffa0d0'] },
     carnival: { top: ['#e83850', '#8a1830', '#ffb0b8'], dirt: ['#5a2a6a', '#3a1648', '#7a4a8a'], brick: ['#ffd040', '#b08010', '#fff0a0'], solid: ['#40a0e8', '#1a5a98', '#a0d8ff'], plank: ['#ffffff', '#e83850', '#ffffff'] },
     castle: { top: ['#8a8a9a', '#4a4a5a', '#b8b8c8'], dirt: ['#5a5a6a', '#3a3a48', '#7a7a8a'], brick: ['#8a4a5a', '#4a2030', '#b87a8a'], solid: ['#7a7a8a', '#3a3a4a', '#aaaabb'], plank: ['#6a4a30', '#3a2818', '#9a7050'] },
   };
@@ -692,6 +695,36 @@ const Sprites = (() => {
   };
   for (const k of Object.keys(more2)) { S.bg[k].layers.push(...more2[k]); S.bg[k].layers.sort((a, b) => a.f - b.f); }
 
+
+  // ---- Lost Lands: jungle, desert, and the Static Dimension ----
+  S.bg.jungle = { sky: gradient('#3a8a6a', '#c8f0a0'), layers: [
+    L(0.02, (x) => { disc(x, 400, 50, 18, '#fff4c0'); }),
+    L(0.05, (x) => peaks(x, 150, 70, 90, '#3a6a5a', null, 601)),
+    L(0.12, (x) => { for (let k = 0; k < 3; k++) { const tx = 80 + k * 170; x.fillStyle = '#4a6a4a'; x.fillRect(tx, 110, 50, 114); for (let s = 0; s < 4; s++) x.fillRect(tx + 5 + s * 3, 102 - s * 8, 40 - s * 6, 8); x.fillStyle = '#2a4a3a'; x.fillRect(tx + 20, 150, 10, 16); } }),
+    L(0.2, (x) => { for (let i = 0; i < 512; i++) { const h = Math.round(140 + Math.sin(i * 0.03) * 12 + Math.sin(i * 0.11) * 5); x.fillStyle = '#2a7a3a'; x.fillRect(i, h, 1, 224 - h); } }),
+    L(0.3, (x) => { const r = rng(602); for (let k = 0; k < 14; k++) { const tx = (k * 37 + r() * 10) | 0; x.fillStyle = '#5a3a20'; x.fillRect(tx, 120, 4, 104); for (let a = 0; a < 5; a++) { const ang = -2.6 + a * 0.55; for (let s = 0; s < 18; s++) { x.fillStyle = '#2e9a3a'; x.fillRect(Math.round(tx + 2 + Math.cos(ang) * s), Math.round(118 + Math.sin(ang) * s * 0.7 + s * s * 0.03), 3, 2); } } } }),
+    L(0.42, (x) => { x.fillStyle = '#1e6a2a'; for (let k = 0; k < 40; k++) { const vx = k * 13 + 4; for (let y = 0; y < 30 + (k * 17) % 50; y++) x.fillRect(vx + Math.round(Math.sin(y * 0.15 + k) * 2), y, 1, 1); } }),
+    L(0.55, (x) => motes(x, 40, ['#ffff80', '#c0ff80'], 60, 200, 1, 603), 0.05),
+    L(0.65, (x) => { const r = rng(604); for (let k = 0; k < 16; k++) { const fx = (r() * 500) | 0; for (let s = 0; s < 6; s++) { x.fillStyle = s % 2 ? '#3aaa4a' : '#2a8a3a'; x.fillRect(fx + s * 2, 200 - s * 3, 10 - s, 3); x.fillRect(fx - s * 2, 200 - s * 3, 10 - s, 3); } } }),
+    L(0.9, (x) => { const r = rng(605); for (let k = 0; k < 12; k++) { const lx = (r() * 500) | 0; x.fillStyle = '#145a1e'; for (let s = 0; s < 14; s++) x.fillRect(lx + s, 224 - Math.round(Math.sin((s / 14) * Math.PI) * 20), 1, 20); } }),
+  ] };
+  S.bg.desert = { sky: gradient('#f0a050', '#ffe8b0'), layers: [
+    L(0.02, (x) => { disc(x, 380, 60, 26, '#fff0a0'); disc(x, 380, 60, 34, 'rgba(255,240,160,0.25)'); }),
+    L(0.06, (x) => { for (const [px, w] of [[90, 60], [300, 90]]) for (let y = 0; y < w; y++) { x.fillStyle = y % 6 < 1 ? '#c8905a' : '#e0a868'; x.fillRect(px - Math.round(w - y), 160 - y, Math.round((w - y) * 2), 1); } }),
+    L(0.15, (x) => { for (let i = 0; i < 512; i++) { const h = Math.round(165 + Math.sin(i * 0.02) * 10 + Math.sin(i * 0.05 + 1) * 5); x.fillStyle = '#e8b870'; x.fillRect(i, h, 1, 224 - h); x.fillStyle = '#f8d090'; x.fillRect(i, h, 1, 2); } }),
+    L(0.28, (x) => { const r = rng(611); for (let k = 0; k < 8; k++) { const cx = (r() * 480) | 0, h = 30 + ((r() * 20) | 0); x.fillStyle = '#3a8a3a'; x.fillRect(cx, 196 - h, 6, h); x.fillRect(cx - 6, 196 - h + 10, 6, 4); x.fillRect(cx - 6, 196 - h + 2, 3, 10); x.fillRect(cx + 6, 196 - h + 16, 6, 4); x.fillRect(cx + 9, 196 - h + 6, 3, 12); } }),
+    L(0.4, (x) => { for (let i = 0; i < 512; i++) { const h = Math.round(186 + Math.sin(i * 0.035 + 2) * 8); x.fillStyle = '#d89a50'; x.fillRect(i, h, 1, 224 - h); } }),
+    L(0.55, (x) => { const r = rng(612); for (let k = 0; k < 5; k++) { const sx = (r() * 480) | 0; x.fillStyle = '#e8e0d0'; x.fillRect(sx, 206, 10, 3); x.fillRect(sx + 2, 203, 2, 3); x.fillRect(sx + 7, 204, 4, 2); } }),
+    L(0.75, (x) => motes(x, 50, ['#f8e0a0', '#e0b070'], 100, 224, 1, 613), 0.5),
+  ] };
+  S.bg.static = { sky: gradient('#10001a', '#3a0a5a'), layers: [
+    L(0.01, (x) => motes(x, 90, ['#ff40ff', '#40ffff', '#ffffff'], 0, 224, 1, 621)),
+    L(0.04, (x) => { for (let k = 0; k < 18; k++) { x.fillStyle = k % 2 ? 'rgba(255,60,200,0.15)' : 'rgba(60,255,240,0.15)'; x.fillRect(0, 10 + k * 12, 512, 3); } }),
+    L(0.1, (x) => { const r = rng(622); for (let k = 0; k < 24; k++) { const bx = (r() * 500) | 0, by = (r() * 180) | 0, w = 8 + ((r() * 30) | 0); x.fillStyle = ['#ff40c0', '#40e0ff', '#a040ff', '#ffffff'][k % 4]; x.globalAlpha = 0.35; x.fillRect(bx, by, w, 4 + ((r() * 8) | 0)); x.globalAlpha = 1; } }),
+    L(0.2, (x) => { for (let i = 0; i < 512; i += 2) { const h = 120 + ((i * 7919) % 60); x.fillStyle = '#1a0a3a'; x.fillRect(i, h, 2, 224 - h); if (i % 16 === 0) { x.fillStyle = '#40ffe0'; x.fillRect(i, h - 2, 2, 2); } } }),
+    L(0.35, (x) => { for (let k = 0; k < 6; k++) { const tx = k * 90 + 20; x.fillStyle = '#2a1a4a'; x.fillRect(tx, 100, 30, 124); x.fillStyle = '#100820'; x.fillRect(tx + 3, 104, 24, 18); x.fillStyle = k % 2 ? '#ff40c0' : '#40ffe0'; for (let y = 0; y < 18; y += 3) x.fillRect(tx + 4, 105 + y, 22, 1); } }),
+    L(0.6, (x) => motes(x, 40, ['#ff60ff', '#60ffff'], 0, 224, 2, 623), 0.4),
+  ] };
   // ---- Carnival Isle ----
   S.bg.carnival = { sky: gradient('#1a0a3a', '#d05a8a'), layers: [
     L(0.01, (x) => motes(x, 70, ['#ffffff', '#ffe0a0'], 0, 120, 1, 501)),

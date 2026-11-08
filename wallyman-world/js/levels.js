@@ -426,10 +426,102 @@ const LEVELS = [
       b.set(72, 11, 'G');
     },
   },
+  // ================= Lost Lands (world 4) and the Static Dimension =================
+  {
+    name: 'VINE TEMPLE', theme: 'jungle', music: 'jungle', width: 200, ziplines: [[29, 4, 45, 8]],
+    powerups: [['H', 50], ['E', 120]],
+    extras: [['p', 12], ['g', 50], ['2', 70], ['h', 104], ['g', 132], ['3', 180]],
+    build(b) {
+      b.ground(0, 30).set(2, 11, '@').row(18, 3, 'XXXX').fill(19, 4, 19, 11, '|').coins(18, 1, 4).row(27, 4, 'XXX');
+      b.ground(46, 80).fill(60, 6, 61, 11, 'X').set(62, 8, 'd').set(66, 9, 'C').row(70, 8, 'BWB').set(78, 11, '0');
+      b.ground(97, 170).set(112, 11, '9').fill(160, 5, 161, 11, 'X').fill(158, 4, 158, 11, '|').row(150, 7, 'WOW');
+      b.ground(171, 199).set(192, 11, 'G');
+    },
+  },
+  {
+    name: 'GOLEM SANCTUM', theme: 'jungle', music: 'jungle', width: 130, boss: true, bossHp: 6, bossName: 'STONE GOLEM', bossType: 'golem', talk: 'golem',
+    bossMsg: ['THE STONE GOLEM CRUMBLES!', '', 'A SECRET PATH OPENS', 'TOWARD THE DESERT DUNES.'],
+    extras: [['g', 20], ['2', 40], ['p', 60], ['3', 80]],
+    build(b) {
+      b.ground(0, 129).set(2, 11, '@').fill(20, 8, 22, 8, '[').set(24, 8, '{').fill(26, 8, 28, 8, ')').fill(30, 5, 32, 5, ')').coins(30, 3, 3);
+      b.fill(40, 2, 40, 10, '|').row(39, 1, 'XXX').set(50, 9, 'C').row(58, 8, 'BWB').fill(70, 9, 71, 11, 'X').fill(75, 7, 76, 11, 'X').fill(80, 9, 81, 11, 'X');
+      b.set(124, 10, '*');
+    },
+  },
+  {
+    name: 'DUNE DRIFT', theme: 'desert', music: 'desert', width: 200, weather: 'sandstorm', portals: [[60, 10, 104, 4]],
+    powerups: [['V', 40], ['N', 90], ['E', 150]],
+    extras: [['8', 24], ['2', 50], ['g', 80], ['8', 118], ['p', 130], ['8', 164], ['u', 100]],
+    build(b) {
+      b.ground(0, 30).set(2, 11, '@').row(12, 8, 'BWB');
+      b.fill(31, 10, 40, 13, '$').ground(41, 70).set(60, 11, '.').row(48, 8, 'WSW');
+      b.fill(71, 12, 84, 13, '$').fill(71, 10, 84, 11, '$').ground(85, 96).set(88, 9, 'C');
+      b.row(100, 6, 'XXXXXXXX').coins(100, 4, 8);
+      b.ground(110, 150).fill(130, 10, 136, 11, '$').fill(130, 12, 136, 13, '#');
+      b.fill(151, 9, 162, 13, '$').ground(163, 199).stairsUp(176, 3).set(190, 11, 'G');
+    },
+  },
+  {
+    name: 'SANDWORM PIT', theme: 'desert', music: 'desert', width: 120, boss: true, bossHp: 6, bossName: 'SANDWORM', bossType: 'sandworm', talk: 'sandworm',
+    bossMsg: ['THE SANDWORM BURROWS AWAY', 'FOR GOOD!', '', 'TWO TOWERS RISE OVER', 'THE HORIZON...'],
+    extras: [['8', 20], ['g', 40], ['8', 62]],
+    build(b) {
+      b.ground(0, 119).set(2, 11, '@').fill(26, 10, 34, 11, '$').fill(26, 12, 34, 13, '#').row(44, 8, 'BWB').set(56, 9, 'C').fill(64, 9, 65, 11, 'X');
+      b.set(112, 11, '*');
+    },
+  },
+  { name: 'LAVA TOWER', theme: 'volcano', music: 'volcano', width: 16, noAuto: true, tower: { screens: 7, hazard: 'lava', seed: 7 }, build(b) { towerBuild(b, this, 0); } },
+  { name: 'FLOOD TOWER', theme: 'water', music: 'water', width: 16, noAuto: true, tower: { screens: 7, hazard: 'water', seed: 13 }, build(b) { towerBuild(b, this, 0); } },
+  {
+    name: 'GLITCH FIELDS', theme: 'static', music: 'static', width: 200, glitch: true, portals: [[46, 10, 96, 3]],
+    powerups: [['E', 30], ['H', 120]],
+    extras: [['4', 20], ['3', 40], ['2', 70], ['8', 110], ['1', 130], ['u', 150], ['4', 170]],
+    build(b) {
+      b.ground(0, 40).set(2, 11, '@').fill(20, 3, 30, 10, ':').fill(20, 0, 30, 1, '#').coins(22, 3, 6);
+      b.ground(41, 70).set(55, 8, '{').fill(58, 9, 62, 9, '[').fill(64, 6, 68, 6, ')').set(60, 11, 'C');
+      b.row(94, 5, 'XXXXXX').ground(100, 140).fill(110, 2, 124, 10, ':').fill(110, 0, 124, 1, 'X').row(114, 2, 'WOW');
+      b.ground(141, 199).set(150, 11, '0').fill(160, 6, 161, 11, 'X').set(190, 11, 'G');
+    },
+  },
+  {
+    name: 'NULL VOID', theme: 'static', music: 'static', width: 200, glitch: true, ziplines: [[36, 3, 60, 8], [118, 2, 140, 7]],
+    powerups: [['V', 60], ['T', 150]],
+    extras: [['3', 20], ['4', 45], ['2', 80], ['8', 100], ['1', 125], ['u', 140], ['3', 160]],
+    build(b) {
+      b.ground(0, 34).set(2, 11, '@').fill(26, 4, 34, 11, 'X').fill(24, 4, 24, 11, '|');
+      b.ground(62, 110).set(66, 8, '{').fill(70, 8, 74, 8, ')').fill(77, 5, 81, 5, '[').set(90, 11, '0').set(80, 11, 'C');
+      b.fill(111, 2, 116, 11, 'X').fill(110, 2, 110, 11, '|');
+      b.ground(142, 199).fill(150, 2, 162, 10, ':').fill(150, 0, 162, 1, '#').row(152, 2, 'BOB').set(190, 11, 'G');
+    },
+  },
+  {
+    name: 'THE CORE', theme: 'static', music: 'static', width: 120, glitch: true, boss: true, bossHp: 12, bossName: 'STATIC EMPEROR', bossType: 'emperor', talk: 'emperor', final2: true,
+    bossMsg: ['THE STATIC EMPEROR IS BEATEN!', '', 'EVERY ISLAND, EVERY WORLD', 'AND EVERY DIMENSION NOW', 'HAS FULL SIGNAL FOREVER.', '', 'YOU ARE THE TRUE HERO!'],
+    extras: [['4', 30], ['3', 50], ['2', 70]],
+    build(b) {
+      b.ground(0, 119).set(2, 11, '@').set(40, 9, 'C').row(50, 8, 'WEW').row(104, 8, '===').row(112, 8, '===');
+      b.set(110, 10, '*');
+    },
+  },
 ];
 
+// Tower levels are a stack of one-screen rooms; you climb up through the top of each room.
+function towerRows(def, k) {
+  const T = def.tower, n = T.screens, r = (() => { let z = (T.seed * 9973 + k * 7919) >>> 0; return () => ((z = (z * 1664525 + 1013904223) >>> 0) / 4294967296); })();
+  const g = Array.from({ length: 14 }, () => Array(16).fill('.'));
+  for (let y = 0; y < 14; y++) { g[y][0] = 'X'; g[y][15] = 'X'; }
+  const set = (x, y, c) => { if (x > 0 && x < 15 && y >= 0 && y < 14) g[y][x] = c; };
+  if (k === 0) { for (let x = 1; x < 15; x++) { g[12][x] = '#'; g[13][x] = '#'; } set(3, 11, '@'); }
+  else for (let x = 1; x < 15; x++) g[12][x] = '=';
+  if (k === n - 1) { for (let x = 1; x < 15; x++) { g[5][x] = '#'; g[4][x] = '.'; } set(8, 4, 'G'); for (let x = 2; x < 13; x += 3) set(x, 2, 'o'); }
+  const rows = k === n - 1 ? [9] : [9, 6, 3];
+  rows.forEach((y, i) => { const left = (i + k) % 2 === 0, x0 = left ? 1 + Math.floor(r() * 3) : 7 + Math.floor(r() * 3), w = 5 + Math.floor(r() * 3); for (let x = x0; x < x0 + w; x++) set(x, y, '='); if (r() < 0.5) set(x0 + 1, y - 1, 'o'); if (r() < 0.35) set(x0 + 2, y - 3, 'o'); });
+  if (k > 0 && k < n - 1) { if (r() < 0.6) set(4 + Math.floor(r() * 8), 1 + Math.floor(r() * 2), r() < 0.5 ? 'z' : 'b'); if (k % 3 === 2) set(12, 8, 'W'); if (k === 3) set(4, 2, 'E'); }
+  return g.map((row) => row.join(''));
+}
+function towerBuild(b, def, k) { towerRows(def, k).forEach((row, y) => { for (let x = 0; x < 16; x++) b.g[y][x] = row[x]; }); }
 function buildLevel(i) {
-  const def = i === 99 ? window.CUSTOM_LEVEL : i === 98 ? window.RUSH_LEVEL : i === 97 ? window.ENDLESS_LEVEL : LEVELS[i], b = new LevelBuilder(def.width);
+  const def = i === 99 ? window.CUSTOM_LEVEL : i === 98 ? window.RUSH_LEVEL : i === 97 ? window.ENDLESS_LEVEL : i === 96 ? window.TOWER_SCREEN : i === 95 ? window.VERSUS_LEVEL : LEVELS[i], b = new LevelBuilder(def.width);
   def.build(b);
   if (def.secret) { if (def.secret.prep) def.secret.prep(b); b.set(def.secret.x, def.secret.y, 'Z'); }
   if (def.yeti) b.set(def.yeti[0], def.yeti[1], 'y');
@@ -465,7 +557,7 @@ function buildLevel(i) {
   }
   // Extra enemies, placed on the nearest safe spot: ground walkers on solid ground,
   // bats under a ceiling, UFOs in open sky.
-  const SOLIDS = '#BXUWPSOAJNTEYH';
+  const SOLIDS = '#BXUWPSOAJNTEYH[]{';
   const ground = (x0) => {
     for (let x = x0; x < Math.min(b.w - 18, x0 + 14); x++) {
       for (let y = 3; y < 14; y++) {
@@ -507,7 +599,7 @@ function buildLevel(i) {
   }
   // Five Wally Medals per level, tucked up high: on top of blocks, platforms and ledges,
   // one in each fifth of the level (floating above the ground if a fifth has no ledge).
-  const firm = '#BXUW=PSOAVQDJNTEYH';
+  const firm = '#BXUW=PSOAVQDJNTEYH[]{';
   const seg = (b.w - 32) / 5;
   for (let k = 0; k < 5; k++) {
     const x0 = 10 + Math.floor(k * seg), x1 = 10 + Math.floor((k + 1) * seg);
@@ -545,7 +637,7 @@ function buildLevel(i) {
     if (b.g[ky][kx] !== '.') { let best = null; for (let x = kx - 12; x <= kx + 12; x++) for (let y = 2; y <= 9; y++) if (x > 0 && x < b.w && b.g[y][x] === '.' && b.g[y - 1][x] === '.' && firm.includes(b.g[y + 1][x]) && (!best || y < best[1])) best = [x, y]; if (best) [kx, ky] = best; }
     b.g[ky][kx] = '&';
   }
-  const ENT = 'gpzhmnCGKabctuMfjeykZsqwvlxi1234567&r';
+  const ENT = 'gpzhmnCGKabctuMfjeykZsqwvlxi1234567&r890d*';
   for (let y = 0; y < 14; y++) for (let x = 0; x < b.w; x++) {
     const c = b.g[y][x];
     if (c === '@') { start = { x, y }; b.g[y][x] = '.'; } else if (ENT.includes(c)) {

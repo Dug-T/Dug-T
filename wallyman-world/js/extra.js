@@ -426,12 +426,12 @@ Play.prototype.updateP2 = function () {
     }
   });
   if (q.down) return;
-  // keep player 2 on screen
-  if (q.x < this.cam.x + 2) { q.x = this.cam.x + 2; if (q.vx < 0) q.vx = 0; }
-  if (q.x > this.cam.x + VW - q.w - 2) { q.x = this.cam.x + VW - q.w - 2; if (q.vx > 0) q.vx = 0; }
+  // keep player 2 on screen (not in a versus race, where each player has their own view)
+  if (!this.versus && q.x < this.cam.x + 2) { q.x = this.cam.x + 2; if (q.vx < 0) q.vx = 0; }
+  if (!this.versus && q.x > this.cam.x + VW - q.w - 2) { q.x = this.cam.x + VW - q.w - 2; if (q.vx > 0) q.vx = 0; }
   // bounce off each other's heads
   for (const [a, b] of [[q, p], [p, q]]) {
-    if (a.vy > 0 && a.x + a.w > b.x && a.x < b.x + b.w && a.y + a.h >= b.y && a.y + a.h <= b.y + 8 && !a.riding) { a.vy = -5.6; a.y = b.y - a.h; Audio8.sfx('spring'); this.parts.push({ k: 'star', x: b.x + b.w / 2, y: b.y, life: 10 }); }
+    if (a.vy > 0 && a.x + a.w > b.x && a.x < b.x + b.w && a.y + a.h >= b.y && a.y + a.h <= b.y + 8 && !a.riding) { a.vy = -5.6; a.y = b.y - a.h; Audio8.sfx('spring'); if (this.onHeadBounce) this.onHeadBounce(a, b); this.parts.push({ k: 'star', x: b.x + b.w / 2, y: b.y, life: 10 }); }
   }
 };
 {
