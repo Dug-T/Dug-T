@@ -172,6 +172,48 @@ const Audio8 = (() => {
       chords: 'C Am F G C Am F C',
       mel: 'E5/4 G5/4 C6/4 B5/4 | A5/6 G5/2 E5/8 | F5/4 A5/4 C6/4 E6/4 | D6/12 r/4 | E5/4 G5/4 C6/4 D6/4 | E6/6 D6/2 C6/8 | A5/4 G5/4 F5/4 A5/4 | G5/16',
     },
+    neon: {
+      bpm: 138, swing: 0, bass: 'drive', harm: 'stab', drums: 'k.hsk.hsk.hsk.hs', lead: 'p12',
+      chords: 'Am F C G Am F C E',
+      mel: 'E5/2 A5/2 C6/2 B5/2 A5/4 E5/4 | F5/2 A5/2 C6/2 A5/2 F5/8 | G5/2 C6/2 E6/2 D6/2 C6/4 G5/4 | B5/4 G5/4 D5/8 |' +
+        'E5/2 A5/2 C6/2 E6/2 D6/4 C6/4 | A5/2 F5/2 C5/2 F5/2 A5/8 | G5/2 E5/2 C5/2 E5/2 G5/2 C6/2 E6/4 | E6/12 r/4',
+    },
+    bossufo: {
+      bpm: 160, swing: 0, bass: 'drive', harm: 'pad', drums: 'k.s.k.sskks.k.s.', lead: 'p50',
+      chords: 'Cm Ab Bb G Cm Ab Bb G',
+      mel: 'C5/2 G5/2 C6/2 G5/2 Eb6/4 D6/4 | Ab5/2 C6/2 Eb6/2 C6/2 Ab5/8 | Bb5/2 D6/2 F6/2 D6/2 Bb5/4 F5/4 | G5/2 B5/2 D6/2 G6/2 F6/4 D6/4 |' +
+        'C6/2 Bb5/2 G5/2 Eb5/2 C5/4 G5/4 | Ab5/2 G5/2 F5/2 Eb5/2 C5/8 | D5/2 F5/2 Bb5/2 D6/2 F6/4 D6/4 | B5/12 r/4',
+    },
+    bossice: {
+      bpm: 150, swing: 0, bass: 'drive', harm: 'stab', drums: 'k.hsk.hskkhsk.hs', lead: 'p25',
+      chords: 'Dm Dm Bb C Dm Dm Bb A',
+      mel: 'D5/2 F5/2 A5/2 D6/2 C6/4 A5/4 | F5/2 A5/2 D6/2 F6/2 E6/8 | D6/2 Bb5/2 F5/2 Bb5/2 C6/4 G5/4 | E5/2 G5/2 C6/2 E6/2 D6/4 C6/4 |' +
+        'D6/2 C6/2 A5/2 F5/2 D5/4 A5/4 | F5/2 E5/2 D5/2 F5/2 A5/8 | Bb5/2 A5/2 G5/2 F5/2 E5/2 F5/2 G5/4 | A5/12 r/4',
+    },
+    bosscarn: {
+      bpm: 180, swing: 0.4, bass: 'waltz', harm: 'stab', drums: 'k.hk.hk.hk.hk.hs', lead: 'p12',
+      chords: 'Em B Em B Am Em B Em',
+      mel: 'E5/2 G5/2 B5/2 E6/4 D#6/2 E6/2 | F#6/2 E6/2 D#6/2 B5/4 r/2 F#5/2 | G5/2 B5/2 E6/2 G6/4 F#6/2 E6/2 | D#6/2 F#6/2 B6/4 r/4 |' +
+        'A5/2 C6/2 E6/2 A6/4 G6/2 F#6/2 | E6/2 D#6/2 E6/2 B5/4 r/2 G5/2 | F#5/2 A5/2 D#6/2 F#6/2 E6/2 D#6/2 B5/4 | E5/12 r/4',
+    },
+    bossjungle: {
+      bpm: 140, swing: 0.2, bass: 'bounce', harm: 'stab', drums: 'k.kskk.sk.kskkss', lead: 'p25',
+      chords: 'Gm Gm Eb F Gm Gm Eb D',
+      mel: 'G4/2 Bb4/2 D5/2 G5/2 F5/4 D5/4 | Eb5/2 D5/2 C5/2 Bb4/2 G4/8 | Eb5/2 G5/2 Bb5/2 G5/2 Eb5/4 C5/4 | F5/2 A5/2 C6/2 A5/2 F5/8 |' +
+        'G5/2 F5/2 D5/2 Bb4/2 G4/4 D5/4 | Bb5/2 A5/2 G5/2 F5/2 D5/8 | Eb5/2 F5/2 G5/2 Bb5/2 C6/2 Bb5/2 G5/4 | F#5/12 r/4',
+    },
+    bossdesert: {
+      bpm: 146, swing: 0, bass: 'drive', harm: 'pad', drums: 'k..sk.s.k..skks.', lead: 'p12',
+      chords: 'Em Em F F Em Em D B',
+      mel: 'E5/2 F5/2 G#5/2 A5/2 B5/4 A5/4 | G#5/2 F5/2 E5/4 r/4 B4/4 | F5/2 G#5/2 A5/2 C6/2 B5/4 G#5/4 | A5/2 G#5/2 F5/2 E5/2 F5/8 |' +
+        'E5/2 G#5/2 B5/2 E6/2 D6/4 C6/4 | B5/2 A5/2 G#5/2 F5/2 E5/8 | D5/2 F#5/2 A5/2 D6/2 C6/4 A5/4 | B5/12 r/4',
+    },
+    bossfinal: {
+      bpm: 190, swing: 0, bass: 'drive', harm: 'stab', drums: 'kshskshskkhskshs', lead: 'p12',
+      chords: 'Bm G A F# Bm G Em F#',
+      mel: 'B4/1 B4/1 D5/2 F#5/2 B5/2 A5/2 F#5/2 D5/4 | G5/2 B5/2 D6/2 B5/2 G5/4 E5/4 | A5/2 C#6/2 E6/2 C#6/2 A5/4 F#5/4 | F#5/2 A#5/2 C#6/2 F#6/2 E6/4 C#6/4 |' +
+        'B5/2 D6/2 F#6/2 D6/2 B5/2 F#5/2 D5/4 | G5/2 F#5/2 E5/2 D5/2 B4/8 | E5/2 G5/2 B5/2 E6/2 D6/4 B5/4 | A#5/12 r/4',
+    },
     jungle: {
       bpm: 132, swing: 0.25, bass: 'bounce', harm: 'stab', drums: 'k..sk.s.k..sk.ss', lead: 'p25',
       chords: 'Am Am G G F F G E',

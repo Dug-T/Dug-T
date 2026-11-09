@@ -198,7 +198,7 @@ const todayKey = () => { const d = new Date(); return d.getFullYear() * 10000 + 
 function dailyToday() {
   let s = todayKey() * 2654435761 % 4294967296;
   const r = () => { s = (s * 1103515245 + 12345) % 2147483648; return s / 2147483648; };
-  r(); const pool = LEVELS.map((d, i) => i).filter((i) => !LEVELS[i].shmup && !LEVELS[i].minecart && !LEVELS[i].secretRoom), li = pool[Math.floor(r() * pool.length)], rule = DAILY_RULES[Math.floor(r() * DAILY_RULES.length)];
+  r(); const pool = LEVELS.map((d, i) => i).filter((i) => !LEVELS[i].shmup && !LEVELS[i].minecart && !LEVELS[i].secretRoom && !LEVELS[i].board && !LEVELS[i].sub && !LEVELS[i].train && !LEVELS[i].tower && !LEVELS[i].boss), li = pool[Math.floor(r() * pool.length)], rule = DAILY_RULES[Math.floor(r() * DAILY_RULES.length)];
   return { li, rule, key: todayKey() };
 }
 const dailyScores = () => { const d = lsGet('wallyman-daily', null); return d && d.key === todayKey() ? d.scores : []; };

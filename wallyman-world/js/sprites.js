@@ -183,6 +183,7 @@ const Sprites = (() => {
     factory: { top: ['#9aa0b0', '#5a6070', '#d0d4e0'], dirt: ['#5a6070', '#3a4050', '#7a8090'], brick: ['#c08030', '#6a4010', '#f0b050'], solid: ['#7a8090', '#3a4050', '#b0b8c8'], plank: ['#e0b030', '#6a5010', '#fff070'] },
     candy: { top: ['#ff90c8', '#d04890', '#ffd8ec'], dirt: ['#b06838', '#7a4018', '#d89058'], brick: ['#ff6080', '#c02850', '#ffb0c0'], solid: ['#80d8ff', '#3a90c8', '#d0f0ff'], plank: ['#ffffff', '#ff70a0', '#ffffff'] },
     moon: { top: ['#d0d0d8', '#80808e', '#f4f4fa'], dirt: ['#9a9aa8', '#6a6a78', '#b8b8c4'], brick: ['#7a7a90', '#4a4a5a', '#a8a8c0'], solid: ['#a0a8c0', '#5a6078', '#d0d8f0'], plank: ['#8890a8', '#4a5068', '#c0c8e0'] },
+    neon: { top: ['#30e0ff', '#1060a0', '#c0ffff'], dirt: ['#1a1a3a', '#0e0e24', '#2a2a5a'], brick: ['#ff40a0', '#901050', '#ffa0d0'], solid: ['#4a4a6a', '#24243a', '#8a8ab0'], plank: ['#ffe040', '#a08010', '#fff0a0'] },
     jungle: { top: ['#4ac040', '#1e7a28', '#9af07a'], dirt: ['#7a5a3a', '#4a3420', '#9a7a50'], brick: ['#8a8a6a', '#4a4a38', '#b8b890'], solid: ['#7a8a6a', '#3a4a30', '#a8b890'], plank: ['#9a6a3a', '#5a3a1a', '#c09050'] },
     desert: { top: ['#f0c870', '#c09040', '#fff0b0'], dirt: ['#d8a058', '#a87030', '#f0c080'], brick: ['#c87848', '#884020', '#f0a070'], solid: ['#c8a878', '#8a6a40', '#f0d8a8'], plank: ['#a07040', '#604020', '#c89050'] },
     static: { top: ['#a040ff', '#40108a', '#e0a0ff'], dirt: ['#2a1a4a', '#140a28', '#4a2a7a'], brick: ['#30d0c0', '#106a70', '#a0fff0'], solid: ['#5a5a7a', '#2a2a40', '#a0a0c8'], plank: ['#ff40a0', '#8a1050', '#ffa0d0'] },
@@ -696,6 +697,17 @@ const Sprites = (() => {
   for (const k of Object.keys(more2)) { S.bg[k].layers.push(...more2[k]); S.bg[k].layers.sort((a, b) => a.f - b.f); }
 
 
+
+  S.bg.neon = { sky: gradient('#05051a', '#3a1050'), layers: [
+    L(0.01, (x) => motes(x, 50, ['#ffffff', '#c0c0ff'], 0, 90, 1, 701)),
+    L(0.02, (x) => { disc(x, 90, 40, 12, '#f0f0ff'); disc(x, 95, 36, 11, '#05051a'); }),
+    L(0.06, (x) => { const r = rng(702); for (let i = 0; i < 512;) { const w = 18 + ((r() * 26) | 0), h = 60 + ((r() * 90) | 0); x.fillStyle = '#16163a'; x.fillRect(i, 224 - h, w, h); for (let wy = 228 - h; wy < 220; wy += 6) for (let wx = i + 2; wx < i + w - 2; wx += 4) if (r() < 0.3) { x.fillStyle = r() < 0.5 ? 'rgba(255,230,140,0.6)' : 'rgba(140,220,255,0.5)'; x.fillRect(wx, wy, 2, 3); } i += w + 2; } }),
+    L(0.14, (x) => { const r = rng(703); for (let i = 0; i < 512;) { const w = 24 + ((r() * 30) | 0), h = 50 + ((r() * 70) | 0); x.fillStyle = '#22224a'; x.fillRect(i, 224 - h, w, h); x.fillStyle = '#2e2e60'; x.fillRect(i, 224 - h, w, 2); for (let wy = 230 - h; wy < 222; wy += 7) for (let wx = i + 3; wx < i + w - 3; wx += 5) { x.fillStyle = r() < 0.35 ? '#ffe080' : '#18183a'; x.fillRect(wx, wy, 3, 4); } if (r() < 0.6) { x.fillStyle = '#c0c0d0'; x.fillRect(i + w / 2, 214 - h, 1, 10); x.fillStyle = '#ff3040'; x.fillRect(i + w / 2 - 1, 212 - h, 3, 2); } i += w + 4; } }),
+    L(0.25, (x) => { for (const [nx, ny, c, w] of [[40, 120, '#ff40a0', 34], [180, 100, '#40e0ff', 44], [330, 130, '#ffe040', 30], [450, 110, '#a060ff', 40]]) { x.fillStyle = 'rgba(0,0,0,0.5)'; x.fillRect(nx - 2, ny - 2, w + 4, 16); x.strokeStyle = c; x.lineWidth = 2; x.strokeRect(nx, ny, w, 12); x.fillStyle = c; for (let k = 0; k < w - 8; k += 6) x.fillRect(nx + 4 + k, ny + 4, 4, 4); } }),
+    L(0.35, (x) => { for (const cx of [120, 400]) { x.fillStyle = '#ffd040'; x.fillRect(cx, 30, 4, 190); for (let y = 30; y < 220; y += 8) x.fillRect(cx - 2, y, 8, 1); x.fillRect(cx - 70, 30, 100, 4); x.fillStyle = '#3a3a3a'; x.fillRect(cx - 60, 34, 1, 30); x.fillStyle = '#ff3040'; x.fillRect(cx + 1, 26, 2, 3); } }),
+    L(0.5, (x) => motes(x, 30, ['#ff60c0', '#60e0ff', '#ffe060'], 40, 200, 1, 704), 0.05),
+    L(0.8, (x) => { for (let k = 0; k < 6; k++) { const px = k * 90 + 30; x.fillStyle = '#0a0a20'; x.fillRect(px, 180, 3, 44); x.fillStyle = 'rgba(255,240,160,0.25)'; for (let s = 0; s < 18; s++) x.fillRect(px + 1 - s, 182 + s * 2, s * 2 + 2, 2); x.fillStyle = '#fff0a0'; x.fillRect(px - 2, 178, 7, 3); } }),
+  ] };
   // ---- Lost Lands: jungle, desert, and the Static Dimension ----
   S.bg.jungle = { sky: gradient('#3a8a6a', '#c8f0a0'), layers: [
     L(0.02, (x) => { disc(x, 400, 50, 18, '#fff4c0'); }),

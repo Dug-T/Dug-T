@@ -37,6 +37,20 @@ Open `index.html` in any modern browser — or enable **GitHub Pages** for this 
 - **Signal Bars** – three per level, tucked away in the highest nooks. They're saved when you clear the level and shown in the HUD; collect all three for **FULL SIGNAL**: +3 specials, a 1-UP and a trophy.
 - **Time Attack ghost** – your best run in each level is recorded, and a see-through ghost of it races you next time.
 - **Level Maker** (Extras → Level Maker) – build your own 120-tile course in any of the 13 themes, with every block, hazard, enemy and item. D-pad moves the cursor, A places (hold to paint), B erases, S picks the next item (B+S the previous one), START opens the menu (Play Test, Save, Theme, Clear All, Save and Exit). Three courses are kept on your device, and play-testing drops you straight back into the editor. New tools: **water zones** (swim inside them), **dark zones**, a **boss at the end** (any boss or mini-boss), **COPY AREA** then paste with A, and **share codes**: SHARE CODE shows a short text code to send to friends, LOAD CODE plays theirs.
+- **New power-ups** (in ? blocks across the levels): the **Drill Helmet** (press Down on the ground to dig straight down – dig up **buried treasure chests**, look for the faint sparkle in the ground), the **Balloon Pack** (float upward for a few seconds and steer), **Giga Wally** (grow huge for 10 seconds, smashing blocks and flattening enemies) and the **Ghost Cloak** (go see-through and drift right through walls).
+- **Combo meter** – chain enemy defeats quickly or without landing for score multipliers (x2, x3...). An x8 combo gives a 1-UP.
+- **Wally Town** – a new stop on the Wally Island map (next to Wally's House). Walk around, enter buildings with Up and talk to people with A:
+  - **NPC quests** – Mrs Mittens (find her lost kitty in Cavern Commute), Coach (beat Sunny Shoreline without getting hit), Old Salt (collect 150 coins), Board Bro (2000 trick points on Powder Peak) and the Gardener (stomp 25 Grumbles). Rewards are coins and lives; the **Quest Board** tracks them.
+  - **My Home** – buy and place furniture: paintings, a clock, a trophy shelf, a hero poster, a sofa, a lava lamp, a plant, an arcade machine, an aquarium and rugs.
+  - **Rides** – five special levels: **Powder Peak** (snowboarding downhill – hit the ramps for air, press B in the air to spin a trick, and grind on rails; land a spin badly and you wipe out), **Deep Sea Dive** (pilot a submarine, fire torpedoes with B, dodge mines, and fight the **Giant Squid**), **Haunted Express** (run along the roof of a speeding ghost train and hold Down to duck the tunnels), and **Rooftop Run** and **Neon Heights** in **Neon City** (night-time rooftops, cranes and window-cleaner lifts).
+- **EX Boss Rush** – after beating the Static Emperor, Boss Rush gets an EX mode with all ten bosses, tougher and faster, and its own records.
+- **Daily gift** – the first time you open the map each day you get coins; keep a 7-day streak for bigger gifts and a 1-UP.
+- **Online ghost races** – with Firebase set up, your Time Attack records upload as world ghosts; press S on the Time Attack menu to race the world's best ghost for each level.
+- **Credits** – roll after beating the Static Emperor (and any time from Extras), with every hero, friend, enemy and boss marching past.
+- **Intro movie** – leave the title screen alone for about 25 seconds and a short animated story plays.
+- **Boss music** – the UFOs, Ice Yeti, Ringmaster, Golem, Sandworm, Giant Squid and Static Emperor (and the mini-bosses) now have their own battle themes.
+- **Colour assist and readable text** (Options) – HIGH CONTRAST, VIVID, RED-GREEN ASSIST and BLUE-YELLOW ASSIST colour filters, and a READABLE TEXT option that gives all text a bold outline.
+- **Install as an app** – on the GitHub Pages site the game can be added to a phone's home screen or installed on a computer (Extras → INSTALL APP explains how). It gets its own icon and keeps working offline.
 - **The Lost Lands** – a fourth island, reached by boat from Carnival Isle after beating the Ringmaster:
   - **Vine Temple** – climb vines (press Up), ride a **zipline**, dodge **dart traps**, get fired from a **barrel cannon** (press Jump to launch), then outrun a **giant rolling boulder**.
   - **Golem Sanctum** – **on/off switch blocks** (hit the switch to swap which coloured blocks are solid), then the **Stone Golem**, who slams the ground (jump the shockwaves) and throws rocks; stomp the glowing gem on its head while it is stunned.
@@ -92,7 +106,7 @@ Open `index.html` in any modern browser — or enable **GitHub Pages** for this 
 - **Costumes** – visit the **Wardrobe** in Dino's Shop at Wally's House. Seven outfits: Classic, Wally Jr, Golden (find 20 Wally Medals), Ice (clear Frosty Peaks), Dino Suit (clear Coral Depths), Shadow (clear Haunted Manor) and Fire (beat Baron Static).
 - **Difficulty** (Extras → Options): Easy (3 hearts, 50% more time, slower enemies, weaker bosses), Normal, or Hard (1 heart, less time, faster enemies, tougher bosses).
 - **Star rankings** – up to 3 stars per level: finish with 40% of the time left, have all 5 medals, and take no hits. Stars show on the clear screen, the map and the level intro.
-- **Trophies** – 39 achievements (first clear, flawless boss, Dino rider, UFO hunter, secret exits, three stars and more) with pop-up notifications and a **Trophy Room**.
+- **Trophies** – 47 achievements (first clear, flawless boss, Dino rider, UFO hunter, secret exits, three stars and more) with pop-up notifications and a **Trophy Room**.
 - **Extras menu** – Trophy Room, **Jukebox** (play every song), **Gallery** (heroes, enemies, bosses and items) and **Options** (difficulty, music/sound volume, sound on/off, **CRT retro-TV filter**, screen shake).
 - **Hidden secrets** – an invisible block in most levels (jump into empty air to find a 1-UP) and cracked walls that crumble into coins when blasted, chomped, shocked or ground-pounded.
 - **High score table** – when a run ends (game over or beating the game) a top-10 score lets you enter your name arcade-style (D-pad + A, or just type). Scores are kept in the browser; when the game runs as a claude.ai artifact they are also shared through its database for players allowed to save there.
@@ -144,5 +158,7 @@ js/extra.js         challenges, cutscenes, splits, day/night and 2-player co-op
 js/batche.js        Carnival Isle, new enemies, pets, upgrades, Dino's House, mini-games, missions, Endless Run, art
 js/batchf.js        Lost Lands, Static Dimension, vines, ziplines, cannons, portals, towers, new bosses and heroes, events, assist
 js/batchf2.js       photo mode, versus, fishing, kart racing, Course World, save codes, options and controls
+js/batchg.js        new power-ups, rides, combo meter, Wally Town, EX rush, daily gifts, world ghosts, credits, intro movie
+manifest.webmanifest, sw.js, icons/   install-as-an-app support (works offline)
 assets/             pixelated WallyMan, GothChick and Doug Thomson portraits (title, character select, ending)
 ```

@@ -503,6 +503,76 @@ const LEVELS = [
       b.set(110, 10, '*');
     },
   },
+  // ================= Wally Town rides =================
+  {
+    name: 'POWDER PEAK', theme: 'snow', music: 'snow', width: 260, board: true, noAuto: true,
+    build(b) {
+      let x = 0, top = 6;
+      b.ground(0, 14, top).set(3, top - 1, '@');
+      x = 15;
+      const plan = 'grgsrgrgsgrrgsg';
+      for (let k = 0; k < plan.length && x < 236; k++) {
+        const f = plan[k], len = 10 + (k % 3) * 3;
+        b.ground(x, x + len, top).coins(x + 3, top - 3, 4);
+        if (f === 'r') { b.set(x + len - 1, top - 1, '/'); x += len + 1; b.ground(x, x + 2, Math.min(12, top + 2)); x += 5; top = Math.min(12, top + 1); }
+        else if (f === 's') { b.row(x + len + 1, top - 1, '=========='); x += len + 12; top = Math.min(12, top + 1); }
+        else { x += len + 1; if (k % 2) top = Math.min(12, top + 1); b.set(x - 4, top - 1, 'g'); }
+      }
+      b.ground(x, 259, top).set(Math.min(252, x + 12), top - 1, 'G');
+    },
+  },
+  {
+    name: 'DEEP SEA DIVE', theme: 'water', music: 'water', width: 220, sub: true, autoscroll: 0.7, noAuto: true, boss: true, bossHp: 8, bossName: 'GIANT SQUID', bossType: 'squid', talk: 'squid',
+    bossMsg: ['THE GIANT SQUID SWIMS AWAY', 'IN A CLOUD OF INK!', '', 'THE DEEP SEA IS SAFE AGAIN.'],
+    mines: [[30, 6], [44, 3], [58, 9], [76, 5], [92, 10], [110, 4], [128, 8], [146, 6], [160, 3], [172, 9]],
+    build(b) {
+      b.fill(0, 0, 219, 0, '#').fill(0, 13, 219, 13, '#').set(3, 6, '@');
+      const caves = [[24, 1, 4], [40, 9, 12], [62, 1, 5], [70, 10, 12], [96, 1, 3], [104, 8, 12], [134, 1, 5], [150, 10, 12], [180, 1, 3]];
+      for (const [x, y0, y1] of caves) b.fill(x, y0, x + 4, y1, '#');
+      for (const [x, y] of [[36, 6], [52, 3], [84, 8], [118, 6], [140, 9], [166, 5]]) b.set(x, y, 'f');
+      for (let k = 0; k < 14; k++) b.coins(20 + k * 12, 3 + (k * 4) % 8, 2);
+      b.set(214, 6, '*');
+    },
+  },
+  {
+    name: 'HAUNTED EXPRESS', theme: 'haunted', music: 'haunted', width: 230, train: true, autoscroll: 1.25, noAuto: true,
+    build(b) {
+      b.ground(0, 229, 12);
+      b.fill(0, 9, 18, 11, 'X').set(3, 8, '@');
+      let x = 21, k = 0;
+      while (x < 214) {
+        const len = 12 + (k % 3) * 4; b.fill(x, 9, x + len, 11, 'X');
+        if (k % 3 === 1) b.fill(x + 3, 0, x + len - 3, 7, '#');
+        if (k % 2 === 0) b.set(x + 5, 4, 'e'); else b.coins(x + 2, 6, 4);
+        if (k % 4 === 3) b.set(x + 8, 3, 'b');
+        x += len + 3; k++;
+      }
+      b.fill(214, 9, 229, 11, 'X').set(222, 8, 'G');
+    },
+  },
+  {
+    name: 'ROOFTOP RUN', theme: 'neon', music: 'neon', width: 200, noAuto: true,
+    extras: [],
+    build(b) {
+      b.ground(0, 18, 9).set(3, 8, '@').row(8, 6, 'BWB');
+      const roofs = [[22, 34, 10], [38, 52, 8], [58, 70, 11], [76, 92, 7], [98, 112, 9], [120, 136, 10], [142, 156, 8], [162, 176, 11]];
+      roofs.forEach(([a, c, top], i) => { b.ground(a, c, top); if (i % 2) b.set(a + 5, top - 1, 'g'); else b.set(a + 6, top - 1, '2'); b.coins(a + 2, top - 3, 3); });
+      b.set(54, 8, 'm').set(94, 6, 'n').set(115, 8, 'm').set(138, 6, 'n').set(158, 7, 'm');
+      b.set(84, 3, 'z').set(128, 4, 'z').set(100, 8, 'C').set(146, 3, '3');
+      b.ground(180, 199, 9).set(192, 8, 'G');
+    },
+  },
+  {
+    name: 'NEON HEIGHTS', theme: 'neon', music: 'neon', width: 200, noAuto: true,
+    build(b) {
+      b.ground(0, 16, 11).set(3, 10, '@');
+      const roofs = [[20, 30, 9], [34, 44, 7], [50, 60, 10], [66, 78, 6], [84, 96, 9], [102, 112, 7], [118, 130, 10], [136, 148, 6], [154, 166, 8]];
+      roofs.forEach(([a, c, top], i) => { b.ground(a, c, top); b.set(a + 4, top - 1, 'tg2'[i % 3]); b.coins(a + 3, top - 3, 3); if (i === 4) b.set(a + 6, top - 1, 'C'); });
+      b.set(32, 9, 'n').set(46, 7, 'm').set(63, 8, 'n').set(81, 7, 'm').set(99, 8, 'n').set(115, 6, 'm').set(133, 8, 'n').set(151, 6, 'm');
+      b.set(72, 2, 'u').set(108, 3, '3').set(142, 2, 'u').row(88, 5, 'WOW');
+      b.ground(170, 199, 9).set(190, 8, 'G');
+    },
+  },
 ];
 
 // Tower levels are a stack of one-screen rooms; you climb up through the top of each room.
@@ -557,7 +627,7 @@ function buildLevel(i) {
   }
   // Extra enemies, placed on the nearest safe spot: ground walkers on solid ground,
   // bats under a ceiling, UFOs in open sky.
-  const SOLIDS = '#BXUWPSOAJNTEYH[]{';
+  const SOLIDS = '#BXUWPSOAJNTEYH[]{F+}?`';
   const ground = (x0) => {
     for (let x = x0; x < Math.min(b.w - 18, x0 + 14); x++) {
       for (let y = 3; y < 14; y++) {
@@ -599,7 +669,7 @@ function buildLevel(i) {
   }
   // Five Wally Medals per level, tucked up high: on top of blocks, platforms and ledges,
   // one in each fifth of the level (floating above the ground if a fifth has no ledge).
-  const firm = '#BXUW=PSOAVQDJNTEYH[]{';
+  const firm = '#BXUW=PSOAVQDJNTEYH[]{F+}?`';
   const seg = (b.w - 32) / 5;
   for (let k = 0; k < 5; k++) {
     const x0 = 10 + Math.floor(k * seg), x1 = 10 + Math.floor((k + 1) * seg);
