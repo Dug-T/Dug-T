@@ -45,5 +45,13 @@ service cloud.firestore {
         && request.resource.data.rec is string && request.resource.data.rec.size() < 400000;
       allow delete: if false;
     }
+    // Top 5 best clear times per level (document L<level>), stored as a small JSON list.
+    match /leaders/{id} {
+      allow read: if true;
+      allow create, update: if request.resource.data.keys().hasOnly(['li', 'top'])
+        && request.resource.data.li is int && request.resource.data.li >= 0 && request.resource.data.li < 64
+        && request.resource.data.top is string && request.resource.data.top.size() < 600;
+      allow delete: if false;
+    }
   }
 }

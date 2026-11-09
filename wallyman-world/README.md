@@ -21,6 +21,25 @@ Open `index.html` in any modern browser — or enable **GitHub Pages** for this 
 
 ## What's in it
 
+- **Crystal Isle** – a 5th island (take the boat from the Lost Lands once the Sandworm is beaten): **Glitter Grotto** (pitch-dark caves lit only by your lantern, glowing crystals and crystal bugs, with wall-jump shafts), **Windy Cliffs** (strong gusts and fans that blow you up cliffs), **Slippery Slopes** (real slopes), **Toy Factory** (conveyor belts, springs, fans, crushers, toy soldiers and wind-up mice), **Magma Chase** (a wall of lava chases you from the left), **Beat Box Arena** and **Crystal Crown**.
+- **New bosses** – **DJ Decibel**, whose every attack lands on the beat of his song (bass waves to jump, speaker blasts to stay under, falling notes; stomp him when his lid pops open on beat 4), and the **Crystal Dragon** (crystal-shard rain, swoops, and perches to rest – that's when you stomp it).
+- **Wall-jump for everyone** – every hero can now slide down walls and kick off them (the Upgrade Tree's Wall Jump is free).
+- **Bigger ground pound** – a shock ring that knocks out enemies further away, and orange **pound plates** that only a ground pound can press.
+- **Slopes and belly slide** – hold Down on a slope (or while running) to slide on your tummy and bowl over enemies. Three at once earns a trophy.
+- **Puzzle rooms** – three side rooms on Crystal Isle: push crates onto pressure plates, turn crystal mirrors (press Up while touching one) to bounce a light beam into a target, and ground-pound plates. Solving one opens the gate and awards all 3 stars. Press Up at the sign to reset a room.
+- **Volt, the rival** – a speedy rival races you to the flag in some levels (a race bar shows who is ahead). Beat him for 20 coins.
+- **Signposts and Professor Hoot** – a sign near the start of each level gives a tip; if you lose 3 lives in one level, Professor Hoot the owl turns up with a hint.
+- **Bestiary** (Extras) – a page for every enemy and boss with a description and how many you have beaten.
+- **Level radar** – in levels you have already beaten, a strip at the bottom shows the medals, signal bars and buried treasure you are still missing (switch it off in Options).
+- **Replays** (Extras) – your fastest clear of each level is recorded and can be watched back (the 12 most recent are kept).
+- **Best times and world leaderboards** – your best clear time per level shows on the map and in Extras → Leaderboards; with Firebase set up, the world top 5 per level appear too.
+- **Doug's Story** (Challenges) – three new levels starring Doug Thomson with story scenes: race Volt, sprint through his vault, then beat him in a boss fight.
+- **Survival Arena** (Challenges) – one room, endless waves of enemies, drinks every 3 waves. **Hard Remix** (Challenges) – meaner versions of the Wally Island levels with new looks, more enemies and less time.
+- **Jukebox + sound test** – songs unlock as you hear them in the game; press left/right for a sound test of every effect.
+- **Languages** – menus and common messages in English, Spanish, French or German (Options → Language).
+- **Intro voice** – now and then, as the game starts, a voice says "WallyMan World, created by Claude and Doug Thomson. Enjoy the game." (uses your browser's built-in voices; switch it off in Options).
+- **Kart race upgrade** – ramps that launch you into the air, karts that bump and take damage (a health bar shows over each one), and karts that explode when they take too much – then respawn a few seconds later.
+
 - **Title screen & file select** – animated logo, 3 save slots (saved in your browser), high scores, sound toggle, erase file.
 - **Wally Island overworld map** – walk between levels; clearing a level unlocks the next path.
 - **8 levels**: Wally's Backyard (grassland), Cavern Commute (cave), Cloudtop Climb (sky), Static Fortress (castle + boss fight against **Baron Static**), Sunny Shoreline (beach with springboards), Frosty Peaks (slippery ice), Deep Dark Mine (cave), and Static Tower (the final rematch with a tougher Baron Static).
@@ -106,7 +125,7 @@ Open `index.html` in any modern browser — or enable **GitHub Pages** for this 
 - **Costumes** – visit the **Wardrobe** in Dino's Shop at Wally's House. Seven outfits: Classic, Wally Jr, Golden (find 20 Wally Medals), Ice (clear Frosty Peaks), Dino Suit (clear Coral Depths), Shadow (clear Haunted Manor) and Fire (beat Baron Static).
 - **Difficulty** (Extras → Options): Easy (3 hearts, 50% more time, slower enemies, weaker bosses), Normal, or Hard (1 heart, less time, faster enemies, tougher bosses).
 - **Star rankings** – up to 3 stars per level: finish with 40% of the time left, have all 5 medals, and take no hits. Stars show on the clear screen, the map and the level intro.
-- **Trophies** – 47 achievements (first clear, flawless boss, Dino rider, UFO hunter, secret exits, three stars and more) with pop-up notifications and a **Trophy Room**.
+- **Trophies** – 57 achievements (first clear, flawless boss, Dino rider, UFO hunter, secret exits, three stars and more) with pop-up notifications and a **Trophy Room**.
 - **Extras menu** – Trophy Room, **Jukebox** (play every song), **Gallery** (heroes, enemies, bosses and items) and **Options** (difficulty, music/sound volume, sound on/off, **CRT retro-TV filter**, screen shake).
 - **Hidden secrets** – an invisible block in most levels (jump into empty air to find a 1-UP) and cracked walls that crumble into coins when blasted, chomped, shocked or ground-pounded.
 - **High score table** – when a run ends (game over or beating the game) a top-10 score lets you enter your name arcade-style (D-pad + A, or just type). Scores are kept in the browser; when the game runs as a claude.ai artifact they are also shared through its database for players allowed to save there.
@@ -135,7 +154,7 @@ The GitHub Pages version can share one high-score table with everyone through a 
 3. In Firestore's **Rules** tab, paste the contents of [`firestore.rules`](firestore.rules) and **Publish**. Anyone can read and add scores; nobody can edit or delete them, and only valid-looking scores are accepted.
 4. **Project settings → Your apps → Web (`</>`)**, register an app, then copy `projectId` and `apiKey` into [`js/online-config.js`](js/online-config.js).
 
-With those set the table title reads **WORLD HIGH SCORES**. Without them (or offline) scores are kept on each device. The claude.ai artifact version cannot reach outside services, so it keeps its own table.
+With those set the table title reads **WORLD HIGH SCORES**, and the per-level world leaderboards fill in. Without them (or offline) scores are kept on each device. The claude.ai artifact version cannot reach outside services, so it keeps its own table.
 
 ## Tip jar (Ko-fi)
 
@@ -159,6 +178,9 @@ js/batche.js        Carnival Isle, new enemies, pets, upgrades, Dino's House, mi
 js/batchf.js        Lost Lands, Static Dimension, vines, ziplines, cannons, portals, towers, new bosses and heroes, events, assist
 js/batchf2.js       photo mode, versus, fishing, kart racing, Course World, save codes, options and controls
 js/batchg.js        new power-ups, rides, combo meter, Wally Town, EX rush, daily gifts, world ghosts, credits, intro movie
+js/batchh.js        slopes, fans, wall-jump for all, puzzles, lava chase, dark caves, new enemies and bosses, the rival, signs, arena/remix/replay modes
+js/batchh2.js       Crystal Isle levels and map, puzzle rooms, Doug's story, bestiary, replays, leaderboards, radar
+js/batchh3.js       menus, jukebox + sound test, languages, intro voice, kart race
 manifest.webmanifest, sw.js, icons/   install-as-an-app support (works offline)
 assets/             pixelated WallyMan, GothChick and Doug Thomson portraits (title, character select, ending)
 ```

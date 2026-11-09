@@ -470,9 +470,11 @@ function OptionsScene() { // eslint-disable-line no-func-assign
     ['EVENTS', { get: () => (Settings.get('events') === false ? 'OFF' : 'AUTO'), set: () => Settings.set('events', Settings.get('events') === false) }],
     ['COLORS', { get: () => `< ${Settings.get('colors') || 'NORMAL'} >`, step: (d) => { Settings.set('colors', COLOR_MODES[(COLOR_MODES.indexOf(Settings.get('colors') || 'NORMAL') + d + COLOR_MODES.length) % COLOR_MODES.length]); applyColorMode(); } }],
     ['READABLE TEXT', { get: () => (Settings.get('readable') ? 'ON' : 'OFF'), set: () => Settings.set('readable', !Settings.get('readable')) }],
+    ['LANGUAGE', { get: () => `< ${Settings.get('lang') || 'ENGLISH'} >`, step: (d) => { const L = typeof LANGS !== 'undefined' ? LANGS : ['ENGLISH']; Settings.set('lang', L[(L.indexOf(Settings.get('lang') || 'ENGLISH') + d + L.length) % L.length]); } }],
+    ['INTRO VOICE', toggle('voice')], ['RADAR', toggle('radar')],
     ['CONTROLS', { go: () => ControlsScene() }], ['BACK', { back: true }],
   ];
-  const TIPS = { ASSIST: { OFF: 'ASSIST MODE IS OFF', SLOW: 'SLOW: THE GAME RUNS AT 75% SPEED', HEARTS: 'HEARTS: NEVER RUN OUT OF HEARTS', WIDE: 'WIDE: BIGGER PLATFORMS, NARROWER GAPS', ALL: 'ALL: SLOW + HEARTS + WIDE' }, EVENTS: 'SEASONAL EVENTS SWITCH ON BY DATE', CONTROLS: 'CHANGE YOUR KEYS AND PAD BUTTONS', COLORS: 'COLOUR FILTERS TO HELP TELL THINGS APART', 'READABLE TEXT': 'BOLD OUTLINES ON ALL TEXT', PET: 'A LITTLE BUDDY WHO TAKES A HIT', WEATHER: 'RAIN, STORMS AND SNOW OUTDOORS' };
+  const TIPS = { ASSIST: { OFF: 'ASSIST MODE IS OFF', SLOW: 'SLOW: THE GAME RUNS AT 75% SPEED', HEARTS: 'HEARTS: NEVER RUN OUT OF HEARTS', WIDE: 'WIDE: BIGGER PLATFORMS, NARROWER GAPS', ALL: 'ALL: SLOW + HEARTS + WIDE' }, EVENTS: 'SEASONAL EVENTS SWITCH ON BY DATE', LANGUAGE: 'MENUS IN ENGLISH, SPANISH, FRENCH OR GERMAN', 'INTRO VOICE': 'SOMETIMES A VOICE SAYS HELLO AT THE START', RADAR: 'MAP OF MISSING MEDALS IN BEATEN LEVELS', CONTROLS: 'CHANGE YOUR KEYS AND PAD BUTTONS', COLORS: 'COLOUR FILTERS TO HELP TELL THINGS APART', 'READABLE TEXT': 'BOLD OUTLINES ON ALL TEXT', PET: 'A LITTLE BUDDY WHO TAKES A HIT', WEATHER: 'RAIN, STORMS AND SNOW OUTDOORS' };
   let sel = 0, t = 0;
   return {
     enter() { Audio8.play('menu'); },
@@ -491,7 +493,7 @@ function OptionsScene() { // eslint-disable-line no-func-assign
       drawParallax('sky', t * 0.3); drawWindow(16, 4, 224, 216);
       txt('OPTIONS', 128, 10, '#ffe040', { align: 'center' });
       rows.forEach(([name, r], i) => {
-        const y = 20 + i * 12, on = i === sel;
+        const top = Math.max(0, Math.min(rows.length - 16, sel - 8)); if (i < top || i >= top + 16) return; const y = Math.round(20 + (i - top) * 11.5), on = i === sel;
         if (on) txt('>', 26 + ((t >> 3) & 1), y, '#ffe040');
         txt(name, 36, y, on ? '#ffe040' : '#fff');
         if (r.vol) { const v = Math.round(Audio8.getVolume(r.vol) * 5); for (let k = 0; k < 5; k++) { ctx.fillStyle = k < v ? '#5ff0ff' : '#3a3a58'; ctx.fillRect(150 + k * 9, y + 6 - k, 7, 2 + k); } }

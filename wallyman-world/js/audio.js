@@ -257,6 +257,42 @@ const Audio8 = (() => {
       mel: 'D5/2 D5/2 F5/2 D5/2 A5/4 G#5/2 A5/2 | Bb5/4 A5/2 G5/2 F5/4 E5/4 | D5/2 D5/2 F5/2 D5/2 C6/4 Bb5/2 A5/2 | G5/2 F5/2 E5/2 C#5/2 D5/8 |' +
         'F5/2 F5/2 A5/2 F5/2 C6/4 B5/2 C6/2 | D6/4 C6/2 Bb5/2 A5/4 G5/4 | F5/2 E5/2 D5/2 E5/2 F5/2 G5/2 A5/4 | D5/12 r/4',
     },
+    crystal: {
+      bpm: 104, swing: 0, bass: 'hold', harm: 'arp', drums: 'k...h...s...h...', lead: 'p25',
+      chords: 'Em C G D Em C B B',
+      mel: 'B5/4 G5/2 E5/2 B5/4 C6/4 | G5/4 E5/2 C5/2 G5/8 | D6/4 B5/2 G5/2 D6/4 E6/4 | F#6/4 D6/4 A5/8 |' +
+        'E6/4 B5/2 G5/2 E6/4 D6/4 | C6/2 B5/2 G5/2 E5/2 C5/8 | D#5/2 F#5/2 B5/2 D#6/2 F#6/8 | B5/12 r/4',
+    },
+    toy: {
+      bpm: 150, swing: 0.3, bass: 'bounce', harm: 'stab', drums: 'k.h.s.hkk.h.s.h.', lead: 'p12',
+      chords: 'C A7 Dm G7 C A7 Dm G7',
+      mel: 'G5/2 C6/2 E6/2 C6/2 G5/4 E5/4 | A5/2 C#6/2 E6/2 G6/2 E6/8 | F5/2 A5/2 D6/2 A5/2 F6/4 D6/4 | B5/2 D6/2 G6/2 F6/2 D6/8 |' +
+        'E6/2 D6/2 C6/2 G5/2 E5/2 G5/2 C6/4 | C#6/2 E6/2 A6/2 G6/2 E6/8 | D6/2 E6/2 F6/2 A6/2 G6/4 F6/4 | C6/12 r/4',
+    },
+    bossbeat: {
+      bpm: 120, swing: 0, bass: 'drive', harm: 'stab', drums: 'k...s...k.k.s...', lead: 'p50',
+      chords: 'Am Am F G Am Am F E',
+      mel: 'A5/4 r/4 A5/2 C6/2 E6/4 | D6/4 C6/4 A5/8 | F5/4 r/4 F5/2 A5/2 C6/4 | B5/4 G5/4 D6/8 |' +
+        'A5/4 r/4 A5/2 C6/2 E6/4 | G6/4 E6/4 C6/8 | F6/4 E6/4 D6/4 C6/4 | B5/4 G#5/4 E5/8',
+    },
+    bosscrystal: {
+      bpm: 164, swing: 0, bass: 'drive', harm: 'pad', drums: 'k.hsk.hsk.hsksss', lead: 'p25',
+      chords: 'Bm G Em F# Bm G A F#',
+      mel: 'B5/2 F#5/2 B5/2 D6/2 F#6/4 E6/4 | D6/2 B5/2 G5/2 B5/2 D6/8 | E6/2 G6/2 E6/2 B5/2 G5/4 E5/4 | F#5/2 A#5/2 C#6/2 F#6/2 E6/8 |' +
+        'D6/2 C#6/2 B5/2 F#5/2 D5/4 F#5/4 | G5/2 B5/2 D6/2 G6/2 F#6/8 | E6/2 C#6/2 A5/2 C#6/2 E6/4 A6/4 | F#6/12 r/4',
+    },
+    arena: {
+      bpm: 156, swing: 0, bass: 'drive', harm: 'stab', drums: 'kshskshskshsksss', lead: 'p12',
+      chords: 'Dm Bb C A Dm Bb C A',
+      mel: 'D5/2 F5/2 A5/2 D6/2 C6/4 A5/4 | Bb5/2 D6/2 F6/2 D6/2 Bb5/8 | C6/2 E6/2 G6/2 E6/2 C6/4 G5/4 | A5/2 C#6/2 E6/2 A6/2 G6/8 |' +
+        'F6/2 E6/2 D6/2 A5/2 F5/4 D5/4 | D6/2 C6/2 Bb5/2 F5/2 D5/8 | E5/2 G5/2 C6/2 E6/2 G6/4 E6/4 | A5/12 r/4',
+    },
+    doug: {
+      bpm: 132, swing: 0.25, bass: 'walk', harm: 'stab', drums: 'k.h.s.h.k.hks.h.', lead: 'p25',
+      chords: 'G Em C D G Em Am D',
+      mel: 'D5/2 G5/2 B5/2 D6/2 B5/4 G5/4 | E5/2 G5/2 B5/2 E6/2 D6/8 | C6/2 B5/2 A5/2 G5/2 E5/4 C5/4 | D5/2 F#5/2 A5/2 D6/2 C6/8 |' +
+        'B5/2 D6/2 G6/2 D6/2 B5/4 G5/4 | E6/2 D6/2 B5/2 G5/2 E5/8 | A5/2 C6/2 E6/2 C6/2 A5/4 F#5/4 | G5/12 r/4',
+    },
     boss: {
       bpm: 172, swing: 0, bass: 'drive', harm: 'stab', drums: 'kshskshskshsksss', lead: 'p12',
       chords: 'Em C Em B',
@@ -415,5 +451,5 @@ const Audio8 = (() => {
     try { localStorage.setItem(kind === 'music' ? 'wallyman-music-vol' : 'wallyman-sfx-vol', String(v)); } catch (e) { /* ignore */ }
   }
   const getVolume = (kind) => (kind === 'music' ? musicVol : sfxVol);
-  return { songs: () => Object.keys(SONGS), setVolume, getVolume, init, unlock: init, play, stop, sfx, setEnabled, isEnabled: () => enabled, current: () => curName };
+  return { sfxNames: () => Object.keys(SFX), songStep: () => (cur && ctx ? (ctx.currentTime - t0) / cur.stepDur : -1), songs: () => Object.keys(SONGS), setVolume, getVolume, init, unlock: init, play, stop, sfx, setEnabled, isEnabled: () => enabled, current: () => curName };
 })();

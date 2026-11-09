@@ -96,10 +96,10 @@ const Save = (() => {
   const KEY = 'wallyman-world-save-v1';
   let slots = [null, null, null];
   try { const d = JSON.parse(localStorage.getItem(KEY)); if (Array.isArray(d)) slots = [d[0] || null, d[1] || null, d[2] || null]; } catch (e) { /* ignore */ }
-  slots.forEach((s) => { if (s) { s.cleared = Array.from({ length: 38 }, (_, i) => !!(s.cleared && s.cleared[i])); s.medals = Array.from({ length: 38 }, (_, i) => (s.medals && s.medals[i]) | 0); s.secrets = s.secrets || {}; s.stars = Array.from({ length: 38 }, (_, i) => (s.stars && s.stars[i]) | 0); s.bars = Array.from({ length: 38 }, (_, i) => (s.bars && s.bars[i]) | 0); s.costume = s.costume || 'classic'; s.players = s.players || 1; s.turn = s.turn || 0; } });
+  slots.forEach((s) => { if (s) { s.cleared = Array.from({ length: 64 }, (_, i) => !!(s.cleared && s.cleared[i])); s.medals = Array.from({ length: 64 }, (_, i) => (s.medals && s.medals[i]) | 0); s.secrets = s.secrets || {}; s.stars = Array.from({ length: 64 }, (_, i) => (s.stars && s.stars[i]) | 0); s.bars = Array.from({ length: 64 }, (_, i) => (s.bars && s.bars[i]) | 0); s.costume = s.costume || 'classic'; s.players = s.players || 1; s.turn = s.turn || 0; } });
   return {
     slots,
-    fresh: () => ({ players: 1, turn: 0, other: null, hero: 'wally', costume: 'classic', cleared: Array(38).fill(false), medals: Array(38).fill(0), stars: Array(38).fill(0), bars: Array(38).fill(0), secrets: {}, lives: 5, score: 0, coins: 0, node: 0, bonusAmmo: 0, startHearts: 0, startBoots: false }),
+    fresh: () => ({ players: 1, turn: 0, other: null, hero: 'wally', costume: 'classic', cleared: Array(64).fill(false), medals: Array(64).fill(0), stars: Array(64).fill(0), bars: Array(64).fill(0), secrets: {}, lives: 5, score: 0, coins: 0, node: 0, bonusAmmo: 0, startHearts: 0, startBoots: false }),
     persist() { try { localStorage.setItem(KEY, JSON.stringify(slots)); } catch (e) { /* ignore */ } },
   };
 })();
@@ -1022,7 +1022,7 @@ const WORLDS = [
 function setNode(li) {
   for (let w = 0; w < WORLDS.length; w++) { const i = WORLDS[w].nodes().findIndex((n) => n.li === li); if (i >= 0) { game.world = w; game[WORLDS[w].key] = i; return; } }
 }
-const levelTag = (li) => (li >= 33 ? `T${li - 32}` : li >= 30 ? `X${li - 29}` : li >= 24 ? `L${li - 23}` : li >= 21 ? `R${li - 20}` : li >= 15 ? `C${li - 14}` : li >= 11 ? `S${li - 10}` : LEVELS[li] && LEVELS[li].bonus ? `B${li - 7}` : String(li + 1));
+const levelTag = (li) => (LEVELS[li] && LEVELS[li].tag ? LEVELS[li].tag : li >= 33 ? `T${li - 32}` : li >= 30 ? `X${li - 29}` : li >= 24 ? `L${li - 23}` : li >= 21 ? `R${li - 20}` : li >= 15 ? `C${li - 14}` : li >= 11 ? `S${li - 10}` : LEVELS[li] && LEVELS[li].bonus ? `B${li - 7}` : String(li + 1));
 function drawRocket(x, y, t) {
   ctx.fillStyle = '#1a1020'; ctx.fillRect(x - 4, y - 16, 8, 16); ctx.fillRect(x - 7, y - 6, 14, 6);
   ctx.fillStyle = '#f0f0f8'; ctx.fillRect(x - 3, y - 15, 6, 14); ctx.fillStyle = '#e83850'; ctx.fillRect(x - 2, y - 18, 4, 4); ctx.fillRect(x - 6, y - 5, 3, 4); ctx.fillRect(x + 3, y - 5, 3, 4);
@@ -1042,10 +1042,11 @@ function MapScene() {
     if (n < 0 || n >= NODES_.length) return false;
     const nd = NODES_[n];
     if (nd.kind === 'door' || nd.kind === 'town') return true;
-    if (nd.kind === 'portal') return W === 0 ? !!game.cleared[7] : nd.to === 2 && W === 1 ? !!game.cleared[14] : nd.to === 3 ? !!game.cleared[20] : true;
+    if (nd.side) return !!game.cleared[nd.after];
+    if (nd.kind === 'portal') return W === 0 ? !!game.cleared[7] : nd.to === 2 && W === 1 ? !!game.cleared[14] : nd.to === 3 ? !!game.cleared[20] : nd.to === 4 ? !!game.cleared[27] : true;
     if (nd.gate && !dimensionOpen()) return false;
     if (W === 0) return nd.kind === 'bonus' ? !!(game.secrets[nd.li] || game.cleared[7]) : (n <= 1 || game.cleared[n - 2]);
-    const prev = NODES_.slice(0, n).filter((k) => k.li !== undefined && k.kind !== 'door').pop();
+    const prev = NODES_.slice(0, n).filter((k) => k.li !== undefined && k.kind !== 'door' && !k.side).pop();
     return !prev || !!game.cleared[prev.li];
   };
   function drawNode(n, i) {
@@ -1171,7 +1172,7 @@ function IntroScene(li, fromCheckpoint) {
     update() { t++; if (t > 130 || (t > 20 && Input.confirm())) go(() => new Play(li, fromCheckpoint)); },
     draw() {
       ctx.fillStyle = '#000'; ctx.fillRect(0, 0, VW, VH);
-      txt(LEVELS[li].bonus ? 'BONUS LEVEL' : li >= 33 ? 'WALLY TOWN RIDE' : li >= 30 ? `STATIC DIMENSION ${li - 29}` : li >= 24 ? `LOST LANDS ${li - 23}` : li >= 21 ? 'SECRET ROOM' : li >= 15 ? `CARNIVAL ${li - 14}` : li >= 11 ? `STAR ISLE ${li - 10}` : `LEVEL ${li + 1}`, 128, 60, LEVELS[li].bonus || li >= 21 ? '#c070ff' : '#ffe040', { scale: 2, align: 'center' });
+      txt(LEVELS[li].world ? LEVELS[li].world : LEVELS[li].bonus ? 'BONUS LEVEL' : li >= 33 ? 'WALLY TOWN RIDE' : li >= 30 ? `STATIC DIMENSION ${li - 29}` : li >= 24 ? `LOST LANDS ${li - 23}` : li >= 21 ? 'SECRET ROOM' : li >= 15 ? `CARNIVAL ${li - 14}` : li >= 11 ? `STAR ISLE ${li - 10}` : `LEVEL ${li + 1}`, 128, 60, LEVELS[li].bonus || li >= 21 ? '#c070ff' : '#ffe040', { scale: 2, align: 'center' });
       txt(LEVELS[li].name, 128, 88, '#fff', { align: 'center' });
       if (isNight()) txt('NIGHT TIME: GHOSTS ROAM, COINS X2', 128, 204, '#a0b0ff', { align: 'center' });
       drawWally(110, 142, 'idle' + ((t >> 4) % 4), 1);
@@ -1482,7 +1483,7 @@ class Play {
       for (const f of [0.3, 0.55, 0.8]) this.lv.spawns.push({ t: 'e', x: Math.floor(this.lv.w * f), y: 6 });
       this.lv.spawns.sort((a, b2) => a.x - b2.x);
     }
-    this.medalsGot = 0; this.barsGot = 0; this.pauseSel = 0; if (!game.bars) game.bars = Array(38).fill(0);
+    this.medalsGot = 0; this.barsGot = 0; this.pauseSel = 0; if (!game.bars) game.bars = Array(64).fill(0);
     if (game.bonusAmmo) { this.p.ammo = Math.min(9, 3 + game.bonusAmmo); game.bonusAmmo = 0; }
     if (game.startHearts) { this.p.hearts = 3; game.startHearts = 0; }
     if (game.startBoots) { this.p.boots = true; game.startBoots = false; }

@@ -188,6 +188,8 @@ const Sprites = (() => {
     desert: { top: ['#f0c870', '#c09040', '#fff0b0'], dirt: ['#d8a058', '#a87030', '#f0c080'], brick: ['#c87848', '#884020', '#f0a070'], solid: ['#c8a878', '#8a6a40', '#f0d8a8'], plank: ['#a07040', '#604020', '#c89050'] },
     static: { top: ['#a040ff', '#40108a', '#e0a0ff'], dirt: ['#2a1a4a', '#140a28', '#4a2a7a'], brick: ['#30d0c0', '#106a70', '#a0fff0'], solid: ['#5a5a7a', '#2a2a40', '#a0a0c8'], plank: ['#ff40a0', '#8a1050', '#ffa0d0'] },
     carnival: { top: ['#e83850', '#8a1830', '#ffb0b8'], dirt: ['#5a2a6a', '#3a1648', '#7a4a8a'], brick: ['#ffd040', '#b08010', '#fff0a0'], solid: ['#40a0e8', '#1a5a98', '#a0d8ff'], plank: ['#ffffff', '#e83850', '#ffffff'] },
+    crystal: { top: ['#60e0e0', '#2a7a9a', '#c0ffff'], dirt: ['#2a2050', '#160f30', '#3e3070'], brick: ['#b070ff', '#5a2aa0', '#e0c0ff'], solid: ['#4a5a8a', '#24304a', '#90a8d8'], plank: ['#7a5a40', '#4a3020', '#a08060'] },
+    toy: { top: ['#ff5060', '#a01830', '#ffb0b8'], dirt: ['#ffd040', '#c09010', '#fff090'], brick: ['#40a0ff', '#1a50a0', '#a0d8ff'], solid: ['#50d070', '#208040', '#a0f0b0'], plank: ['#ffffff', '#c0c0d0', '#ffffff'] },
     castle: { top: ['#8a8a9a', '#4a4a5a', '#b8b8c8'], dirt: ['#5a5a6a', '#3a3a48', '#7a7a8a'], brick: ['#8a4a5a', '#4a2030', '#b87a8a'], solid: ['#7a7a8a', '#3a3a4a', '#aaaabb'], plank: ['#6a4a30', '#3a2818', '#9a7050'] },
   };
   function tileSet(theme) {
@@ -751,6 +753,24 @@ const Sprites = (() => {
     L(0.7, (x) => motes(x, 50, ['#ff60c0', '#ffe040', '#60e0ff', '#ffffff'], 0, 210, 1, 502, 2), 0.1),
     L(0.85, (x) => { for (const px of [60, 300, 460]) { x.fillStyle = '#3a1a3a'; x.fillRect(px, 150, 3, 70); disc(x, px + 1, 146, 5, 'rgba(255,230,120,0.35)'); disc(x, px + 1, 146, 2, '#fff0a0'); } }),
     L(0.97, (x) => { for (let i = 0; i < 512; i += 16) { x.fillStyle = (i / 16) % 2 ? '#ff4060' : '#ffd040'; for (let y = 0; y < 8; y++) x.fillRect(i + y, y, 16 - y * 2, 1); } x.fillStyle = '#2a1a2a'; x.fillRect(0, 0, 512, 1); }),
+  ] };
+
+  // ---- Crystal Isle and the Toy Factory ----
+  S.bg.crystal = { sky: gradient('#08061a', '#2a1a50'), layers: [
+    L(0.01, (x) => motes(x, 60, ['#a0f0ff', '#e0b0ff', '#ffffff'], 0, 224, 1, 801)),
+    L(0.05, (x) => { const r = rng(802); for (let k = 0; k < 9; k++) { const cx = (k * 60 + r() * 30) | 0, h = 50 + ((r() * 70) | 0), w = 8 + ((r() * 8) | 0); for (let y = 0; y < h; y++) { const ww = Math.max(1, Math.round(w * (1 - y / h))); x.fillStyle = y % 7 ? 'rgba(80,60,160,0.55)' : 'rgba(140,120,230,0.6)'; x.fillRect(cx - ww, 224 - y, ww * 2, 1); } } }),
+    L(0.12, (x) => { for (let i = 0; i < 512; i++) { const h = Math.round(20 + Math.sin(i * 0.03) * 10 + Math.sin(i * 0.09) * 6); x.fillStyle = '#140c2a'; x.fillRect(i, 0, 1, h); } const r = rng(803); for (let k = 0; k < 24; k++) { const sx = (r() * 500) | 0, l = 8 + ((r() * 18) | 0); for (let y = 0; y < l; y++) { x.fillStyle = y > l - 3 ? '#80f0ff' : '#3a2a6a'; x.fillRect(sx + Math.round(y * 0.1), 18 + y, Math.max(1, Math.round((l - y) / 4)), 1); } } }),
+    L(0.25, (x) => { const r = rng(804); for (let k = 0; k < 12; k++) { const cx = (r() * 500) | 0, h = 24 + ((r() * 40) | 0), col = ['#60e0e0', '#b070ff', '#ff70c0'][k % 3]; for (let y = 0; y < h; y++) { const ww = Math.max(1, Math.round(6 * (1 - y / h))); x.fillStyle = col; x.globalAlpha = 0.55; x.fillRect(cx - ww, 210 - y, ww * 2, 1); x.globalAlpha = 0.9; x.fillStyle = '#ffffff'; if (y % 5 === 0) x.fillRect(cx - ww + 1, 210 - y, 1, 1); x.globalAlpha = 1; } disc(x, cx, 190, 14, 'rgba(120,220,255,0.06)'); } }),
+    L(0.4, (x) => { for (let i = 0; i < 512; i++) { const h = Math.round(196 + Math.sin(i * 0.04) * 5); x.fillStyle = '#1e1640'; x.fillRect(i, h, 1, 224 - h); } }),
+    L(0.7, (x) => motes(x, 40, ['#80f0ff', '#e0a0ff'], 30, 210, 1, 805), 0.08),
+  ] };
+  S.bg.toy = { sky: gradient('#80c8ff', '#fff0d0'), layers: [
+    L(0.03, (x) => { for (let i = 0; i < 6; i++) cloud(x, i * 90 + 20, 40 + (i % 2) * 20, 0.8, '#ffffff', '#e8f0ff'); }),
+    L(0.1, (x) => { const r = rng(811); for (let i = 0; i < 512;) { const w = 20 + ((r() * 20) | 0), h = 20 + ((r() * 3) | 0) * 20; const col = ['#ff6070', '#ffd040', '#40a0ff', '#50d070', '#c070ff'][(i / 7 | 0) % 5]; x.fillStyle = col; x.fillRect(i, 210 - h, w, h + 14); x.fillStyle = 'rgba(255,255,255,0.35)'; x.fillRect(i, 210 - h, w, 2); x.fillStyle = 'rgba(0,0,0,0.15)'; x.fillRect(i + w - 2, 210 - h, 2, h + 14); if (r() < 0.5) { x.fillStyle = 'rgba(255,255,255,0.6)'; x.fillRect(i + 4, 214 - h, 5, 5); x.fillRect(i + w - 9, 214 - h, 5, 5); } i += w + 3; } }),
+    L(0.2, (x) => { for (const cx of [90, 330]) { for (let a = 0; a < 16; a++) { const t2 = (a / 16) * Math.PI * 2; x.fillStyle = '#8a8aa0'; x.fillRect(Math.round(cx + Math.cos(t2) * 30) - 3, Math.round(110 + Math.sin(t2) * 30) - 3, 6, 6); } disc(x, cx, 110, 28, '#a0a0b8'); disc(x, cx, 110, 10, '#6a6a80'); } }),
+    L(0.32, (x) => { x.fillStyle = '#6a6a80'; x.fillRect(0, 150, 512, 6); x.fillStyle = '#9a9ab0'; x.fillRect(0, 150, 512, 1); for (let k = 0; k < 512; k += 48) { const col = ['#ff6070', '#40a0ff', '#ffd040', '#50d070'][(k / 48) % 4]; x.fillStyle = col; x.fillRect(k + 10, 134, 16, 16); x.fillStyle = 'rgba(255,255,255,0.5)'; x.fillRect(k + 12, 136, 4, 4); } }),
+    L(0.55, (x) => { for (let k = 0; k < 7; k++) { const tx = k * 80 + 20; x.fillStyle = '#e04050'; x.fillRect(tx, 186, 22, 20); x.fillStyle = '#ffd040'; x.fillRect(tx + 6, 176, 10, 10); x.fillStyle = '#1a1020'; x.fillRect(tx + 8, 179, 2, 2); x.fillRect(tx + 12, 179, 2, 2); x.fillStyle = '#40a0ff'; x.fillRect(tx - 4, 204, 30, 4); } }),
+    L(0.85, (x) => motes(x, 40, ['#ff6070', '#ffd040', '#40a0ff', '#50d070'], 0, 224, 2, 812), 0.2),
   ] };
 
   S.portrait = new Image();
