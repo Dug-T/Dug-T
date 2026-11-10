@@ -293,6 +293,12 @@ const Audio8 = (() => {
       mel: 'D5/2 G5/2 B5/2 D6/2 B5/4 G5/4 | E5/2 G5/2 B5/2 E6/2 D6/8 | C6/2 B5/2 A5/2 G5/2 E5/4 C5/4 | D5/2 F#5/2 A5/2 D6/2 C6/8 |' +
         'B5/2 D6/2 G6/2 D6/2 B5/4 G5/4 | E6/2 D6/2 B5/2 G5/2 E5/8 | A5/2 C6/2 E6/2 C6/2 A5/4 F#5/4 | G5/12 r/4',
     },
+    pirate: {
+      bpm: 126, swing: 0.35, bass: 'bounce', harm: 'waltz', drums: 'k..h..s..h..k.s.', lead: 'p25',
+      chords: 'Dm Dm C C Bb Bb A A',
+      mel: 'A4/2 D5/2 D5/2 E5/2 F5/4 D5/4 | C5/2 E5/2 E5/2 F5/2 G5/4 E5/4 | F5/2 D5/2 Bb4/2 D5/2 F5/4 A5/4 | G5/4 E5/4 C#5/8 |' +
+        'A5/2 G5/2 F5/2 E5/2 D5/4 A4/4 | C5/2 D5/2 E5/2 G5/2 C6/8 | Bb5/2 A5/2 G5/2 F5/2 D5/4 Bb4/4 | A4/2 C#5/2 E5/2 G5/2 A5/8',
+    },
     boss: {
       bpm: 172, swing: 0, bass: 'drive', harm: 'stab', drums: 'kshskshskshsksss', lead: 'p12',
       chords: 'Em C Em B',

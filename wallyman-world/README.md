@@ -21,6 +21,23 @@ Open `index.html` in any modern browser — or enable **GitHub Pages** for this 
 
 ## What's in it
 
+- **Pirate Cove** – a 6th island (sail from Crystal Isle after beating the Crystal Dragon): **Shipwreck Shore**, **Cannon Deck** (cannonball volleys land where red markers flash), **Rising Tide** (the sea slowly floods the level and drains away again – swim up to high treasures), **Skull Cave** (dark) and the **Ghost Galleon**, where **Captain Gloombeard** vanishes, throws his cutlass, calls in cannon fire and can only be stomped while he rests on deck. New enemy: **Skelly Pirates**.
+- **Roguelike Tower** (Challenges) – randomly built floors; after each one pick 1 of 3 upgrades (jet boots, extra hearts, magnet, shield, cannon pro, super special, speedy shoes, slow clock). One life – your best floor is saved.
+- **Golden Levels** (Challenges) – once an island's castle is beaten, its levels can be replayed with 100 gold coins hidden all over them.
+- **Tutorial** – the Training Grounds teach every move with signposts. New files are offered it on the map, and it's in Challenges too.
+- **Volt is playable** after finishing Doug's Story – the fastest runner, with a **Lightning Dash** special that zaps through enemies.
+- **Hero Maker** (Extras) – design your own hero: suit, cape and boots, skin, visor, hair style and colour, and a name. Pick them on the hero screen.
+- **Hero quips** – now and then your hero says a short line out loud after a boss, a 1-UP or a clear (Options → Hero Quips).
+- **Reserve box** – grab a power-up you don't need right now (an energy drink at full hearts, a second pair of jet boots...) and it is stored. Hold Up and press S to drop it in when you need it.
+- **Garden** (Dino's House) – plant coin seeds, pet fruit and star seeds that grow over real hours; water once a day to speed them up. Star seeds grow rare hats (pirate hat, flower crown, viking helmet).
+- **New mini-games** – Beat Tapper (tap on the beat to DJ Decibel's song), Snowball Fight and Whack-a-Grumble.
+- **Airship fast travel** – press S on the map to fly to any island you have unlocked.
+- **Pet tricks** (Dino's House → Pets) – pets level up as you clear levels: Fetch (wider coin grab), Sniff (barks near hidden blocks, cracked walls and buried treasure) and Guard (comes back 3x faster after saving you).
+- **Level Maker** – slopes, fans, crates, pressure plates, pound plates, gates, mirrors, light beams and targets, crushers, glow crystals, every new enemy and a dark lantern mode.
+- **Level of the Week** in Course World and **Cloud Save** in Dino's House (both need the Firebase settings).
+- **Touch layout editor** (Options) – drag and resize the on-screen buttons. **Auto-run** and **One Button** modes make the game easier to play.
+- **Boss phase 2** – Baron Static and the Motherships change form at half health with extra attacks, in the story and in Boss Rush.
+
 - **Crystal Isle** – a 5th island (take the boat from the Lost Lands once the Sandworm is beaten): **Glitter Grotto** (pitch-dark caves lit only by your lantern, glowing crystals and crystal bugs, with wall-jump shafts), **Windy Cliffs** (strong gusts and fans that blow you up cliffs), **Slippery Slopes** (real slopes), **Toy Factory** (conveyor belts, springs, fans, crushers, toy soldiers and wind-up mice), **Magma Chase** (a wall of lava chases you from the left), **Beat Box Arena** and **Crystal Crown**.
 - **New bosses** – **DJ Decibel**, whose every attack lands on the beat of his song (bass waves to jump, speaker blasts to stay under, falling notes; stomp him when his lid pops open on beat 4), and the **Crystal Dragon** (crystal-shard rain, swoops, and perches to rest – that's when you stomp it).
 - **Wall-jump for everyone** – every hero can now slide down walls and kick off them (the Upgrade Tree's Wall Jump is free).
@@ -125,7 +142,7 @@ Open `index.html` in any modern browser — or enable **GitHub Pages** for this 
 - **Costumes** – visit the **Wardrobe** in Dino's Shop at Wally's House. Seven outfits: Classic, Wally Jr, Golden (find 20 Wally Medals), Ice (clear Frosty Peaks), Dino Suit (clear Coral Depths), Shadow (clear Haunted Manor) and Fire (beat Baron Static).
 - **Difficulty** (Extras → Options): Easy (3 hearts, 50% more time, slower enemies, weaker bosses), Normal, or Hard (1 heart, less time, faster enemies, tougher bosses).
 - **Star rankings** – up to 3 stars per level: finish with 40% of the time left, have all 5 medals, and take no hits. Stars show on the clear screen, the map and the level intro.
-- **Trophies** – 57 achievements (first clear, flawless boss, Dino rider, UFO hunter, secret exits, three stars and more) with pop-up notifications and a **Trophy Room**.
+- **Trophies** – 67 achievements (first clear, flawless boss, Dino rider, UFO hunter, secret exits, three stars and more) with pop-up notifications and a **Trophy Room**.
 - **Extras menu** – Trophy Room, **Jukebox** (play every song), **Gallery** (heroes, enemies, bosses and items) and **Options** (difficulty, music/sound volume, sound on/off, **CRT retro-TV filter**, screen shake).
 - **Hidden secrets** – an invisible block in most levels (jump into empty air to find a 1-UP) and cracked walls that crumble into coins when blasted, chomped, shocked or ground-pounded.
 - **High score table** – when a run ends (game over or beating the game) a top-10 score lets you enter your name arcade-style (D-pad + A, or just type). Scores are kept in the browser; when the game runs as a claude.ai artifact they are also shared through its database for players allowed to save there.
@@ -181,6 +198,8 @@ js/batchg.js        new power-ups, rides, combo meter, Wally Town, EX rush, dail
 js/batchh.js        slopes, fans, wall-jump for all, puzzles, lava chase, dark caves, new enemies and bosses, the rival, signs, arena/remix/replay modes
 js/batchh2.js       Crystal Isle levels and map, puzzle rooms, Doug's story, bestiary, replays, leaderboards, radar
 js/batchh3.js       menus, jukebox + sound test, languages, intro voice, kart race
+js/batchi.js        Pirate Cove levels, tide, volleys, Gloombeard, tower floors, gold mode, tutorial, Volt + hero maker heroes, reserve box, pet tricks, boss phase 2, quips
+js/batchi2.js       Pirate Cove map, airship, tower/gold menus, garden, pets, mini-games, hero maker, cloud save, Level of the Week, touch editor, Level Maker parts
 manifest.webmanifest, sw.js, icons/   install-as-an-app support (works offline)
 assets/             pixelated WallyMan, GothChick and Doug Thomson portraits (title, character select, ending)
 ```

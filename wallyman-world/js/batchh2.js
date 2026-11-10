@@ -191,6 +191,7 @@ WORLDS.push({ nodes: () => NODES5, edges: () => EDGES5, isle: () => Island5, nam
   const _Map = MapScene;
   MapScene = function (...a) { // eslint-disable-line no-func-assign
     const s = _Map(...a), d = s.draw;
+    if (!s.isMap) return s;
     s.draw = function () {
       d.call(this);
       const W = game.world || 0, WD = WORLDS[W], nodes = WD.nodes();

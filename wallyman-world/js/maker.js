@@ -27,9 +27,12 @@ const Maker = (() => {
   slots = slots.map((s) => (s && validRows(s.rows) && THEME_LIST.includes(s.theme) ? { theme: s.theme, boss: s.boss || '', rows: s.rows.map((r) => r.split('')) } : null));
   const persist = () => { try { localStorage.setItem(KEY, JSON.stringify(slots.map((s) => (s ? { theme: s.theme, boss: s.boss || '', rows: s.rows.map((r) => r.join('')) } : null)))); } catch (e) { /* ignore */ } };
   // Share codes: theme + boss + run-length encoded grid, wrapped in base64
-  const CHARS = '.#BWPSOAVQDXRI=^LJ<>o' + 'gpzhbctuelmnasMxC@G' + 'NTEY~;fj';
+  const CHARS = '.#BWPSOAVQDXRI=^LJ<>o' + 'gpzhbctuelmnasMxC@G' + 'NTEY~;fji' + '◢◣φβπΠΓ╱╲εωχσμζψκ¤ξ';
+  // newer tiles are stored as plain ASCII inside share codes
+  const ENC = { '◢': '1', '◣': '2', 'φ': '3', 'β': '4', 'π': '5', 'Π': '6', 'Γ': '7', '╱': '8', '╲': '9', 'ε': '0', 'ω': '!', 'χ': '?', 'σ': '$', 'μ': '%', 'ζ': '&', 'ψ': '*', 'κ': '+', '¤': ',', 'ξ': '-' }, DEC = {};
+  for (const k of Object.keys(ENC)) DEC[ENC[k]] = k;
   function encode(lv) {
-    const flat = lv.rows.map((r) => r.join('')).join('');
+    const flat = lv.rows.map((r) => r.join('')).join('').replace(/[^\x00-\x7f]/g, (c) => ENC[c] || '.');
     let out = '';
     for (let i = 0; i < flat.length;) { let j = i; while (j < flat.length && flat[j] === flat[i] && j - i < 1295) j++; const n = j - i; out += n > 2 ? flat[i] + '|' + n.toString(36) + '|' : flat[i].repeat(n); i = j; }
     const body = String.fromCharCode(65 + THEME_LIST.indexOf(lv.theme)) + String.fromCharCode(65 + Math.max(0, BOSSES.findIndex((b) => b[0] === (lv.boss || '')))) + out;
@@ -42,6 +45,7 @@ const Maker = (() => {
       if (!theme || !boss) return null;
       let flat = '';
       for (let i = 2; i < body.length;) { const c = body[i]; if (body[i + 1] === '|') { const e = body.indexOf('|', i + 2); flat += c.repeat(parseInt(body.slice(i + 2, e), 36)); i = e + 1; } else { flat += c; i++; } if (flat.length > W * H) return null; }
+      flat = flat.replace(/[0-9!?$%&*+,-]/g, (c) => DEC[c] || c);
       if (flat.length !== W * H || [...flat].some((c) => !CHARS.includes(c))) return null;
       return { theme, boss: boss[0], rows: Array.from({ length: H }, (_, y) => flat.slice(y * W, (y + 1) * W).split('')) };
     } catch (e) { return null; }

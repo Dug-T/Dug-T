@@ -25,19 +25,20 @@ const SL_R = '◢', SL_L = '◣', FAN = 'φ', CRYS = 'κ', GATE = 'Γ', PLATE = 
 [FAN, CRYS, GATE, POUNDP, POUNDED, EMIT, RECV].forEach((c) => SOLID.add(c));
 const isSlope = (c) => c === SL_R || c === SL_L;
 const H_ENTS = { 'σ': 'toysoldier', 'μ': 'windup', 'ζ': 'crystalbug', 'ψ': 'gustbird', 'χ': 'crusher', 'β': 'crate', 'ς': 'sign' };
-const hR = (X, Y, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(Math.round(X), Math.round(Y), w, h); };
+let hCtx = null; // draw the new characters onto another canvas when set
+const hR = (X, Y, w, h, c) => { const C = hCtx || ctx; C.fillStyle = c; C.fillRect(Math.round(X), Math.round(Y), w, h); };
 
 // ---------------- art for the new characters ----------------
 function drawVolt(cx, feet, face, t, pose) {
   const x = Math.round(cx) - 5, y = Math.round(feet) - 22, run = pose === 'run', leg = run ? ((t >> 2) & 1) : 0;
-  ctx.save(); if (face < 0) { ctx.translate(x * 2 + 10, 0); ctx.scale(-1, 1); }
+  const C = hCtx || ctx; C.save(); if (face < 0) { C.translate(x * 2 + 10, 0); C.scale(-1, 1); }
   hR(x + 1, y + 1, 9, 7, '#1a1020'); hR(x + 2, y + 2, 7, 5, '#f0c090'); hR(x + 6, y + 3, 2, 2, '#1a1020');
   for (let k = 0; k < 4; k++) hR(x - 1 + k * 3, y - 2 + (k % 2), 3, 4, '#2a6aff'); hR(x - 3, y + 1, 4, 2, '#2a6aff'); hR(x - 5, y + 2, 3, 1, '#5aa0ff');
   hR(x + 1, y + 8, 9, 8, '#1a1020'); hR(x + 2, y + 9, 7, 6, '#ffd040'); hR(x + 4, y + 10, 2, 2, '#2a6aff'); hR(x + 5, y + 12, 2, 2, '#2a6aff');
   hR(x + 1, y + 15, 9, 7, '#1a1020'); hR(x + 2 + (leg ? 2 : 0), y + 16, 3, 5, '#303060'); hR(x + 6 - (leg ? 2 : 0), y + 16, 3, 5, '#303060');
   hR(x + 1 + (leg ? 2 : 0), y + 20, 4, 2, '#ff3040'); hR(x + 6 - (leg ? 2 : 0), y + 20, 4, 2, '#ff3040');
   if (run && (t >> 1) & 1) { hR(x - 6, y + 10, 4, 1, '#ffe040'); hR(x - 9, y + 14, 5, 1, '#ffe040'); }
-  ctx.restore();
+  C.restore();
 }
 function drawHEnemy(type, x, y, t, face = 1) {
   ctx.save(); if (face < 0) { ctx.translate(x * 2 + 14, 0); ctx.scale(-1, 1); }
@@ -218,7 +219,7 @@ const rivalOK = (pl) => pl.lv.goal && !pl.def.autoscroll && !pl.def.board && !pl
       const type = H_ENTS[g[y][x]]; if (!type) continue; g[y][x] = '.';
       const X = x * TS, Y = y * TS;
       if (type === 'crate') this.platforms.push({ crate: true, x: X, y: Y, w: 16, h: 16, ox: X, oy: Y, axis: 'c', t: 0, dx: 0, dy: 0, vy: 0 });
-      else if (type === 'sign') this.ents.push({ type: 'sign', alive: true, t: 0, x: X + 2, y: Y + 2, w: 12, h: 14, lines: this.def.signLines || levelTip(this.def, this.li) });
+      else if (type === 'sign') this.ents.push({ type: 'sign', alive: true, t: 0, x: X + 2, y: Y + 2, w: 12, h: 14, lines: (this.def.signs && this.def.signs[x]) || this.def.signLines || levelTip(this.def, this.li) });
       else if (type === 'crusher') this.ents.push({ type: 'crusher', alive: true, t: (x * 13) % 90, x: X - 6, y: Y, top: Y, w: 28, h: 16, state: 'wait', act: 60 + (x * 7) % 60, hazard: false });
       else if (type === 'gustbird') this.ents.push({ type, alive: true, enemy: true, stomp: true, t: x * 3, x: X, y: Y, oy: Y, ox: X, w: 14, h: 10, vx: -0.7, face: -1 });
       else this.ents.push({ type, alive: true, enemy: true, stomp: true, t: 0, x: X + 1, y: Y + 2, w: 14, h: 14, vx: (type === 'windup' ? -1.35 : -0.45) * DIFF[this.diff].speed, vy: 0, face: -1, cool: 90 });

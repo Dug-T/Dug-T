@@ -1043,7 +1043,7 @@ function MapScene() {
     const nd = NODES_[n];
     if (nd.kind === 'door' || nd.kind === 'town') return true;
     if (nd.side) return !!game.cleared[nd.after];
-    if (nd.kind === 'portal') return W === 0 ? !!game.cleared[7] : nd.to === 2 && W === 1 ? !!game.cleared[14] : nd.to === 3 ? !!game.cleared[20] : nd.to === 4 ? !!game.cleared[27] : true;
+    if (nd.kind === 'portal') return W === 0 ? !!game.cleared[7] : nd.to === 2 && W === 1 ? !!game.cleared[14] : nd.to === 3 ? !!game.cleared[20] : nd.to === 4 ? !!game.cleared[27] : nd.to === 5 ? !!game.cleared[44] : true;
     if (nd.gate && !dimensionOpen()) return false;
     if (W === 0) return nd.kind === 'bonus' ? !!(game.secrets[nd.li] || game.cleared[7]) : (n <= 1 || game.cleared[n - 2]);
     const prev = NODES_.slice(0, n).filter((k) => k.li !== undefined && k.kind !== 'door' && !k.side).pop();
@@ -1097,6 +1097,7 @@ function MapScene() {
     }
   }
   return {
+    isMap: true,
     enter() { Audio8.play('map'); },
     update() {
       t++; if (lockT > 0) lockT--;
@@ -1290,10 +1291,10 @@ function HatScene() {
       txt(h.name, 208, 48, '#ffe040', { align: 'center' });
       if (game.hat === h.id || (h.id === 'none' && !game.hat)) txt('WEARING', 208, 62, '#5ae060', { align: 'center' });
       else if (own) txt('A: WEAR', 208, 62, '#fff', { align: 'center' });
-      else { ctx.drawImage(Sprites.coinIcon, 190, 62); txt(String(h.price), 197, 62, game.coins >= h.price ? '#fff' : '#ff6060'); }
+      else if (h.garden) txt('GROW IT IN', 208, 56, '#5ae060', { align: 'center' }), txt('THE GARDEN', 208, 66, '#5ae060', { align: 'center' }); else { ctx.drawImage(Sprites.coinIcon, 190, 62); txt(String(h.price), 197, 62, game.coins >= h.price ? '#fff' : '#ff6060'); }
       if (msgT) txt(msg.slice(0, 13), 208, 76, '#5ff0ff', { align: 'center' });
       HAT_LIST.forEach((k, i) => {
-        const x = 10 + i * 34, y = 140;
+        const x = 10 + (i - Math.max(0, Math.min(HAT_LIST.length - 7, sel - 3))) * 34, y = 140; if (x < 0 || x > 230) return;
         ctx.fillStyle = i === sel ? '#ffe040' : '#6a4a7a'; ctx.fillRect(x - 2, y - 2, 32, 40);
         ctx.fillStyle = '#efe0f8'; ctx.fillRect(x, y, 28, 36);
         Wally.draw(ctx, x + 14, y + 33, 'idle0', 1, { t, hat: k.id, black: false });

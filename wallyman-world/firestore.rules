@@ -53,5 +53,14 @@ service cloud.firestore {
         && request.resource.data.top is string && request.resource.data.top.size() < 600;
       allow delete: if false;
     }
+    // Cloud saves (document id = the player's private 10-letter key): read or write by key only.
+    match /saves/{id} {
+      allow get: if id.matches('^[A-Z2-9]{10}$');
+      allow list: if false;
+      allow create, update: if id.matches('^[A-Z2-9]{10}$') && request.resource.data.keys().hasOnly(['code', 'ts'])
+        && request.resource.data.code is string && request.resource.data.code.size() < 200000
+        && request.resource.data.ts is int;
+      allow delete: if false;
+    }
   }
 }

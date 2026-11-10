@@ -591,7 +591,7 @@ function towerRows(def, k) {
 }
 function towerBuild(b, def, k) { towerRows(def, k).forEach((row, y) => { for (let x = 0; x < 16; x++) b.g[y][x] = row[x]; }); }
 function buildLevel(i) {
-  const def = i === 99 ? window.CUSTOM_LEVEL : i === 98 ? window.RUSH_LEVEL : i === 97 ? window.ENDLESS_LEVEL : i === 96 ? window.TOWER_SCREEN : i === 95 ? window.VERSUS_LEVEL : i === 94 ? window.ARENA_LEVEL : LEVELS[i], b = new LevelBuilder(def.width);
+  const def = i === 99 ? window.CUSTOM_LEVEL : i === 98 ? window.RUSH_LEVEL : i === 97 ? window.ENDLESS_LEVEL : i === 96 ? window.TOWER_SCREEN : i === 95 ? window.VERSUS_LEVEL : i === 94 ? window.ARENA_LEVEL : i === 93 ? window.ROGUE_LEVEL : LEVELS[i], b = new LevelBuilder(def.width);
   def.build(b);
   if (def.secret) { if (def.secret.prep) def.secret.prep(b); b.set(def.secret.x, def.secret.y, 'Z'); }
   if (def.yeti) b.set(def.yeti[0], def.yeti[1], 'y');
