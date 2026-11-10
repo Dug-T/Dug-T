@@ -1739,14 +1739,15 @@ class Play {
     if (this.talk) { this.updateTalk(); return; }
     if (Input.pressed('start') && (this.state === 'play')) { this.paused = !this.paused; this.pauseSel = 0; Audio8.sfx('pause'); return; }
     if (this.paused) {
-      if (Input.pressed('down')) { this.pauseSel = (this.pauseSel + 1) % 5; Audio8.sfx('select'); }
-      if (Input.pressed('up')) { this.pauseSel = (this.pauseSel + 4) % 5; Audio8.sfx('select'); }
+      if (Input.pressed('down')) { this.pauseSel = (this.pauseSel + 1) % 6; Audio8.sfx('select'); }
+      if (Input.pressed('up')) { this.pauseSel = (this.pauseSel + 5) % 6; Audio8.sfx('select'); }
       if (Input.pressed('jump') && this.pauseSel === 3) { this.paused = false; this.photo = { x: 128, y: 112, sticker: 0, frame: 0, items: [] }; Audio8.sfx('confirm'); return; }
       if (this.pauseSel === 1 || this.pauseSel === 2) {
         const kind = this.pauseSel === 1 ? 'music' : 'sfx', d = (Input.pressed('right') ? 0.2 : 0) - (Input.pressed('left') ? 0.2 : 0);
         if (d) { Audio8.setVolume(kind, Audio8.getVolume(kind) + d); Audio8.sfx('coin'); }
       }
       if (Input.pressed('back') || (Input.pressed('jump') && this.pauseSel === 0)) { this.paused = false; Audio8.sfx('pause'); }
+      if (Input.pressed('jump') && this.pauseSel === 5) { this.paused = false; this.state = 'done'; Save.persist(); Audio8.sfx('confirm'); go(() => TitleScene()); return; }
       if (Input.pressed('jump') && this.pauseSel === 4) { this.paused = false; Save.persist(); const li = this.li; go(() => (this.endless ? EndlessIntro() : this.rush ? ChallengeScene(1) : this.daily ? DailyScene() : this.def.custom ? LevelMakerScene(Maker.state) : this.ta ? TimeAttackSelect(li) : nextTurn(() => MapScene()))); }
       return;
     }
@@ -2749,11 +2750,11 @@ class Play {
     this.drawStars();
     if (this.paused) {
       ctx.fillStyle = 'rgba(0,0,0,0.45)'; ctx.fillRect(0, 0, VW, VH);
-      drawWindow(48, 50, 160, 128);
+      drawWindow(48, 48, 160, 136);
       txt('PAUSED', 128, 58, '#ffe040', { scale: 2, align: 'center' });
-      const labels = ['CONTINUE', 'MUSIC', 'SOUND FX', 'PHOTO MODE', 'EXIT TO MAP'];
+      const labels = ['CONTINUE', 'MUSIC', 'SOUND FX', 'PHOTO MODE', 'EXIT TO MAP', 'EXIT TO MAIN MENU'];
       labels.forEach((l, i) => {
-        const y = 82 + i * 15, on = i === this.pauseSel;
+        const y = 78 + i * 14, on = i === this.pauseSel;
         txt(l, 70, y, on ? '#ffe040' : '#fff');
         if (on) txt('>', 60 + ((frame >> 3) & 1), y, '#ffe040');
         if (i === 1 || i === 2) {
@@ -2761,7 +2762,7 @@ class Play {
           for (let k = 0; k < 5; k++) { ctx.fillStyle = k < v ? (on ? '#ffe040' : '#5ff0ff') : '#3a3a58'; ctx.fillRect(130 + k * 9, y + 6 - k, 7, 2 + k); }
         }
       });
-      txt('A: SELECT   < >: VOLUME', 128, 162, '#a8b0d8', { align: 'center' });
+      txt('A: SELECT   < >: VOLUME', 128, 168, '#a8b0d8', { align: 'center' });
     }
   }
   drawTiles(cx) {
