@@ -3118,7 +3118,7 @@ resize();
 scene = TitleScene();
 scene.enter();
 let last = performance.now(), acc = 0;
-function loop(now) {
+function loopStep(now) {
   acc += Math.min(100, now - last); last = now;
   while (acc >= 1000 / 60) {
     acc -= 1000 / 60;
@@ -3136,6 +3136,27 @@ function loop(now) {
     // SNES-style "iris" fade: a shrinking/growing circle mask
     const r = (1 - fade) * 190;
     ctx.save(); ctx.fillStyle = '#000'; ctx.beginPath(); ctx.rect(0, 0, VW, VH); ctx.arc(128, 112, Math.max(0, r), 0, Math.PI * 2, true); ctx.fill(); ctx.restore();
+  }
+  }
+// crash guard: if anything goes wrong, show a friendly screen instead of freezing
+function OopsScene(err) {
+  let t = 0;
+  return {
+    enter() { Audio8.stop(); },
+    update() { t++; if (t > 30 && (Input.confirm() || Input.pressed('back'))) { try { Save.persist(); } catch (e) { /* ignore */ } go(() => TitleScene()); } },
+    draw() {
+      ctx.fillStyle = '#101848'; ctx.fillRect(0, 0, VW, VH);
+      txt('OOPS!', 128, 60, '#ffe040', { scale: 3, align: 'center' });
+      ['SOMETHING WENT WRONG THERE.', 'YOUR SAVE FILES ARE SAFE.', '', 'PRESS START TO GO BACK', 'TO THE TITLE SCREEN.'].forEach((l, k) => txt(l, 128, 100 + k * 12, '#fff', { align: 'center' }));
+      txt(String((err && err.message) || err || '').toUpperCase().replace(/[^A-Z0-9 .,:()'-]/g, '').slice(0, 40), 128, 196, '#7880b0', { align: 'center' });
+    },
+  };
+}
+let crashes = 0;
+function loop(now) {
+  try { loopStep(now); } catch (e) {
+    console.error(e); crashes++;
+    try { fade = 0; fadeDir = 0; scene = crashes > 20 ? { update() {}, draw() {} } : OopsScene(e); if (scene.enter) scene.enter(); } catch (e2) { /* ignore */ }
   }
   requestAnimationFrame(loop);
 }

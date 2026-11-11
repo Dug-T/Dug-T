@@ -343,7 +343,7 @@ function textBox(title, placeholder, done) { // small page overlay with a text f
   const wrap = document.createElement('div');
   wrap.style.cssText = 'position:fixed;inset:0;background:rgba(8,10,40,0.82);display:flex;align-items:center;justify-content:center;z-index:50;font-family:monospace';
   wrap.innerHTML = '<div style="background:#101848;border:3px solid #ffe040;border-radius:8px;padding:14px;width:min(90vw,360px);color:#fff;text-align:center"><div style="color:#ffe040;font-weight:bold;margin-bottom:8px"></div><input maxlength="16" style="width:100%;box-sizing:border-box;font:16px monospace;padding:6px;text-transform:uppercase"><div style="display:flex;gap:8px;justify-content:center;margin-top:10px"><button>OK</button><button>CANCEL</button></div></div>';
-  wrap.querySelector('div div').textContent = title;
+  wrap.querySelector(':scope > div > div').textContent = title;
   const input = wrap.querySelector('input'); input.placeholder = placeholder;
   const [ok, cancel] = wrap.querySelectorAll('button');
   [ok, cancel].forEach((b) => { b.style.cssText = 'font:bold 14px monospace;padding:8px 14px;border-radius:6px;border:2px solid #fff;background:#2f62d0;color:#fff'; });

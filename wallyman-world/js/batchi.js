@@ -211,7 +211,7 @@ HERO_IDS.push('volt', 'maker');
     const img = Wally.frame(pose, capeF, o.signal, face, o.white ? 'w' : o.ghost ? 'g' : o.black ? 'k' : 'n', 'classic', hero);
     c2.drawImage(img, X, Y, w, h);
     if (o.ghost || o.black) return;
-    if (hero === 'maker') { const cfg = makerCfg(); if (cfg.hair && cfg.hair !== 'none') Wally.drawHat(c2, img, X, Y, w / Wally.W, h / Wally.H, 'hair_' + cfg.hair, o.t); }
+    if (hero === 'maker') { const style = MAKER_HAIR[makerCfg().hair] || 'none'; if (style !== 'none') Wally.drawHat(c2, img, X, Y, w / Wally.W, h / Wally.H, 'hair_' + style, o.t); }
     const hat = o.hat !== undefined ? o.hat : Wally.hat;
     if (hat && hat !== 'none') Wally.drawHat(c2, img, X, Y, w / Wally.W, h / Wally.H, hat, o.t);
   };
