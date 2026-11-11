@@ -5,7 +5,7 @@ const ctx = cv.getContext('2d');
 ctx.imageSmoothingEnabled = false;
 let frame = 0;
 // the game's update number, shown on the title screen: 1.0 is the first, and each new update adds 0.1 (1.1, 1.2, ...)
-const GAME_VERSION = '1.4';
+const GAME_VERSION = '1.5';
 const SOLID = new Set(['#', 'B', 'W', 'P', 'S', 'O', 'A', 'V', 'Q', 'D', 'N', 'T', 'E', 'H', '[', ']', '{', 'F', '+', '}', '?', '`', 'U', 'X', '^', 'J', 'R', '<', '>', 'Y']);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const approach = (v, t, d) => (v < t ? Math.min(t, v + d) : Math.max(t, v - d));
@@ -862,7 +862,7 @@ function TitleScene() {
         });
         if (eraseMode) txt('PICK A FILE TO ERASE', 30, 199, '#ff8080', { outline: '#000' });
       }
-      txt('@2026 DUG-T', 4, 214, '#fff');
+      txt('@2026 DOUGLAS THOMSON', 4, 214, '#fff');
       if (typeof drawTipJar === 'function') drawTipJar(t);
     },
   };
@@ -1203,7 +1203,7 @@ function GameOverScene() {
 }
 function EndingScene() {
   let t = 0;
-  const lines = ['THE STATIC IS GONE!', '', 'BARON STATIC HAS BEEN', 'UNPLUGGED FOR GOOD AND', 'WALLY ISLAND HAS FULL', 'SIGNAL ONCE AGAIN.', '', 'THANKS FOR PLAYING', 'WALLYMAN WORLD!', '', 'STARRING WALLYMAN', 'CREATED BY DUG-T'];
+  const lines = ['THE STATIC IS GONE!', '', 'BARON STATIC HAS BEEN', 'UNPLUGGED FOR GOOD AND', 'WALLY ISLAND HAS FULL', 'SIGNAL ONCE AGAIN.', '', 'THANKS FOR PLAYING', 'WALLYMAN WORLD!', '', 'STARRING WALLYMAN', 'CREATED BY DOUGLAS THOMSON'];
   return {
     enter() { Audio8.play('victory'); },
     update() { t++; if (t > 240 && Input.confirm()) go(() => finishRun(true, () => TitleScene())); },
