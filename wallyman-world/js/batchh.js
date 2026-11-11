@@ -212,7 +212,7 @@ const rivalOK = (pl) => pl.lv.goal && !pl.def.autoscroll && !pl.def.board && !pl
   };
   Play.prototype.initH = function () {
     this._initH = true;
-    const g = this.lv.grid, W = this.lv.w, normal = !this.ta && !this.rush && !this.daily && !this.endless && !this.def.custom && this.li < LEVELS.length && !this.mode;
+    const g = this.lv.grid, W = this.lv.w, normal = !this.ta && !this.rush && !this.daily && !this.endless && !this.def.custom && isRealLi(this.li) && !this.mode;
     this.hasSlopes = g.some((r) => r.some(isSlope));
     // custom entities placed with special characters in the level layouts
     for (let y = 0; y < 14; y++) for (let x = 0; x < W; x++) {
@@ -362,7 +362,7 @@ const rivalOK = (pl) => pl.lv.goal && !pl.def.autoscroll && !pl.def.board && !pl
   const _die = Play.prototype.die;
   Play.prototype.die = function () {
     if (this.mode && this.mode.kind === 'replay') return;
-    if (this.state === 'play' && !this.mode && !this.ta && !this.rush && !this.daily && !this.endless && !this.def.custom && this.li < LEVELS.length && !this._p2ctx && game) { game.deathsAt = game.deathsAt || {}; game.deathsAt[this.li] = (game.deathsAt[this.li] | 0) + 1; }
+    if (this.state === 'play' && !this.mode && !this.ta && !this.rush && !this.daily && !this.endless && !this.def.custom && isRealLi(this.li) && !this._p2ctx && game) { game.deathsAt = game.deathsAt || {}; game.deathsAt[this.li] = (game.deathsAt[this.li] | 0) + 1; }
     return _die.call(this);
   };
   const _clear = Play.prototype.clear;

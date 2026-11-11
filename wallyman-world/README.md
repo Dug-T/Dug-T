@@ -2,7 +2,7 @@
 
 A 16-bit style side-scrolling platformer starring **WallyMan**, built in plain HTML5 + JavaScript (no installs, no build step).
 
-**Current version: Update 1.2.** The update number shows on a ribbon under the title logo. It is set by `GAME_VERSION` at the top of `js/game.js`, and each new update adds 0.1 (1.1, 1.2, 1.3 and so on).
+**Current version: Update 1.3.** The update number shows on a ribbon under the title logo. It is set by `GAME_VERSION` at the top of `js/game.js`, and each new update adds 0.1 (1.1, 1.2, 1.3 and so on). Each update also changes the `?v=` number on the script tags in `index.html` and the cache name in `sw.js`, so browsers fetch the new files instead of showing old saved copies.
 
 ## Play
 
@@ -24,6 +24,17 @@ Open `index.html` in any modern browser — or enable **GitHub Pages** for this 
 ## What's in it
 
 - **Saves on every device** – the game keeps each player's progress in their own browser. If a browser looks like it won't keep saves (for example a claude.ai link opened while signed out), the title screen says so, S shows a **save code** for each file, and quitting to the title offers one too.
+- **Haunted Hollow** – a 12th island (ghost train from the Clockwork Kingdom): furniture that wakes up and chases you (stomp it – wardrobes take two), **mirrors** that open the secret wall they show while you stand in front of them, a pitch-dark library, and the **Phantom Organist**, whose music turns into notes and shockwaves – stomp him while he rests at the bench.
+- **Bug's-Eye Garden** – a 13th island where WallyMan is tiny: giant plants, **ladybirds** to ride over gaps, **dew drops** to bounce on, and **ant hills** that send out marching ants. **Queen Wasp** dives at you – stomp her while her stinger is stuck in the ground.
+- **Baron's Revenge** – the final island: three levels mixing every mechanic, then **Baron Static's Mega-Mech**, which uses lightning, rolling gears and shockwaves – stomp the open cockpit. Beating it plays a **new ending**.
+- **Level Maker pieces** – 15 new pieces: lightning rod and power blocks, updraft, wind or currents left and right, gear wheel, pendulum (the row sets its length), rewind switch and bridge, guard, giant clam, bubble stream, jetpack, time clock, and a **weather stone** (the row picks the weather). They work in share codes too.
+- **Iron Hero** (Challenges) – one life for the whole game; extra lives turn into points, and a fall ends the run. The best runs are listed.
+- **Mega Boss Rush** (Challenges) – every boss in the game back to back with one timer (opens after you beat the Clockmaker).
+- **More mini-games** – **Card Battle** (play the cards from your Card Album against four rivals), **Grumble Bowling**, the **Party Board** (a dice board game for 1–4 players plus CPUs), the **Arcade Corner** (Brick Breaker and Snake with high scores) and **Air Hockey** (against Dino or a friend).
+- **Fossil Museum** – bones are buried in the Lost Lands and Dino Valley (ground-pound the cracked ground, or crouch on it); build a T-Rex, Triceratops and Pterodactyl.
+- **Pet Show** – enter your pet in three contests; time your presses for points, and win rosettes and coins.
+- **Weather Machine** – choose the weather for outdoor levels, once you have seen it in the game.
+- **Photo Puzzles** – sliding puzzles made from built-in pictures and your own photos.
 - **Clockwork Kingdom** – an 11th island (clock train from the Underwater Kingdom): ride platforms on turning **gear wheels**, touch **rewind switches** to rebuild a crumbled bridge for a few seconds, dodge swinging **pendulums**, sneak through **The Vault**, use the jetpack and time clock in **Time Tower**, and face **the Clockmaker**, who throws rolling gears – stomp him when he lands to wind his key. The side level **Ninja Dojo** opens after The Vault.
 - **Stealth levels** – guards sweep searchlights; if one spots you an **alarm** rings and extra foes drop in. Stomp guards from above. Finish a stealth level without an alarm for a trophy.
 - **Ninja Nell** – a secret hero (beat Wally Island): hold Up against a wall to **climb** it, press S to **dash** through foes (no specials used, short cooldown), and crouch to **hide from searchlights**. Her pet is a fox.
@@ -257,6 +268,9 @@ js/batchl.js        Update 1.1: weather sounds, rainbows, fog, hail, lightning r
 js/batchl2.js       Update 1.1: Storm Peaks and the Underwater Kingdom (levels, bosses, maps) and the updated menus
 js/batchm.js        Update 1.2: tornadoes, earthquakes, jetpack, time clock, stealth guards, Ninja Nell, the Clockwork Kingdom and the Clockmaker
 js/batchm2.js       Update 1.2: mini golf, pinball, quiz, Garden Defence, kitchen, crafting, pet evolution, mailbox, Photo Safari, menus
+js/batchn.js        Update 1.3: Haunted Hollow, Bug's-Eye Garden, Baron's Revenge and the new ending, Iron Hero, Mega Boss Rush, Level Maker pieces, Weather Machine
+js/batchn2.js       Update 1.3: Card Battle, Grumble Bowling, Party Board, Arcade Corner, Air Hockey
+js/batchn3.js       Update 1.3: Fossil Museum, Pet Show, Photo Puzzles, menus
 js/batchj2.js       Dino Valley map, completion, mirror/rematch menus, card and photo albums, theatre, Music Maker, Maker worlds, Party Mode
 js/batchi2.js       Pirate Cove map, airship, tower/gold menus, garden, pets, mini-games, hero maker, cloud save, Level of the Week, touch editor, Level Maker parts
 manifest.webmanifest, sw.js, icons/   install-as-an-app support (works offline)

@@ -377,7 +377,7 @@ function LeaderScene() {
   const _hud = Play.prototype.drawHUD;
   Play.prototype.drawHUD = function () {
     _hud.call(this);
-    if (this.mode || this.ta || this.rush || this.daily || this.endless || this.def.custom || this.li >= LEVELS.length || !game.cleared[this.li] || this.def.boss || this.lv.w < 40 || Settings.get('radar') === false) return;
+    if (this.mode || this.ta || this.rush || this.daily || this.endless || this.def.custom || !isRealLi(this.li) || !game.cleared[this.li] || this.def.boss || this.lv.w < 40 || Settings.get('radar') === false) return;
     const W = this.lv.w * TS, x0 = 40, w = 176, y = 214, X = (px) => x0 + Math.round(clamp(px / W, 0, 1) * w);
     ctx.fillStyle = 'rgba(16,16,40,0.7)'; ctx.fillRect(x0 - 30, y - 3, w + 36, 9); txt('RADAR', x0 - 28, y - 2, '#a8b0d8');
     hR(x0, y + 1, w, 1, '#5a5a80');

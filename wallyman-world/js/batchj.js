@@ -159,7 +159,7 @@ const Cards = (() => {
     this._initJ = true;
     const g = this.lv.grid, W = this.lv.w, m = this.mode;
     // a mech suit block in some levels
-    if ((this.def.mech || (this.li % 4 === 1 && this.li < LEVELS.length && !this.def.boss)) && !this.def.custom && !this.def.sub && !this.def.tower && !this.def.shmup && !this.def.board) {
+    if ((this.def.mech || (this.li % 4 === 1 && isRealLi(this.li) && !this.def.boss)) && !this.def.custom && !this.def.sub && !this.def.tower && !this.def.shmup && !this.def.board) {
       let placed = false;
       for (let x = 40; x < W - 20 && !placed; x++) { const y = g.findIndex((r) => r[x] === 'W'); if (y >= 0) { g[y][x] = 'Ж'; placed = true; } }
       for (let x = 44; x < W - 20 && !placed; x++) for (let y = 6; y < 14; y++) if (SOLID.has(g[y][x]) && [1, 2, 3, 4, 5].every((d) => g[y - d][x] === '.')) { g[y - 4][x] = 'Ж'; placed = true; break; } else if (g[y][x] !== '.') break;

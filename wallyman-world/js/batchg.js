@@ -42,7 +42,7 @@ function drawPowerItem(type, x, y) {
   Play.prototype.update = function () {
     if (!this._initG) {
       this._initG = true;
-      const g = this.lv.grid, W = this.lv.w, normal = !this.def.custom && !this.ta && !this.rush && this.li < LEVELS.length && !this.def.tower && !this.def.shmup && !this.def.sub;
+      const g = this.lv.grid, W = this.lv.w, normal = !this.def.custom && !this.ta && !this.rush && isRealLi(this.li) && !this.def.tower && !this.def.shmup && !this.def.sub;
       if (normal) { // turn a few ? blocks into the new power-ups and bury some treasure
         const ws = []; for (let y = 1; y < 13; y++) for (let x = 0; x < W; x++) if (g[y][x] === 'W') ws.push([x, y]);
         ws.sort((a, b) => a[0] - b[0]); const kinds = Object.keys(POWER_BLOCKS);
