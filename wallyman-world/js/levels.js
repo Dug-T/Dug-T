@@ -590,6 +590,8 @@ function towerRows(def, k) {
   return g.map((row) => row.join(''));
 }
 function towerBuild(b, def, k) { towerRows(def, k).forEach((row, y) => { for (let x = 0; x < 16; x++) b.g[y][x] = row[x]; }); }
+// level numbers 93-99 are used by the special modes (rogue, arena, versus, tower, endless, rush, Level Maker)
+function isRealLi(li) { return li >= 0 && li < LEVELS.length && !(LEVELS[li] && LEVELS[li].reserved); }
 function buildLevel(i) {
   const def = i === 99 ? window.CUSTOM_LEVEL : i === 98 ? window.RUSH_LEVEL : i === 97 ? window.ENDLESS_LEVEL : i === 96 ? window.TOWER_SCREEN : i === 95 ? window.VERSUS_LEVEL : i === 94 ? window.ARENA_LEVEL : i === 93 ? window.ROGUE_LEVEL : LEVELS[i], b = new LevelBuilder(def.width);
   def.build(b);

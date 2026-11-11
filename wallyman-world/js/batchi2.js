@@ -26,7 +26,7 @@ const Island6 = makeIsland(NODES6, [[90, 160, 26], [136, 158, 26], [182, 150, 24
   return col;
 });
 WORLDS.push({ nodes: () => NODES6, edges: () => EDGES6, isle: () => Island6, name: 'PIRATE COVE', sea: ['#0a4a6a', '#1a6a8a'], key: 'node6' });
-const worldOpen = (w) => [true, !!game.cleared[7], !!game.cleared[14], !!game.cleared[20], !!game.cleared[27], !!game.cleared[44], !!game.cleared[55], !!game.cleared[62], !!game.cleared[69], !!game.cleared[78], !!game.cleared[85]][w];
+const worldOpen = (w) => [true, !!game.cleared[7], !!game.cleared[14], !!game.cleared[20], !!game.cleared[27], !!game.cleared[44], !!game.cleared[55], !!game.cleared[62], !!game.cleared[69], !!game.cleared[78], !!game.cleared[85], !!game.cleared[91], !!game.cleared[105], !!game.cleared[111]][w];
 
 // ---------------- map: airship fast travel and the tutorial offer ----------------
 function AirshipScene(to) {

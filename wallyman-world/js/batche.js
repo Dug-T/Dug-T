@@ -367,7 +367,7 @@ function missionsFor(li) {
   let coins = 0; lv.grid.forEach((r) => r.forEach((c) => { if (c === 'o') coins++; if (c === 'W') coins++; }));
   return (missionCache[li] = { foes: Math.max(4, Math.round(foes * 0.5)), coins: Math.max(6, Math.min(30, Math.floor(coins * 0.6))) });
 }
-const missionsOn = (pl) => !pl.ta && !pl.rush && !pl.daily && !pl.endless && !pl.def.custom && pl.li < LEVELS.length;
+const missionsOn = (pl) => !pl.ta && !pl.rush && !pl.daily && !pl.endless && !pl.def.custom && isRealLi(pl.li);
 {
   const _upd = Play.prototype.update;
   Play.prototype.update = function () {
@@ -466,7 +466,7 @@ const missionsOn = (pl) => !pl.ta && !pl.rush && !pl.daily && !pl.endless && !pl
     const s = _intro(li, cp), d = s.draw;
     s.draw = function () {
       d.call(this);
-      if (li >= LEVELS.length || !game) return;
+      if (!isRealLi(li) || !game) return;
       const m = missionsFor(li), got = (game.missions && game.missions[li]) | 0;
       drawWindow(148, 116, 104, 44);
       txt('MISSIONS', 200, 121, '#ffe040', { align: 'center' });
@@ -648,7 +648,7 @@ function StatsScene() {
   const S = game.stats || {}, bits = (a, n) => a.reduce((s, m) => s + [...Array(n).keys()].filter((i) => (m | 0) & (1 << i)).length, 0);
   const fav = Object.entries(S.hero || {}).sort((a, b) => b[1] - a[1])[0];
   const pt = Math.floor((game.playTime || 0) / 60), lines = [
-    ['PLAY TIME', `${Math.floor(pt / 3600)}H ${pad(Math.floor(pt / 60) % 60, 2)}M ${pad(pt % 60, 2)}S`], ['LEVELS CLEARED', `${game.cleared.filter(Boolean).length}/${LEVELS.length}`],
+    ['PLAY TIME', `${Math.floor(pt / 3600)}H ${pad(Math.floor(pt / 60) % 60, 2)}M ${pad(pt % 60, 2)}S`], ['LEVELS CLEARED', `${game.cleared.filter((c, i) => c && isRealLi(i)).length}/${LEVELS.filter((d) => !d.reserved).length}`],
     ['WALLY MEDALS', String(bits(game.medals, 5))], ['STARS', String(bits(game.stars, 3))], ['SIGNAL BARS', String(bits(game.bars || [], 3))], ['MISSIONS', String(bits(game.missions || [], 3))],
     ['ENEMIES DEFEATED', String(S.kills || 0)], ['BOSSES BEATEN', String(S.bosses || 0)], ['LIVES LOST', String(S.deaths || 0)], ['COINS COLLECTED', String(S.coins || 0)],
     ['SECRET KEYS', `${Object.keys(game.keys || {}).length}/3`], ['FAVOURITE HERO', fav ? HEROES[fav[0]].short || HEROES[fav[0]].name : '-'], ['NEW GAME+', game.plus ? String(game.plus) : '-'],
@@ -671,7 +671,7 @@ function PlusScene() {
       t++;
       if (Input.pressed('back') || Input.pressed('run')) { go(() => HouseScene(4)); return; }
       if (t > 20 && Input.pressed('jump')) {
-        game.plus = (game.plus || 0) + 1; game.cleared = Array(100).fill(false); game.medals = Array(100).fill(0); game.stars = Array(100).fill(0); game.bars = Array(100).fill(0); game.missions = []; for (let k = 4; k <= 12; k++) game['node' + k] = 0; if (typeof ngPlusStart === 'function') ngPlusStart();
+        game.plus = (game.plus || 0) + 1; game.cleared = Array(140).fill(false); game.medals = Array(140).fill(0); game.stars = Array(140).fill(0); game.bars = Array(140).fill(0); game.missions = []; for (let k = 4; k <= 16; k++) game['node' + k] = 0; if (typeof ngPlusStart === 'function') ngPlusStart();
         game.secrets = {}; game.world = 0; game.node = 0; game.node2 = 0; game.node3 = 0; game.seenTalk = {}; Save.persist(); Audio8.sfx('secret'); go(() => MapScene());
       }
     },
