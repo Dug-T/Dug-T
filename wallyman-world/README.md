@@ -2,7 +2,7 @@
 
 A 16-bit style side-scrolling platformer starring **WallyMan**, built in plain HTML5 + JavaScript (no installs, no build step).
 
-**Current version: Update 1.0.** The update number shows on a ribbon under the title logo. It is set by `GAME_VERSION` at the top of `js/game.js`, and each new update adds 0.1 (1.1, 1.2, 1.3 and so on).
+**Current version: Update 1.1.** The update number shows on a ribbon under the title logo. It is set by `GAME_VERSION` at the top of `js/game.js`, and each new update adds 0.1 (1.1, 1.2, 1.3 and so on).
 
 ## Play
 
@@ -24,6 +24,16 @@ Open `index.html` in any modern browser — or enable **GitHub Pages** for this 
 ## What's in it
 
 - **Saves on every device** – the game keeps each player's progress in their own browser. If a browser looks like it won't keep saves (for example a claude.ai link opened while signed out), the title screen says so, S shows a **save code** for each file, and quitting to the title offers one too.
+- **Update 1.1 at a glance** – the first time a returning player opens the game after an update, a **What's New** list shows what changed; every update's list stays in **Extras → Updates**.
+- **Storm Peaks** – a 9th island (rocket from Orbit One after Mega-Bot) under a permanent thunderstorm: Squall Slopes, **Lightning Rod Ridge** (lightning hits a rod and its platform crackles into life for a few seconds – watch for the "!" on the rod), **Wind Tunnel Pass** (updrafts lift you to high ledges and gusts push you back), **Frozen Lake** and the side level **Glacier Rink** (ice skating: in the air press B to spin, Up for a star jump or S for a triple axel, and chain them for a bigger combo – land before the move finishes or you wipe out), **Hail Hollow** (big hailstones drop where their shadows grow), and **King Thunderhead**, a crowned storm cloud who calls down lightning and blows you about – when he sinks low and puffs, bounce on his head.
+- **Underwater Kingdom** – a 10th island (submarine from Storm Peaks): every level has an **air meter**, topped up in **bubble streams**; **currents** carry you along; **giant clams** open to show a pearl (+5 coins) and snap shut after a shake. The queen of the deep, **Serpentina**, swims in waves and charges at you – dodge so she hits a wall, then stomp her dizzy head.
+- **Weather you can hear** – thunder that phone speakers can play, a rain hiss that grows into a downpour, gusting wind, and **puddle splashes** when you land in the rain. When the rain stops a **rainbow** appears, and sometimes a **rainbow coin trail** leads to a 1-UP. **Fog** and **hailstorms** join the random weather. In dark levels each **lightning flash shows hidden blocks and cracked walls** for a moment.
+- **Phone buzzes** – on Android phones the game buzzes for hits, ground-pounds, nearby thunder and team blasts (iPhones do not let web pages vibrate). Options → RUMBLE turns it off.
+- **New Game+ remix** – starting New Game+ now resets every island (not just the first three), shuffles which enemies appear where, and gives you the **Golden Hero** outfit.
+- **Weekly Challenge** (Challenges) – three levels and one rule (Turbo, No Running, Backwards, Bouncy, Foggy, Hail, Moon, One Heart or Storm week), the same for everyone all week; beat all three in a row for your weekly best.
+- **WallyMan's Diary** (Dino's House) – a funny diary page for each island you finish. **Statue Garden** (Dino's House) – a gold statue of every boss you have beaten.
+- **Trophy cards** – in the Trophy Room press A on a trophy you have won to make a picture card; it goes into your Photo Album and is shared (phones) or downloaded.
+- **Beat Tapper** – now plays along to any island's song. **Co-op boss battles** – in Boss Rematch press S for two players: one set of team hearts, and when both players press Special close together you land a **TEAM BLAST** on the boss.
 - **Orbit One** – an 8th world (rocket from Dino Valley after the T-Rex): Orbit Dock, **Zero-G Lab** (float through purple zero-gravity rooms – tap jump to push off), **Airlock Alley** (doors cycle open and shut and pull you along), Solar Array and Reactor Core (laser gates switch on and off) and **Mega-Bot Bay** – stomp Mega-Bot's head when its hatch pops open.
 - **The Glitch World** – a hidden 3-level world with odd physics (everything bounces, left and right swap, lag spikes rewind you). Rumour has it you get in by holding Down against the far-left wall at the start of Cavern Commute...
 - **Kart Grand Prix** – three tracks (Wally Ring, Dune Oval, icy Frost Loop), ? item boxes (boost, banana, shield – S to use), quick races or a 3-race cup with points.
@@ -232,6 +242,8 @@ js/batchi.js        Pirate Cove levels, tide, volleys, Gloombeard, tower floors,
 js/batchj.js        Dino Valley, Shadow Wally, mirror mode, mech suit, cards, restarts, captions, backups, Maker pipes, Music Maker songs
 js/batchk.js        Orbit One, the Glitch World, island quests, pets, outfits, speedrun timer, titles, save warning
 js/batchk2.js       Orbit One map, quest givers, pet/costume shops, Kart Grand Prix, ghost races, speedrun, fishing, living map, help book, titles
+js/batchl.js        Update 1.1: weather sounds, rainbows, fog, hail, lightning reveals, phone buzzes, New Game+ remix, What's New, diary, statues, trophy cards, weekly challenge, Beat Tapper songs, co-op bosses
+js/batchl2.js       Update 1.1: Storm Peaks and the Underwater Kingdom (levels, bosses, maps) and the updated menus
 js/batchj2.js       Dino Valley map, completion, mirror/rematch menus, card and photo albums, theatre, Music Maker, Maker worlds, Party Mode
 js/batchi2.js       Pirate Cove map, airship, tower/gold menus, garden, pets, mini-games, hero maker, cloud save, Level of the Week, touch editor, Level Maker parts
 manifest.webmanifest, sw.js, icons/   install-as-an-app support (works offline)

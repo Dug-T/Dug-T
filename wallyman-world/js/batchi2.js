@@ -26,7 +26,7 @@ const Island6 = makeIsland(NODES6, [[90, 160, 26], [136, 158, 26], [182, 150, 24
   return col;
 });
 WORLDS.push({ nodes: () => NODES6, edges: () => EDGES6, isle: () => Island6, name: 'PIRATE COVE', sea: ['#0a4a6a', '#1a6a8a'], key: 'node6' });
-const worldOpen = (w) => [true, !!game.cleared[7], !!game.cleared[14], !!game.cleared[20], !!game.cleared[27], !!game.cleared[44], !!game.cleared[55], !!game.cleared[62]][w];
+const worldOpen = (w) => [true, !!game.cleared[7], !!game.cleared[14], !!game.cleared[20], !!game.cleared[27], !!game.cleared[44], !!game.cleared[55], !!game.cleared[62], !!game.cleared[69], !!game.cleared[78]][w];
 
 // ---------------- map: airship fast travel and the tutorial offer ----------------
 function AirshipScene(to) {
@@ -335,13 +335,13 @@ function MiniGamesScene(start = 0) { // eslint-disable-line no-func-assign
   };
 }
 const payCoins = (n) => { game.coins += n; while (game.coins >= 100) { game.coins -= 100; game.lives++; } Save.persist(); };
-function RhythmScene() {
+function RhythmScene(song = 'bossbeat') {
   const LANES = ['left', 'jump', 'right'], LBL = ['<', 'A', '>'], HITY = 176, SPEED = 34; // pixels per beat
-  const notes = []; let s = 77; for (let b = 4; b < 52; b += 0.5) { s = (s * 1103515245 + 12345) >>> 0; if ((b % 1 === 0 && s % 10 < 7) || (b % 1 && s % 10 < 3)) notes.push({ b, lane: (s >> 8) % 3, hit: 0 }); }
+  const notes = []; let s = 77 + [...song].reduce((a, c) => a + c.charCodeAt(0) * 7, 0); for (let b = 4; b < 52; b += 0.5) { s = (s * 1103515245 + 12345) >>> 0; if ((b % 1 === 0 && s % 10 < 7) || (b % 1 && s % 10 < 3)) notes.push({ b, lane: (s >> 8) % 3, hit: 0 }); }
   let t = 0, score = 0, combo = 0, best = 0, judge = '', judgeT = 0, done = false, t0 = null; const flash = [0, 0, 0];
-  const beat = () => { const st = Audio8.songStep(); if (st >= 0 && Audio8.current() === 'bossbeat') return st / 4; if (t0 === null) t0 = t; return (t - t0) / 30; };
+  const beat = () => { const st = Audio8.songStep(); if (st >= 0 && Audio8.current() === song) return st / 4; if (t0 === null) t0 = t; return (t - t0) / 30; };
   return {
-    enter() { Audio8.stop(); Audio8.play('bossbeat'); },
+    enter() { Audio8.stop(); Audio8.play(song); },
     update() {
       t++; if (judgeT) judgeT--; for (let i = 0; i < 3; i++) if (flash[i]) flash[i]--;
       if (done) { if (t > 60 && (Input.confirm() || Input.pressed('back'))) go(() => MiniGamesScene(4)); return; }
