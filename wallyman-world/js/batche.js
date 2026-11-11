@@ -861,15 +861,31 @@ function pickWeather(theme, not) {
     if (!w || this.paused || this.talk) return;
     // change every 15-30 seconds: fade the old weather out, then the new one in
     if (this.state === 'play' && --w.timer <= 0 && !w.want) { w.want = pickWeather(this.def.theme, w.cur); w.timer = 900 + Math.floor(Math.random() * 900); }
-    if (w.want) { w.amt -= 0.012; if (w.amt <= 0) { w.amt = 0; w.cur = w.want; w.want = null; this.wxMsg = { s: WX_MSG[w.cur], t: 130 }; if (w.cur === 'thunder') Audio8.sfx('thunder'); } }
+    if (w.want) { w.amt -= 0.012; if (w.amt <= 0) { w.amt = 0; w.cur = w.want; w.want = null; this.wxMsg = { s: WX_MSG[w.cur], t: 130 }; if (w.cur === 'thunder') { w.flash = 12; this.lightning(); } } }
     else if (w.cur !== 'clear' && w.amt < 1) w.amt = Math.min(1, w.amt + 0.012);
     this.def.ice = w.baseIce || (w.cur === 'snow' && w.amt > 0.6);
     // thunderstorms: flashes, and the odd lightning bolt striking near you (watch the warning)
     if (w.flash > 0) w.flash--;
     if (w.cur === 'thunder' && w.amt > 0.7 && this.state === 'play') {
-      if (frame % 260 === 0) { w.flash = 12; Audio8.sfx('thunder'); rumble(0.3, 150); }
+      if (--w.nextFlash <= 0 || !(w.nextFlash > 0)) { w.flash = 12; this.lightning(); w.nextFlash = 200 + Math.floor(Math.random() * 300); }
       if (frame % 420 === 210 && !this.bossLock && !this.arena) { const x = this.p.x + ((frame * 53) % 140) - 60; this.ents.push({ type: 'bolt', alive: true, t: 0, x, y: 0, w: 8, h: 8 }); }
     }
+  };
+  // after each flash the thunder arrives 1 to 5 seconds later, like a real storm: the longer the
+  // wait, the further away the lightning was, so the rumble is softer and lower
+  Play.prototype.lightning = function () {
+    const sec = 1 + Math.random() * 4;
+    (this.thunderQ = this.thunderQ || []).push({ t: Math.round(sec * 60), d: (sec - 1) / 4 });
+  };
+  const _updTh = Play.prototype.update;
+  Play.prototype.update = function () {
+    const r = _updTh.apply(this, arguments);
+    const q = this.thunderQ;
+    if (q && q.length && !this.paused) {
+      for (const k of q) if (--k.t === 0) { Audio8.thunder(k.d); if (k.d < 0.4) rumble(0.45 - k.d, 300); }
+      this.thunderQ = q.filter((k) => k.t > 0);
+    }
+    return r;
   };
   const _rn = Play.prototype.rainNow;
   Play.prototype.rainNow = function () { const w = this.wx; if (w) return w.cur === 'rain' || w.cur === 'thunder' ? w.amt * (w.cur === 'thunder' ? 1 : 0.8) : 0; return _rn.call(this); };
@@ -880,7 +896,7 @@ function pickWeather(theme, not) {
     e.t++;
     if (e.t === 1) { let y = 0; while (y < 13 && !SOLID.has(this.tile(Math.floor((e.x + 4) / TS), y))) y++; e.gy = y * TS; }
     if (e.t === 60) {
-      Audio8.sfx('thunder'); this.shake = Math.max(this.shake, 8); if (this.wx) this.wx.flash = 8; rumble(0.6, 200);
+      Audio8.thunder(0); this.shake = Math.max(this.shake, 8); if (this.wx) this.wx.flash = 8; rumble(0.6, 200); // a strike right next to you: the crack comes at once
       for (let i = 0; i < 6; i++) this.parts.push({ k: 'spark', x: e.x + 4 + (i - 3) * 3, y: e.gy - 4, life: 14 });
       const p = this.p; if (this.state === 'play' && Math.abs(p.x + p.w / 2 - (e.x + 4)) < 14 && p.y + p.h > e.gy - 60) this.hurt();
     }

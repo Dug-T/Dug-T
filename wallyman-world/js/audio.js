@@ -457,5 +457,20 @@ const Audio8 = (() => {
     try { localStorage.setItem(kind === 'music' ? 'wallyman-music-vol' : 'wallyman-sfx-vol', String(v)); } catch (e) { /* ignore */ }
   }
   const getVolume = (kind) => (kind === 'music' ? musicVol : sfxVol);
-  return { addSong(n, d) { SONGS[n] = d; delete compiled[n]; if (curName === n) { cur = null; curName = null; } }, sfxNames: () => Object.keys(SFX), songStep: () => (cur && ctx ? (ctx.currentTime - t0) / cur.stepDur : -1), songs: () => Object.keys(SONGS), setVolume, getVolume, init, unlock: init, play, stop, sfx, setEnabled, isEnabled: () => enabled, current: () => curName };
+  // thunder after a lightning flash. dist 0 = right overhead (a sharp crack, then a loud roll);
+  // dist 1 = far away (no crack, just a soft, low rumble that rolls on for longer)
+  function thunder(dist = 0.5) {
+    if (!ctx || !enabled) return;
+    const d = Math.max(0, Math.min(1, dist)), t = ctx.currentTime + 0.005, vol = 0.5 - d * 0.3;
+    if (d < 0.45) { const c = 1 - d * 1.6; noise(t, 0.16, 0.42 * c, sfxBus, 'highpass', 1600); noise(t + 0.02, 0.4, 0.32 * c, sfxBus, 'bandpass', 800, 0.8); }
+    const parts = 3 + Math.floor(Math.random() * 3);
+    for (let i = 0; i < parts; i++) {
+      const s = ctx.createBufferSource(); s.buffer = noiseBuf; s.loop = true;
+      const fl = ctx.createBiquadFilter(); fl.type = 'lowpass'; fl.frequency.value = 150 + (1 - d) * 280 + Math.random() * 60;
+      const g = ctx.createGain(), st = t + (i ? 0.15 + i * (0.2 + Math.random() * 0.35) : 0), dur = 0.9 + Math.random() * 1.1 + d * 0.9, pk = vol * (i ? 0.5 + Math.random() * 0.45 : 1);
+      g.gain.setValueAtTime(0.0001, st); g.gain.exponentialRampToValueAtTime(pk, st + 0.05 + d * 0.3); g.gain.exponentialRampToValueAtTime(0.0001, st + dur);
+      s.connect(fl); fl.connect(g); g.connect(sfxBus); s.start(st, Math.random() * 0.9); s.stop(st + dur + 0.05);
+    }
+  }
+  return { addSong(n, d) { SONGS[n] = d; delete compiled[n]; if (curName === n) { cur = null; curName = null; } }, sfxNames: () => Object.keys(SFX), songStep: () => (cur && ctx ? (ctx.currentTime - t0) / cur.stepDur : -1), songs: () => Object.keys(SONGS), thunder, setVolume, getVolume, init, unlock: init, play, stop, sfx, setEnabled, isEnabled: () => enabled, current: () => curName };
 })();

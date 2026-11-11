@@ -622,6 +622,19 @@ function ChallengeScene(start = 0) { // eslint-disable-line no-func-assign
 }
 
 // the first title screen was built before these files loaded: rebuild it so the newest extras apply
+{ // the update number on a little ribbon under the logo
+  const _T = TitleScene;
+  TitleScene = function (...a) { // eslint-disable-line no-func-assign
+    const s = _T(...a), d = s.draw;
+    s.draw = function () {
+      d.call(this);
+      const label = 'UPDATE ' + GAME_VERSION, w = label.length * 6 - 1, x = 128 - (w >> 1) - 5;
+      hR(x - 3, 93, 3, 9, '#8a1010'); hR(x + w + 10, 93, 3, 9, '#8a1010'); hR(x, 91, w + 10, 11, '#d02828'); hR(x, 91, w + 10, 1, '#ff7070'); hR(x, 101, w + 10, 1, '#6a0808');
+      txt(label, 128, 93, '#ffe040', { align: 'center' });
+    };
+    return s;
+  };
+}
 if (typeof scene !== 'undefined' && scene && scene.isTitle) { scene = TitleScene(); if (scene.enter) scene.enter(); }
 // Level Maker shortcuts: U = undo, Y = redo
 addEventListener('keydown', (e) => { if (!e.repeat && typeof scene !== 'undefined' && scene && scene.isMaker && window.makerKeys) window.makerKeys(e.code); });
