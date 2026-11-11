@@ -20,6 +20,20 @@
   #pad button.small { width: 56px; height: 34px; border-radius: 17px; font-size: 11px; }
   #pad .dpad { display: grid; grid-template-columns: 56px 56px 56px; grid-template-rows: 56px 56px; gap: 4px; }
   #pad .dpad button { width: 56px; height: 56px; border-radius: 12px; }
+  /* landscape: the picture fills the height, the d-pad and buttons sit in the side margins, START in a corner */
+  @media (orientation: landscape) {
+    body.touch #pad { bottom: calc(10px + env(safe-area-inset-bottom, 0px)); padding: 10px max(14px, env(safe-area-inset-right, 0px)) 10px max(14px, env(safe-area-inset-left, 0px)); }
+    body.touch #pad > .grp:nth-child(2) { position: fixed; top: calc(8px + env(safe-area-inset-top, 0px)); left: max(10px, env(safe-area-inset-left, 0px)); }
+  }
+  @media (orientation: landscape) and (max-height: 500px) {
+    body.touch #pad .dpad { grid-template-columns: 48px 48px 48px; grid-template-rows: 48px 48px; }
+    body.touch #pad .dpad button { width: 48px; height: 48px; }
+  }
+  /* portrait: a tip to turn sideways, with a full-screen button */
+  #turnHint { display: none; position: fixed; top: env(safe-area-inset-top, 0px); left: 0; right: 0; height: 30px; align-items: center; justify-content: center; gap: 8px; font: bold 11px monospace; color: #ffe040; background: rgba(16,24,72,0.85); z-index: 40; }
+  #turnHint button { font: bold 11px monospace; color: #fff; background: #2f62d0; border: 1px solid #fff; border-radius: 6px; padding: 3px 8px; }
+  @media (orientation: portrait) { body.touch #turnHint { display: flex; } }
+  body.nohint #turnHint, body.fs #turnHint { display: none !important; }
 </style>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#101848">
@@ -29,6 +43,7 @@
 </head>
 <body>
 <canvas id="screen" width="256" height="224"></canvas>
+<div id="turnHint"><span>&#8635; TURN SIDEWAYS FOR A BIGGER SCREEN</span><button id="fsBtn">FULL SCREEN</button><button id="hintX" aria-label="Hide">&#10005;</button></div>
 <div id="pad">
   <div class="grp dpad">
     <span></span><button data-k="up">&#9650;</button><span></span>
@@ -45,35 +60,36 @@
     <button data-k="jump" style="margin-bottom:28px">A</button>
   </div>
 </div>
-<script src="js/font.js?v=1.5"></script>
-<script src="js/audio.js?v=1.5"></script>
-<script src="js/sprites.js?v=1.5"></script>
-<script src="js/wally.js?v=1.5"></script>
-<script src="js/levels.js?v=1.5"></script>
-<script src="js/online-config.js?v=1.5"></script>
-<script src="js/game.js?v=1.5"></script>
-<script src="js/maker.js?v=1.5"></script>
-<script src="js/extra.js?v=1.5"></script>
-<script src="js/batche.js?v=1.5"></script>
-<script src="js/batchf.js?v=1.5"></script>
-<script src="js/batchf2.js?v=1.5"></script>
-<script src="js/batchg.js?v=1.5"></script>
-<script src="js/batchh.js?v=1.5"></script>
-<script src="js/batchh2.js?v=1.5"></script>
-<script src="js/batchh3.js?v=1.5"></script>
-<script src="js/batchi.js?v=1.5"></script>
-<script src="js/batchi2.js?v=1.5"></script>
-<script src="js/batchj.js?v=1.5"></script>
-<script src="js/batchj2.js?v=1.5"></script>
-<script src="js/batchk.js?v=1.5"></script>
-<script src="js/batchk2.js?v=1.5"></script>
-<script src="js/batchl.js?v=1.5"></script>
-<script src="js/batchl2.js?v=1.5"></script>
-<script src="js/batchm.js?v=1.5"></script>
-<script src="js/batchm2.js?v=1.5"></script>
-<script src="js/batchn.js?v=1.5"></script>
-<script src="js/batchn2.js?v=1.5"></script>
-<script src="js/batchn3.js?v=1.5"></script>
-<script src="js/batcho.js?v=1.5"></script>
+<script src="js/font.js?v=1.6"></script>
+<script src="js/audio.js?v=1.6"></script>
+<script src="js/sprites.js?v=1.6"></script>
+<script src="js/wally.js?v=1.6"></script>
+<script src="js/levels.js?v=1.6"></script>
+<script src="js/online-config.js?v=1.6"></script>
+<script src="js/game.js?v=1.6"></script>
+<script src="js/maker.js?v=1.6"></script>
+<script src="js/extra.js?v=1.6"></script>
+<script src="js/batche.js?v=1.6"></script>
+<script src="js/batchf.js?v=1.6"></script>
+<script src="js/batchf2.js?v=1.6"></script>
+<script src="js/batchg.js?v=1.6"></script>
+<script src="js/batchh.js?v=1.6"></script>
+<script src="js/batchh2.js?v=1.6"></script>
+<script src="js/batchh3.js?v=1.6"></script>
+<script src="js/batchi.js?v=1.6"></script>
+<script src="js/batchi2.js?v=1.6"></script>
+<script src="js/batchj.js?v=1.6"></script>
+<script src="js/batchj2.js?v=1.6"></script>
+<script src="js/batchk.js?v=1.6"></script>
+<script src="js/batchk2.js?v=1.6"></script>
+<script src="js/batchl.js?v=1.6"></script>
+<script src="js/batchl2.js?v=1.6"></script>
+<script src="js/batchm.js?v=1.6"></script>
+<script src="js/batchm2.js?v=1.6"></script>
+<script src="js/batchn.js?v=1.6"></script>
+<script src="js/batchn2.js?v=1.6"></script>
+<script src="js/batchn3.js?v=1.6"></script>
+<script src="js/batcho.js?v=1.6"></script>
+<script src="js/batchp.js?v=1.6"></script>
 </body>
 </html>
