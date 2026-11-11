@@ -14,8 +14,8 @@ const fossilsGot = () => (game && game.fossils) || [];
 {
   const _upd = Play.prototype.update;
   Play.prototype.update = function () {
-    if (!this._initF) {
-      this._initF = true;
+    if (!this._initFossil) {
+      this._initFossil = true;
       if (game && !this.mode && !this.ta && !this.rush && !this.daily && FOSSIL_LV().includes(this.li) && this.lv && this.lv.grid) {
         const missing = []; for (const [k] of SKELETONS) for (let b = 0; b < 4; b++) if (!fossilsGot().includes(k + b)) missing.push(k + b);
         if (missing.length) {
