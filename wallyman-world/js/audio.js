@@ -436,8 +436,11 @@ const Audio8 = (() => {
     freeze: (t) => { [88, 84, 79, 76, 72].forEach((m, i) => tone('sine', freq(m), t + i * 0.05, 0.12, 0.12, sfxBus, { echo: true })); noise(t, 0.3, 0.1, sfxBus, 'highpass', 6000); },
     fireball: (t) => { noise(t, 0.18, 0.2, sfxBus, 'bandpass', 1200, 1); tone('p50', 300, t, 0.15, 0.1, sfxBus, { slide: 120 }); },
     flap: (t) => noise(t, 0.08, 0.12, sfxBus, 'lowpass', 900),
-    thunder: (t) => { noise(t, 1.2, 0.45, sfxBus, 'lowpass', 300); noise(t + 0.05, 0.3, 0.25, sfxBus, 'lowpass', 1200); },
+    thunder: (t) => { noise(t, 1.2, 0.45, sfxBus, 'lowpass', 300); noise(t + 0.05, 0.3, 0.25, sfxBus, 'lowpass', 1200); noise(t, 0.6, 0.5, sfxBus, 'bandpass', 520, 0.7); noise(t + 0.2, 0.8, 0.35, sfxBus, 'bandpass', 380, 0.7); },
     dig: (t) => noise(t, 0.25, 0.25, sfxBus, 'lowpass', 500),
+    splash: (t) => { noise(t, 0.16, 0.28, sfxBus, 'bandpass', 1700, 0.8); noise(t + 0.03, 0.22, 0.16, sfxBus, 'bandpass', 900, 1); tone('sine', 700, t, 0.08, 0.06, sfxBus, { slide: 300 }); },
+    hail: (t) => { noise(t, 0.05, 0.3, sfxBus, 'highpass', 3000); tone('p25', 1800 + Math.random() * 600, t, 0.03, 0.05, sfxBus); },
+    rainbow: (t) => [72, 76, 79, 84, 88, 91].forEach((m, i) => tone('triangle', freq(m), t + i * 0.07, 0.18, 0.12, sfxBus, { echo: true })),
     spring: (t) => tone('p25', 180, t, 0.3, 0.14, sfxBus, { slide: 1100, slideT: 0.25 }),
     letter: (t) => tone('p50', 1500, t, 0.03, 0.07, sfxBus),
     map: (t) => tone('triangle', 600, t, 0.05, 0.2, sfxBus, { slide: 900 }),
@@ -458,19 +461,48 @@ const Audio8 = (() => {
   }
   const getVolume = (kind) => (kind === 'music' ? musicVol : sfxVol);
   // thunder after a lightning flash. dist 0 = right overhead (a sharp crack, then a loud roll);
-  // dist 1 = far away (no crack, just a soft, low rumble that rolls on for longer)
+  // dist 1 = far away (no crack, a softer, lower roll that goes on for longer). Most of the sound sits
+  // between 250 Hz and 2 kHz so phone and laptop speakers can play it; a deep layer adds weight on bigger speakers.
+  function grain(t, dur, vol, type, f, q, att) {
+    const s = ctx.createBufferSource(); s.buffer = noiseBuf; s.loop = true;
+    const fl = ctx.createBiquadFilter(); fl.type = type; fl.frequency.value = f; fl.Q.value = q;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + att); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    s.connect(fl); fl.connect(g); g.connect(sfxBus); s.start(t, Math.random() * 0.9); s.stop(t + dur + 0.05);
+  }
+  // steady weather sounds: a rain hiss (from a light patter to a downpour) and gusting wind.
+  // The game sets the levels every frame; they fade smoothly and fall silent outside levels.
+  let amb = null;
+  function ambience(rain = 0, wind = 0) {
+    if (!ctx) return;
+    if (!amb) {
+      if (!rain && !wind) return;
+      const mk = (type, f, q) => { const s = ctx.createBufferSource(); s.buffer = noiseBuf; s.loop = true; const fl = ctx.createBiquadFilter(); fl.type = type; fl.frequency.value = f; fl.Q.value = q; const g = ctx.createGain(); g.gain.value = 0; s.connect(fl); fl.connect(g); g.connect(sfxBus); s.start(); return { g, fl }; };
+      amb = { rain: mk('bandpass', 3800, 0.5), drops: mk('bandpass', 1300, 1.2), wind: mk('bandpass', 420, 1.4) };
+    }
+    const now = ctx.currentTime, on = enabled ? 1 : 0;
+    amb.rain.g.gain.setTargetAtTime(on * 0.16 * rain, now, 0.4);
+    amb.drops.g.gain.setTargetAtTime(on * 0.07 * rain * (0.6 + Math.random() * 0.8), now, 0.05);
+    const gust = wind * (0.75 + 0.25 * Math.sin(now * 1.7) + 0.15 * Math.sin(now * 4.3));
+    amb.wind.g.gain.setTargetAtTime(on * 0.3 * gust, now, 0.3);
+    amb.wind.fl.frequency.setTargetAtTime(320 + 260 * gust, now, 0.4);
+  }
   function thunder(dist = 0.5) {
     if (!ctx || !enabled) return;
-    const d = Math.max(0, Math.min(1, dist)), t = ctx.currentTime + 0.005, vol = 0.5 - d * 0.3;
-    if (d < 0.45) { const c = 1 - d * 1.6; noise(t, 0.16, 0.42 * c, sfxBus, 'highpass', 1600); noise(t + 0.02, 0.4, 0.32 * c, sfxBus, 'bandpass', 800, 0.8); }
-    const parts = 3 + Math.floor(Math.random() * 3);
-    for (let i = 0; i < parts; i++) {
-      const s = ctx.createBufferSource(); s.buffer = noiseBuf; s.loop = true;
-      const fl = ctx.createBiquadFilter(); fl.type = 'lowpass'; fl.frequency.value = 150 + (1 - d) * 280 + Math.random() * 60;
-      const g = ctx.createGain(), st = t + (i ? 0.15 + i * (0.2 + Math.random() * 0.35) : 0), dur = 0.9 + Math.random() * 1.1 + d * 0.9, pk = vol * (i ? 0.5 + Math.random() * 0.45 : 1);
-      g.gain.setValueAtTime(0.0001, st); g.gain.exponentialRampToValueAtTime(pk, st + 0.05 + d * 0.3); g.gain.exponentialRampToValueAtTime(0.0001, st + dur);
-      s.connect(fl); fl.connect(g); g.connect(sfxBus); s.start(st, Math.random() * 0.9); s.stop(st + dur + 0.05);
+    const d = Math.max(0, Math.min(1, dist)), t = ctx.currentTime + 0.005, loud = 1 - d * 0.5, len = 1.6 + d * 1.4;
+    if (d < 0.6) { // the crack: a bright snap, then a quick tearing crackle
+      const c = 1 - d;
+      grain(t, 0.14, 1.1 * c, 'bandpass', 2600, 0.6, 0.004);
+      for (let i = 0; i < 5; i++) grain(t + 0.05 + i * (0.04 + Math.random() * 0.05), 0.12, (0.7 - i * 0.1) * c, 'bandpass', 1400 + Math.random() * 1600, 0.9, 0.006);
     }
+    const centre = 700 - d * 380; // the roll: lots of overlapping bursts so it rumbles and rolls instead of hissing
+    const n = 9 + Math.floor(Math.random() * 5);
+    for (let i = 0; i < n; i++) {
+      const st = t + (d < 0.6 ? 0.08 : 0) + (i / n) * len * (0.7 + Math.random() * 0.3), dur = 0.35 + Math.random() * 0.6, k = 1 - (i / n) * 0.6;
+      grain(st, dur, (0.55 + Math.random() * 0.5) * loud * k, 'bandpass', centre * (0.7 + Math.random() * 0.6), 0.7, 0.03 + d * 0.12);
+    }
+    grain(t, len + 0.6, 0.9 * loud, 'lowpass', 160, 0.7, 0.05 + d * 0.3); // deep body for headphones and big speakers
+    grain(t + len * 0.4, len * 0.8, 0.5 * loud, 'lowpass', 420, 0.7, 0.2); // a long low tail
   }
-  return { addSong(n, d) { SONGS[n] = d; delete compiled[n]; if (curName === n) { cur = null; curName = null; } }, sfxNames: () => Object.keys(SFX), songStep: () => (cur && ctx ? (ctx.currentTime - t0) / cur.stepDur : -1), songs: () => Object.keys(SONGS), thunder, setVolume, getVolume, init, unlock: init, play, stop, sfx, setEnabled, isEnabled: () => enabled, current: () => curName };
+  return { addSong(n, d) { SONGS[n] = d; delete compiled[n]; if (curName === n) { cur = null; curName = null; } }, sfxNames: () => Object.keys(SFX), songStep: () => (cur && ctx ? (ctx.currentTime - t0) / cur.stepDur : -1), songs: () => Object.keys(SONGS), thunder, ambience, setVolume, getVolume, init, unlock: init, play, stop, sfx, setEnabled, isEnabled: () => enabled, current: () => curName };
 })();
