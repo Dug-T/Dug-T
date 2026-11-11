@@ -124,7 +124,7 @@ function LevelMakerScene(resume) {
   const P = Maker.PALETTE, H = Maker.H; let W = Maker.W;
   let mode = resume ? 'edit' : 'slots', slot = resume ? resume.slot : 0, t = 0, msg = '', msgT = 0, menuSel = 0, held = {};
   let lv = resume ? Maker.slots[slot] : null, cur = resume ? resume.cur : { x: 2, y: 10, pal: 0 }, camX = resume ? resume.camX : 0;
-  const MENU = ['PLAY TEST', 'SAVE', 'THEME', 'BOSS', 'LENGTH', 'COPY AREA', 'SHARE CODE', 'LOAD CODE', 'UPLOAD ONLINE', 'CLEAR ALL', 'SAVE AND EXIT'];
+  const MENU = ['PLAY TEST', 'SAVE', 'THEME', 'BOSS', 'LENGTH', 'TEST FROM HERE', 'UNDO', 'REDO', 'TOOL', 'COPY AREA', 'SHARE CODE', 'LOAD CODE', 'UPLOAD ONLINE', 'CLEAR ALL', 'SAVE AND EXIT'];
   let selA = null;
   const TILESET = '#BWPSOAVQDXR=^LJ<>oNTEY~';
   const say = (s) => { msg = s; msgT = 120; };
@@ -150,6 +150,35 @@ function LevelMakerScene(resume) {
     else { lv.rows.forEach((r) => { r.length = w; }); if (!lv.rows.some((r) => r.includes('G'))) lv.rows[11][w - 6] = 'G'; if (!lv.rows.some((r) => r.includes('@'))) lv.rows[11][2] = '@'; cur.x = Math.min(cur.x, w - 1); camX = Math.min(camX, w * 16 - 256); }
     W = w; say(w > old ? 'COURSE IS NOW DOUBLE LENGTH!' : 'COURSE IS NORMAL LENGTH'); Audio8.sfx('check');
   };
+  // editing history and tools: undo / redo, flood fill and straight lines
+  let undo = [], redoS = [], tool = 'PAINT', lineA = null;
+  const snap = () => { undo.push(lv.rows.map((r) => r.slice())); if (undo.length > 60) undo.shift(); redoS = []; };
+  const doUndo = () => { if (!undo.length) { say('NOTHING TO UNDO'); return; } redoS.push(lv.rows.map((r) => r.slice())); lv.rows = undo.pop(); W = lv.rows[0].length; say('UNDONE'); Audio8.sfx('select'); };
+  const doRedo = () => { if (!redoS.length) { say('NOTHING TO REDO'); return; } undo.push(lv.rows.map((r) => r.slice())); lv.rows = redoS.pop(); W = lv.rows[0].length; say('REDONE'); Audio8.sfx('select'); };
+  const palChar = () => (cur.pal < P.length ? P[cur.pal][0] : null);
+  const flood = () => {
+    const c = palChar(); if (!c || c === '@' || c === 'G' || Maker.LIMITS[c]) { say('FILL WORKS WITH TILES ONLY'); return; }
+    const from = lv.rows[cur.y][cur.x]; if (from === c) return; snap();
+    const st = [[cur.x, cur.y]]; let n = 0;
+    while (st.length && n < 3000) { const [x, y] = st.pop(); if (x < 0 || y < 0 || x >= W || y >= H || lv.rows[y][x] !== from) continue; lv.rows[y][x] = c; n++; st.push([x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]); }
+    say(`FILLED ${n} TILES`); Audio8.sfx('check');
+  };
+  const line = () => {
+    const c = palChar(); if (!c || c === '@' || c === 'G') { say('LINES WORK WITH TILES AND ITEMS'); return; }
+    if (!lineA) { lineA = { x: cur.x, y: cur.y }; say('A: PICK WHERE THE LINE ENDS'); return; }
+    snap(); let x0 = lineA.x, y0 = lineA.y; const x1 = cur.x, y1 = cur.y, dx = Math.abs(x1 - x0), dy = -Math.abs(y1 - y0), sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1; let err = dx + dy;
+    for (let k = 0; k < 600; k++) { if (!Maker.LIMITS[c] || count(c) < Maker.LIMITS[c]) lv.rows[y0][x0] = c; if (x0 === x1 && y0 === y1) break; const e2 = 2 * err; if (e2 >= dy) { err += dy; x0 += sx; } if (e2 <= dx) { err += dx; y0 += sy; } }
+    lineA = null; say('LINE DRAWN!'); Audio8.sfx('check');
+  };
+  const testHere = () => {
+    if (count('G') === 0 && lv.boss !== 'K' && lv.boss !== 'k') { say('PLACE A GOAL FIRST!'); Audio8.sfx('bump'); return; }
+    save(); const copy = { theme: lv.theme, boss: lv.boss, rows: lv.rows.map((r) => r.map((c) => (c === '@' ? '.' : c))) };
+    let y = cur.y; while (y > 1 && copy.rows[y][cur.x] !== '.') y--; copy.rows[y][cur.x] = '@';
+    if (!game) game = Save.fresh();
+    window.CUSTOM_LEVEL = Maker.toDef(copy); Maker.state = { slot, cur: Object.assign({}, cur), camX };
+    Audio8.sfx('confirm'); go(() => new Play(99, false));
+  };
+  window.makerKeys = (k) => { if (mode !== 'edit') return; if (k === 'KeyU') doUndo(); if (k === 'KeyY') doRedo(); };
   const erase = () => { if (lv.rows[cur.y][cur.x] !== '.') { lv.rows[cur.y][cur.x] = '.'; Audio8.sfx('stomp'); } };
   const save = () => { Maker.slots[slot] = lv; Maker.persist(); };
   const playTest = () => {
@@ -162,6 +191,7 @@ function LevelMakerScene(resume) {
   };
   const fake = () => ({ T: Sprites.tiles[lv.theme], lv: { w: W }, bumps: [], def: {}, tile(tx, ty) { if (ty < 0 || ty >= H) return '.'; if (tx < 0 || tx >= W) return 'X'; const c = lv.rows[ty][tx]; return TILESET.includes(c) ? c : '.'; } });
   return {
+    isMaker: true,
     enter() { Audio8.play(resume ? (lv ? lv.theme : 'menu') : 'menu'); },
     update() {
       t++; if (msgT > 0) msgT--; if (lv) W = lv.rows[0].length;
@@ -177,6 +207,7 @@ function LevelMakerScene(resume) {
         if (Input.pressed('up')) { menuSel = (menuSel + MENU.length - 1) % MENU.length; Audio8.sfx('select'); }
         const lr = (Input.pressed('right') ? 1 : 0) - (Input.pressed('left') ? 1 : 0);
         if (menuSel === 2 && lr) { const L = Maker.THEME_LIST, i = L.indexOf(lv.theme); lv.theme = L[(i + lr + L.length) % L.length]; Audio8.play(lv.theme); Audio8.sfx('select'); }
+        if (MENU[menuSel] === 'TOOL' && lr) { tool = { PAINT: 'FILL', FILL: 'LINE', LINE: 'PAINT' }[tool]; lineA = null; }
         if (menuSel === 4 && lr) setLength(lv.rows[0].length > Maker.W ? Maker.W : Maker.W * 2);
         if (menuSel === 3 && lr) { const B = Maker.BOSSES, i = Math.max(0, B.findIndex((b) => b[0] === (lv.boss || ''))); lv.boss = B[(i + lr + B.length) % B.length][0]; Audio8.sfx('select'); }
         if (Input.pressed('back') || (Input.pressed('start') && ![0, MENU.length - 1].includes(menuSel))) { mode = 'edit'; return; }
@@ -184,7 +215,9 @@ function LevelMakerScene(resume) {
           const S = MENU[menuSel];
           if (S === 'PLAY TEST') { mode = 'edit'; playTest(); } else if (S === 'SAVE') { save(); say('SAVED!'); Audio8.sfx('check'); mode = 'edit'; } else if (S === 'THEME') {
             const L = Maker.THEME_LIST; lv.theme = L[(L.indexOf(lv.theme) + 1) % L.length]; Audio8.play(lv.theme);
-          } else if (S === 'LENGTH') { setLength(lv.rows[0].length > Maker.W ? Maker.W : Maker.W * 2); }
+          } else if (S === 'UNDO') { doUndo(); } else if (S === 'REDO') { doRedo(); } else if (S === 'TEST FROM HERE') { mode = 'edit'; testHere(); }
+          else if (S === 'TOOL') { tool = { PAINT: 'FILL', FILL: 'LINE', LINE: 'PAINT' }[tool]; lineA = null; say('TOOL: ' + tool); }
+          else if (S === 'LENGTH') { snap(); setLength(lv.rows[0].length > Maker.W ? Maker.W : Maker.W * 2); }
           else if (S === 'BOSS') { const B = Maker.BOSSES, i = Math.max(0, B.findIndex((b) => b[0] === (lv.boss || ''))); lv.boss = B[(i + 1) % B.length][0]; Audio8.sfx('select'); }
           else if (S === 'COPY AREA') { mode = 'sel'; selA = null; say('A: PICK ONE CORNER'); }
           else if (S === 'SHARE CODE') { mode = 'dom'; codeBox('LEVEL CODE - SHARE IT!', Maker.encode(lv), null, () => { mode = 'edit'; }); }
@@ -222,8 +255,11 @@ function LevelMakerScene(resume) {
       if (repeat('up') && cur.y > 0) { cur.y--; moved = true; }
       if (repeat('down') && cur.y < H - 1) { cur.y++; moved = true; }
       if (Input.pressed('special')) { const n = P.length + (Maker.clip ? 1 : 0); cur.pal = (cur.pal + (Input.down('run') ? n - 1 : 1)) % n; Audio8.sfx('select'); }
-      if (Input.pressed('jump') || (moved && Input.down('jump'))) place();
-      if (Input.pressed('run') || (moved && Input.down('run'))) erase();
+      if (Input.pressed('jump') && tool === 'FILL') { flood(); } else if (Input.pressed('jump') && tool === 'LINE') { line(); } else {
+        if (Input.pressed('jump') || Input.pressed('run')) snap();
+        if (Input.pressed('jump') || (moved && Input.down('jump'))) place();
+        if (Input.pressed('run') || (moved && Input.down('run'))) erase();
+      }
       const want = cur.x * 16 - 120; camX += Math.round((Math.max(0, Math.min(W * 16 - 256, want)) - camX) * 0.25);
     },
     draw() {
@@ -271,13 +307,15 @@ function LevelMakerScene(resume) {
       ctx.fillStyle = 'rgba(16,24,72,0.82)'; ctx.fillRect(0, 0, 256, 13);
       txt(mode === 'sel' ? 'SELECT AREA' : cur.pal === P.length ? 'PASTE' : P[cur.pal][1], 4, 3, '#ffe040');
       txt(`${cur.x + 1}/${W}`, 252, 3, '#fff', { align: 'right' });
+      if (tool !== 'PAINT') txt('TOOL: ' + tool, 252, 13, '#ffe040', { align: 'right', outline: '#101848' });
+      if (lineA) { const lx = lineA.x * 16 - Math.round(camX), ly = lineA.y * 16; ctx.strokeStyle = (frame >> 3) & 1 ? '#ffe040' : '#ffffff'; ctx.strokeRect(lx + 0.5, ly + 0.5, 15, 15); }
       txt(lv.theme.toUpperCase(), 170, 3, '#80e0ff', { align: 'right' });
       if (msgT > 0) { drawWindow(40, 96, 176, 24); txt(msg, 128, 104, '#fff', { align: 'center' }); }
       if (mode === 'menu') {
-        drawWindow(44, 22, 168, 166);
+        drawWindow(44, 18, 168, 196);
         txt('MAKER MENU', 128, 37, '#ffe040', { align: 'center' });
         MENU.forEach((s, i) => {
-          const y = 44 + i * 12, label = i === 4 ? `LENGTH: ${lv.rows[0].length > Maker.W ? 'LONG' : 'NORMAL'}` : i === 2 ? `THEME: ${lv.theme.toUpperCase()}` : i === 3 ? `BOSS: ${Maker.BOSSES.find((b) => b[0] === (lv.boss || ''))[1]}` : s;
+          const y = 38 + i * 11, label = MENU[i] === 'TOOL' ? `TOOL: ${tool}` : i === 4 ? `LENGTH: ${lv.rows[0].length > Maker.W ? 'LONG' : 'NORMAL'}` : i === 2 ? `THEME: ${lv.theme.toUpperCase()}` : i === 3 ? `BOSS: ${Maker.BOSSES.find((b) => b[0] === (lv.boss || ''))[1]}` : s;
           txt(label, 64, y, i === menuSel ? '#ffe040' : '#fff');
           if (i === menuSel) txt('>', 54 + ((t >> 3) & 1), y, '#ffe040');
         });

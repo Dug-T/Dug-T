@@ -21,6 +21,12 @@ const Wally = (() => {
     dino: { blue: '#2ec4b6', blueD: '#1a8a80', blueL: '#6ae8d8', blueLL: '#a0fff0', org: '#ff8c42', orgD: '#c0602a', orgL: '#ffb880' },
     shadow: { blue: '#3a2a5a', blueD: '#20142e', blueL: '#5a4a8a', blueLL: '#8a7ab8', org: '#8a3ac8', orgD: '#5a1a8a', orgL: '#c070ff', lens: '#ff3040' },
     fire: { blue: '#e83030', blueD: '#a01818', blueL: '#ff7060', blueLL: '#ffb0a0', org: '#ffd040', orgD: '#c09010', orgL: '#fff0a0' },
+    neon: { blue: '#1a1a3a', blueD: '#0e0e24', blueL: '#30e0ff', blueLL: '#c0ffff', org: '#ff40a0', orgD: '#901050', orgL: '#ffa0d0' },
+    pirate: { blue: '#a02030', blueD: '#6a1020', blueL: '#d04050', blueLL: '#ff8090', org: '#3a2a4a', orgD: '#1a1020', orgL: '#5a4a6a' },
+    knight: { blue: '#a0a8b8', blueD: '#6a7080', blueL: '#d0d8e8', blueLL: '#ffffff', org: '#2050c0', orgD: '#103080', orgL: '#5080ff' },
+    galaxy: { blue: '#2a1a5a', blueD: '#140a30', blueL: '#5a3aa0', blueLL: '#c0a0ff', org: '#ffe040', orgD: '#c09010', orgL: '#fff0a0', lens: '#ff70ff' },
+    candy: { blue: '#ff90c8', blueD: '#d04890', blueL: '#ffc0e0', blueLL: '#ffffff', org: '#60d0ff', orgD: '#2a90c8', orgL: '#b0f0ff' },
+    glitch: { blue: '#30d0c0', blueD: '#106a70', blueL: '#a040ff', blueLL: '#ffffff', org: '#ff40a0', orgD: '#8a1050', orgL: '#ffe040', lens: '#5ae060' },
     // secret hero: Robo-Wally (steel body, red cape, glowing red visor)
     robo: { blue: '#9aa4b8', blueD: '#626c80', blueL: '#c8d0e0', blueLL: '#eef2ff', org: '#e83030', orgD: '#a01818', orgL: '#ff7060', skin: '#b8c0d0', skinD: '#7a8498', skinL: '#e8eef8', lens: '#ff3040', sole: '#30343c' },
   };
@@ -172,6 +178,9 @@ const Wally = (() => {
     dino: { hairP: '#2ec4b6', hairV: '#ff8c42', dress: '#1a4a44', dressL: '#2e8a80' },
     shadow: { hairP: '#8a3ac8', hairV: '#5a1a8a', eye: '#ff3040', lips: '#8a1a5a' },
     fire: { hairP: '#ff3020', hairV: '#ffa020', dress: '#6a0c10', dressL: '#a02028', bootL: '#ff7020' },
+    neon: { hairP: '#30e0ff', hairV: '#ff40a0', dress: '#1a1a3a', dressL: '#30e0ff' }, pirate: { hairP: '#3a2010', hairV: '#a02030', dress: '#a02030', dressL: '#d04050' },
+    knight: { hairP: '#ffd040', hairV: '#c09010', dress: '#6a7080', dressL: '#d0d8e8', bootL: '#a0a8b8' }, galaxy: { hairP: '#c0a0ff', hairV: '#5a3aa0', dress: '#140a30', dressL: '#5a3aa0', eye: '#ffe040' },
+    candy: { hairP: '#ff90c8', hairV: '#60d0ff', dress: '#ffc0e0', dressL: '#ffffff' }, glitch: { hairP: '#30d0c0', hairV: '#a040ff', dress: '#106a70', dressL: '#ff40a0', eye: '#5ae060' },
     // secret hero: Frost Queen
     frost: { hair: '#e8f4ff', hairP: '#a8e0ff', hairV: '#5aa0f0', dress: '#2a5a9a', dressL: '#5a90d0', dressD: '#183a68', skin: '#eef4ff', skinD: '#b8c8e8', skinL: '#ffffff', boot: '#c8e0ff', bootD: '#7aa0d0', bootL: '#ffffff', lips: '#4a80e0', eye: '#5ff0ff', silver: '#5ff0ff' },
   };
@@ -269,6 +278,9 @@ const Wally = (() => {
     tee: '#18161e', teeL: '#34303e', teeD: '#0a080e', print: '#c8ccd8', jeans: '#2c4a80', jeansD: '#1c3058', shoe: '#e8e8f0', sole: '#6a6a7a',
   };
   const DOUG_COSTUMES = {
+    neon: { tee: '#ff40a0', teeL: '#ffa0d0', teeD: '#901050', jeans: '#1a1a3a', jeansD: '#0e0e24' }, pirate: { tee: '#f0ecd8', teeL: '#ffffff', teeD: '#c0b8a0', jeans: '#a02030', jeansD: '#6a1020' },
+    knight: { tee: '#a0a8b8', teeL: '#d0d8e8', teeD: '#6a7080' }, galaxy: { tee: '#2a1a5a', teeL: '#5a3aa0', teeD: '#140a30', lens: '#ff70ff' },
+    candy: { tee: '#ff90c8', teeL: '#ffc0e0', teeD: '#d04890', jeans: '#60d0ff', jeansD: '#2a90c8' }, glitch: { tee: '#30d0c0', teeL: '#a040ff', teeD: '#106a70', lens: '#5ae060' },
     classic: {}, junior: { tee: '#2ea84a', teeL: '#5ad070', teeD: '#1a7030' }, gold: { tee: '#d8a820', teeL: '#ffd860', teeD: '#a07810', frame: '#7a4a10' },
     ice: { tee: '#90c8f8', teeL: '#d0ecff', teeD: '#5888c0', jeans: '#e0e8f8', jeansD: '#a8b8d8' }, dino: { tee: '#2ec4b6', teeL: '#6ae8d8', teeD: '#1a8a80', frame: '#ff8c42' },
     shadow: { tee: '#3a2a5a', teeL: '#5a4a8a', teeD: '#20142e', frame: '#8a1a3a', lens: '#ff8090' }, fire: { tee: '#e83030', teeL: '#ff7060', teeD: '#a01818', jeans: '#3a1a1a', jeansD: '#200c0c' },
