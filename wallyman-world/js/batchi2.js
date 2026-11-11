@@ -471,11 +471,11 @@ function HeroMakerScene() {
 
 // ---------------- touch controls editor ----------------
 const TouchLayout = (() => {
-  const KEY = 'wallyman-touch', groups = () => [...document.querySelectorAll('#pad > .grp')];
-  const load = () => lsJ(KEY, {});
+  const KEY = () => (innerWidth > innerHeight ? 'wallyman-touch-land' : 'wallyman-touch'), groups = () => [...document.querySelectorAll('#pad > .grp')];
+  const load = () => lsJ(KEY(), {});
   function apply() { const d = load(); groups().forEach((g, i) => { const c = d[i] || { x: 0, y: 0, s: 1 }; g.style.transform = `translate(${c.x}px, ${c.y}px) scale(${c.s})`; g.style.transformOrigin = i === 0 ? 'left bottom' : i === 2 ? 'right bottom' : 'center bottom'; }); }
-  apply();
-  return { load, apply, save: (d) => { lsS(KEY, d); apply(); }, groups };
+  apply(); addEventListener('resize', apply);
+  return { load, apply, save: (d) => { lsS(KEY(), d); apply(); }, groups };
 })();
 function TouchLayoutScene() {
   const hadTouch = document.body.classList.contains('touch'), d = TouchLayout.load(); let selG = 0, t = 0, drag = null, done = false;
