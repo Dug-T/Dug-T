@@ -2,7 +2,7 @@
 
 A 16-bit style side-scrolling platformer starring **WallyMan**, built in plain HTML5 + JavaScript (no installs, no build step).
 
-**Current version: Update 1.1.** The update number shows on a ribbon under the title logo. It is set by `GAME_VERSION` at the top of `js/game.js`, and each new update adds 0.1 (1.1, 1.2, 1.3 and so on).
+**Current version: Update 1.2.** The update number shows on a ribbon under the title logo. It is set by `GAME_VERSION` at the top of `js/game.js`, and each new update adds 0.1 (1.1, 1.2, 1.3 and so on).
 
 ## Play
 
@@ -24,6 +24,17 @@ Open `index.html` in any modern browser — or enable **GitHub Pages** for this 
 ## What's in it
 
 - **Saves on every device** – the game keeps each player's progress in their own browser. If a browser looks like it won't keep saves (for example a claude.ai link opened while signed out), the title screen says so, S shows a **save code** for each file, and quitting to the title offers one too.
+- **Clockwork Kingdom** – an 11th island (clock train from the Underwater Kingdom): ride platforms on turning **gear wheels**, touch **rewind switches** to rebuild a crumbled bridge for a few seconds, dodge swinging **pendulums**, sneak through **The Vault**, use the jetpack and time clock in **Time Tower**, and face **the Clockmaker**, who throws rolling gears – stomp him when he lands to wind his key. The side level **Ninja Dojo** opens after The Vault.
+- **Stealth levels** – guards sweep searchlights; if one spots you an **alarm** rings and extra foes drop in. Stomp guards from above. Finish a stealth level without an alarm for a trophy.
+- **Ninja Nell** – a secret hero (beat Wally Island): hold Up against a wall to **climb** it, press S to **dash** through foes (no specials used, short cooldown), and crouch to **hide from searchlights**. Her pet is a fox.
+- **Tornadoes and earthquakes** join the random weather: tornadoes lift you up and fling you, and quakes shake rocks loose from above (watch their shadows).
+- **Jetpack and time clock** – the jetpack lets you fly for 5 seconds (hold Jump in the air); the time clock freezes foes and moving platforms for 5 seconds. Find them in the Clockwork Kingdom or craft them.
+- **New mini-games** (Dino's House → Mini-Games): **Mini Golf** (9 holes with bumpers, pipes and Grumbles), **Pinball** (bosses for bumpers; Left/Right flip, hold A to launch), **Professor Hoot's Quiz** (10 questions about the game, free to play) and **Garden Defence** (stop 5 waves of Grumbles reaching the garden).
+- **Dino's Kitchen** – grow carrots, tomatoes and pumpkins in the garden (or buy them in the kitchen) and cook a snack that powers up your next level: extra heart, shield, coin magnet, more cannonballs and specials, or a jetpack.
+- **Crafting bench** – gears, springs, cloth and crystals turn up in most levels; craft a jetpack, time clock or bubble shield for your reserve box, or the Clockwork outfit.
+- **Pet evolution** – pets now change their look as they level up (a collar, goggles, a crown) and at 30 XP evolve into their final form, which zaps a nearby foe every 8 seconds.
+- **Mailbox** – a new letter from a game character each day you play, some with coins or gifts inside.
+- **Photo Safari** – photograph creatures in photo mode to fill four pages; each finished page pays 25 coins.
 - **Update 1.1 at a glance** – the first time a returning player opens the game after an update, a **What's New** list shows what changed; every update's list stays in **Extras → Updates**.
 - **Storm Peaks** – a 9th island (rocket from Orbit One after Mega-Bot) under a permanent thunderstorm: Squall Slopes, **Lightning Rod Ridge** (lightning hits a rod and its platform crackles into life for a few seconds – watch for the "!" on the rod), **Wind Tunnel Pass** (updrafts lift you to high ledges and gusts push you back), **Frozen Lake** and the side level **Glacier Rink** (ice skating: in the air press B to spin, Up for a star jump or S for a triple axel, and chain them for a bigger combo – land before the move finishes or you wipe out), **Hail Hollow** (big hailstones drop where their shadows grow), and **King Thunderhead**, a crowned storm cloud who calls down lightning and blows you about – when he sinks low and puffs, bounce on his head.
 - **Underwater Kingdom** – a 10th island (submarine from Storm Peaks): every level has an **air meter**, topped up in **bubble streams**; **currents** carry you along; **giant clams** open to show a pearl (+5 coins) and snap shut after a shake. The queen of the deep, **Serpentina**, swims in waves and charges at you – dodge so she hits a wall, then stomp her dizzy head.
@@ -244,6 +255,8 @@ js/batchk.js        Orbit One, the Glitch World, island quests, pets, outfits, s
 js/batchk2.js       Orbit One map, quest givers, pet/costume shops, Kart Grand Prix, ghost races, speedrun, fishing, living map, help book, titles
 js/batchl.js        Update 1.1: weather sounds, rainbows, fog, hail, lightning reveals, phone buzzes, New Game+ remix, What's New, diary, statues, trophy cards, weekly challenge, Beat Tapper songs, co-op bosses
 js/batchl2.js       Update 1.1: Storm Peaks and the Underwater Kingdom (levels, bosses, maps) and the updated menus
+js/batchm.js        Update 1.2: tornadoes, earthquakes, jetpack, time clock, stealth guards, Ninja Nell, the Clockwork Kingdom and the Clockmaker
+js/batchm2.js       Update 1.2: mini golf, pinball, quiz, Garden Defence, kitchen, crafting, pet evolution, mailbox, Photo Safari, menus
 js/batchj2.js       Dino Valley map, completion, mirror/rematch menus, card and photo albums, theatre, Music Maker, Maker worlds, Party Mode
 js/batchi2.js       Pirate Cove map, airship, tower/gold menus, garden, pets, mini-games, hero maker, cloud save, Level of the Week, touch editor, Level Maker parts
 manifest.webmanifest, sw.js, icons/   install-as-an-app support (works offline)
