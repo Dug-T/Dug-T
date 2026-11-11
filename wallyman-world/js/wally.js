@@ -24,6 +24,7 @@ const Wally = (() => {
     neon: { blue: '#1a1a3a', blueD: '#0e0e24', blueL: '#30e0ff', blueLL: '#c0ffff', org: '#ff40a0', orgD: '#901050', orgL: '#ffa0d0' },
     pirate: { blue: '#a02030', blueD: '#6a1020', blueL: '#d04050', blueLL: '#ff8090', org: '#3a2a4a', orgD: '#1a1020', orgL: '#5a4a6a' },
     knight: { blue: '#a0a8b8', blueD: '#6a7080', blueL: '#d0d8e8', blueLL: '#ffffff', org: '#2050c0', orgD: '#103080', orgL: '#5080ff' },
+    clockwork: { blue: '#8a5a2a', blueD: '#5a3a18', blueL: '#c08040', blueLL: '#f0c080', org: '#d0a040', orgD: '#8a6a20', orgL: '#ffe080', lens: '#5ff0ff' },
     gold: { blue: '#d0a020', blueD: '#8a6010', blueL: '#ffd040', blueLL: '#fff0a0', org: '#ffffff', orgD: '#d0d0e0', orgL: '#ffffff', lens: '#ff3040' },
     galaxy: { blue: '#2a1a5a', blueD: '#140a30', blueL: '#5a3aa0', blueLL: '#c0a0ff', org: '#ffe040', orgD: '#c09010', orgL: '#fff0a0', lens: '#ff70ff' },
     candy: { blue: '#ff90c8', blueD: '#d04890', blueL: '#ffc0e0', blueLL: '#ffffff', org: '#60d0ff', orgD: '#2a90c8', orgL: '#b0f0ff' },
@@ -180,8 +181,10 @@ const Wally = (() => {
     shadow: { hairP: '#8a3ac8', hairV: '#5a1a8a', eye: '#ff3040', lips: '#8a1a5a' },
     fire: { hairP: '#ff3020', hairV: '#ffa020', dress: '#6a0c10', dressL: '#a02028', bootL: '#ff7020' },
     neon: { hairP: '#30e0ff', hairV: '#ff40a0', dress: '#1a1a3a', dressL: '#30e0ff' }, pirate: { hairP: '#3a2010', hairV: '#a02030', dress: '#a02030', dressL: '#d04050' },
-    knight: { hairP: '#ffd040', hairV: '#c09010', dress: '#6a7080', dressL: '#d0d8e8', bootL: '#a0a8b8' }, gold: { hairP: '#ffe040', hairV: '#c09010', dress: '#a07010', dressL: '#ffd040', eye: '#ff3040' }, galaxy: { hairP: '#c0a0ff', hairV: '#5a3aa0', dress: '#140a30', dressL: '#5a3aa0', eye: '#ffe040' },
+    knight: { hairP: '#ffd040', hairV: '#c09010', dress: '#6a7080', dressL: '#d0d8e8', bootL: '#a0a8b8' }, clockwork: { hairP: '#c08040', hairV: '#8a5a2a', dress: '#5a3a18', dressL: '#d0a040', eye: '#5ff0ff' }, gold: { hairP: '#ffe040', hairV: '#c09010', dress: '#a07010', dressL: '#ffd040', eye: '#ff3040' }, galaxy: { hairP: '#c0a0ff', hairV: '#5a3aa0', dress: '#140a30', dressL: '#5a3aa0', eye: '#ffe040' },
     candy: { hairP: '#ff90c8', hairV: '#60d0ff', dress: '#ffc0e0', dressL: '#ffffff' }, glitch: { hairP: '#30d0c0', hairV: '#a040ff', dress: '#106a70', dressL: '#ff40a0', eye: '#5ae060' },
+    // secret hero: Ninja Nell
+    ninja: { hair: '#1a1a2a', hairP: '#c02030', hairV: '#801020', dress: '#22223a', dressL: '#3a3a5a', dressD: '#10101c', boot: '#2a2a3a', bootD: '#101018', bootL: '#4a4a6a', lips: '#c04060', eye: '#ff4040', silver: '#c0c8d8' },
     // secret hero: Frost Queen
     frost: { hair: '#e8f4ff', hairP: '#a8e0ff', hairV: '#5aa0f0', dress: '#2a5a9a', dressL: '#5a90d0', dressD: '#183a68', skin: '#eef4ff', skinD: '#b8c8e8', skinL: '#ffffff', boot: '#c8e0ff', bootD: '#7aa0d0', bootL: '#ffffff', lips: '#4a80e0', eye: '#5ff0ff', silver: '#5ff0ff' },
   };
@@ -280,7 +283,7 @@ const Wally = (() => {
   };
   const DOUG_COSTUMES = {
     neon: { tee: '#ff40a0', teeL: '#ffa0d0', teeD: '#901050', jeans: '#1a1a3a', jeansD: '#0e0e24' }, pirate: { tee: '#f0ecd8', teeL: '#ffffff', teeD: '#c0b8a0', jeans: '#a02030', jeansD: '#6a1020' },
-    knight: { tee: '#a0a8b8', teeL: '#d0d8e8', teeD: '#6a7080' }, gold: { tee: '#d0a020', teeL: '#ffe060', teeD: '#8a6010', lens: '#ff3040' }, galaxy: { tee: '#2a1a5a', teeL: '#5a3aa0', teeD: '#140a30', lens: '#ff70ff' },
+    knight: { tee: '#a0a8b8', teeL: '#d0d8e8', teeD: '#6a7080' }, clockwork: { tee: '#8a5a2a', teeL: '#c08040', teeD: '#5a3a18', lens: '#5ff0ff' }, gold: { tee: '#d0a020', teeL: '#ffe060', teeD: '#8a6010', lens: '#ff3040' }, galaxy: { tee: '#2a1a5a', teeL: '#5a3aa0', teeD: '#140a30', lens: '#ff70ff' },
     candy: { tee: '#ff90c8', teeL: '#ffc0e0', teeD: '#d04890', jeans: '#60d0ff', jeansD: '#2a90c8' }, glitch: { tee: '#30d0c0', teeL: '#a040ff', teeD: '#106a70', lens: '#5ae060' },
     classic: {}, junior: { tee: '#2ea84a', teeL: '#5ad070', teeD: '#1a7030' }, gold: { tee: '#d8a820', teeL: '#ffd860', teeD: '#a07810', frame: '#7a4a10' },
     ice: { tee: '#90c8f8', teeL: '#d0ecff', teeD: '#5888c0', jeans: '#e0e8f8', jeansD: '#a8b8d8' }, dino: { tee: '#2ec4b6', teeL: '#6ae8d8', teeD: '#1a8a80', frame: '#ff8c42' },
@@ -366,8 +369,8 @@ const Wally = (() => {
     let c = cache.get(key);
     if (c) return c;
     if (variant === 'n') {
-      const cos = hero === 'robo' ? 'robo' : hero === 'frost' ? 'frost' : costume;
-      if (face > 0) c = outline(api.extraHero && (hero === 'dino' || hero === 'baron') ? api.extraHero(hero, pose, capeF) : hero === 'goth' || hero === 'frost' ? rigGoth(POSES[pose], capeF, signal, cos) : hero === 'doug' ? rigDoug(POSES[pose], capeF, signal, cos) : rig(POSES[pose], capeF, signal, cos), PAL0.ink);
+      const cos = hero === 'robo' ? 'robo' : hero === 'frost' ? 'frost' : hero === 'ninja' ? 'ninja' : costume;
+      if (face > 0) c = outline(api.extraHero && (hero === 'dino' || hero === 'baron') ? api.extraHero(hero, pose, capeF) : hero === 'goth' || hero === 'frost' || hero === 'ninja' ? rigGoth(POSES[pose], capeF, signal, cos) : hero === 'doug' ? rigDoug(POSES[pose], capeF, signal, cos) : rig(POSES[pose], capeF, signal, cos), PAL0.ink);
       else c = Sprites.flip(frame(pose, capeF, signal, 1, 'n', costume, hero));
     } else c = tint(frame(pose, capeF, signal, face, 'n', costume, hero), variant === 'w' ? '#ffffff' : variant === 'k' ? '#1a1020' : '#5ff0ff');
     cache.set(key, c);

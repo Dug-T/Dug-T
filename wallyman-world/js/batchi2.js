@@ -26,7 +26,7 @@ const Island6 = makeIsland(NODES6, [[90, 160, 26], [136, 158, 26], [182, 150, 24
   return col;
 });
 WORLDS.push({ nodes: () => NODES6, edges: () => EDGES6, isle: () => Island6, name: 'PIRATE COVE', sea: ['#0a4a6a', '#1a6a8a'], key: 'node6' });
-const worldOpen = (w) => [true, !!game.cleared[7], !!game.cleared[14], !!game.cleared[20], !!game.cleared[27], !!game.cleared[44], !!game.cleared[55], !!game.cleared[62], !!game.cleared[69], !!game.cleared[78]][w];
+const worldOpen = (w) => [true, !!game.cleared[7], !!game.cleared[14], !!game.cleared[20], !!game.cleared[27], !!game.cleared[44], !!game.cleared[55], !!game.cleared[62], !!game.cleared[69], !!game.cleared[78], !!game.cleared[85]][w];
 
 // ---------------- map: airship fast travel and the tutorial offer ----------------
 function AirshipScene(to) {
@@ -221,7 +221,7 @@ function HouseScene(start = 0) { // eslint-disable-line no-func-assign
     },
   };
 }
-const SEEDS = { coin: { name: 'COIN SEED', price: 5, hours: 8, col: '#ffd040' }, fruit: { name: 'PET FRUIT', price: 8, hours: 12, col: '#ff5060' }, star: { name: 'STAR SEED', price: 25, hours: 36, col: '#c070ff' } };
+const SEEDS = { coin: { name: 'COIN SEED', price: 5, hours: 8, col: '#ffd040' }, fruit: { name: 'PET FRUIT', price: 8, hours: 12, col: '#ff5060' }, star: { name: 'STAR SEED', price: 25, hours: 36, col: '#c070ff' }, carrot: { name: 'CARROT', price: 3, hours: 2, col: '#ff8a20', veg: true }, tomato: { name: 'TOMATO', price: 4, hours: 3, col: '#ff3030', veg: true }, pumpkin: { name: 'PUMPKIN', price: 6, hours: 5, col: '#ffa040', veg: true } };
 const SEED_IDS = Object.keys(SEEDS);
 function GardenScene() {
   if (!game.garden) game.garden = [null, null, null, null, null, null];
@@ -243,6 +243,7 @@ function GardenScene() {
       // harvest
       game.garden[sel] = null; game.harvests = (game.harvests || 0) + 1; if (game.harvests >= 5) Ach.unlock('gardener'); Audio8.sfx('oneup');
       if (pl.seed === 'coin') { game.coins += 15; while (game.coins >= 100) { game.coins -= 100; game.lives++; } say('+15 COINS!'); }
+      else if (SEEDS[pl.seed].veg) { game.pantry = game.pantry || {}; game.pantry[pl.seed] = (game.pantry[pl.seed] | 0) + 2; say(`+2 ${SEEDS[pl.seed].name}S FOR THE KITCHEN!`); }
       else if (pl.seed === 'fruit') { const k = heroOf(); game.petXP = game.petXP || {}; game.petXP[k] = (game.petXP[k] | 0) + 3; say(`${(PETS[k] || PETS.wally).name} ATE IT! +3 PET XP`); }
       else { game.hats = game.hats || ['none']; const left = ['pirate', 'flower', 'viking'].filter((h) => !game.hats.includes(h)); if (left.length) { const h = left[(game.harvests * 7) % left.length]; game.hats.push(h); say('A RARE HAT: ' + HAT_LIST.find((k) => k.id === h).name + '!'); } else { game.lives += 2; say('+2 LIVES!'); } }
       Save.persist();

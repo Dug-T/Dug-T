@@ -5,7 +5,7 @@ const ctx = cv.getContext('2d');
 ctx.imageSmoothingEnabled = false;
 let frame = 0;
 // the game's update number, shown on the title screen: 1.0 is the first, and each new update adds 0.1 (1.1, 1.2, ...)
-const GAME_VERSION = '1.1';
+const GAME_VERSION = '1.2';
 const SOLID = new Set(['#', 'B', 'W', 'P', 'S', 'O', 'A', 'V', 'Q', 'D', 'N', 'T', 'E', 'H', '[', ']', '{', 'F', '+', '}', '?', '`', 'U', 'X', '^', 'J', 'R', '<', '>', 'Y']);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const approach = (v, t, d) => (v < t ? Math.min(t, v + d) : Math.max(t, v - d));
@@ -1045,7 +1045,7 @@ function MapScene() {
     const nd = NODES_[n];
     if (nd.kind === 'door' || nd.kind === 'town') return true;
     if (nd.side) return !!game.cleared[nd.after];
-    if (nd.kind === 'portal') return W === 0 ? !!game.cleared[7] : nd.to === 2 && W === 1 ? !!game.cleared[14] : nd.to === 3 ? !!game.cleared[20] : nd.to === 4 ? !!game.cleared[27] : nd.to === 5 ? !!game.cleared[44] : nd.to === 6 ? !!game.cleared[55] : nd.to === 7 ? !!game.cleared[62] : nd.to === 8 ? !!game.cleared[69] : nd.to === 9 ? !!game.cleared[78] : true;
+    if (nd.kind === 'portal') return W === 0 ? !!game.cleared[7] : nd.to === 2 && W === 1 ? !!game.cleared[14] : nd.to === 3 ? !!game.cleared[20] : nd.to === 4 ? !!game.cleared[27] : nd.to === 5 ? !!game.cleared[44] : nd.to === 6 ? !!game.cleared[55] : nd.to === 7 ? !!game.cleared[62] : nd.to === 8 ? !!game.cleared[69] : nd.to === 9 ? !!game.cleared[78] : nd.to === 10 ? !!game.cleared[85] : true;
     if (nd.gate && !dimensionOpen()) return false;
     if (W === 0) return nd.kind === 'bonus' ? !!(game.secrets[nd.li] || game.cleared[7]) : (n <= 1 || game.cleared[n - 2]);
     const prev = NODES_.slice(0, n).filter((k) => k.li !== undefined && k.kind !== 'door' && !k.side).pop();
