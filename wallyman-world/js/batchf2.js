@@ -46,6 +46,7 @@ const PHOTO_FRAMES = ['NONE', 'POLAROID', 'GOLD', 'COMIC'];
       try {
         const c = document.createElement('canvas'); c.width = VW * 4; c.height = VH * 4; const x = c.getContext('2d'); x.imageSmoothingEnabled = false; x.drawImage(cv, 0, 0, VW * 4, VH * 4);
         const a = document.createElement('a'); a.href = c.toDataURL('image/png'); a.download = 'wallyman-photo-' + Date.now() + '.png'; document.body.appendChild(a); a.click(); a.remove();
+        if (typeof PhotoAlbum !== 'undefined') PhotoAlbum.add(cv);
         ph.msg = 'PHOTO SAVED!'; Ach.unlock('photo');
       } catch (e) { ph.msg = 'COULD NOT SAVE THE PHOTO'; }
       ph.msgT = 90;
@@ -471,13 +472,13 @@ function OptionsScene() { // eslint-disable-line no-func-assign
     ['COLORS', { get: () => `< ${Settings.get('colors') || 'NORMAL'} >`, step: (d) => { Settings.set('colors', COLOR_MODES[(COLOR_MODES.indexOf(Settings.get('colors') || 'NORMAL') + d + COLOR_MODES.length) % COLOR_MODES.length]); applyColorMode(); } }],
     ['READABLE TEXT', { get: () => (Settings.get('readable') ? 'ON' : 'OFF'), set: () => Settings.set('readable', !Settings.get('readable')) }],
     ['LANGUAGE', { get: () => `< ${Settings.get('lang') || 'ENGLISH'} >`, step: (d) => { const L = typeof LANGS !== 'undefined' ? LANGS : ['ENGLISH']; Settings.set('lang', L[(L.indexOf(Settings.get('lang') || 'ENGLISH') + d + L.length) % L.length]); } }],
-    ['INTRO VOICE', toggle('voice')], ['RADAR', toggle('radar')], ['HERO QUIPS', toggle('quips')],
+    ['INTRO VOICE', toggle('voice')], ['RADAR', toggle('radar')], ['HERO QUIPS', toggle('quips')], ['CAPTIONS', toggle('captions')],
     ['AUTO-RUN', { get: () => (Settings.get('autorun') ? 'ON' : 'OFF'), set: () => Settings.set('autorun', !Settings.get('autorun')) }],
     ['ONE BUTTON', { get: () => (Settings.get('onebtn') ? 'ON' : 'OFF'), set: () => Settings.set('onebtn', !Settings.get('onebtn')) }],
     ['TOUCH LAYOUT', { go: () => TouchLayoutScene() }],
     ['CONTROLS', { go: () => ControlsScene() }], ['BACK', { back: true }],
   ];
-  const TIPS = { ASSIST: { OFF: 'ASSIST MODE IS OFF', SLOW: 'SLOW: THE GAME RUNS AT 75% SPEED', HEARTS: 'HEARTS: NEVER RUN OUT OF HEARTS', WIDE: 'WIDE: BIGGER PLATFORMS, NARROWER GAPS', ALL: 'ALL: SLOW + HEARTS + WIDE' }, EVENTS: 'SEASONAL EVENTS SWITCH ON BY DATE', 'HERO QUIPS': 'YOUR HERO SOMETIMES SAYS A LINE OUT LOUD', 'AUTO-RUN': 'YOUR HERO RUNS BY ITSELF - JUST JUMP!', 'ONE BUTTON': 'AUTO-RUN, AND EVERY BUTTON JUMPS', 'TOUCH LAYOUT': 'MOVE AND RESIZE THE ON-SCREEN BUTTONS', LANGUAGE: 'MENUS IN ENGLISH, SPANISH, FRENCH OR GERMAN', 'INTRO VOICE': 'SOMETIMES A VOICE SAYS HELLO AT THE START', RADAR: 'MAP OF MISSING MEDALS IN BEATEN LEVELS', CONTROLS: 'CHANGE YOUR KEYS AND PAD BUTTONS', COLORS: 'COLOUR FILTERS TO HELP TELL THINGS APART', 'READABLE TEXT': 'BOLD OUTLINES ON ALL TEXT', PET: 'A LITTLE BUDDY WHO TAKES A HIT', WEATHER: 'RAIN, STORMS AND SNOW OUTDOORS' };
+  const TIPS = { ASSIST: { OFF: 'ASSIST MODE IS OFF', SLOW: 'SLOW: THE GAME RUNS AT 75% SPEED', HEARTS: 'HEARTS: NEVER RUN OUT OF HEARTS', WIDE: 'WIDE: BIGGER PLATFORMS, NARROWER GAPS', ALL: 'ALL: SLOW + HEARTS + WIDE' }, EVENTS: 'SEASONAL EVENTS SWITCH ON BY DATE', 'HERO QUIPS': 'YOUR HERO SOMETIMES SAYS A LINE OUT LOUD', CAPTIONS: 'SUBTITLES FOR EVERY SPOKEN LINE', 'AUTO-RUN': 'YOUR HERO RUNS BY ITSELF - JUST JUMP!', 'ONE BUTTON': 'AUTO-RUN, AND EVERY BUTTON JUMPS', 'TOUCH LAYOUT': 'MOVE AND RESIZE THE ON-SCREEN BUTTONS', LANGUAGE: 'MENUS IN ENGLISH, SPANISH, FRENCH OR GERMAN', 'INTRO VOICE': 'SOMETIMES A VOICE SAYS HELLO AT THE START', RADAR: 'MAP OF MISSING MEDALS IN BEATEN LEVELS', CONTROLS: 'CHANGE YOUR KEYS AND PAD BUTTONS', COLORS: 'COLOUR FILTERS TO HELP TELL THINGS APART', 'READABLE TEXT': 'BOLD OUTLINES ON ALL TEXT', PET: 'A LITTLE BUDDY WHO TAKES A HIT', WEATHER: 'RAIN, STORMS AND SNOW OUTDOORS' };
   let sel = 0, t = 0;
   return {
     enter() { Audio8.play('menu'); },

@@ -21,6 +21,19 @@ Open `index.html` in any modern browser — or enable **GitHub Pages** for this 
 
 ## What's in it
 
+- **Dino Valley** – a 7th island (take the raft from Pirate Cove after Captain Gloombeard): Jurassic Jungle, **Stampede!** (a herd of dinosaurs chases you), **Pterodactyl Pass** (fly a pterodactyl through rocky pillars), Tar Pits, Fossil Cave and the **Rex Arena** – make the T-Rex charge into a wall, then stomp him while he's dizzy. New enemy: **Raptors**.
+- **Completion** (Extras) – your percentage for levels, medals, stars and trophies. At 100 percent the secret **Signal Source** opens, where **Shadow Wally** copies your every move.
+- **Mirror Mode** (Challenges) – every level flipped left to right with faster enemies (unlocks after Baron Static's tower).
+- **Mech suit** – a walking robot from special blocks in some levels: stomps anything it touches, smashes brick walls, fires a laser with B and takes 3 hits before it breaks.
+- **Trading cards** – enemies sometimes drop a card (and bosses always do); some are shiny. See them in Extras → Card Album.
+- **Photo Album** – photos taken in Photo Mode are kept (10 at a time) to browse and download later.
+- **Boss Rematch** (Extras) – refight any boss you have beaten, with a best time for each.
+- **Theatre** (Extras) – rewatch the opening story, intro movie, comics, Doug's story scenes, the ending and the credits.
+- **Music Maker** (Extras) – write a tune on a 32-step note grid, pick tempo, chords, drums, bass and sound, save up to 3 songs and set one as the music for a Level Maker slot.
+- **Level Maker worlds** (Extras → Maker Worlds) – chain up to 5 courses into a mini world with its own map, and share the whole world with one code. Courses can now be **double length** (Maker menu → Length), and in Maker courses pressing Down on a pipe takes you to the matching pipe, so you can build sub-areas.
+- **Party Mode** (Challenges) – up to 4 players (gamepads, with the computer filling empty seats) play Coin Grab, Last One Standing and Hot Potato.
+- **Restart Level / Restart Checkpoint** in the pause menu, **captions** for every spoken line (Options), an **Oops screen** instead of a freeze if something goes wrong, and a **daily save backup** (Extras → Backups keeps the last 3 days).
+
 - **Pirate Cove** – a 6th island (sail from Crystal Isle after beating the Crystal Dragon): **Shipwreck Shore**, **Cannon Deck** (cannonball volleys land where red markers flash), **Rising Tide** (the sea slowly floods the level and drains away again – swim up to high treasures), **Skull Cave** (dark) and the **Ghost Galleon**, where **Captain Gloombeard** vanishes, throws his cutlass, calls in cannon fire and can only be stomped while he rests on deck. New enemy: **Skelly Pirates**.
 - **Roguelike Tower** (Challenges) – randomly built floors; after each one pick 1 of 3 upgrades (jet boots, extra hearts, magnet, shield, cannon pro, super special, speedy shoes, slow clock). One life – your best floor is saved.
 - **Golden Levels** (Challenges) – once an island's castle is beaten, its levels can be replayed with 100 gold coins hidden all over them.
@@ -142,7 +155,7 @@ Open `index.html` in any modern browser — or enable **GitHub Pages** for this 
 - **Costumes** – visit the **Wardrobe** in Dino's Shop at Wally's House. Seven outfits: Classic, Wally Jr, Golden (find 20 Wally Medals), Ice (clear Frosty Peaks), Dino Suit (clear Coral Depths), Shadow (clear Haunted Manor) and Fire (beat Baron Static).
 - **Difficulty** (Extras → Options): Easy (3 hearts, 50% more time, slower enemies, weaker bosses), Normal, or Hard (1 heart, less time, faster enemies, tougher bosses).
 - **Star rankings** – up to 3 stars per level: finish with 40% of the time left, have all 5 medals, and take no hits. Stars show on the clear screen, the map and the level intro.
-- **Trophies** – 67 achievements (first clear, flawless boss, Dino rider, UFO hunter, secret exits, three stars and more) with pop-up notifications and a **Trophy Room**.
+- **Trophies** – 77 achievements (first clear, flawless boss, Dino rider, UFO hunter, secret exits, three stars and more) with pop-up notifications and a **Trophy Room**.
 - **Extras menu** – Trophy Room, **Jukebox** (play every song), **Gallery** (heroes, enemies, bosses and items) and **Options** (difficulty, music/sound volume, sound on/off, **CRT retro-TV filter**, screen shake).
 - **Hidden secrets** – an invisible block in most levels (jump into empty air to find a 1-UP) and cracked walls that crumble into coins when blasted, chomped, shocked or ground-pounded.
 - **High score table** – when a run ends (game over or beating the game) a top-10 score lets you enter your name arcade-style (D-pad + A, or just type). Scores are kept in the browser; when the game runs as a claude.ai artifact they are also shared through its database for players allowed to save there.
@@ -199,6 +212,8 @@ js/batchh.js        slopes, fans, wall-jump for all, puzzles, lava chase, dark c
 js/batchh2.js       Crystal Isle levels and map, puzzle rooms, Doug's story, bestiary, replays, leaderboards, radar
 js/batchh3.js       menus, jukebox + sound test, languages, intro voice, kart race
 js/batchi.js        Pirate Cove levels, tide, volleys, Gloombeard, tower floors, gold mode, tutorial, Volt + hero maker heroes, reserve box, pet tricks, boss phase 2, quips
+js/batchj.js        Dino Valley, Shadow Wally, mirror mode, mech suit, cards, restarts, captions, backups, Maker pipes, Music Maker songs
+js/batchj2.js       Dino Valley map, completion, mirror/rematch menus, card and photo albums, theatre, Music Maker, Maker worlds, Party Mode
 js/batchi2.js       Pirate Cove map, airship, tower/gold menus, garden, pets, mini-games, hero maker, cloud save, Level of the Week, touch editor, Level Maker parts
 manifest.webmanifest, sw.js, icons/   install-as-an-app support (works offline)
 assets/             pixelated WallyMan, GothChick and Doug Thomson portraits (title, character select, ending)

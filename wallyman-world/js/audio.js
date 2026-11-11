@@ -457,5 +457,5 @@ const Audio8 = (() => {
     try { localStorage.setItem(kind === 'music' ? 'wallyman-music-vol' : 'wallyman-sfx-vol', String(v)); } catch (e) { /* ignore */ }
   }
   const getVolume = (kind) => (kind === 'music' ? musicVol : sfxVol);
-  return { sfxNames: () => Object.keys(SFX), songStep: () => (cur && ctx ? (ctx.currentTime - t0) / cur.stepDur : -1), songs: () => Object.keys(SONGS), setVolume, getVolume, init, unlock: init, play, stop, sfx, setEnabled, isEnabled: () => enabled, current: () => curName };
+  return { addSong(n, d) { SONGS[n] = d; delete compiled[n]; if (curName === n) { cur = null; curName = null; } }, sfxNames: () => Object.keys(SFX), songStep: () => (cur && ctx ? (ctx.currentTime - t0) / cur.stepDur : -1), songs: () => Object.keys(SONGS), setVolume, getVolume, init, unlock: init, play, stop, sfx, setEnabled, isEnabled: () => enabled, current: () => curName };
 })();

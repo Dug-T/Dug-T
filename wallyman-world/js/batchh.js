@@ -196,7 +196,7 @@ const rivalOK = (pl) => pl.lv.goal && !pl.def.autoscroll && !pl.def.board && !pl
   Play.prototype.update = function () {
     if (!this._initH) this.initH();
     const m = this.mode;
-    if (m && this.paused && this.pauseSel === 4 && Input.pressed('jump')) { this.paused = false; this.state = 'done'; go(() => modeExit(this, false)); return; }
+    if (m && this.paused && this.pauseSel === 6 && Input.pressed('jump')) { this.paused = false; this.state = 'done'; go(() => modeExit(this, false)); return; }
     _upd.call(this);
     if (this.paused || this.talk || this.photo) return;
     if (m && this.state === 'dying' && this.stateT === 110) { this.state = 'done'; go(() => modeExit(this, false)); return; }

@@ -16,14 +16,14 @@ const Maker = (() => {
   ];
   const BOSSES = [['', 'NONE'], ['K', 'BARON STATIC'], ['k', 'MOTHERSHIP'], ['y', 'ICE YETI'], ['q', 'KING KRABBY'], ['w', 'DRILL MOLE'], ['v', 'NIMBUS']];
   const LIMITS = { M: 5, x: 3, C: 3, u: 6, i: 3 };
-  const blank = (theme = 'grass') => {
-    const rows = Array.from({ length: H }, (_, y) => (y >= 12 ? '#'.repeat(W) : '.'.repeat(W)).split(''));
-    rows[11][2] = '@'; rows[11][W - 6] = 'G';
+  const blank = (theme = 'grass', w = W) => {
+    const rows = Array.from({ length: H }, (_, y) => (y >= 12 ? '#'.repeat(w) : '.'.repeat(w)).split(''));
+    rows[11][2] = '@'; rows[11][w - 6] = 'G';
     return { theme, rows };
   };
   let slots = [null, null, null];
   try { const d = JSON.parse(localStorage.getItem(KEY)); if (Array.isArray(d)) slots = [0, 1, 2].map((i) => d[i] || null); } catch (e) { /* ignore */ }
-  const validRows = (r) => Array.isArray(r) && r.length === H && r.every((row) => typeof row === 'string' && row.length === W);
+  const validRows = (r) => Array.isArray(r) && r.length === H && r.every((row) => typeof row === 'string' && (row.length === W || row.length === W * 2) && row.length === r[0].length);
   slots = slots.map((s) => (s && validRows(s.rows) && THEME_LIST.includes(s.theme) ? { theme: s.theme, boss: s.boss || '', rows: s.rows.map((r) => r.split('')) } : null));
   const persist = () => { try { localStorage.setItem(KEY, JSON.stringify(slots.map((s) => (s ? { theme: s.theme, boss: s.boss || '', rows: s.rows.map((r) => r.join('')) } : null)))); } catch (e) { /* ignore */ } };
   // Share codes: theme + boss + run-length encoded grid, wrapped in base64
@@ -36,18 +36,18 @@ const Maker = (() => {
     let out = '';
     for (let i = 0; i < flat.length;) { let j = i; while (j < flat.length && flat[j] === flat[i] && j - i < 1295) j++; const n = j - i; out += n > 2 ? flat[i] + '|' + n.toString(36) + '|' : flat[i].repeat(n); i = j; }
     const body = String.fromCharCode(65 + THEME_LIST.indexOf(lv.theme)) + String.fromCharCode(65 + Math.max(0, BOSSES.findIndex((b) => b[0] === (lv.boss || '')))) + out;
-    return 'WMW1-' + btoa(body).replace(/=+$/, '');
+    return (lv.rows[0].length > W ? 'WMW2-' : 'WMW1-') + btoa(body).replace(/=+$/, '');
   }
   function decode(code) {
     try {
-      const m = String(code).replace(/\s+/g, '').match(/^WMW1-([A-Za-z0-9+/]+)=*$/); if (!m) return null;
+      const m0 = String(code).replace(/\s+/g, '').match(/^WMW([12])-([A-Za-z0-9+/]+)=*$/); if (!m0) return null; const WW = m0[1] === '2' ? W * 2 : W, m = [m0[0], m0[2]];
       const body = atob(m[1] + '==='.slice((m[1].length + 3) % 4)), theme = THEME_LIST[body.charCodeAt(0) - 65], boss = BOSSES[body.charCodeAt(1) - 65];
       if (!theme || !boss) return null;
       let flat = '';
-      for (let i = 2; i < body.length;) { const c = body[i]; if (body[i + 1] === '|') { const e = body.indexOf('|', i + 2); flat += c.repeat(parseInt(body.slice(i + 2, e), 36)); i = e + 1; } else { flat += c; i++; } if (flat.length > W * H) return null; }
+      for (let i = 2; i < body.length;) { const c = body[i]; if (body[i + 1] === '|') { const e = body.indexOf('|', i + 2); flat += c.repeat(parseInt(body.slice(i + 2, e), 36)); i = e + 1; } else { flat += c; i++; } if (flat.length > WW * H) return null; }
       flat = flat.replace(/[0-9!?$%&*+,-]/g, (c) => DEC[c] || c);
-      if (flat.length !== W * H || [...flat].some((c) => !CHARS.includes(c))) return null;
-      return { theme, boss: boss[0], rows: Array.from({ length: H }, (_, y) => flat.slice(y * W, (y + 1) * W).split('')) };
+      if (flat.length !== WW * H || [...flat].some((c) => !CHARS.includes(c))) return null;
+      return { theme, boss: boss[0], rows: Array.from({ length: H }, (_, y) => flat.slice(y * WW, (y + 1) * WW).split('')) };
     } catch (e) { return null; }
   }
   // Turn an edited grid into a playable level definition (buildLevel(99) reads it)
@@ -56,14 +56,15 @@ const Maker = (() => {
     const d = baseDef(lv); d.darkCols = darkCols;
     const bc = lv.boss || '';
     if (bc === 'K' || bc === 'k') Object.assign(d, { boss: true, bossHp: bc === 'K' ? 3 : 5, bossName: bc === 'k' ? 'MOTHERSHIP' : undefined });
-    else if (bc === 'y') d.yetiArena = [W - 17, W - 2]; else if (bc) Object.assign(d, { miniArena: [W - 17, W - 2] });
-    const build = d.build; d.build = (b) => { build(b); if (bc) { const bx = bc === 'K' ? W - 5 : bc === 'k' ? W - 8 : W - 9, by = bc === 'v' || bc === 'k' ? 3 : 10; b.g[by][bx] = bc; } };
+    const LW = lv.rows[0].length;
+    if (bc === 'y') d.yetiArena = [LW - 17, LW - 2]; else if (bc && bc !== 'K' && bc !== 'k') Object.assign(d, { miniArena: [LW - 17, LW - 2] });
+    const build = d.build; d.build = (b) => { build(b); if (bc) { const bx = bc === 'K' ? LW - 5 : bc === 'k' ? LW - 8 : LW - 9, by = bc === 'v' || bc === 'k' ? 3 : 10; b.g[by][bx] = bc; } };
     return d;
   };
   const baseDef = (lv) => ({
-    name: 'MY LEVEL', theme: lv.theme, music: lv.theme, width: W, custom: true,
+    name: 'MY LEVEL', theme: lv.theme, music: lv.theme, width: lv.rows[0].length, custom: true,
     water: lv.theme === 'water', lowGrav: lv.theme === 'moon', dino: lv.theme === 'sky' || lv.theme === 'airship' ? 'blue' : lv.theme === 'volcano' ? 'red' : 'teal',
-    build(b) { for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) b.g[y][x] = lv.rows[y][x]; },
+    build(b) { for (let y = 0; y < H; y++) for (let x = 0; x < lv.rows[y].length; x++) b.g[y][x] = lv.rows[y][x]; },
   });
   return { W, H, THEME_LIST, PALETTE, BOSSES, LIMITS, blank, slots, persist, toDef, encode, decode, clip: null, state: null };
 })();
@@ -120,10 +121,10 @@ function makerIcon(c, X, Y, t = 0) {
 }
 
 function LevelMakerScene(resume) {
-  const P = Maker.PALETTE, W = Maker.W, H = Maker.H;
+  const P = Maker.PALETTE, H = Maker.H; let W = Maker.W;
   let mode = resume ? 'edit' : 'slots', slot = resume ? resume.slot : 0, t = 0, msg = '', msgT = 0, menuSel = 0, held = {};
   let lv = resume ? Maker.slots[slot] : null, cur = resume ? resume.cur : { x: 2, y: 10, pal: 0 }, camX = resume ? resume.camX : 0;
-  const MENU = ['PLAY TEST', 'SAVE', 'THEME', 'BOSS', 'COPY AREA', 'SHARE CODE', 'LOAD CODE', 'UPLOAD ONLINE', 'CLEAR ALL', 'SAVE AND EXIT'];
+  const MENU = ['PLAY TEST', 'SAVE', 'THEME', 'BOSS', 'LENGTH', 'COPY AREA', 'SHARE CODE', 'LOAD CODE', 'UPLOAD ONLINE', 'CLEAR ALL', 'SAVE AND EXIT'];
   let selA = null;
   const TILESET = '#BWPSOAVQDXR=^LJ<>oNTEY~';
   const say = (s) => { msg = s; msgT = 120; };
@@ -143,6 +144,12 @@ function LevelMakerScene(resume) {
     if (c === 'G' && cur.y < 5) { say('GOAL NEEDS ROOM ABOVE'); return; }
     lv.rows[cur.y][cur.x] = c; Audio8.sfx('select');
   };
+  const setLength = (w) => { // grow a course to double length, or trim it back
+    const old = lv.rows[0].length; if (w === old) return;
+    if (w > old) lv.rows.forEach((r, y) => { for (let x = old; x < w; x++) r.push(y >= 12 ? '#' : '.'); });
+    else { lv.rows.forEach((r) => { r.length = w; }); if (!lv.rows.some((r) => r.includes('G'))) lv.rows[11][w - 6] = 'G'; if (!lv.rows.some((r) => r.includes('@'))) lv.rows[11][2] = '@'; cur.x = Math.min(cur.x, w - 1); camX = Math.min(camX, w * 16 - 256); }
+    W = w; say(w > old ? 'COURSE IS NOW DOUBLE LENGTH!' : 'COURSE IS NORMAL LENGTH'); Audio8.sfx('check');
+  };
   const erase = () => { if (lv.rows[cur.y][cur.x] !== '.') { lv.rows[cur.y][cur.x] = '.'; Audio8.sfx('stomp'); } };
   const save = () => { Maker.slots[slot] = lv; Maker.persist(); };
   const playTest = () => {
@@ -157,7 +164,7 @@ function LevelMakerScene(resume) {
   return {
     enter() { Audio8.play(resume ? (lv ? lv.theme : 'menu') : 'menu'); },
     update() {
-      t++; if (msgT > 0) msgT--;
+      t++; if (msgT > 0) msgT--; if (lv) W = lv.rows[0].length;
       if (mode === 'slots') {
         if (Input.pressed('down')) { slot = (slot + 1) % 3; Audio8.sfx('select'); }
         if (Input.pressed('up')) { slot = (slot + 2) % 3; Audio8.sfx('select'); }
@@ -170,13 +177,15 @@ function LevelMakerScene(resume) {
         if (Input.pressed('up')) { menuSel = (menuSel + MENU.length - 1) % MENU.length; Audio8.sfx('select'); }
         const lr = (Input.pressed('right') ? 1 : 0) - (Input.pressed('left') ? 1 : 0);
         if (menuSel === 2 && lr) { const L = Maker.THEME_LIST, i = L.indexOf(lv.theme); lv.theme = L[(i + lr + L.length) % L.length]; Audio8.play(lv.theme); Audio8.sfx('select'); }
+        if (menuSel === 4 && lr) setLength(lv.rows[0].length > Maker.W ? Maker.W : Maker.W * 2);
         if (menuSel === 3 && lr) { const B = Maker.BOSSES, i = Math.max(0, B.findIndex((b) => b[0] === (lv.boss || ''))); lv.boss = B[(i + lr + B.length) % B.length][0]; Audio8.sfx('select'); }
-        if (Input.pressed('back') || (Input.pressed('start') && ![0, 9].includes(menuSel))) { mode = 'edit'; return; }
+        if (Input.pressed('back') || (Input.pressed('start') && ![0, MENU.length - 1].includes(menuSel))) { mode = 'edit'; return; }
         if (Input.pressed('jump') || Input.pressed('start')) {
           const S = MENU[menuSel];
           if (S === 'PLAY TEST') { mode = 'edit'; playTest(); } else if (S === 'SAVE') { save(); say('SAVED!'); Audio8.sfx('check'); mode = 'edit'; } else if (S === 'THEME') {
             const L = Maker.THEME_LIST; lv.theme = L[(L.indexOf(lv.theme) + 1) % L.length]; Audio8.play(lv.theme);
-          } else if (S === 'BOSS') { const B = Maker.BOSSES, i = Math.max(0, B.findIndex((b) => b[0] === (lv.boss || ''))); lv.boss = B[(i + 1) % B.length][0]; Audio8.sfx('select'); }
+          } else if (S === 'LENGTH') { setLength(lv.rows[0].length > Maker.W ? Maker.W : Maker.W * 2); }
+          else if (S === 'BOSS') { const B = Maker.BOSSES, i = Math.max(0, B.findIndex((b) => b[0] === (lv.boss || ''))); lv.boss = B[(i + 1) % B.length][0]; Audio8.sfx('select'); }
           else if (S === 'COPY AREA') { mode = 'sel'; selA = null; say('A: PICK ONE CORNER'); }
           else if (S === 'SHARE CODE') { mode = 'dom'; codeBox('LEVEL CODE - SHARE IT!', Maker.encode(lv), null, () => { mode = 'edit'; }); }
           else if (S === 'LOAD CODE') { mode = 'dom'; codeBox('PASTE A LEVEL CODE', '', (code) => { const d = Maker.decode(code); if (!d) return false; lv = d; Audio8.play(lv.theme); say('LEVEL LOADED!'); return true; }, () => { mode = 'edit'; }); }
@@ -218,6 +227,7 @@ function LevelMakerScene(resume) {
       const want = cur.x * 16 - 120; camX += Math.round((Math.max(0, Math.min(W * 16 - 256, want)) - camX) * 0.25);
     },
     draw() {
+      if (lv) W = lv.rows[0].length;
       if (mode === 'slots') {
         drawParallax('candy', t * 0.3);
         drawWindow(40, 30, 176, 150);
@@ -264,10 +274,10 @@ function LevelMakerScene(resume) {
       txt(lv.theme.toUpperCase(), 170, 3, '#80e0ff', { align: 'right' });
       if (msgT > 0) { drawWindow(40, 96, 176, 24); txt(msg, 128, 104, '#fff', { align: 'center' }); }
       if (mode === 'menu') {
-        drawWindow(44, 26, 168, 154);
+        drawWindow(44, 22, 168, 166);
         txt('MAKER MENU', 128, 37, '#ffe040', { align: 'center' });
         MENU.forEach((s, i) => {
-          const y = 48 + i * 12, label = i === 2 ? `THEME: ${lv.theme.toUpperCase()}` : i === 3 ? `BOSS: ${Maker.BOSSES.find((b) => b[0] === (lv.boss || ''))[1]}` : s;
+          const y = 44 + i * 12, label = i === 4 ? `LENGTH: ${lv.rows[0].length > Maker.W ? 'LONG' : 'NORMAL'}` : i === 2 ? `THEME: ${lv.theme.toUpperCase()}` : i === 3 ? `BOSS: ${Maker.BOSSES.find((b) => b[0] === (lv.boss || ''))[1]}` : s;
           txt(label, 64, y, i === menuSel ? '#ffe040' : '#fff');
           if (i === menuSel) txt('>', 54 + ((t >> 3) & 1), y, '#ffe040');
         });
