@@ -4,6 +4,8 @@ const cv = document.getElementById('screen');
 const ctx = cv.getContext('2d');
 ctx.imageSmoothingEnabled = false;
 let frame = 0;
+// the game's update number, shown on the title screen: 1.0 is the first, and each new update adds 0.1 (1.1, 1.2, ...)
+const GAME_VERSION = '1.0';
 const SOLID = new Set(['#', 'B', 'W', 'P', 'S', 'O', 'A', 'V', 'Q', 'D', 'N', 'T', 'E', 'H', '[', ']', '{', 'F', '+', '}', '?', '`', 'U', 'X', '^', 'J', 'R', '<', '>', 'Y']);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const approach = (v, t, d) => (v < t ? Math.min(t, v + d) : Math.max(t, v - d));
@@ -2463,7 +2465,6 @@ class Play {
       ctx.fillStyle = 'rgba(190,215,255,0.65)';
       const n = Math.round(70 * rain);
       for (let i = 0; i < n; i++) { const x = (((i * 37 - cx * 0.2 - frame * 2) % VW) + VW) % VW, y = (i * 53 + frame * 7) % (VH + 10) - 10; ctx.fillRect(Math.round(x), Math.round(y), 1, 5); ctx.fillRect(Math.round(x) - 1, Math.round(y) + 4, 1, 2); }
-      if (this.def.weather === 'storm' && frame % 300 === 0) Audio8.sfx('thunder');
     }
   }
   drawYeti(e, x, y) {
@@ -2735,7 +2736,7 @@ class Play {
     }
     if (this.def.dark || (this.def.darkCols && this.def.darkCols.has(Math.floor((this.p.x + this.p.w / 2) / TS)))) { // spooky: only a pool of light around WallyMan, with the odd lightning flash
       const lf = frame % 420, flash = lf < 5 || (lf > 10 && lf < 14);
-      if (lf === 0) Audio8.sfx('boom');
+      if (lf === 0 && !this.paused && this.lightning) this.lightning();
       if (!flash) {
         const px = this.p.x + this.p.w / 2 - cx, py = this.p.y + this.p.h / 2;
         const gr = ctx.createRadialGradient(px, py, 34, px, py, 118);
