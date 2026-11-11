@@ -3,7 +3,8 @@
 // plus an echo send for that warm SNES "reverb". All music here is original.
 const Audio8 = (() => {
   let ctx = null, master, musicBus, sfxBus, echoIn, noiseBuf, waves = {};
-  let enabled = true;
+  let enabled = true, musicVol = 1, sfxVol = 1;
+  try { const m = localStorage.getItem('wallyman-music-vol'), f = localStorage.getItem('wallyman-sfx-vol'); if (m !== null) musicVol = +m; if (f !== null) sfxVol = +f; } catch (e) { /* ignore */ }
   try { enabled = localStorage.getItem('wallyman-sound') !== 'off'; } catch (e) { /* ignore */ }
 
   const NOTE = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
@@ -29,8 +30,8 @@ const Audio8 = (() => {
     const comp = ctx.createDynamicsCompressor();
     comp.threshold.value = -14; comp.ratio.value = 4;
     master.connect(comp); comp.connect(ctx.destination);
-    musicBus = ctx.createGain(); musicBus.gain.value = 0.55; musicBus.connect(master);
-    sfxBus = ctx.createGain(); sfxBus.gain.value = 0.7; sfxBus.connect(master);
+    musicBus = ctx.createGain(); musicBus.gain.value = 0.55 * musicVol; musicBus.connect(master);
+    sfxBus = ctx.createGain(); sfxBus.gain.value = 0.7 * sfxVol; sfxBus.connect(master);
     // echo
     echoIn = ctx.createGain(); echoIn.gain.value = 0.28;
     const d = ctx.createDelay(1); d.delayTime.value = 0.19;
@@ -96,6 +97,11 @@ const Audio8 = (() => {
       mel: 'C5/2 F5/2 A5/2 C6/4 A5/2 C6/4 | Bb5/3 A5/1 G5/2 F5/2 G5/8 | A5/2 G5/2 F5/2 D5/2 C5/4 F5/4 | E5/2 F5/2 G5/2 A5/2 G5/8 |' +
         'C5/2 F5/2 A5/2 C6/4 D6/2 C6/4 | Bb5/2 D6/2 C6/2 Bb5/2 A5/4 F5/4 | G5/2 A5/2 Bb5/2 G5/2 E5/2 F5/2 G5/2 E5/2 | F5/8 C5/2 F5/6',
     },
+    menu: {
+      bpm: 118, swing: 0.36, bass: 'walk', harm: 'stab', drums: 'k..hs.h.k.hhs.h.', lead: 'p12',
+      chords: 'D Bm G A D Bm Em A G A F#m Bm G A D D',
+      mel: 'F#5/3 E5/1 D5/2 A4/2 B4/2 D5/2 F#5/4 | E5/2 D5/2 B4/4 r/2 B4/2 C#5/2 D5/2 | E5/3 D5/1 B4/2 G4/2 A4/2 B4/2 D5/4 | C#5/2 E5/2 A5/4 G5/2 F#5/2 E5/4 |F#5/3 E5/1 D5/2 A4/2 B4/2 D5/2 A5/4 | B5/2 A5/2 F#5/2 D5/2 E5/4 F#5/4 | G5/2 F#5/2 E5/2 D5/2 B4/2 D5/2 E5/2 G5/2 | F#5/6 E5/2 C#5/4 A4/4 |B4/2 D5/2 G5/3 F#5/1 E5/2 D5/2 B4/4 | C#5/2 E5/2 A5/3 G5/1 F#5/2 E5/2 C#5/4 | A5/3 G#5/1 F#5/2 C#5/2 E5/4 D5/2 C#5/2 | D5/2 C#5/2 B4/2 F#4/2 B4/8 |G5/3 F#5/1 E5/2 D5/2 B4/2 D5/2 G5/4 | A5/3 G5/1 F#5/2 E5/2 C#5/2 E5/2 A5/4 | F#5/2 A5/2 D6/4 C#6/2 B5/2 A5/4 | D5/12 r/4',
+    },
     map: {
       bpm: 112, swing: 0.25, bass: 'walk', harm: 'pad', drums: 'k...h.h.k...h.h.', lead: 'p12',
       chords: 'G C Em D G C D G',
@@ -121,11 +127,177 @@ const Audio8 = (() => {
       mel: 'F5/4 D5/4 Bb4/4 | C5/4 Eb5/4 G5/4 | F5/6 Eb5/2 D5/4 | C5/12 | F5/4 D5/4 Bb4/4 | Eb5/4 G5/4 Bb5/4 | A5/4 G5/4 A5/4 | Bb5/12 |' +
         'D6/4 C6/4 Bb5/4 | C6/6 Bb5/2 A5/4 | G5/4 F5/4 Eb5/4 | F5/12 | D5/4 Eb5/4 F5/4 | G5/4 Eb5/4 C5/4 | D5/4 F5/4 A4/4 | Bb4/12',
     },
+    charge: {
+      bpm: 184, swing: 0, bass: 'drive', harm: 'stab', drums: 'khskhskhkhshkhsh', lead: 'p25',
+      chords: 'C F G C',
+      mel: 'C5/2 E5/2 G5/2 C6/2 G5/2 E5/2 C6/4 | A5/2 F5/2 C6/2 A5/2 F5/4 C6/4 | B5/2 G5/2 D6/2 B5/2 G5/4 D6/4 | C6/4 G5/2 E5/2 C5/8',
+    },
+    haunted: {
+      bpm: 96, swing: 0, bass: 'sparse', harm: 'arp', drums: 'k.......h.......', lead: 'p50',
+      chords: 'Em C Am B Em C B Em',
+      mel: 'E5/4 G5/2 F#5/2 E5/4 B4/4 | C5/4 E5/2 D#5/2 E5/8 | A4/2 C5/2 E5/4 D5/2 C5/2 B4/4 | D#5/6 F#5/2 B5/8 |' +
+        'E5/4 G5/2 B5/2 A#5/4 B5/4 | C6/4 B5/2 A5/2 G5/4 E5/4 | F#5/2 G5/2 A5/2 G5/2 F#5/4 D#5/4 | E5/12 r/4',
+    },
+    water: {
+      bpm: 132, swing: 0, bar: 12, bass: 'waltz', harm: 'waltz', drums: 'k.....h.....', lead: 'p12',
+      chords: 'E A B E E A F#m B',
+      mel: 'G#5/4 B5/4 E6/4 | C#6/6 B5/2 A5/4 | F#5/4 A5/4 D#6/4 | E6/12 | G#5/4 E5/4 B4/4 | A4/4 C#5/4 E5/4 | F#5/4 A5/4 C#6/4 | B5/8 r/4',
+    },
+    airship: {
+      bpm: 138, swing: 0, bass: 'drive', harm: 'stab', drums: 'k.s.k.s.k.s.kss.', lead: 'p25',
+      chords: 'Gm Eb F D Gm Eb F Gm',
+      mel: 'G4/2 Bb4/2 D5/2 G5/4 F5/2 D5/4 | Eb5/4 G5/2 Bb5/2 G5/4 Eb5/4 | F5/2 F5/2 A5/2 C6/2 Bb5/2 A5/2 F5/4 | F#5/6 A5/2 D6/8 |' +
+        'G5/2 D5/2 G5/2 Bb5/4 A5/2 G5/4 | G5/4 Bb5/2 Eb6/2 D6/4 Bb5/4 | A5/2 C6/2 A5/2 F5/2 D5/2 F#5/2 A5/4 | G5/12 r/4',
+    },
+    volcano: {
+      bpm: 150, swing: 0, bass: 'drive', harm: 'stab', drums: 'k.hsk.hsk.hsk.ss', lead: 'p25',
+      chords: 'Em Em C D Em Em C B',
+      mel: 'E5/2 E5/2 G5/2 E5/2 B5/4 A5/2 G5/2 | F#5/2 G5/2 A5/2 G5/2 E5/8 | C5/2 E5/2 G5/2 C6/4 B5/2 A5/2 G5/2 | F#5/4 A5/4 D6/4 C6/2 A5/2 |' +
+        'E5/2 G5/2 B5/2 E6/4 D6/2 B5/4 | G5/2 F#5/2 E5/2 D5/2 E5/8 | C6/4 B5/2 A5/2 G5/4 E5/4 | D#5/4 F#5/4 B5/8',
+    },
+    factory: {
+      bpm: 140, swing: 0, bass: 'drive', harm: 'arp', drums: 'k.h.k.h.k.hhk.h.', lead: 'p12',
+      chords: 'Am Am Dm Dm E E Am Am',
+      mel: 'A4/2 A4/1 A4/1 C5/2 E5/2 A5/2 G5/2 E5/2 C5/2 | A4/2 A4/1 A4/1 C5/2 E5/2 G5/4 E5/4 | D5/2 D5/1 D5/1 F5/2 A5/2 D6/2 C6/2 A5/2 F5/2 | D5/2 D5/1 D5/1 F5/2 A5/2 C6/4 A5/4 |' +
+        'E5/2 E5/1 E5/1 G#5/2 B5/2 E6/2 D6/2 B5/2 G#5/2 | E5/2 F5/2 E5/2 D5/2 C5/2 B4/2 G#4/4 | A4/2 C5/2 E5/2 A5/2 G5/2 E5/2 C5/2 E5/2 | A5/8 r/8',
+    },
+    candy: {
+      bpm: 160, swing: 0.35, bass: 'bounce', harm: 'stab', drums: 'k.h.s.h.k.h.s.hh', lead: 'p25',
+      chords: 'F Bb C F Dm Bb C F',
+      mel: 'C5/2 F5/2 A5/2 F5/2 C6/4 A5/4 | Bb5/2 A5/2 G5/2 F5/2 D5/4 F5/4 | E5/2 G5/2 C6/2 G5/2 E5/4 C5/4 | F5/6 A5/2 F5/8 |' +
+        'D5/2 F5/2 A5/2 D6/2 C6/2 A5/2 F5/4 | Bb4/2 D5/2 F5/2 Bb5/2 A5/4 G5/4 | G5/2 A5/2 Bb5/2 G5/2 E5/2 C5/2 E5/2 G5/2 | F5/12 r/4',
+    },
+    moon: {
+      bpm: 100, swing: 0, bass: 'sparse', harm: 'pad', drums: 'k.......h.......', lead: 'p50',
+      chords: 'C Am F G C Am F C',
+      mel: 'E5/4 G5/4 C6/4 B5/4 | A5/6 G5/2 E5/8 | F5/4 A5/4 C6/4 E6/4 | D6/12 r/4 | E5/4 G5/4 C6/4 D6/4 | E6/6 D6/2 C6/8 | A5/4 G5/4 F5/4 A5/4 | G5/16',
+    },
+    neon: {
+      bpm: 138, swing: 0, bass: 'drive', harm: 'stab', drums: 'k.hsk.hsk.hsk.hs', lead: 'p12',
+      chords: 'Am F C G Am F C E',
+      mel: 'E5/2 A5/2 C6/2 B5/2 A5/4 E5/4 | F5/2 A5/2 C6/2 A5/2 F5/8 | G5/2 C6/2 E6/2 D6/2 C6/4 G5/4 | B5/4 G5/4 D5/8 |' +
+        'E5/2 A5/2 C6/2 E6/2 D6/4 C6/4 | A5/2 F5/2 C5/2 F5/2 A5/8 | G5/2 E5/2 C5/2 E5/2 G5/2 C6/2 E6/4 | E6/12 r/4',
+    },
+    bossufo: {
+      bpm: 160, swing: 0, bass: 'drive', harm: 'pad', drums: 'k.s.k.sskks.k.s.', lead: 'p50',
+      chords: 'Cm Ab Bb G Cm Ab Bb G',
+      mel: 'C5/2 G5/2 C6/2 G5/2 Eb6/4 D6/4 | Ab5/2 C6/2 Eb6/2 C6/2 Ab5/8 | Bb5/2 D6/2 F6/2 D6/2 Bb5/4 F5/4 | G5/2 B5/2 D6/2 G6/2 F6/4 D6/4 |' +
+        'C6/2 Bb5/2 G5/2 Eb5/2 C5/4 G5/4 | Ab5/2 G5/2 F5/2 Eb5/2 C5/8 | D5/2 F5/2 Bb5/2 D6/2 F6/4 D6/4 | B5/12 r/4',
+    },
+    bossice: {
+      bpm: 150, swing: 0, bass: 'drive', harm: 'stab', drums: 'k.hsk.hskkhsk.hs', lead: 'p25',
+      chords: 'Dm Dm Bb C Dm Dm Bb A',
+      mel: 'D5/2 F5/2 A5/2 D6/2 C6/4 A5/4 | F5/2 A5/2 D6/2 F6/2 E6/8 | D6/2 Bb5/2 F5/2 Bb5/2 C6/4 G5/4 | E5/2 G5/2 C6/2 E6/2 D6/4 C6/4 |' +
+        'D6/2 C6/2 A5/2 F5/2 D5/4 A5/4 | F5/2 E5/2 D5/2 F5/2 A5/8 | Bb5/2 A5/2 G5/2 F5/2 E5/2 F5/2 G5/4 | A5/12 r/4',
+    },
+    bosscarn: {
+      bpm: 180, swing: 0.4, bass: 'waltz', harm: 'stab', drums: 'k.hk.hk.hk.hk.hs', lead: 'p12',
+      chords: 'Em B Em B Am Em B Em',
+      mel: 'E5/2 G5/2 B5/2 E6/4 D#6/2 E6/2 | F#6/2 E6/2 D#6/2 B5/4 r/2 F#5/2 | G5/2 B5/2 E6/2 G6/4 F#6/2 E6/2 | D#6/2 F#6/2 B6/4 r/4 |' +
+        'A5/2 C6/2 E6/2 A6/4 G6/2 F#6/2 | E6/2 D#6/2 E6/2 B5/4 r/2 G5/2 | F#5/2 A5/2 D#6/2 F#6/2 E6/2 D#6/2 B5/4 | E5/12 r/4',
+    },
+    bossjungle: {
+      bpm: 140, swing: 0.2, bass: 'bounce', harm: 'stab', drums: 'k.kskk.sk.kskkss', lead: 'p25',
+      chords: 'Gm Gm Eb F Gm Gm Eb D',
+      mel: 'G4/2 Bb4/2 D5/2 G5/2 F5/4 D5/4 | Eb5/2 D5/2 C5/2 Bb4/2 G4/8 | Eb5/2 G5/2 Bb5/2 G5/2 Eb5/4 C5/4 | F5/2 A5/2 C6/2 A5/2 F5/8 |' +
+        'G5/2 F5/2 D5/2 Bb4/2 G4/4 D5/4 | Bb5/2 A5/2 G5/2 F5/2 D5/8 | Eb5/2 F5/2 G5/2 Bb5/2 C6/2 Bb5/2 G5/4 | F#5/12 r/4',
+    },
+    bossdesert: {
+      bpm: 146, swing: 0, bass: 'drive', harm: 'pad', drums: 'k..sk.s.k..skks.', lead: 'p12',
+      chords: 'Em Em F F Em Em D B',
+      mel: 'E5/2 F5/2 G#5/2 A5/2 B5/4 A5/4 | G#5/2 F5/2 E5/4 r/4 B4/4 | F5/2 G#5/2 A5/2 C6/2 B5/4 G#5/4 | A5/2 G#5/2 F5/2 E5/2 F5/8 |' +
+        'E5/2 G#5/2 B5/2 E6/2 D6/4 C6/4 | B5/2 A5/2 G#5/2 F5/2 E5/8 | D5/2 F#5/2 A5/2 D6/2 C6/4 A5/4 | B5/12 r/4',
+    },
+    bossfinal: {
+      bpm: 190, swing: 0, bass: 'drive', harm: 'stab', drums: 'kshskshskkhskshs', lead: 'p12',
+      chords: 'Bm G A F# Bm G Em F#',
+      mel: 'B4/1 B4/1 D5/2 F#5/2 B5/2 A5/2 F#5/2 D5/4 | G5/2 B5/2 D6/2 B5/2 G5/4 E5/4 | A5/2 C#6/2 E6/2 C#6/2 A5/4 F#5/4 | F#5/2 A#5/2 C#6/2 F#6/2 E6/4 C#6/4 |' +
+        'B5/2 D6/2 F#6/2 D6/2 B5/2 F#5/2 D5/4 | G5/2 F#5/2 E5/2 D5/2 B4/8 | E5/2 G5/2 B5/2 E6/2 D6/4 B5/4 | A#5/12 r/4',
+    },
+    jungle: {
+      bpm: 132, swing: 0.25, bass: 'bounce', harm: 'stab', drums: 'k..sk.s.k..sk.ss', lead: 'p25',
+      chords: 'Am Am G G F F G E',
+      mel: 'A4/2 C5/2 E5/2 A5/2 G5/4 E5/4 | D5/2 E5/2 G5/2 D5/2 B4/8 | C5/2 F5/2 A5/2 C6/2 B5/4 A5/4 | G5/4 E5/4 G#5/8 |' +
+        'A5/2 G5/2 E5/2 C5/2 D5/2 E5/2 A4/4 | G4/2 B4/2 D5/2 G5/2 F5/4 D5/4 | C5/2 E5/2 F5/2 A5/2 G5/2 F5/2 E5/4 | E5/12 r/4',
+    },
+    desert: {
+      bpm: 120, swing: 0.15, bass: 'sparse', harm: 'pad', drums: 'k...s.k.k...s...', lead: 'p25',
+      chords: 'Dm Dm C C Bb Bb A A',
+      mel: 'D5/2 E5/2 F5/2 A5/2 G#5/4 A5/4 | F5/2 E5/2 D5/2 C#5/2 D5/8 | A4/2 D5/2 F5/2 G5/2 A5/4 Bb5/4 | A5/4 G5/4 F5/2 E5/2 C#5/4 |' +
+        'D5/2 F5/2 A5/2 D6/2 C6/4 Bb5/4 | A5/2 G5/2 F5/2 E5/2 F5/8 | G5/2 F5/2 E5/2 D5/2 C#5/2 E5/2 A4/4 | D5/12 r/4',
+    },
+    static: {
+      bpm: 176, swing: 0, bass: 'drive', harm: 'stab', drums: 'kshskshskshskhss', lead: 'p12',
+      chords: 'Em Em C D Em Em C B',
+      mel: 'E5/1 E5/1 G5/2 B5/2 E6/2 D6/2 B5/2 G5/4 | A5/2 C6/2 B5/2 A5/2 G5/4 F#5/4 | E5/2 G5/2 B5/2 E6/2 F#6/2 E6/2 D6/2 B5/2 | C6/4 B5/4 A5/4 F#5/4 |' +
+        'G5/2 B5/2 E6/2 B5/2 G5/2 E5/2 B4/4 | C5/2 E5/2 A5/2 C6/2 B5/4 A5/4 | G5/2 F#5/2 E5/2 D5/2 C5/2 B4/2 C5/2 D5/2 | E5/12 r/4',
+    },
+    carnival: {
+      bpm: 168, swing: 0.4, bass: 'bounce', harm: 'stab', drums: 'k.hsk.hsk.hsk.hs', lead: 'p25',
+      chords: 'C G G C C G G C F C G C',
+      mel: 'G5/2 F#5/2 G5/2 E5/2 C5/4 E5/4 | D5/2 C#5/2 D5/2 B4/2 G4/4 B4/4 | D5/2 F5/2 A5/2 G5/2 F5/2 D5/2 B4/2 D5/2 | C5/4 E5/4 G5/4 C6/4 |' +
+        'G5/2 F#5/2 G5/2 E5/2 C5/4 E5/4 | F5/2 E5/2 F5/2 D5/2 B4/4 D5/4 | A5/2 G5/2 F5/2 E5/2 D5/2 C5/2 B4/2 D5/2 | C5/12 r/4',
+    },
+    beach: {
+      bpm: 152, swing: 0.32, bass: 'bounce', harm: 'stab', drums: 'k.hsh.hsk.hsh.hh', lead: 'p25',
+      chords: 'G C D G G C D G Em C A D',
+      mel: 'B4/2 D5/2 G5/2 D5/2 E5/3 D5/1 B4/4 | C5/2 E5/2 G5/2 E5/2 A5/4 G5/4 | F#5/2 A5/2 F#5/2 D5/2 E5/2 F#5/2 D5/4 | G5/6 D5/2 B4/4 r/4 |' +
+        'B4/2 D5/2 G5/2 D5/2 E5/3 D5/1 G5/4 | A5/2 G5/2 E5/2 C5/2 E5/4 G5/4 | F#5/3 E5/1 D5/2 C5/2 B4/2 A4/2 F#4/4 | G4/12 r/4 |' +
+        'E5/2 G5/2 B5/4 A5/2 G5/2 E5/4 | E5/2 G5/2 C6/4 B5/2 A5/2 G5/4 | A5/3 G5/1 F#5/2 E5/2 C#5/2 E5/2 A5/4 | F#5/2 E5/2 D5/2 A4/2 D5/8',
+    },
+    snow: {
+      bpm: 150, swing: 0, bar: 12, bass: 'waltz', harm: 'arp', drums: 'k.....h.....', lead: 'p12',
+      chords: 'Am F G C Am F G Am Dm Am E Am',
+      mel: 'E5/4 A5/4 B5/4 | C6/6 B5/2 A5/4 | B5/4 G5/4 D5/4 | E5/12 | E5/4 A5/4 B5/4 | C6/4 D6/4 E6/4 | D6/4 B5/4 G5/4 | A5/12 |' +
+        'F5/4 A5/4 D6/4 | C6/6 B5/2 A5/4 | G#5/4 B5/4 E6/4 | A5/8 r/4',
+    },
     castle: {
       bpm: 146, swing: 0, bass: 'drive', harm: 'stab', drums: 'k.hks.h.k.hks.ss', lead: 'p25',
       chords: 'Dm Bb Dm A F Gm A Dm',
       mel: 'D5/2 D5/2 F5/2 D5/2 A5/4 G#5/2 A5/2 | Bb5/4 A5/2 G5/2 F5/4 E5/4 | D5/2 D5/2 F5/2 D5/2 C6/4 Bb5/2 A5/2 | G5/2 F5/2 E5/2 C#5/2 D5/8 |' +
         'F5/2 F5/2 A5/2 F5/2 C6/4 B5/2 C6/2 | D6/4 C6/2 Bb5/2 A5/4 G5/4 | F5/2 E5/2 D5/2 E5/2 F5/2 G5/2 A5/4 | D5/12 r/4',
+    },
+    crystal: {
+      bpm: 104, swing: 0, bass: 'hold', harm: 'arp', drums: 'k...h...s...h...', lead: 'p25',
+      chords: 'Em C G D Em C B B',
+      mel: 'B5/4 G5/2 E5/2 B5/4 C6/4 | G5/4 E5/2 C5/2 G5/8 | D6/4 B5/2 G5/2 D6/4 E6/4 | F#6/4 D6/4 A5/8 |' +
+        'E6/4 B5/2 G5/2 E6/4 D6/4 | C6/2 B5/2 G5/2 E5/2 C5/8 | D#5/2 F#5/2 B5/2 D#6/2 F#6/8 | B5/12 r/4',
+    },
+    toy: {
+      bpm: 150, swing: 0.3, bass: 'bounce', harm: 'stab', drums: 'k.h.s.hkk.h.s.h.', lead: 'p12',
+      chords: 'C A7 Dm G7 C A7 Dm G7',
+      mel: 'G5/2 C6/2 E6/2 C6/2 G5/4 E5/4 | A5/2 C#6/2 E6/2 G6/2 E6/8 | F5/2 A5/2 D6/2 A5/2 F6/4 D6/4 | B5/2 D6/2 G6/2 F6/2 D6/8 |' +
+        'E6/2 D6/2 C6/2 G5/2 E5/2 G5/2 C6/4 | C#6/2 E6/2 A6/2 G6/2 E6/8 | D6/2 E6/2 F6/2 A6/2 G6/4 F6/4 | C6/12 r/4',
+    },
+    bossbeat: {
+      bpm: 120, swing: 0, bass: 'drive', harm: 'stab', drums: 'k...s...k.k.s...', lead: 'p50',
+      chords: 'Am Am F G Am Am F E',
+      mel: 'A5/4 r/4 A5/2 C6/2 E6/4 | D6/4 C6/4 A5/8 | F5/4 r/4 F5/2 A5/2 C6/4 | B5/4 G5/4 D6/8 |' +
+        'A5/4 r/4 A5/2 C6/2 E6/4 | G6/4 E6/4 C6/8 | F6/4 E6/4 D6/4 C6/4 | B5/4 G#5/4 E5/8',
+    },
+    bosscrystal: {
+      bpm: 164, swing: 0, bass: 'drive', harm: 'pad', drums: 'k.hsk.hsk.hsksss', lead: 'p25',
+      chords: 'Bm G Em F# Bm G A F#',
+      mel: 'B5/2 F#5/2 B5/2 D6/2 F#6/4 E6/4 | D6/2 B5/2 G5/2 B5/2 D6/8 | E6/2 G6/2 E6/2 B5/2 G5/4 E5/4 | F#5/2 A#5/2 C#6/2 F#6/2 E6/8 |' +
+        'D6/2 C#6/2 B5/2 F#5/2 D5/4 F#5/4 | G5/2 B5/2 D6/2 G6/2 F#6/8 | E6/2 C#6/2 A5/2 C#6/2 E6/4 A6/4 | F#6/12 r/4',
+    },
+    arena: {
+      bpm: 156, swing: 0, bass: 'drive', harm: 'stab', drums: 'kshskshskshsksss', lead: 'p12',
+      chords: 'Dm Bb C A Dm Bb C A',
+      mel: 'D5/2 F5/2 A5/2 D6/2 C6/4 A5/4 | Bb5/2 D6/2 F6/2 D6/2 Bb5/8 | C6/2 E6/2 G6/2 E6/2 C6/4 G5/4 | A5/2 C#6/2 E6/2 A6/2 G6/8 |' +
+        'F6/2 E6/2 D6/2 A5/2 F5/4 D5/4 | D6/2 C6/2 Bb5/2 F5/2 D5/8 | E5/2 G5/2 C6/2 E6/2 G6/4 E6/4 | A5/12 r/4',
+    },
+    doug: {
+      bpm: 132, swing: 0.25, bass: 'walk', harm: 'stab', drums: 'k.h.s.h.k.hks.h.', lead: 'p25',
+      chords: 'G Em C D G Em Am D',
+      mel: 'D5/2 G5/2 B5/2 D6/2 B5/4 G5/4 | E5/2 G5/2 B5/2 E6/2 D6/8 | C6/2 B5/2 A5/2 G5/2 E5/4 C5/4 | D5/2 F#5/2 A5/2 D6/2 C6/8 |' +
+        'B5/2 D6/2 G6/2 D6/2 B5/4 G5/4 | E6/2 D6/2 B5/2 G5/2 E5/8 | A5/2 C6/2 E6/2 C6/2 A5/4 F#5/4 | G5/12 r/4',
+    },
+    pirate: {
+      bpm: 126, swing: 0.35, bass: 'bounce', harm: 'waltz', drums: 'k..h..s..h..k.s.', lead: 'p25',
+      chords: 'Dm Dm C C Bb Bb A A',
+      mel: 'A4/2 D5/2 D5/2 E5/2 F5/4 D5/4 | C5/2 E5/2 E5/2 F5/2 G5/4 E5/4 | F5/2 D5/2 Bb4/2 D5/2 F5/4 A5/4 | G5/4 E5/4 C#5/8 |' +
+        'A5/2 G5/2 F5/2 E5/2 D5/4 A4/4 | C5/2 D5/2 E5/2 G5/2 C6/8 | Bb5/2 A5/2 G5/2 F5/2 D5/4 Bb4/4 | A4/2 C#5/2 E5/2 G5/2 A5/8',
     },
     boss: {
       bpm: 172, swing: 0, bass: 'drive', harm: 'stab', drums: 'kshskshskshsksss', lead: 'p12',
@@ -221,7 +393,7 @@ const Audio8 = (() => {
     // fade out lingering notes quickly by swapping the music bus
     const old = musicBus; old.gain.setTargetAtTime(0, ctx.currentTime, 0.03);
     setTimeout(() => old.disconnect(), 400);
-    musicBus = ctx.createGain(); musicBus.gain.value = 0.55; musicBus.connect(master);
+    musicBus = ctx.createGain(); musicBus.gain.value = 0.55 * musicVol; musicBus.connect(master);
   }
 
   // ---------- sound effects ----------
@@ -246,6 +418,28 @@ const Audio8 = (() => {
     boom: (t) => { noise(t, 0.9, 0.5, sfxBus, 'lowpass', 800); tone('sine', 120, t, 0.8, 0.4, sfxBus, { slide: 30 }); },
     spark: (t) => noise(t, 0.12, 0.15, sfxBus, 'bandpass', 4000, 3),
     tick: (t) => tone('p50', 1800, t, 0.02, 0.05, sfxBus),
+    cannon: (t) => { tone('sine', 220, t, 0.14, 0.35, sfxBus, { slide: 70 }); noise(t, 0.1, 0.18, sfxBus, 'lowpass', 900); },
+    reload: (t) => { noise(t, 0.04, 0.2, sfxBus, 'highpass', 2500); noise(t + 0.09, 0.05, 0.22, sfxBus, 'bandpass', 1800, 2); tone('p25', freq(76), t + 0.16, 0.08, 0.1, sfxBus); },
+    lasercharge: (t) => tone('sine', 300, t, 0.7, 0.08, sfxBus, { slide: 1400, slideT: 0.7 }),
+    laser: (t) => { tone('p12', 1760, t, 0.45, 0.1, sfxBus, { slide: 440, slideT: 0.45 }); noise(t, 0.4, 0.12, sfxBus, 'bandpass', 3000, 1); },
+    swoop: (t) => tone('triangle', 900, t, 0.2, 0.12, sfxBus, { slide: 300 }),
+    snort: (t) => { noise(t, 0.18, 0.2, sfxBus, 'lowpass', 600); tone('square', 120, t, 0.12, 0.06, sfxBus, { slide: 70 }); },
+    zap: (t) => tone('p50', 1400, t, 0.1, 0.07, sfxBus, { slide: 700 }),
+    dino: (t) => [72, 79, 76, 84].forEach((m, i) => tone('p25', freq(m), t + i * 0.07, 0.07, 0.11, sfxBus, { echo: true })),
+    chomp: (t) => { noise(t, 0.08, 0.25, sfxBus, 'lowpass', 1400); tone('square', 260, t, 0.08, 0.08, sfxBus, { slide: 120 }); },
+    dinocry: (t) => tone('p25', 900, t, 0.35, 0.1, sfxBus, { slide: 300 }),
+    swim: (t) => { tone('sine', 380, t, 0.12, 0.08, sfxBus, { slide: 620 }); noise(t, 0.08, 0.05, sfxBus, 'bandpass', 900, 2); },
+    secret: (t) => [67, 71, 74, 78, 79, 83, 86, 91].forEach((m, i) => tone('p25', freq(m), t + i * 0.06, 0.1, 0.1, sfxBus, { echo: true })),
+    roar: (t) => { noise(t, 0.6, 0.35, sfxBus, 'lowpass', 500); tone('square', 110, t, 0.55, 0.12, sfxBus, { slide: 60 }); },
+    bats: (t) => [93, 98, 95, 100].forEach((m, i) => tone('p12', freq(m), t + i * 0.04, 0.04, 0.07, sfxBus, { slide: freq(m) * 1.3 })),
+    shock: (t) => { tone('sine', 180, t, 0.5, 0.22, sfxBus, { slide: 1800, slideT: 0.35, echo: true }); noise(t, 0.4, 0.18, sfxBus, 'bandpass', 2500, 1); tone('p25', 1500, t + 0.05, 0.25, 0.08, sfxBus, { slide: 400 }); },
+    freeze: (t) => { [88, 84, 79, 76, 72].forEach((m, i) => tone('sine', freq(m), t + i * 0.05, 0.12, 0.12, sfxBus, { echo: true })); noise(t, 0.3, 0.1, sfxBus, 'highpass', 6000); },
+    fireball: (t) => { noise(t, 0.18, 0.2, sfxBus, 'bandpass', 1200, 1); tone('p50', 300, t, 0.15, 0.1, sfxBus, { slide: 120 }); },
+    flap: (t) => noise(t, 0.08, 0.12, sfxBus, 'lowpass', 900),
+    thunder: (t) => { noise(t, 1.2, 0.45, sfxBus, 'lowpass', 300); noise(t + 0.05, 0.3, 0.25, sfxBus, 'lowpass', 1200); },
+    dig: (t) => noise(t, 0.25, 0.25, sfxBus, 'lowpass', 500),
+    spring: (t) => tone('p25', 180, t, 0.3, 0.14, sfxBus, { slide: 1100, slideT: 0.25 }),
+    letter: (t) => tone('p50', 1500, t, 0.03, 0.07, sfxBus),
     map: (t) => tone('triangle', 600, t, 0.05, 0.2, sfxBus, { slide: 900 }),
   };
   function sfx(name) {
@@ -257,5 +451,11 @@ const Audio8 = (() => {
     try { localStorage.setItem('wallyman-sound', v ? 'on' : 'off'); } catch (e) { /* ignore */ }
     if (master) master.gain.value = v ? 0.8 : 0;
   }
-  return { init, unlock: init, play, stop, sfx, setEnabled, isEnabled: () => enabled, current: () => curName };
+  function setVolume(kind, v) {
+    v = Math.max(0, Math.min(1, Math.round(v * 5) / 5));
+    if (kind === 'music') { musicVol = v; if (musicBus) musicBus.gain.value = 0.55 * v; } else { sfxVol = v; if (sfxBus) sfxBus.gain.value = 0.7 * v; }
+    try { localStorage.setItem(kind === 'music' ? 'wallyman-music-vol' : 'wallyman-sfx-vol', String(v)); } catch (e) { /* ignore */ }
+  }
+  const getVolume = (kind) => (kind === 'music' ? musicVol : sfxVol);
+  return { addSong(n, d) { SONGS[n] = d; delete compiled[n]; if (curName === n) { cur = null; curName = null; } }, sfxNames: () => Object.keys(SFX), songStep: () => (cur && ctx ? (ctx.currentTime - t0) / cur.stepDur : -1), songs: () => Object.keys(SONGS), setVolume, getVolume, init, unlock: init, play, stop, sfx, setEnabled, isEnabled: () => enabled, current: () => curName };
 })();

@@ -5,20 +5,27 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>WallyMan World</title>
 <style>
-  :root { --bg: #000; --btn: rgba(255,255,255,0.14); --btn-on: rgba(255,224,64,0.45); --ink: #fff; }
+  :root { --bg: #000; --btn: transparent; --btn-on: rgba(255,224,64,0.35); --ink: #fff; }
   html, body { margin: 0; height: 100%; background: var(--bg); overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none; }
   body { display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: monospace; color: var(--ink); }
   @media (orientation: portrait) { body.touch { justify-content: flex-start; padding-top: 32px; } }
   #screen { image-rendering: pixelated; image-rendering: crisp-edges; background: #000; display: block; }
   #pad { display: none; }
-  body.touch #pad { display: flex; position: fixed; left: 0; right: 0; bottom: 0; justify-content: space-between; align-items: flex-end; padding: 16px; box-sizing: border-box; pointer-events: none; }
+  body.touch #pad { display: flex; position: fixed; left: 0; right: 0; bottom: calc(110px + env(safe-area-inset-bottom, 0px)); justify-content: space-between; align-items: flex-end; padding: 16px; box-sizing: border-box; pointer-events: none; }
   #pad .grp { display: flex; gap: 10px; align-items: flex-end; pointer-events: auto; }
-  #pad button { width: 64px; height: 64px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.5); background: var(--btn); color: var(--ink); font: bold 18px monospace; touch-action: none; }
+  #pad button { opacity: 0.3; transition: opacity 0.08s; -webkit-tap-highlight-color: transparent; }
+  #pad button.on { opacity: 0.6; }
+  #pad button { width: 64px; height: 64px; border-radius: 50%; border: 2px solid #fff; background: var(--btn); text-shadow: 0 0 2px #000; color: var(--ink); font: bold 18px monospace; touch-action: none; }
   #pad button.on { background: var(--btn-on); }
   #pad button.small { width: 56px; height: 34px; border-radius: 17px; font-size: 11px; }
   #pad .dpad { display: grid; grid-template-columns: 56px 56px 56px; grid-template-rows: 56px 56px; gap: 4px; }
   #pad .dpad button { width: 56px; height: 56px; border-radius: 12px; }
 </style>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#101848">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
 </head>
 <body>
 <canvas id="screen" width="256" height="224"></canvas>
@@ -31,14 +38,32 @@
     <button class="small" data-k="start">START</button>
   </div>
   <div class="grp">
-    <button data-k="run">B</button>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:8px">
+      <button class="small" data-k="special" style="width:48px;height:40px;border-radius:20px;font-size:14px">S</button>
+      <button data-k="run">B</button>
+    </div>
     <button data-k="jump" style="margin-bottom:28px">A</button>
   </div>
 </div>
 <script src="js/font.js"></script>
 <script src="js/audio.js"></script>
 <script src="js/sprites.js"></script>
+<script src="js/wally.js"></script>
 <script src="js/levels.js"></script>
+<script src="js/online-config.js"></script>
 <script src="js/game.js"></script>
+<script src="js/maker.js"></script>
+<script src="js/extra.js"></script>
+<script src="js/batche.js"></script>
+<script src="js/batchf.js"></script>
+<script src="js/batchf2.js"></script>
+<script src="js/batchg.js"></script>
+<script src="js/batchh.js"></script>
+<script src="js/batchh2.js"></script>
+<script src="js/batchh3.js"></script>
+<script src="js/batchi.js"></script>
+<script src="js/batchi2.js"></script>
+<script src="js/batchj.js"></script>
+<script src="js/batchj2.js"></script>
 </body>
 </html>
