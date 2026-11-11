@@ -2,7 +2,7 @@
 
 A 16-bit style side-scrolling platformer starring **WallyMan**, built in plain HTML5 + JavaScript (no installs, no build step).
 
-**Current version: Update 1.4.** The update number shows on a ribbon under the title logo. It is set by `GAME_VERSION` at the top of `js/game.js`, and each new update adds 0.1 (1.1, 1.2, 1.3 and so on). Each update also changes the `?v=` number on the script tags in `index.html` and the cache name in `sw.js`, so browsers fetch the new files instead of showing old saved copies.
+**Current version: Update 1.5.** The update number shows on a ribbon under the title logo. It is set by `GAME_VERSION` at the top of `js/game.js`, and each new update adds 0.1 (1.1, 1.2, 1.3 and so on). Each update also changes the `?v=` number on the script tags in `index.html` and the cache name in `sw.js`, so browsers fetch the new files instead of showing old saved copies.
 
 ## Play
 

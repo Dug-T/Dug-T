@@ -562,7 +562,7 @@ const OnlineGhosts = (() => {
 function CreditsScene(next) {
   let t = 0;
   const cast = [['heroes', HERO_IDS.map((h) => ['h', h])], ['friends', [['dino', 'teal'], ['dino', 'red'], ['dino', 'blue'], ['dino', 'ice']]], ['enemies', ['grumble', 'prickle', 'buzzer', 'hopper', 'bat', 'charger', 'turret', 'ghost', 'slime', 'boomer', 'magdrone', 'cactus', 'beamling', 'squad'].map((k) => ['s', k])], ['bosses', ['boss', 'yeti', 'crab', 'mole', 'dragon', 'mother', 'ringmaster', 'golem', 'sandworm', 'squid', 'emperor'].map((k) => ['s', k])]];
-  const lines = ['WALLYMAN WORLD', '', 'CREATED BY', 'DUG-T', '', 'STARRING', 'WALLYMAN', 'GOTHCHICK', 'DOUG THOMSON', 'ROBO-WALLY', 'FROST QUEEN', 'DINO', 'BARON STATIC', '', 'MUSIC', 'ORIGINAL CHIPTUNES', '', 'BUILT WITH', 'CLAUDE BY ANTHROPIC', '', 'THANK YOU', 'FOR PLAYING!'];
+  const lines = ['WALLYMAN WORLD', '', 'CREATED BY', 'DOUGLAS THOMSON', '', 'STARRING', 'WALLYMAN', 'GOTHCHICK', 'DOUG THOMSON', 'ROBO-WALLY', 'FROST QUEEN', 'DINO', 'BARON STATIC', '', 'MUSIC', 'ORIGINAL CHIPTUNES', '', 'BUILT WITH', 'CLAUDE BY ANTHROPIC', '', 'THANK YOU', 'FOR PLAYING!'];
   return {
     enter() { Audio8.play('title'); },
     update() { t++; if ((t > 60 && (Input.confirm() || Input.pressed('back'))) || t > 2000) go(next || (() => ExtrasScene())); },
