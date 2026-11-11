@@ -96,10 +96,10 @@ const Save = (() => {
   const KEY = 'wallyman-world-save-v1';
   let slots = [null, null, null];
   try { const d = JSON.parse(localStorage.getItem(KEY)); if (Array.isArray(d)) slots = [d[0] || null, d[1] || null, d[2] || null]; } catch (e) { /* ignore */ }
-  slots.forEach((s) => { if (s) { s.cleared = Array.from({ length: 64 }, (_, i) => !!(s.cleared && s.cleared[i])); s.medals = Array.from({ length: 64 }, (_, i) => (s.medals && s.medals[i]) | 0); s.secrets = s.secrets || {}; s.stars = Array.from({ length: 64 }, (_, i) => (s.stars && s.stars[i]) | 0); s.bars = Array.from({ length: 64 }, (_, i) => (s.bars && s.bars[i]) | 0); s.costume = s.costume || 'classic'; s.players = s.players || 1; s.turn = s.turn || 0; } });
+  slots.forEach((s) => { if (s) { s.cleared = Array.from({ length: 80 }, (_, i) => !!(s.cleared && s.cleared[i])); s.medals = Array.from({ length: 80 }, (_, i) => (s.medals && s.medals[i]) | 0); s.secrets = s.secrets || {}; s.stars = Array.from({ length: 80 }, (_, i) => (s.stars && s.stars[i]) | 0); s.bars = Array.from({ length: 80 }, (_, i) => (s.bars && s.bars[i]) | 0); s.costume = s.costume || 'classic'; s.players = s.players || 1; s.turn = s.turn || 0; } });
   return {
     slots,
-    fresh: () => ({ players: 1, turn: 0, other: null, hero: 'wally', costume: 'classic', cleared: Array(64).fill(false), medals: Array(64).fill(0), stars: Array(64).fill(0), bars: Array(64).fill(0), secrets: {}, lives: 5, score: 0, coins: 0, node: 0, bonusAmmo: 0, startHearts: 0, startBoots: false }),
+    fresh: () => ({ players: 1, turn: 0, other: null, hero: 'wally', costume: 'classic', cleared: Array(80).fill(false), medals: Array(80).fill(0), stars: Array(80).fill(0), bars: Array(80).fill(0), secrets: {}, lives: 5, score: 0, coins: 0, node: 0, bonusAmmo: 0, startHearts: 0, startBoots: false }),
     persist() { try { localStorage.setItem(KEY, JSON.stringify(slots)); } catch (e) { /* ignore */ } },
   };
 })();
@@ -626,7 +626,7 @@ function WardrobeScene() {
       if (msgT) txt(msg, 205, 76, '#5ff0ff', { align: 'center' });
       // all costumes
       COSTUME_LIST.forEach((k, i) => {
-        const x = 12 + i * 34, y = 140, ok = k.ok();
+        const x = 12 + (i - Math.max(0, Math.min(COSTUME_LIST.length - 7, sel - 3))) * 34, y = 140, ok = k.ok(); if (x < 0 || x > 230) return;
         ctx.fillStyle = i === sel ? '#ffe040' : '#6a4020'; ctx.fillRect(x - 2, y - 2, 32, 40);
         ctx.fillStyle = '#f0d8a8'; ctx.fillRect(x, y, 28, 36);
         ctx.drawImage(Wally.frame('idle0', 0, false, 1, ok ? 'n' : 'k', k.id, heroOf()), x + 2, y + 2);
@@ -1043,7 +1043,7 @@ function MapScene() {
     const nd = NODES_[n];
     if (nd.kind === 'door' || nd.kind === 'town') return true;
     if (nd.side) return !!game.cleared[nd.after];
-    if (nd.kind === 'portal') return W === 0 ? !!game.cleared[7] : nd.to === 2 && W === 1 ? !!game.cleared[14] : nd.to === 3 ? !!game.cleared[20] : nd.to === 4 ? !!game.cleared[27] : nd.to === 5 ? !!game.cleared[44] : nd.to === 6 ? !!game.cleared[55] : true;
+    if (nd.kind === 'portal') return W === 0 ? !!game.cleared[7] : nd.to === 2 && W === 1 ? !!game.cleared[14] : nd.to === 3 ? !!game.cleared[20] : nd.to === 4 ? !!game.cleared[27] : nd.to === 5 ? !!game.cleared[44] : nd.to === 6 ? !!game.cleared[55] : nd.to === 7 ? !!game.cleared[62] : true;
     if (nd.gate && !dimensionOpen()) return false;
     if (W === 0) return nd.kind === 'bonus' ? !!(game.secrets[nd.li] || game.cleared[7]) : (n <= 1 || game.cleared[n - 2]);
     const prev = NODES_.slice(0, n).filter((k) => k.li !== undefined && k.kind !== 'door' && !k.side).pop();
@@ -1055,6 +1055,8 @@ function MapScene() {
       ctx.fillStyle = '#c03030'; for (let k = 0; k < 6; k++) ctx.fillRect(n.x - 7 + k, n.y - 12 + 5 - k, 14 - k * 2, 1);
       ctx.fillStyle = '#f8f0d8'; ctx.fillRect(n.x - 6, n.y - 6, 12, 8); ctx.fillStyle = '#6a3a1a'; ctx.fillRect(n.x - 1, n.y - 3, 3, 5);
       ctx.fillStyle = '#5ff0ff'; ctx.fillRect(n.x - 5, n.y - 4, 3, 2);
+    } else if (n.kind === 'npc') {
+      if (typeof drawNpcNode === 'function') drawNpcNode(n, t);
     } else if (n.kind === 'town') {
       for (const [dx, h, c] of [[-9, 8, '#e0a040'], [-2, 11, '#d05050'], [5, 7, '#5080e0']]) { ctx.fillStyle = '#1a1020'; ctx.fillRect(n.x + dx - 1, n.y - h - 1, 7, h + 2); ctx.fillStyle = c; ctx.fillRect(n.x + dx, n.y - h, 5, h); ctx.fillStyle = '#fff0a0'; ctx.fillRect(n.x + dx + 1, n.y - h + 2, 1, 1); ctx.fillRect(n.x + dx + 3, n.y - h + 2, 1, 1); }
     } else if (n.kind === 'door') {
@@ -1123,7 +1125,7 @@ function MapScene() {
       if (Input.confirm()) {
         if (nd.kind === 'door') {
           if (game.keys && game.keys[nd.key]) { Audio8.sfx('secret'); const li = nd.li; go(() => IntroScene(li, false)); } else { Audio8.sfx('bump'); lockT = 90; }
-        } else if (nd.kind === 'town') { Audio8.sfx('confirm'); go(() => TownScene()); } else if (nd.li !== undefined) { Audio8.sfx('confirm'); const li = nd.li; go(() => IntroScene(li, false)); } else if (nd.kind === 'home') { Audio8.sfx('confirm'); go(() => HouseScene()); } else if (nd.kind === 'portal') {
+        } else if (nd.kind === 'town') { Audio8.sfx('confirm'); go(() => TownScene()); } else if (nd.kind === 'npc') { Audio8.sfx('confirm'); go(() => QuestNpcScene(nd)); } else if (nd.li !== undefined) { Audio8.sfx('confirm'); const li = nd.li; go(() => IntroScene(li, false)); } else if (nd.kind === 'home') { Audio8.sfx('confirm'); go(() => HouseScene()); } else if (nd.kind === 'portal') {
           const to = nd.to !== undefined ? nd.to : W === 0 ? 1 : 0, tw = WORLDS[to];
           Audio8.sfx('secret'); game.world = to; game[tw.key] = Math.max(0, tw.nodes().findIndex((k) => k.kind === 'portal' && k.to === W)); Save.persist();
           const comic = to === 1 && !game.seenComic1 ? 'star' : to === 2 && !game.seenComic2 ? 'carnival' : null;
@@ -1158,7 +1160,7 @@ function MapScene() {
       txt(label, 12, 205, '#fff');
       if (n.li !== undefined && n.kind !== 'door') { const mc = medalCount(n.li); ctx.drawImage(Sprites.miniMedal, 186, 206); txt(mc + '/5', 193, 205, mc === 5 ? '#ffe040' : '#fff'); const st = game.stars[n.li] | 0; for (let k = 0; k < 3; k++) txt('#', 222 + k * 8, 205, st & (1 << k) ? '#ffe040' : game.cleared[n.li] ? '#6a6a90' : '#30305a'); }
       if (lockT > 0) { drawWindow(48, 92, 160, 30); txt('LOCKED! FIND THE KEY', 128, 99, '#ff8080', { align: 'center' }); txt('HIDDEN IN A LEVEL...', 128, 110, '#fff', { align: 'center' }); }
-      if (target === null && (t >> 5) % 2 === 0) txt(n.kind === 'door' ? 'START: OPEN' : n.li !== undefined ? 'PRESS START' : n.kind === 'portal' ? 'START: TRAVEL' : n.kind === 'town' ? 'START: ENTER' : 'START: HOUSE', 160, 186, '#fff', { outline: '#101848' });
+      if (target === null && (t >> 5) % 2 === 0) txt(n.kind === 'door' ? 'START: OPEN' : n.li !== undefined ? 'PRESS START' : n.kind === 'portal' ? 'START: TRAVEL' : n.kind === 'town' ? 'START: ENTER' : n.kind === 'npc' ? 'START: TALK' : 'START: HOUSE', 160, 186, '#fff', { outline: '#101848' });
     },
   };
 }
@@ -1484,7 +1486,7 @@ class Play {
       for (const f of [0.3, 0.55, 0.8]) this.lv.spawns.push({ t: 'e', x: Math.floor(this.lv.w * f), y: 6 });
       this.lv.spawns.sort((a, b2) => a.x - b2.x);
     }
-    this.medalsGot = 0; this.barsGot = 0; this.pauseSel = 0; if (!game.bars) game.bars = Array(64).fill(0);
+    this.medalsGot = 0; this.barsGot = 0; this.pauseSel = 0; if (!game.bars) game.bars = Array(80).fill(0);
     if (game.bonusAmmo) { this.p.ammo = Math.min(9, 3 + game.bonusAmmo); game.bonusAmmo = 0; }
     if (game.startHearts) { this.p.hearts = 3; game.startHearts = 0; }
     if (game.startBoots) { this.p.boots = true; game.startBoots = false; }
@@ -1865,7 +1867,7 @@ class Play {
     }
     const run = !auto && Input.down('run');
     const ice = this.def.ice && p.onGround;
-    const water = !!this.def.water || this.tile(Math.floor((p.x + p.w / 2) / TS), Math.floor((p.y + p.h / 2) / TS)) === '~', frozen = p.frozen > 0;
+    const water = !!this.def.water || '~░'.includes(this.tile(Math.floor((p.x + p.w / 2) / TS), Math.floor((p.y + p.h / 2) / TS))), frozen = p.frozen > 0;
     if (frozen) p.frozen--;
     const hid = heroOf(), goth = hid === 'goth' || hid === 'frost', doug = hid === 'doug', robo = hid === 'robo', wallUp = doug || !!(game.upgrades && game.upgrades.wall);
     const max = water ? (run ? 1.9 : 1.3) : run ? (goth ? 2.5 : doug ? 3.05 : 2.8) : goth ? 1.5 : 1.6, acc = (run ? 0.11 : 0.08) * (ice ? 0.45 : 1) * (water ? 0.7 : 1);

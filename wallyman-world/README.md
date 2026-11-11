@@ -21,6 +21,21 @@ Open `index.html` in any modern browser — or enable **GitHub Pages** for this 
 
 ## What's in it
 
+- **Saves on every device** – the game keeps each player's progress in their own browser. If a browser looks like it won't keep saves (for example a claude.ai link opened while signed out), the title screen says so, S shows a **save code** for each file, and quitting to the title offers one too.
+- **Orbit One** – an 8th world (rocket from Dino Valley after the T-Rex): Orbit Dock, **Zero-G Lab** (float through purple zero-gravity rooms – tap jump to push off), **Airlock Alley** (doors cycle open and shut and pull you along), Solar Array and Reactor Core (laser gates switch on and off) and **Mega-Bot Bay** – stomp Mega-Bot's head when its hatch pops open.
+- **The Glitch World** – a hidden 3-level world with odd physics (everything bounces, left and right swap, lag spikes rewind you). Rumour has it you get in by holding Down against the far-left wall at the start of Cavern Commute...
+- **Kart Grand Prix** – three tracks (Wally Ring, Dune Oval, icy Frost Loop), ? item boxes (boost, banana, shield – S to use), quick races or a 3-race cup with points.
+- **Pet Shop** (Dino's House) – adopt any hero's pet, or new ones you discover: Boo, Mini UFO, Parrot and Baby Rex. Each pet levels up its own tricks.
+- **Costume Shop** (Dino's House) – Neon Nights, Pirate, Knight, Candy Pop and Galaxy outfits for every hero (Volt too), plus a secret Glitch outfit.
+- **Level Maker tools** – undo/redo (menu, or U and Y keys), a fill tool and a line tool (menu → Tool), and Test From Here to try the course from the cursor.
+- **Ghost Races** (Extras) – share your fastest run on any level as a code; a friend pastes it to race your ghost in Time Attack.
+- **Speedrun** (Challenges) – a fresh file with one timer for the whole game, splits at every island and personal bests (Quick Run to Baron Static, or All Islands to Mega-Bot).
+- **Island quests** – a quest giver on every island map asks you to find 3 lost things hidden in that island's levels, for coins and a 1-UP.
+- **Fishing everywhere** – each island has its own fish (and rare catches); press S while fishing for the **Fish Log**.
+- **Living world map** – drifting clouds, day and night from your clock, and island weather and wildlife.
+- **Help Book** (Extras) – every move, attack, power-up, collectible and mode explained, with a little demo.
+- **Titles** (Extras) – earn titles like Dino Tamer, Pirate King or Golden Ace from trophies; each file wears one, shown on the title screen and next to its high scores.
+
 - **Dino Valley** – a 7th island (take the raft from Pirate Cove after Captain Gloombeard): Jurassic Jungle, **Stampede!** (a herd of dinosaurs chases you), **Pterodactyl Pass** (fly a pterodactyl through rocky pillars), Tar Pits, Fossil Cave and the **Rex Arena** – make the T-Rex charge into a wall, then stomp him while he's dizzy. New enemy: **Raptors**.
 - **Completion** (Extras) – your percentage for levels, medals, stars and trophies. At 100 percent the secret **Signal Source** opens, where **Shadow Wally** copies your every move.
 - **Mirror Mode** (Challenges) – every level flipped left to right with faster enemies (unlocks after Baron Static's tower).
@@ -155,7 +170,7 @@ Open `index.html` in any modern browser — or enable **GitHub Pages** for this 
 - **Costumes** – visit the **Wardrobe** in Dino's Shop at Wally's House. Seven outfits: Classic, Wally Jr, Golden (find 20 Wally Medals), Ice (clear Frosty Peaks), Dino Suit (clear Coral Depths), Shadow (clear Haunted Manor) and Fire (beat Baron Static).
 - **Difficulty** (Extras → Options): Easy (3 hearts, 50% more time, slower enemies, weaker bosses), Normal, or Hard (1 heart, less time, faster enemies, tougher bosses).
 - **Star rankings** – up to 3 stars per level: finish with 40% of the time left, have all 5 medals, and take no hits. Stars show on the clear screen, the map and the level intro.
-- **Trophies** – 77 achievements (first clear, flawless boss, Dino rider, UFO hunter, secret exits, three stars and more) with pop-up notifications and a **Trophy Room**.
+- **Trophies** – 87 achievements (first clear, flawless boss, Dino rider, UFO hunter, secret exits, three stars and more) with pop-up notifications and a **Trophy Room**.
 - **Extras menu** – Trophy Room, **Jukebox** (play every song), **Gallery** (heroes, enemies, bosses and items) and **Options** (difficulty, music/sound volume, sound on/off, **CRT retro-TV filter**, screen shake).
 - **Hidden secrets** – an invisible block in most levels (jump into empty air to find a 1-UP) and cracked walls that crumble into coins when blasted, chomped, shocked or ground-pounded.
 - **High score table** – when a run ends (game over or beating the game) a top-10 score lets you enter your name arcade-style (D-pad + A, or just type). Scores are kept in the browser; when the game runs as a claude.ai artifact they are also shared through its database for players allowed to save there.
@@ -213,6 +228,8 @@ js/batchh2.js       Crystal Isle levels and map, puzzle rooms, Doug's story, bes
 js/batchh3.js       menus, jukebox + sound test, languages, intro voice, kart race
 js/batchi.js        Pirate Cove levels, tide, volleys, Gloombeard, tower floors, gold mode, tutorial, Volt + hero maker heroes, reserve box, pet tricks, boss phase 2, quips
 js/batchj.js        Dino Valley, Shadow Wally, mirror mode, mech suit, cards, restarts, captions, backups, Maker pipes, Music Maker songs
+js/batchk.js        Orbit One, the Glitch World, island quests, pets, outfits, speedrun timer, titles, save warning
+js/batchk2.js       Orbit One map, quest givers, pet/costume shops, Kart Grand Prix, ghost races, speedrun, fishing, living map, help book, titles
 js/batchj2.js       Dino Valley map, completion, mirror/rematch menus, card and photo albums, theatre, Music Maker, Maker worlds, Party Mode
 js/batchi2.js       Pirate Cove map, airship, tower/gold menus, garden, pets, mini-games, hero maker, cloud save, Level of the Week, touch editor, Level Maker parts
 manifest.webmanifest, sw.js, icons/   install-as-an-app support (works offline)
