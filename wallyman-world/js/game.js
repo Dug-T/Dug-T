@@ -786,6 +786,7 @@ function TitleScene() {
   }).concat(['CHALLENGES', 'HIGH SCORES', 'EXTRAS', eraseMode ? 'CANCEL ERASE' : 'ERASE FILE']);
   return {
     isTitle: true,
+    stage: () => mode,
     enter() { Audio8.play('title'); },
     update() {
       t++;

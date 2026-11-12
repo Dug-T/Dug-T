@@ -125,5 +125,30 @@ const Modern = (() => {
   };
 }
 
+// ---------------- the title screen: press B to switch between RETRO and MODERN ----------------
+{
+  const _T = TitleScene;
+  TitleScene = function (...a) { // eslint-disable-line no-func-assign
+    const s = _T(...a), u = s.update, d = s.draw; let flash = 0, t = 0;
+    const atStart = () => !s.stage || s.stage() === 'press';
+    s.update = function () {
+      t++; if (flash) flash--;
+      if (atStart() && Input.pressed('run')) {
+        const m = !Modern.on(); Modern.set(m); Audio8.setStyle(m ? 'modern' : 'retro'); Audio8.unlock(); Audio8.sfx(m ? 'oneup' : 'coin'); flash = 100; return;
+      }
+      return u.call(this);
+    };
+    s.draw = function () {
+      d.call(this);
+      if (!atStart()) return;
+      const m = Modern.on(), name = m ? 'MODERN' : 'RETRO';
+      hR(58, 108, 140, 14, 'rgba(16,24,72,0.8)'); txt('STYLE: ' + name, 98, 111, m ? '#5ff0ff' : '#ffe040', { align: 'center' }); txt('B: CHANGE', 170, 111, '#a8b0d8', { align: 'center' });
+      if (flash) { const k = Math.min(1, flash / 20), w = 160; ctx.save(); ctx.globalAlpha = k; hR(128 - w / 2, 60, w, 40, m ? 'rgba(10,60,90,0.9)' : 'rgba(90,40,10,0.9)'); txt(m ? 'RETRO > MODERN' : 'MODERN > RETRO', 128, 66, '#fff', { align: 'center' }); txt(name + '!', 128, 79, m ? '#5ff0ff' : '#ffe040', { align: 'center', scale: 2, outline: '#101848' }); ctx.restore(); }
+    };
+    return s;
+  };
+}
+if (typeof scene !== 'undefined' && scene && scene.isTitle) { scene = TitleScene(); if (scene.enter) scene.enter(); }
+
 // ---------------- What's New ----------------
-UPDATES.unshift(['1.7', ['NEW: MODERN GRAPHICS (OPTIONS)', 'HIGH RESOLUTION, SMOOTH SPRITES', 'A MODERN FONT, SHADOWS AND LIGHT', 'NEW: MODERN SOUND STYLE (OPTIONS)', 'RICHER INSTRUMENTS AND REVERB', 'RETRO STAYS THE DEFAULT']]);
+UPDATES.unshift(['1.7', ['NEW: MODERN GRAPHICS (OPTIONS)', 'HIGH RESOLUTION, SMOOTH SPRITES', 'A MODERN FONT, SHADOWS AND LIGHT', 'NEW: MODERN SOUND STYLE (OPTIONS)', 'RICHER INSTRUMENTS AND REVERB', 'RETRO STAYS THE DEFAULT', 'PRESS B ON THE TITLE TO SWITCH']]);
