@@ -2558,7 +2558,7 @@
     const o = online;
     for (const pe of [...o.peers.values()]) if (time - pe.seen > 8) dropPeer(pe, `${pe.name} lost connection.`);
     if (!online) return;
-    if (o.status === 'error' && !o.inGame) o.note = "Couldn't connect to the online server. Check your connection.";
+    if ((o.status === 'error' || o.status === 'closed') && !o.inGame) o.note = Net.reason || "Couldn't connect to the online server. Check your connection.";
     if (state === 'lobby') {
       o.hiT -= dt;
       if (o.hiT <= 0 && o.status === 'ok') { o.hiT = 1.5; Net.send('hi', { n: myName() }); if (o.host) Net.send('room', { kind: onKind, lvl: onLvl, diff, started: false, n: myName() }); }
