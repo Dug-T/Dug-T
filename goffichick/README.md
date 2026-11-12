@@ -114,6 +114,14 @@ flinches when hit, and her eyes glow pink when she picks up a new weapon.
 | `d` | **WALLY MAN DELUXE** | Black-and-gold, tough Wally Man who throws exploding phones |
 | `J` | **MEGA SMILEY** | Episode 2 boss: a giant orange grin that sprays sunshine and spits out Mini Orbs |
 
+### Episode 3 enemies
+
+| Map letter | Enemy | Attack |
+|---|---|---|
+| `?` | **Bridezilla** | Storms in at double speed when close, slaps, and throws exploding bouquets |
+| `€` | **Redcoat Entertainer** | Juggles three balls at you at once, and sidesteps your shots |
+| `§` | **WALLY LIVE!** | Final boss: a giant sequinned TV-presenter Wally. Spotlight blasts, rings of applause, and he calls in Wally Man FIT backing dancers |
+
 ## Weapons
 
 Goffichick starts with **every weapon**: press 1-8 (press a number twice to swap between two weapons in the
@@ -164,6 +172,14 @@ green sludge that burns, and dark rooms with flickering lights.
    a sauna exit behind the bat door.
 6. **E2M3: Sunshine Park**: open sky, hedges, a hedge maze hiding the coffin key, a funhouse, a toxic duck pond, a
    bandstand, and the Mega Smiley's arena.
+
+### Episode 3: The Big Day
+
+7. **E3M1: Wedding Bells**: a reception with a raised dance floor and top table, a bridal suite, a kitchen with spilled
+   punch, and the chapel exit behind the bat door.
+8. **E3M2: Happy Days Holiday Camp**: outdoors in the rain with lightning: chalets, a toxic swimming pool, a
+   lifeguard tower reached by lift, and the ballroom exit behind the skull door.
+9. **E3M3: Studio 7**: a TV studio with stepped audience seating, ON AIR signs, and **WALLY LIVE!** on stage.
 
 Each level has its own music track.
 

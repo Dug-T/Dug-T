@@ -174,6 +174,35 @@ const Textures = (() => {
     for (let x = 4; x < 64; x += 8) { g.fillStyle = '#fff6a8'; g.beginPath(); g.arc(x, 3, 2, 0, 7); g.fill(); g.beginPath(); g.arc(x, 61, 2, 0, 7); g.fill(); }
   }, 4);
 
+  // ---- Episode 3 walls ----
+  // 20: wedding venue - white panelling, gold trim, roses
+  T[20] = make(g => {
+    g.fillStyle = '#f4efe6'; g.fillRect(0, 0, 64, 64);
+    g.strokeStyle = '#d4af37'; g.lineWidth = 1.5; g.strokeRect(6, 8, 52, 44); g.strokeRect(10, 12, 44, 36);
+    g.fillStyle = '#e8e0d0'; g.fillRect(0, 56, 64, 8); g.fillStyle = '#d4af37'; g.fillRect(0, 55, 64, 1.5);
+    for (const [x, y] of [[32, 30], [14, 14], [50, 14]]) { g.fillStyle = '#e8406a'; g.beginPath(); g.arc(x, y, 3.5, 0, 7); g.fill(); g.fillStyle = '#ff9ab8'; g.beginPath(); g.arc(x - 1, y - 1, 1.6, 0, 7); g.fill(); g.fillStyle = '#3d8a26'; g.fillRect(x - 5, y + 2, 4, 1.5); g.fillRect(x + 1, y + 2, 4, 1.5); }
+  }, 5);
+  // 21: holiday chalet - pastel blue planks with a little window
+  T[21] = make(g => {
+    for (let y = 0; y < 64; y += 8) { g.fillStyle = y % 16 ? '#8ec4e8' : '#7ab4dc'; g.fillRect(0, y, 64, 7); g.fillStyle = '#5a8ab0'; g.fillRect(0, y + 7, 64, 1); }
+    g.fillStyle = '#ffffff'; g.fillRect(20, 16, 24, 20); g.fillStyle = '#ffe9a8'; g.fillRect(22, 18, 20, 16);
+    g.fillStyle = '#ffffff'; g.fillRect(31, 18, 2, 16); g.fillRect(22, 25, 20, 2);
+    g.fillStyle = '#ff5a8a'; g.fillRect(20, 36, 24, 3);
+  }, 8);
+  // 22: TV studio - black acoustic foam with a blue LED strip
+  T[22] = make(g => {
+    g.fillStyle = '#111116'; g.fillRect(0, 0, 64, 64);
+    for (let y = 0; y < 64; y += 8) for (let x = (y / 8) % 2 * 4; x < 64; x += 8) { g.fillStyle = '#1c1c24'; g.beginPath(); g.moveTo(x, y + 8); g.lineTo(x + 4, y); g.lineTo(x + 8, y + 8); g.fill(); }
+    g.fillStyle = '#3d8bff'; g.fillRect(0, 44, 64, 2); g.fillStyle = 'rgba(61,139,255,0.35)'; g.fillRect(0, 40, 64, 10);
+  }, 10);
+  // 23: ON AIR sign on the studio wall
+  T[23] = make(g => {
+    g.fillStyle = '#111116'; g.fillRect(0, 0, 64, 64);
+    g.fillStyle = '#2a0008'; g.fillRect(8, 20, 48, 20); g.fillStyle = '#ff1a2a'; g.fillRect(10, 22, 44, 16);
+    g.fillStyle = '#fff4f4'; g.font = 'bold 11px sans-serif'; g.textAlign = 'center'; g.fillText('ON AIR', 32, 34);
+    g.fillStyle = '#3d8bff'; g.fillRect(0, 44, 64, 2);
+  }, 4);
+
   // 6: exit switch (off) / 11: (on) - steel panel set into grey stone
   const switchTex = on => make(g => {
     stoneBlocks(g, 138, 22, '#55555a', 16, 4);
@@ -289,6 +318,19 @@ const Textures = (() => {
   });
 
   // toxic glitter-slime (animated by scrolling in the renderer)
+  F.parquet = make(g => { // wedding dance floor
+    for (let y = 0; y < 64; y += 16) for (let x = 0; x < 64; x += 16) { const v = ((x + y) / 16) % 2; g.fillStyle = v ? '#b07a44' : '#c8925a'; g.fillRect(x, y, 16, 16); for (let k = 0; k < 4; k++) { g.fillStyle = 'rgba(80,40,10,0.25)'; if (v) g.fillRect(x, y + k * 4, 16, 1); else g.fillRect(x + k * 4, y, 1, 16); } }
+  }, 8);
+  F.studio = make(g => { // glossy black studio floor with tape marks
+    g.fillStyle = '#16161c'; g.fillRect(0, 0, 64, 64);
+    g.fillStyle = 'rgba(255,255,255,0.06)'; g.fillRect(0, 0, 64, 2);
+    g.fillStyle = '#ffcf3a'; g.fillRect(10, 30, 10, 2); g.fillRect(14, 26, 2, 10);
+  }, 6);
+  F.rig = make(g => { // studio lighting rig ceiling
+    g.fillStyle = '#0c0c10'; g.fillRect(0, 0, 64, 64);
+    g.fillStyle = '#3a3a44'; g.fillRect(0, 30, 64, 4); g.fillRect(30, 0, 4, 64);
+    g.fillStyle = '#fff6c0'; g.beginPath(); g.arc(16, 16, 4, 0, 7); g.fill(); g.beginPath(); g.arc(48, 48, 4, 0, 7); g.fill();
+  }, 6);
   F.rubber = make(g => { // gym floor
     g.fillStyle = '#2c2c30'; g.fillRect(0, 0, 64, 64);
     speckle(g, 700, ['#3a3a40', '#222226', '#ff4fb8', '#3d8bff', '#ffcf3a'], 1);
