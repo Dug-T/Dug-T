@@ -456,6 +456,15 @@ const Sprites = (() => {
       return [r, g, b];
     });
     E_.wallylive.walkFps = E_.boss.walkFps;
+    // other players online: Wally Man in goth black with a coloured trim (pink, cyan, lime, gold)
+    [[255, 60, 170], [40, 220, 255], [120, 255, 60], [255, 200, 30]].forEach((c, i) => {
+      E_['av' + i] = recolorSet(E_.wally, (r, g, b) => {
+        if (blueSuit(r, g, b)) { const v = lum(r, g, b) * 0.32; return [v + c[0] * 0.08, v + c[1] * 0.08, v + c[2] * 0.08]; }
+        if (orangeTrim(r, g, b)) { const v = lum(r, g, b) / 200; return [Math.min(255, c[0] * v), Math.min(255, c[1] * v), Math.min(255, c[2] * v)]; }
+        return [r, g, b];
+      });
+      E_['av' + i].walkFps = E_.wally.walkFps;
+    });
 
     S.proj = {
       skull: [mk(20, 20, g => { flame(g, 4, 12, 4); E(g, '#f2eee6', 12, 10, 7, 7); R(g, '#000', 8, 8, 3, 3); R(g, '#000', 13, 8, 3, 3); R(g, '#000', 9, 14, 6, 1); })],

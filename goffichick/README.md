@@ -83,6 +83,18 @@ flinches when hit, and her eyes glow pink when she picks up a new weapon.
   - **Sharing:** **SHARE** makes a link with the whole level packed inside it. When friends open the link, the
     title menu offers **PLAY FRIEND'S LEVEL**. No server is needed.
 
+- **Online play (deathmatch and co-op):** choose **PLAY ONLINE** on the title screen.
+  - **Hosting:** pick DEATHMATCH or CO-OP CAMPAIGN (and the level co-op starts at), then **HOST A NEW GAME**.
+    Friends pick **JOIN A FRIEND'S GAME** and type the 3-letter room code. The host presses **START**.
+  - **Deathmatch:** played in *DM1: The Mosh Pit*. The first player to 10 frags wins, or whoever leads after
+    10 minutes. Pickups come back after 25 seconds. Other players look like goth Wally Men with a coloured trim
+    and their name above them.
+  - **Co-op:** play the campaign together. The host's game runs the monsters, and monsters go after whoever is
+    closest. Pickups taken by one player disappear for everyone, but each player collects their own keys.
+    Anyone reaching the exit ends the level for everyone, and the host chooses when to carry on.
+  - **Players and limits:** up to 4 players. Online play uses the same Supabase project as the leaderboard,
+    through **Realtime broadcast**, so no extra tables are needed. Realtime is switched on in new projects.
+
 ## Setting up the world leaderboard (Supabase, free)
 
 1. Create a free account at [supabase.com](https://supabase.com) and a **New project** (any name and region).
@@ -227,6 +239,7 @@ js/audio.js         synthesized sound effects and music (WebAudio)
 js/voice.js         Goffichick's voice lines (browser speech, or your own recordings)
 js/leaderboard.js   the shared world leaderboard and weekly board (Supabase)
 js/editor.js        the level editor, level themes and share-link codes
+js/net.js           online play over Supabase Realtime (rooms, broadcast messages)
 js/photo-data.js    the two photos, processed and embedded so the game works from file://
 assets/             the processed photo assets (Wally Man cut-out, HUD faces, title image)
 ```
