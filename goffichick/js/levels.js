@@ -25,6 +25,7 @@
 //    ceilH: 1.4                           ceiling height for the level (raise it when floors go up)
 //  Weapons: 3 coffin shotgun  4 bone gatling  5 skull launcher  6 hexcaster  7 BFG
 //           8 machine gun   9 shotgun   0 rocket launcher   F flamethrower
+//           ! bat-bow   = doom scroll   t bolts (bat-bow ammo)
 //  Decor:  T candelabra  R tombstone  L torch pillar  p office plant  q water cooler
 //          y pumpkin-spice barrel (explodes!)  k skull pile  j blood pool
 'use strict';
@@ -55,6 +56,9 @@ const ITEM_TYPES = {
   '9': { sprite: 'w9', weapon: 'shotgun', ammo: { shells: 8 } },
   '0': { sprite: 'w0', weapon: 'rocketlauncher', ammo: { rockets: 4 } },
   'F': { sprite: 'wF', weapon: 'flamethrower', ammo: { fuel: 80 } },
+  '!': { sprite: 'wBow', weapon: 'batbow', ammo: { bolts: 10 } },
+  '=': { sprite: 'wScroll', weapon: 'doomscroll', ammo: { souls: 60 } },
+  't': { sprite: 'boltsAmmo', ammo: { bolts: 8 }, msg: 'Picked up a quiver of silver bat bolts.' },
   '1': { sprite: 'keyRed', key: 'red', msg: 'Picked up the BAT KEY.' },
   '2': { sprite: 'keyBlue', key: 'blue', msg: 'Picked up the SKULL KEY.' },
   '@': { sprite: 'keyGold', key: 'gold', msg: 'Picked up the COFFIN KEY.' },
@@ -77,7 +81,7 @@ const DECOR_TYPES = {
 
 const LEVELS = [
   {
-    name: 'E1M1: THE CEMETERY GATES', par: 240,
+    name: 'E1M1: THE CEMETERY GATES', ambience: 'wind', par: 240,
     floor: 'graveyard', ceil: 'stoneCeil', fog: [92, 90, 94], ceilH: 1.4, stepTex: 1,
     heights: [
       { x: 37, y: 3, w: 1, h: 15, z: 0.12 },   // chapel steps up to the altar
@@ -133,7 +137,7 @@ const LEVELS = [
     ],
   },
   {
-    name: 'E1M2: CUBICLE HELL', par: 240,
+    name: 'E1M2: CUBICLE HELL', ambience: 'hum', par: 240,
     floor: 'carpet', ceil: 'officeCeil', fog: [70, 70, 76], ceilH: 1.5, stepTex: 4,
     heights: [
       { x: 10, y: 14, w: 5, h: 2, z: 0.25 },   // the manager's raised office
@@ -170,7 +174,7 @@ const LEVELS = [
     ],
   },
   {
-    name: "E1M3: WALLY'S PENTHOUSE", par: 200,
+    name: "E1M3: WALLY'S PENTHOUSE", ambience: 'hum', par: 200,
     floor: 'tiles', ceil: 'goldCeil', fog: [50, 30, 56], boss: true, ceilH: 1.6, stepTex: 9,
     heights: [{ x: 12, y: 18, w: 9, h: 5, z: 0.25 }],   // Wally Prime's stage
     lights: [
@@ -207,7 +211,7 @@ const LEVELS = [
   },
   // ===================== EPISODE 2: THE SUNNY SIDE =====================
   {
-    name: 'E2M1: SHOPPING MAUL', par: 270,
+    name: 'E2M1: SHOPPING MAUL', ambience: 'hum', par: 270,
     floor: 'tiles',
     ceil: 'officeCeil',
     fog: [110, 104, 110],
@@ -250,7 +254,7 @@ const LEVELS = [
     ],
   },
   {
-    name: 'E2M2: GAINS GYM', par: 270,
+    name: 'E2M2: GAINS GYM', ambience: 'hum', par: 270,
     floor: 'rubber',
     ceil: 'officeCeil',
     fog: [60, 56, 64],
@@ -293,7 +297,7 @@ const LEVELS = [
     ],
   },
   {
-    name: 'E2M3: SUNSHINE PARK', par: 240,
+    name: 'E2M3: SUNSHINE PARK', ambience: 'birds', par: 240,
     sky: true,
     floor: 'grass',
     ceil: 'sky',

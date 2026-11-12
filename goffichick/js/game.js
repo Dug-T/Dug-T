@@ -98,6 +98,8 @@
     flame: { speed: 7.5, dmg: [3, 7], size: 0.16, grow: 2.4, life: 0.5, fx: 'flameHit', fxSize: 0.35, sound: null, ignite: 2.2, quiet: true },
     chakra: { speed: 6, dmg: [4, 10], size: 0.24, fx: 'hexHit', fxSize: 0.35, sound: 'hexHit', slow: 1.6 },
     shout: { speed: 7, dmg: [5, 12], size: 0.3, grow: 1.2, fx: 'splash', fxSize: 0.5, sound: 'hexHit', slow: 1.2 },
+    // Bat-Bow: a fast silver bat bolt that pierces everything in a line
+    bat: { speed: 22, dmg: [30, 55], size: 0.2, fx: 'puff', fxSize: 0.2, sound: null, pierce: true },
     phone: { speed: 9.5, dmg: [15, 30], splash: 1.4, splashDmg: 50, size: 0.26, fx: 'boom', fxSize: 0.9, sound: 'explode' },
   };
 
@@ -133,7 +135,7 @@
   function newPlayer(keep) {
     const p = {
       x: 0, y: 0, a: 0, health: 100, armor: 0, armorType: 0,
-      ammo: { bullets: 100, shells: 20, skulls: 8, rockets: 8, souls: 100, fuel: 120 },
+      ammo: { bullets: 100, shells: 20, skulls: 8, rockets: 8, souls: 100, fuel: 120, bolts: 20 },
       weapons: Object.fromEntries(WEAPONS.map(w => [w.key, true])), cur: 'shotgun', next: null,
       switchT: 0, cooldown: 0, firePhase: 0, fireT: 0, flashT: 0, windupT: 0,
       bobT: 0, move: 0, eyeZ: 0.5, refireT: 0, dead: false, faceLook: 0, faceT: 0, painT: 0, grinT: 0,
@@ -142,7 +144,7 @@
     };
     if (keep) {
       p.health = keep.health; p.armor = keep.armor; p.armorType = keep.armorType;
-      p.ammo = { ...keep.ammo }; p.weapons = { ...keep.weapons }; p.cur = keep.cur;
+      p.ammo = { ...p.ammo, ...keep.ammo }; p.weapons = { ...p.weapons, ...keep.weapons }; p.cur = keep.cur;
     }
     return p;
   }
@@ -169,7 +171,7 @@
     const lockAt = new Map();
     for (const z of def.lights || []) for (let y = z.y; y < z.y + z.h; y++) for (let x = z.x; x < z.x + z.w; x++) if (x >= 0 && y >= 0 && x < mw && y < mh) light[y * mw + x] = z.level;
     L = { def, mw, mh, grid, block, seen, slime, light, fh, lifts, liftTile, ceilH: def.ceilH || 1, stepTex: def.stepTex || 1, lightNow: new Float32Array(light), zones: (def.lights || []).map(z => ({ ...z, on: true })), totalSecrets: 0,
-      slimeTex: Textures.flats.slime.data, doors: new Map(), enemies: [], items: [], decor: [], projs: [], fx: [], parts: [],
+      slimeTex: Textures.flats.slime.data, doors: new Map(), enemies: [], items: [], decor: [], projs: [], fx: [], parts: [], bolts: [],
       totalKills: 0, totalItems: 0, exitT: -1, flow: null, flowFrom: -1, fog: def.fog,
       floor: Textures.flats[def.floor].data, ceil: Textures.flats[def.ceil].data };
     player = newPlayer(keep);
@@ -209,6 +211,8 @@
     levelTime = 0; L.flowFrom = -1;
     updateDynLights();
     Sfx.setSong(i + 1);
+    Sfx.setAmbience(def.ambience || (def.weather === 'rain' ? 'rain' : null));
+    L.rain = []; L.lightningT = 4 + Math.random() * 8; L.flashA = 0;
     Voice.say('levelStart', 0.9, true);
     msg = `${def.name}   - music: ${Sfx.songName()}`; msgT = 4;
   }
@@ -326,6 +330,7 @@
       if (d.def.sprite === 'torch') addLight(d.x, d.y, 0.7, 0.3, 1, 0.26 * flick, 2.4);
       else if (d.def.sprite === 'candelabra') addLight(d.x, d.y, 1, 0.7, 0.35, 0.2 * flick, 2);
     }
+    for (const b of L.bolts) for (const q of b.pts.slice(1)) addLight(q[0], q[1], 0.75, 0.45, 1, 0.8, 3);
     for (const pr of L.projs) { const c = LIGHT_OF[pr.kind]; if (c) addLight(pr.x, pr.y, c[0], c[1], c[2], pr.kind === 'gloom' ? 1 : pr.kind === 'flame' ? 0.12 : 0.55, pr.kind === 'gloom' ? 4 : pr.kind === 'flame' ? 2 : 2.6); }
     for (const f of L.fx) { const c = LIGHT_OF[f.kind]; if (!c) continue; const k = 1 - f.t / f.life; addLight(f.x, f.y, c[0], c[1], c[2], (f.kind === 'boom' || f.kind === 'gloomHit' ? 1.3 : f.kind === 'flameHit' ? 0.12 : 0.45) * k, f.kind === 'boom' || f.kind === 'gloomHit' ? 4 : 2); }
     for (const e of L.enemies) if (!e.dead && e.burnT > 0) addLight(e.x, e.y, 1, 0.5, 0.1, 0.6 * flick, 2.5);
@@ -485,7 +490,7 @@
       add(pr.x, pr.y, fr[((time * 12 + pr.x * 7) | 0) % fr.length], pr.z - size / 2, size, true, 1, 0.5, lc ? lc.map(v => Math.round(v * 255)).join(',') : null);
     }
     for (const f of L.fx) { const lc = LIGHT_OF[f.kind]; add(f.x, f.y, f.frames[Math.min(f.frames.length - 1, (f.t / f.life * f.frames.length) | 0)], f.z - f.size / 2, f.size, true, 1, 0.6, lc && f.t / f.life < 0.7 ? lc.map(v => Math.round(v * 255)).join(',') : null); }
-    for (const q of L.parts) add(q.x, q.y, q.spr, q.z - q.size / 2, q.size, q.bright, 1, 0.3);
+    for (const q of L.parts) add(q.x, q.y, q.spr, q.z - q.size / 2, q.size, q.bright, 1, 0.75); // not right in front of the camera
     list.sort((a, b) => b.depth - a.depth);
 
     for (const sp of list) {
@@ -625,7 +630,7 @@
     digits(Math.max(0, Math.ceil(p.health)) + '%', 110, y0 + 33, 24);
     label('HEALTH', 110, y0 + 43);
     // arms
-    for (let i = 0; i < 7; i++) {
+    for (let i = 0; i < 8; i++) {
       const slot = i + 2, has = WEAPONS.some(wp => wp.slot === slot && p.weapons[wp.key]);
       const cur = w && w.slot === slot;
       label(String(slot), 161 + (i % 4) * 14, y0 + 17 + Math.floor(i / 4) * 14, cur ? '#ffffff' : has ? '#ff4fb8' : '#4a3a4a', 'center', 11);
@@ -645,12 +650,12 @@
     digits(Math.ceil(p.armor) + '%', 306, y0 + 33, 24, p.armorType === 2 ? '#b04cff' : '#e0115f');
     label('ARMOR', 306, y0 + 43);
     // ammo table
-    let yy = y0 + 10;
+    let yy = y0 + 9;
     for (const k of Object.keys(AMMO_TYPES)) {
       const isCur = w && w.ammo === k;
-      label(AMMO_TYPES[k].name, 352, yy, isCur ? '#ffffff' : '#c9a6c9', 'left', 6.5);
-      label(`${p.ammo[k]}/${AMMO_TYPES[k].max}`, 474, yy, '#ffcf3a', 'right', 6.5);
-      yy += 7;
+      label(AMMO_TYPES[k].name, 352, yy, isCur ? '#ffffff' : '#c9a6c9', 'left', 5.6);
+      label(`${p.ammo[k]}/${AMMO_TYPES[k].max}`, 474, yy, '#ffcf3a', 'right', 5.6);
+      yy += 6;
     }
     ctx.restore();
   }
@@ -753,7 +758,7 @@
       const idx = my * L.mw + mx, t = L.grid[idx];
       if (t === DOOR) {
         const d = L.doors.get(idx);
-        if (d.secret) { if (d.state === 'closed') { d.state = 'opening'; Sfx.play.door(); player.secrets++; msg = 'A secret is revealed!'; msgT = 3; Voice.say('secret', 1, true); } return; }
+        if (d.secret) { if (d.state === 'closed') { d.state = 'opening'; Sfx.play.door(); player.secrets++; msg = 'A secret is revealed!'; msgT = 3; Voice.say('secret', 1, true); bump('secrets'); } return; }
         if (d.lock && !p.keys[d.lock]) { lockedMsg(d); return; }
         toggleDoor(d); return;
       }
@@ -764,7 +769,7 @@
   }
   function lockedMsg(d) {
     msg = `You need the ${KEYS[d.lock].name} to open this door.`; msgT = 2.5;
-    Sfx.play.oof();
+    Sfx.play.locked();
   }
   function toggleDoor(d, byEnemy) {
     if (d.lock && (byEnemy || !player.keys[d.lock])) return;
@@ -830,6 +835,8 @@
       if (z.on ? Math.random() < 0.025 : Math.random() < 0.25) z.on = !z.on;
       if (was === z.on) continue;
       const v = z.on ? z.level : z.level * 0.65;
+      const zd = Math.hypot(player.x - (z.x + z.w / 2), player.y - (z.y + z.h / 2));
+      if (zd < Math.max(z.w, z.h) / 2 + 3) Sfx.play.buzz(zd);
       for (let y = z.y; y < z.y + z.h; y++) for (let x = z.x; x < z.x + z.w; x++) if (x >= 0 && y >= 0 && x < L.mw && y < L.mh) L.lightNow[y * L.mw + x] = v;
     }
   }
@@ -924,7 +931,7 @@
       splash(pr.x, pr.y, d.splash, d.splashDmg, pr.owner);
       if (pd < 4) shake = Math.max(shake, (4 - pd) * 2);
     }
-    if (d.bfg) bfgSpray(pr.fireA);
+    if (d.bfg) { killTag = 'bfg'; tagKills = 0; bfgSpray(pr.fireA); if (pr.owner === 'player' && tagKills >= 5) unlock('bfg'); killTag = null; }
   }
 
   function splash(x, y, radius, maxDmg, owner) {
@@ -960,7 +967,9 @@
         setTimeout(() => { // a beat later, like the real thing
           spawnFx('boom', e.x, e.y, 0.3, 1.1, 0.45);
           Sfx.play.explode(Math.hypot(e.x - player.x, e.y - player.y));
+          const prevTag = killTag, prevKills = tagKills; killTag = 'barrel'; tagKills = 0;
           splash(e.x, e.y, 1.8, 120, src);
+          if (tagKills >= 3) unlock('barrel'); killTag = prevTag; tagKills = prevKills + tagKills;
           const pd = Math.hypot(e.x - player.x, e.y - player.y); if (pd < 4) shake = Math.max(shake, (4 - pd) * 2);
         }, 120);
       }
@@ -978,6 +987,13 @@
       spawnParts('drop', e.x, e.y, mz, 8, 1.6);
       if (dmg >= 40 && !e.def.boss) spawnParts('gib', e.x, e.y, mz, 9, 2.2); // blown apart
       player.kills++;
+      if (src === 'player') unlock('firstblood');
+      if (/^wally|^boss$/.test(e.type)) bump('wally');
+      if (e.type === 'bubbly' || e.type === 'mini') bump('orbs');
+      if (src && typeof src === 'object' && src.type !== 'barrel') bump('infight');
+      if (e.type === 'boss') unlock('wallyprime');
+      if (e.type === 'megaorb') unlock('popped');
+      if (killTag) tagKills++;
       if (e.def.boss) Voice.say('boss', 1, true); else if (src === 'player') Voice.say('kill', 0.18);
       if (e.def.boss) { L.bossDeadT = 3; msg = e.def.deathMsg || 'THE BOSS IS DOWN!'; msgT = 4; }
       if (e.def.split) { // pops into smaller orbs
@@ -1002,6 +1018,7 @@
       p.armor -= absorb; dmg -= absorb; if (p.armor <= 0) p.armorType = 0;
     }
     p.health -= dmg;
+    if (dmg > 0) p.hurt = true;
     painFlash = Math.min(1, painFlash + dmg / 30);
     p.painT = 0.35;
     if (fromX !== undefined) {
@@ -1231,6 +1248,11 @@
           if (e.dead || e === pr.owner) continue;
           if (pr.owner !== 'player' && e.type !== 'barrel' && pr.owner.type === e.type) continue; // same kind don't hurt each other
           if (Math.hypot(e.x - pr.x, e.y - pr.y) < e.def.radius + pr.def.size / 2) {
+            if (pr.def.pierce) { // flies on through; each monster is hit once
+              pr.hit = pr.hit || new Set(); if (pr.hit.has(e)) continue; pr.hit.add(e);
+              damageEnemy(e, irand(pr.def.dmg[0], pr.def.dmg[1]), pr.owner);
+              spawnParts(e.type === 'barrel' ? 'spark' : 'drop', pr.x, pr.y, pr.z, 5, 1.4); Sfx.play.punch(); continue;
+            }
             damageEnemy(e, irand(pr.def.dmg[0], pr.def.dmg[1]), pr.owner);
             if (pr.def.ignite && !e.dead) { e.burnT = Math.max(e.burnT || 0, pr.def.ignite); e.burnBy = pr.owner; }
             explode(pr); pr.done = true; break;
@@ -1249,6 +1271,39 @@
   const keys = {};
   let mouseDX = 0, fireHeld = false;
   const touch = { mx: 0, my: 0, turn: 0, fire: false };
+  // ---- gamepad (Xbox / PlayStation / Switch / phone controllers, standard mapping)
+  const pad = { mx: 0, my: 0, turn: 0, fire: false, run: false };
+  let padPrev = [], padConnected = false, padNavT = 0;
+  const synthKey = code => { const key = { Enter: 'Enter', Escape: 'Escape' }[code] || code; window.dispatchEvent(new KeyboardEvent('keydown', { code, key })); window.dispatchEvent(new KeyboardEvent('keyup', { code, key })); };
+  function pollGamepad(dt) {
+    const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+    let gp = null; for (const g of pads) if (g && g.connected) { gp = g; break; }
+    if (!gp) { if (padConnected) { padConnected = false; pad.mx = pad.my = pad.turn = 0; pad.fire = pad.run = false; } return; }
+    if (!padConnected) { padConnected = true; msg = 'Controller connected'; msgT = 2; Sfx.init(); }
+    const b = i => !!(gp.buttons[i] && gp.buttons[i].pressed), hit = i => b(i) && !padPrev[i];
+    const ax = i => { const v = gp.axes[i] || 0; return Math.abs(v) < 0.18 ? 0 : (v - Math.sign(v) * 0.18) / 0.82; };
+    if (state === 'playing' && !paused) {
+      pad.mx = ax(0); pad.my = -ax(1); pad.turn = ax(2) * Math.abs(ax(2)) * 4.2 * dt; // curve: fine aim near the centre
+      pad.fire = b(7) || b(6); // either trigger fires
+      pad.run = b(10);
+      if (hit(0) || hit(2)) useAction();
+      if (hit(4)) cycleWeapon(-1);
+      if (hit(5) || hit(3)) cycleWeapon(1);
+      if (hit(8)) automap = !automap;
+      if (hit(9)) paused = true;
+      if (hit(12)) cycleWeapon(-1);
+      if (hit(13)) cycleWeapon(1);
+    } else {
+      pad.mx = pad.my = pad.turn = 0; pad.fire = pad.run = false;
+      // menus: d-pad or left stick move, A chooses, Start resumes
+      const ly = ax(1), lx = ax(0);
+      padNavT -= dt;
+      const dir = b(12) || ly < -0.6 ? 'ArrowUp' : b(13) || ly > 0.6 ? 'ArrowDown' : b(14) || lx < -0.6 ? 'ArrowLeft' : b(15) || lx > 0.6 ? 'ArrowRight' : null;
+      if (dir && padNavT <= 0) { synthKey(dir); padNavT = 0.22; } else if (!dir) padNavT = 0;
+      if (hit(0) || hit(9)) { if (paused) { paused = false; } else synthKey('Enter'); }
+    }
+    padPrev = gp.buttons.map(x => x.pressed);
+  }
 
   function switchWeapon(key) {
     const p = player;
@@ -1276,7 +1331,7 @@
   }
   function bestWeapon() {
     const p = player;
-    const order = ['gatling', 'machinegun', 'coffin', 'shotgun', 'hexcaster', 'flamethrower', 'pistol', 'rocketlauncher', 'launcher', 'bfg', 'knuckles'];
+    const order = ['gatling', 'machinegun', 'coffin', 'shotgun', 'hexcaster', 'batbow', 'doomscroll', 'flamethrower', 'pistol', 'rocketlauncher', 'launcher', 'bfg', 'chainsaw', 'knuckles'];
     for (const k of order) { const w = weaponByKey(k); if (w && p.weapons[k] && (!w.ammo || p.ammo[w.ammo] >= w.cost)) return k; }
     return 'knuckles';
   }
@@ -1292,6 +1347,7 @@
   }
   function doFire(w) {
     const p = player;
+    if (w.type !== 'melee') p.usedGun = true;
     if (w.type !== 'melee') yogaDodge();
     if (w.ammo) p.ammo[w.ammo] -= w.cost;
     Sfx.play[w.sound] && Sfx.play[w.sound]();
@@ -1312,6 +1368,27 @@
     } else if (w.type === 'hitscan') {
       const accurate = w.pellets === 1 && p.refireT <= 0;
       for (let i = 0; i < w.pellets; i++) hitscan(p.x, p.y, p.a + (accurate ? 0 : rand(-w.spread, w.spread)), irand(w.damage[0], w.damage[1]), 40);
+    } else if (w.type === 'zap') {
+      // lightning to the first monster you aim at, then hops to the nearest others
+      const c = Math.cos(p.a), s = Math.sin(p.a), wall = Math.min(cast(p.x, p.y, c, s).dist, w.range);
+      let tgt = null, best = wall;
+      for (const e of shootables()) {
+        const vx = e.x - p.x, vy = e.y - p.y, along = vx * c + vy * s;
+        if (along <= 0 || along >= best) continue;
+        if (Math.abs(vy * c - vx * s) < e.def.radius + 0.25) { tgt = e; best = along; }
+      }
+      const from = [p.x + c * 0.5, p.y + s * 0.5, p.eyeZ - 0.12], pts = [from];
+      if (!tgt) { pts.push([p.x + c * (wall - 0.1), p.y + s * (wall - 0.1), p.eyeZ]); spawnParts('spark', p.x + c * (wall - 0.1), p.y + s * (wall - 0.1), p.eyeZ, 5, 2); }
+      let dmg = irand(w.damage[0], w.damage[1]); const hit = new Set();
+      for (let k = 0; tgt && k <= w.chain; k++) {
+        hit.add(tgt); pts.push([tgt.x, tgt.y, (tgt.fz || 0) + tgt.z + tgt.def.h * 0.55]);
+        damageEnemy(tgt, dmg, 'player'); spawnFx('hexHit', tgt.x, tgt.y, (tgt.fz || 0) + tgt.z + tgt.def.h * 0.55, 0.45, 0.3);
+        dmg = Math.round(dmg * 0.7);
+        let next = null, nd = 4.5;
+        for (const e of shootables()) { if (hit.has(e)) continue; const d = Math.hypot(e.x - tgt.x, e.y - tgt.y); if (d < nd && losClear(tgt.x, tgt.y, e.x, e.y)) { next = e; nd = d; } }
+        tgt = next;
+      }
+      L.bolts.push({ pts, t: 0, life: 0.18 });
     } else if (w.type === 'projectile') {
       fireProjectile(w.projectile, p.x, p.y, p.eyeZ - 0.12, p.a + (w.projSpread ? rand(-w.projSpread, w.projSpread) : 0), 'player');
     }
@@ -1325,7 +1402,7 @@
     const turnSpeed = 2.8;
     if (keys.ArrowLeft) p.a -= turnSpeed * dt;
     if (keys.ArrowRight) p.a += turnSpeed * dt;
-    p.a += mouseDX * 0.0028 + touch.turn; mouseDX = 0; touch.turn = 0;
+    p.a += mouseDX * 0.0028 + touch.turn + pad.turn; mouseDX = 0; touch.turn = 0;
     p.a = normAng(p.a);
     // movement
     let fwd = 0, str = 0;
@@ -1333,10 +1410,10 @@
     if (keys.KeyS || keys.ArrowDown) fwd -= 1;
     if (keys.KeyD) str += 1;
     if (keys.KeyA) str -= 1;
-    fwd += touch.my; str += touch.mx;
+    fwd += touch.my + pad.my; str += touch.mx + pad.mx;
     const len = Math.hypot(fwd, str);
     if (len > 1) { fwd /= len; str /= len; }
-    const speed = (keys.ShiftLeft || keys.ShiftRight ? 6.5 : 4.4) * dt * (p.slowT > 0 ? 0.5 : 1);
+    const speed = (keys.ShiftLeft || keys.ShiftRight || pad.run ? 6.5 : 4.4) * dt * (p.slowT > 0 ? 0.5 : 1);
     p.slowT = Math.max(0, p.slowT - dt);
     const c = Math.cos(p.a), s = Math.sin(p.a);
     const dx = (c * fwd - s * str) * speed, dy = (s * fwd + c * str) * speed;
@@ -1344,6 +1421,8 @@
     const moving = Math.min(1, Math.hypot(fwd, str));
     p.move += (moving - p.move) * Math.min(1, dt * 8);
     p.bobT += dt * 9 * p.move;
+    p.stepAcc = (p.stepAcc || 0) + Math.hypot(dx, dy);
+    if (p.stepAcc > 1.15) { p.stepAcc = 0; if (Math.abs(p.fz - floorAt(p.x, p.y)) < 0.05) Sfx.play.step(); }
     // climb stairs smoothly, ride lifts, and drop off ledges with a little gravity
     const ground = floorAt(p.x, p.y);
     if (ground > p.fz) { p.fz = Math.min(ground, p.fz + dt * 2.8); p.vz = 0; }
@@ -1376,7 +1455,7 @@
       p.windupT -= dt;
       if (p.windupT <= 0) doFire(w);
     }
-    const trigger = fireHeld || keys.ControlLeft || keys.ControlRight || touch.fire || touch.fireTap;
+    const trigger = fireHeld || keys.ControlLeft || keys.ControlRight || touch.fire || touch.fireTap || pad.fire;
     if (trigger && p.cooldown <= 0 && p.switchT <= 0 && p.windupT <= 0) {
       touch.fireTap = false;
       if (w.ammo && p.ammo[w.ammo] < w.cost) {
@@ -1435,7 +1514,7 @@
   };
   function cheatKey(ch) {
     cheatBuf = (cheatBuf + ch).slice(-12);
-    for (const [code, fn] of Object.entries(CHEATS)) if (cheatBuf.endsWith(code)) { msg = fn(); msgT = 3; cheatBuf = ''; }
+    for (const [code, fn] of Object.entries(CHEATS)) if (cheatBuf.endsWith(code)) { msg = fn() + '  (achievements off this run)'; msgT = 3; cheatBuf = ''; cheated = true; }
   }
 
   // ------------------------------------------------------------------ game flow
@@ -1449,6 +1528,38 @@
     del(k) { try { localStorage.removeItem(k); } catch (e) {} },
   };
   { const d = store.get(DIFF_KEY); if (d === 0 || d === 1 || d === 2) diff = d; }
+  // ---- achievements (kept on this device; cheating switches them off for that run)
+  const ACHIEVEMENTS = [
+    { id: 'firstblood', name: 'FIRST BLOOD', desc: 'Defeat your first monster' },
+    { id: 'unsub', name: 'UNSUBSCRIBER', desc: 'Defeat 100 Wally Men of any kind', count: 'wally', need: 100 },
+    { id: 'pooper', name: 'PARTY POOPER', desc: 'Pop 25 Bubbly or Mini Orbs', count: 'orbs', need: 25 },
+    { id: 'secrets', name: 'SECRET KEEPER', desc: 'Find 5 secrets', count: 'secrets', need: 5 },
+    { id: 'infight', name: 'INFIGHTING INSTIGATOR', desc: 'Let monsters finish each other off 10 times', count: 'infight', need: 10 },
+    { id: 'knuckle', name: 'BARE KNUCKLE GOTH', desc: 'Finish a level using only fists or the chainsaw' },
+    { id: 'untouch', name: 'UNTOUCHABLE', desc: 'Finish a level without taking any damage' },
+    { id: 'speed', name: 'SPEED GOTH', desc: "Finish a level in half its par time" },
+    { id: 'collector', name: 'COLLECTOR', desc: 'Collect every item in a level' },
+    { id: 'ultra', name: 'PROPERLY ULTRA', desc: 'Finish a level on Ultra Goth' },
+    { id: 'bfg', name: "BIG FREAKIN' GLOOM", desc: 'Defeat 5 monsters with one BFG shot' },
+    { id: 'barrel', name: 'BARREL OF LAUGHS', desc: 'Defeat 3 monsters with one barrel' },
+    { id: 'wallyprime', name: "WALLY'S WORST DAY", desc: 'Defeat Wally Prime' },
+    { id: 'popped', name: 'POPPED', desc: 'Defeat the Mega Smiley' },
+    { id: 'theend', name: 'THE END OF CHEER', desc: 'Finish the whole game' },
+  ];
+  const ACH_KEY = 'goffichick-achievements';
+  const ach = store.get(ACH_KEY) || { unlocked: {}, counts: {} };
+  let cheated = false, achToasts = [], killTag = null, tagKills = 0;
+  function unlock(id) {
+    if (cheated || ach.unlocked[id]) return;
+    const a = ACHIEVEMENTS.find(x => x.id === id); if (!a) return;
+    ach.unlocked[id] = new Date().toISOString().slice(0, 10); store.set(ACH_KEY, ach);
+    achToasts.push({ a, t: 0 }); Sfx.play.achievement();
+  }
+  function bump(counter, n = 1) {
+    if (cheated) return;
+    ach.counts[counter] = (ach.counts[counter] || 0) + n; store.set(ACH_KEY, ach);
+    for (const a of ACHIEVEMENTS) if (a.count === counter && ach.counts[counter] >= a.need) unlock(a.id);
+  }
   function saveProgress() { store.set(SAVE_KEY, { level: levelIndex, diff, carry }); }
   // ---- scoring, best times and the high-score table (kept on this device)
   const SCORES_KEY = 'goffichick-scores', TIMES_KEY = 'goffichick-best-times', DIFF_MUL = [0.6, 1, 1.5];
@@ -1474,12 +1585,12 @@
   function savedGame() { const s = store.get(SAVE_KEY); return s && LEVELS[s.level] ? s : null; }
   function beginPlay() { state = 'playing'; Sfx.init(); Sfx.startMusic(); }
   function startGame() {
-    levelIndex = 0; carry = null; god = false; runScore = 0;
+    levelIndex = 0; carry = null; god = false; runScore = 0; cheated = false;
     loadLevel(0, null); saveProgress(); beginPlay();
   }
   function continueGame() {
     const sv = savedGame(); if (!sv) return startGame();
-    levelIndex = sv.level; diff = sv.diff; carry = sv.carry; god = false; runScore = (carry && carry.score) || 0;
+    levelIndex = sv.level; diff = sv.diff; carry = sv.carry; god = false; runScore = (carry && carry.score) || 0; cheated = false;
     loadLevel(levelIndex, carry); beginPlay();
   }
   // title menu
@@ -1491,6 +1602,7 @@
     items.push({ id: 'diff', text: `DIFFICULTY   <  ${DIFFS[diff].name}  >` });
     items.push({ id: 'gfx', text: `GRAPHICS   ${QUALITY > 1 ? 'HD' : 'CLASSIC'}` });
     items.push({ id: 'scores', text: 'HIGH SCORES' });
+    items.push({ id: 'ach', text: `ACHIEVEMENTS   ${Object.keys(ach.unlocked).length} / ${ACHIEVEMENTS.length}` });
     items.push({ id: 'voice', text: `GOFFICHICK'S VOICE   ${Voice.on ? 'ON' : 'OFF'}` });
     return items;
   }
@@ -1498,6 +1610,7 @@
     if (item.id === 'continue') continueGame();
     else if (item.id === 'new') startGame();
     else if (item.id === 'scores') { openScores(); lastEntry = -1; posted = null; postStatus = ''; }
+    else if (item.id === 'ach') { state = 'achievements'; stateT = 0; }
     else if (item.id === 'gfx') { QUALITY = QUALITY > 1 ? 1 : 1.5; try { localStorage.setItem('goffichick-quality', String(QUALITY)); } catch (e) {} fitScreen(); Sfx.init(); Sfx.play.switch(); }
     else if (item.id === 'voice') { Voice.toggle(); Sfx.init(); Sfx.play.switch(); if (Voice.on) Voice.say('levelStart', 1, true); }
     else { diff = (diff + dir + DIFFS.length) % DIFFS.length; store.set(DIFF_KEY, diff); Sfx.init(); Sfx.play.switch(); }
@@ -1563,6 +1676,12 @@
     st.best = times[L.def.name]; st.newBest = st.best === undefined || st.time < st.best;
     if (st.newBest) { times[L.def.name] = Math.round(st.time); store.set(TIMES_KEY, times); }
     Voice.say('exit', 0.8, true);
+    if (!player.hurt) unlock('untouch');
+    if (!player.usedGun) unlock('knuckle');
+    if (st.time <= st.par / 2) unlock('speed');
+    if (st.items >= 100 && L.totalItems > 0) unlock('collector');
+    if (diff === 2) unlock('ultra');
+    if (levelIndex >= LEVELS.length - 1) unlock('theend');
     carry = { health: player.health, armor: player.armor, armorType: player.armorType, ammo: player.ammo, weapons: player.weapons, cur: player.cur, score: runScore };
     state = levelIndex >= LEVELS.length - 1 ? 'victory' : 'intermission'; stateT = 0;
     if (state === 'victory') store.del(SAVE_KEY);
@@ -1589,7 +1708,12 @@
       updateEnemies(dt);
       updateProjectiles(dt);
       updateParts(dt);
+      for (const b of L.bolts) b.t += dt; L.bolts = L.bolts.filter(b => b.t < b.life);
       updateDynLights();
+      if (L.def.weather === 'rain') { // lightning every so often, thunder a moment later
+        L.lightningT -= dt; L.flashA = Math.max(0, L.flashA - dt * 3);
+        if (L.lightningT <= 0) { L.lightningT = 7 + Math.random() * 12; L.flashA = 1; lightBoost = Math.max(lightBoost, 0.7); setTimeout(() => Sfx.play.thunder(), 300 + Math.random() * 1200); }
+      }
       if (L.exitT > 0) { L.exitT -= dt; if (L.exitT <= 0) completeLevel(); }
       if (L.bossDeadT > 0) { L.bossDeadT -= dt; if (L.bossDeadT <= 0) completeLevel(); }
     }
@@ -1627,10 +1751,10 @@
       if (state === 'title') drawTitlePad();
     }
     const lines = ['WASD / ARROWS  move      MOUSE  look (click to lock)', 'CLICK / CTRL   fire      E / SPACE  switches, lifts, secrets',
-      '1-8 / Q / WHEEL  weapons   SHIFT run   TAB map   M music'];
-    lines.forEach((l, i) => label(l, 18, 180 + i * 10, '#b78ab7', 'left', 7));
-    label('Keys open coloured doors. Stairs and lifts take you up. V toggles her voice.', 18, 215, '#8a6a8a', 'left', 7);
-    label('ON A PHONE? Left stick moves, drag right side to look.', 18, 227, '#7a5a7a', 'left', 7);
+      '1-9 / Q / WHEEL  weapons   SHIFT run   TAB map   M music'];
+    lines.forEach((l, i) => label(l, 18, 206 + i * 9, '#b78ab7', 'left', 6.5));
+    label('Keys open coloured doors. Stairs and lifts take you up. V toggles her voice. Gamepads work too.', 18, 236, '#8a6a8a', 'left', 6.5);
+    label('ON A PHONE? Left stick moves, drag right side to look.', 18, 246, '#7a5a7a', 'left', 6.5);
   }
 
   function drawOverlayText(title, sub, lines, dy = 16) {
@@ -1641,6 +1765,26 @@
     (lines || []).forEach((l, i) => label(l, W / 2, 108 + i * dy, /NEW/.test(l) ? '#ffcf3a' : '#ffffff', 'center', 10));
   }
   const SCORE_TABS = () => [{ id: 'world', x: W / 2 - 75, text: 'WORLD' }, { id: 'device', x: W / 2 + 15, text: 'THIS DEVICE' }];
+  function drawAchievements() {
+    drawTitle(); drawOverlayText('ACHIEVEMENTS', `${Object.keys(ach.unlocked).length} of ${ACHIEVEMENTS.length} unlocked on this device`, []);
+    ACHIEVEMENTS.forEach((a, i) => {
+      const col = i < 8 ? 0 : 1, row = i % 8, x = col ? W / 2 + 6 : 16, y = 100 + row * 18, got = !!ach.unlocked[a.id];
+      ctx.fillStyle = got ? 'rgba(255,79,184,0.28)' : 'rgba(255,255,255,0.05)'; ctx.fillRect(x, y - 9, W / 2 - 22, 16);
+      label((got ? '* ' : '  ') + a.name, x + 4, y - 1, got ? '#ffcf3a' : '#8a6a8a', 'left', 7.5);
+      let sub = a.desc; if (a.count && !got) sub += `  (${Math.min(ach.counts[a.count] || 0, a.need)}/${a.need})`;
+      label(sub, x + 4, y + 5.5, got ? '#ffd0ec' : '#6a5a6a', 'left', 5.6);
+    });
+    if (stateT > 0.5) label('CLICK OR PRESS ENTER', W / 2, 254, '#c9a6c9', 'center', 8);
+  }
+  function drawAchievementToast(dt) {
+    if (!achToasts.length) return;
+    const t = achToasts[0]; t.t += dt;
+    const a = Math.min(1, t.t * 4, (3.2 - t.t) * 4); if (t.t > 3.2) { achToasts.shift(); return; }
+    ctx.save(); ctx.globalAlpha = Math.max(0, a);
+    ctx.fillStyle = 'rgba(20,0,24,0.88)'; ctx.fillRect(W / 2 - 120, 34, 240, 26); ctx.strokeStyle = '#ffcf3a'; ctx.strokeRect(W / 2 - 119.5, 34.5, 239, 25);
+    label('ACHIEVEMENT UNLOCKED', W / 2, 44, '#ffcf3a', 'center', 7); label(t.a.name, W / 2, 55, '#ffffff', 'center', 9);
+    ctx.restore();
+  }
   function drawScores() {
     const world = scoresTab === 'world';
     drawTitle(); drawOverlayText('HIGH SCORES', world ? 'The gloomiest players anywhere' : 'The gloomiest players on this device', []);
@@ -1694,6 +1838,7 @@
     ctx.setTransform(RES, 0, 0, RES, 0, 0); ctx.imageSmoothingEnabled = true;
     if (state === 'loading' || state === 'title') { drawTitle(); return; }
     if (state === 'scores') { drawScores(); return; }
+    if (state === 'achievements') { drawAchievements(); return; }
     if (state === 'enterName') { drawEnterName(); return; }
     if (state === 'intermission' || state === 'victory') {
       if (state === 'victory') {
@@ -1729,6 +1874,38 @@
       }
       ctx.restore();
     }
+    if (L.bolts.length) { // Doom Scroll lightning, projected from world space onto the screen
+      const dirX = Math.cos(player.a), dirY = Math.sin(player.a), pr = q => {
+        const dx = q[0] - player.x, dy = q[1] - player.y, depth = Math.max(0.2, dx * dirX + dy * dirY);
+        return [(W / 2) * (1 + ((dirX * dy - dirY * dx) / PLANE) / depth), HOR + (player.eyeZ - q[2]) * PROJ / depth];
+      };
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
+      for (const b of L.bolts) {
+        const a = 1 - b.t / b.life;
+        for (const [wdt, col] of [[5, `rgba(160,80,255,${0.45 * a})`], [1.6, `rgba(240,220,255,${a})`]]) {
+          ctx.strokeStyle = col; ctx.lineWidth = wdt; ctx.beginPath();
+          b.pts.forEach((q, i) => {
+            const [sx, sy] = pr(q);
+            if (i === 0) { ctx.moveTo(W / 2 + 18, VIEW_H - 40); return; }
+            const [px0, py0] = i === 1 ? [W / 2 + 18, VIEW_H - 40] : pr(b.pts[i - 1]);
+            for (let k = 1; k <= 5; k++) ctx.lineTo(px0 + (sx - px0) * k / 5 + (k < 5 ? (Math.random() - 0.5) * 10 : 0), py0 + (sy - py0) * k / 5 + (k < 5 ? (Math.random() - 0.5) * 10 : 0));
+          });
+          ctx.stroke();
+        }
+      }
+      ctx.restore();
+    }
+    if (L.def.weather === 'rain') { // rain streaks and lightning flashes
+      if (L.rain.length < 140) for (let i = 0; i < 140; i++) L.rain.push({ x: Math.random() * W, y: Math.random() * VIEW_H, s: 5 + Math.random() * 7 });
+      ctx.save(); ctx.strokeStyle = 'rgba(200,215,255,0.35)'; ctx.lineWidth = 0.7; ctx.beginPath();
+      const turnDrift = (player.a - (L.lastA ?? player.a)) * 120; L.lastA = player.a;
+      for (const r of L.rain) {
+        r.y += r.s * 1.6; r.x += -1.2 - turnDrift; if (r.y > VIEW_H) { r.y = -10; r.x = Math.random() * W; } if (r.x < 0) r.x += W; if (r.x > W) r.x -= W;
+        ctx.moveTo(r.x, r.y); ctx.lineTo(r.x - 1.5, r.y + r.s);
+      }
+      ctx.stroke(); ctx.restore();
+      if (L.flashA > 0) { ctx.fillStyle = `rgba(230,235,255,${L.flashA * 0.45})`; ctx.fillRect(0, 0, W, VIEW_H); }
+    }
     { // soft vignette: darker screen edges
       const vg = ctx.createRadialGradient(W / 2, HOR, VIEW_H * 0.45, W / 2, HOR, W * 0.62);
       vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.38)');
@@ -1743,6 +1920,7 @@
     if (pw.veil > 0) { const g = ctx.createRadialGradient(W / 2, HOR, 40, W / 2, HOR, W * 0.6); g.addColorStop(0, 'rgba(60,0,90,0)'); g.addColorStop(1, 'rgba(60,0,90,0.45)'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, VIEW_H); }
     if (automap) drawAutomap();
     drawMessages();
+    drawAchievementToast(1 / 60);
     if (Voice.subtitle) {
       const t = `"${Voice.subtitle}"`;
       ctx.font = 'italic bold 9px monospace'; const tw = ctx.measureText(t).width;
@@ -1782,6 +1960,7 @@
     if (state === 'dead' && stateT > 1) { restartLevel(); return true; }
     if (state === 'intermission' && stateT > 1) { nextLevel(); return true; }
     if (state === 'victory' && stateT > 2) { if (qualifies(runScore)) { state = 'enterName'; initCur = 0; stateT = 0; } else { openScores(); lastEntry = -1; } return true; }
+    if (state === 'achievements' && stateT > 0.3) { state = 'title'; return true; }
     if (state === 'scores' && stateT > 0.3) {
       if (Leaderboard.enabled && ev && ev.clientX !== undefined) { // tapping a tab switches it
         const g = gamePoint(ev.clientX, ev.clientY);
@@ -1915,6 +2094,7 @@
       const show = state === 'playing' && !paused;
       if (show !== touchShown) { touchShown = show; document.getElementById('touch').style.display = show ? 'block' : 'none'; }
     }
+    pollGamepad(dt);
     if (!paused) update(dt); else time += dt;
     draw();
     requestAnimationFrame(frame);
@@ -1932,6 +2112,6 @@
     titleImg = photos.title;
     state = 'title';
     // expose a tiny debug hook for testing
-    window.GOFFI = { get state() { return state; }, get player() { return player; }, get level() { return L; }, start: startGame, completeLevel, get quality() { return QUALITY; }, get score() { return runScore; }, highScores, get diff() { return diff; }, set diff(v) { diff = v; }, continueGame, savedGame, setLevel: i => { levelIndex = i; loadLevel(i, null); state = 'playing'; } };
+    window.GOFFI = { get state() { return state; }, get player() { return player; }, get level() { return L; }, start: startGame, completeLevel, ach, ACHIEVEMENTS, get quality() { return QUALITY; }, get score() { return runScore; }, highScores, get diff() { return diff; }, set diff(v) { diff = v; }, continueGame, savedGame, setLevel: i => { levelIndex = i; loadLevel(i, null); state = 'playing'; } };
   });
 })();

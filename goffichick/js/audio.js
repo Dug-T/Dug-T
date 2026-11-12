@@ -65,6 +65,14 @@ const Sfx = (() => {
     om: (d) => { const v = vol(d); for (const f of [130.8, 196, 261.6]) tone(f, 0.9, 'sine', 0.12 * v, f * 1.01); },
     coach: (d) => { const v = vol(d); tone(520, 0.12, 'sawtooth', 0.22 * v, 780); tone(780, 0.18, 'square', 0.12 * v, 1040, 0.1); noise(0.15, 1800, 0.12, 'bandpass', v); },
     pop: (d) => { const v = vol(d); tone(900, 0.08, 'sine', 0.35 * v, 220); noise(0.06, 3000, 0.2, 'highpass', v); },
+    saw: () => { tone(110 + Math.random() * 20, 0.13, 'sawtooth', 0.22, 95); noise(0.12, 2200, 0.12, 'bandpass'); },
+    bow: () => { noise(0.08, 3000, 0.4, 'highpass'); tone(220, 0.12, 'triangle', 0.3, 90); },
+    zap: () => { for (let i = 0; i < 3; i++) tone(1400 - i * 300, 0.09, 'sawtooth', 0.14, 300, i * 0.02); noise(0.18, 4000, 0.3, 'highpass'); },
+    locked: () => { tone(90, 0.12, 'square', 0.3, 70); noise(0.1, 600, 0.3, 'bandpass'); tone(140, 0.08, 'square', 0.2, null, 0.12); },
+    buzz: (d) => { const v = vol(d) * 0.5; tone(120, 0.08, 'square', 0.1 * v); noise(0.05, 5000, 0.08 * v, 'highpass'); },
+    step: () => noise(0.05, 260, 0.09, 'lowpass'),
+    thunder: () => { noise(2.2, 160, 0.9, 'lowpass', 1, 50); noise(0.4, 1200, 0.5, 'lowpass', 1, 200); },
+    achievement: () => { [523, 659, 784, 1046].forEach((f, i) => tone(f, 0.18, 'triangle', 0.22, null, i * 0.09)); },
     empty: () => tone(1800, 0.03, 'square', 0.1),
     pickup: () => { tone(660, 0.06, 'square', 0.15); tone(990, 0.09, 'square', 0.15, null, 0.06); },
     weaponUp: () => { tone(330, 0.08, 'square', 0.2); tone(495, 0.08, 'square', 0.2, null, 0.08); tone(660, 0.18, 'square', 0.2, null, 0.16); },
@@ -345,7 +353,47 @@ const Sfx = (() => {
       nextTime += sd; songStep++;
     }
   }
+  // =====================================================================
+  //  AMBIENCE - quiet background sound for each level (wind, fluorescent hum, birds, rain)
+  // =====================================================================
+  let ambWant = null, amb = null;
+  function stopAmbience() {
+    if (!amb) return;
+    const a = amb; amb = null;
+    try { a.gain.gain.setTargetAtTime(0.0001, ctx.currentTime, 0.3); } catch (e) {}
+    clearInterval(a.timer); setTimeout(() => { for (const n of a.nodes) try { n.stop(); } catch (e) {} }, 1200);
+  }
+  function applyAmbience() {
+    stopAmbience();
+    if (!ctx || !ambWant) return;
+    const t = ctx.currentTime, gain = ctx.createGain(); gain.gain.setValueAtTime(0.0001, t); gain.gain.setTargetAtTime(1, t, 0.8); gain.connect(master);
+    const a = { gain, nodes: [], timer: null };
+    const loopNoise = (type, freq, q, vol, rate = 1) => {
+      const src = ctx.createBufferSource(); src.buffer = noiseBuf; src.loop = true; src.playbackRate.value = rate;
+      const f = ctx.createBiquadFilter(); f.type = type; f.frequency.value = freq; f.Q.value = q;
+      const g = ctx.createGain(); g.gain.value = vol; src.connect(f); f.connect(g); g.connect(gain); src.start(t, Math.random()); a.nodes.push(src); return { f, g };
+    };
+    if (ambWant === 'wind') {
+      const w = loopNoise('bandpass', 380, 0.7, 0.05, 0.6);
+      a.timer = setInterval(() => { const n = ctx.currentTime; w.g.gain.setTargetAtTime(0.02 + Math.random() * 0.07, n, 1.2); w.f.frequency.setTargetAtTime(250 + Math.random() * 400, n, 1.5); }, 1400);
+    } else if (ambWant === 'hum') {
+      for (const [f, v] of [[60, 0.02], [120, 0.012]]) { const o = ctx.createOscillator(); o.frequency.value = f; const g = ctx.createGain(); g.gain.value = v; o.connect(g); g.connect(gain); o.start(t); a.nodes.push(o); }
+      loopNoise('highpass', 6000, 0.5, 0.006);
+    } else if (ambWant === 'birds') {
+      loopNoise('lowpass', 500, 0.5, 0.012, 0.5);
+      a.timer = setInterval(() => { if (Math.random() < 0.55) { const base = 2200 + Math.random() * 1800; for (let i = 0; i < 2 + (Math.random() * 3 | 0); i++) tone(base * (0.9 + Math.random() * 0.25), 0.07, 'sine', 0.04, base * 1.3, i * 0.09, gain); } }, 900);
+    } else if (ambWant === 'rain') {
+      loopNoise('highpass', 1800, 0.4, 0.05); loopNoise('lowpass', 300, 0.6, 0.04, 0.7);
+    } else if (ambWant === 'crowd') {
+      const c = loopNoise('bandpass', 700, 0.9, 0.04, 0.8);
+      a.timer = setInterval(() => c.g.gain.setTargetAtTime(0.02 + Math.random() * 0.05, ctx.currentTime, 0.5), 700);
+    }
+    amb = a;
+  }
+  function setAmbience(kind) { if (kind === ambWant && amb) return; ambWant = kind || null; if (ctx) applyAmbience(); }
+
   function startMusic() {
+    if (!amb && ambWant) applyAmbience();
     if (musicTimer || !ctx) return;
     nextTime = ctx.currentTime + 0.1;
     musicTimer = setInterval(scheduler, 50);
@@ -359,5 +407,5 @@ const Sfx = (() => {
   function toggleMusic() { musicOn = !musicOn; if (!musicOn) stopMusic(); else startMusic(); return musicOn; }
   function songName() { return SONGS[songIdx].name; }
 
-  return { init, play, startMusic, stopMusic, toggleMusic, setSong, songName };
+  return { init, play, startMusic, stopMusic, toggleMusic, setSong, songName, setAmbience };
 })();
