@@ -367,6 +367,46 @@ const Sprites = (() => {
       g.beginPath(); g.moveTo(21, 16); g.quadraticCurveTo(20, 24, 26, 23); g.stroke(); E(g, '#222', 26, 23, 1.5, 1.5);
     });
   }
+  // --- BRIDEZILLA: the big day must be PERFECT. Veil, glare, bouquet grenades.
+  function bridezilla(pose) {
+    return mk(70, 90, g => {
+      const step = pose === 1, atk = pose === 2;
+      // huge white dress
+      P(g, '#f6f2ec', [35, 34, 10 + (step ? -2 : 0), 88, 60 + (step ? 2 : 0), 88]);
+      P(g, '#e4ddd2', [35, 40, 22, 88, 28, 88]); P(g, '#e4ddd2', [35, 40, 48, 88, 42, 88]);
+      for (let i = 0; i < 6; i++) E(g, '#ffffff', 14 + i * 8.5, 87, 4, 2);
+      P(g, '#f6f2ec', [26, 22, 44, 22, 41, 38, 29, 38]); R(g, '#d4af37', 28, 36, 14, 2);
+      // arms; bouquet raised to throw
+      if (atk) { P(g, '#f0c8b0', [42, 24, 47, 22, 56, 4, 52, 3]); E(g, '#ff5a8a', 55, 3, 6, 5); E(g, '#ffd0e0', 52, 2, 3, 2); E(g, '#3d8a26', 57, 7, 2, 3); }
+      else { P(g, '#f0c8b0', [42, 24, 47, 24, 50, 42, 46, 43]); E(g, '#ff5a8a', 47, 45, 6, 5); E(g, '#ffd0e0', 45, 44, 3, 2); }
+      P(g, '#f0c8b0', [24, 24, 28, 24, 22, 42, 19, 41]);
+      // head: veil, tiara, furious face
+      P(g, 'rgba(255,255,255,0.75)', [35, 4, 14, 40, 22, 42, 35, 14, 48, 42, 56, 40]);
+      E(g, '#f0c8b0', 35, 14, 7, 8); E(g, '#5a3a1a', 35, 8, 8, 4);
+      P(g, '#d4af37', [29, 7, 31, 2, 33, 6, 35, 1, 37, 6, 39, 2, 41, 7]);
+      P(g, '#000', [30, 12, 34, 14, 30, 14]); P(g, '#000', [40, 12, 36, 14, 40, 14]);
+      R(g, '#ff1a1a', 31, 13, 2, 1); R(g, '#ff1a1a', 37, 13, 2, 1);
+      R(g, '#a01030', 31, 18, 8, atk ? 4 : 2); R(g, '#fff', 32, 18, 6, 1);
+    });
+  }
+  // --- REDCOAT ENTERTAINER: relentless holiday-camp fun. Juggles, dodges, never stops smiling.
+  function redcoat(pose) {
+    return mk(64, 88, g => {
+      const step = pose === 1, atk = pose === 2;
+      R(g, '#f4f1e6', 22 + (step ? -3 : 2), 56, 9, 28); R(g, '#f4f1e6', 33 + (step ? 3 : -2), 56, 9, 28);
+      R(g, '#1a1a1a', 21 + (step ? -3 : 2), 83, 11, 5); R(g, '#1a1a1a', 32 + (step ? 3 : -2), 83, 11, 5);
+      P(g, '#d81e2a', [15, 28, 49, 28, 47, 58, 17, 58]); P(g, '#ffffff', [27, 28, 37, 28, 32, 42]); P(g, '#1d3a8a', [30, 30, 34, 30, 33, 40, 31, 40]);
+      R(g, '#d4af37', 20, 38, 3, 3); R(g, '#d4af37', 41, 38, 3, 3);
+      const bx = [[12, 18, '#ffd21f'], [32, 8, '#3d8bff'], [52, 16, '#39ff6a']];
+      if (atk) { P(g, '#d81e2a', [12, 30, 18, 30, 14, 14, 8, 12]); P(g, '#d81e2a', [46, 30, 52, 30, 56, 12, 50, 14]); for (const [x, y, c] of bx) { E(g, c, x, y - 4, 4, 4); E(g, '#fff', x - 1, y - 5, 1, 1); } }
+      else { P(g, '#d81e2a', [10, 30, 17, 30, 15, 52, 8, 50]); P(g, '#d81e2a', [47, 30, 54, 30, 56, 50, 49, 52]); const t = step ? 6 : 0; for (const [x, y, c] of bx) E(g, c, x, y + t, 3.5, 3.5); }
+      E(g, '#f0c8a0', 12, 52, 3, 3); E(g, '#f0c8a0', 52, 52, 3, 3);
+      E(g, '#f0c8a0', 32, 17, 9, 10);
+      P(g, '#2a1a10', [22, 14, 24, 6, 40, 5, 42, 14, 38, 10, 26, 10]);
+      R(g, '#1a1a1a', 27, 15, 3, 2); R(g, '#1a1a1a', 35, 15, 3, 2);
+      P(g, '#ffffff', [25, 21, 39, 21, 36, 27, 28, 27]); R(g, '#c03040', 25, 20, 14, 1);
+    });
+  }
   // Recolour every frame of an enemy set: fn(r, g, b) -> [r, g, b]
   function recolorSet(set, fn) {
     const one = spr => {
@@ -407,6 +447,15 @@ const Sprites = (() => {
     E_.mini = E_.bubbly;
     E_.megaorb = recolorSet(E_.orb, (r, g, b) => (r > 200 && g > 160 && b < 120) ? [255, Math.max(80, g * 0.6), 20] : [r, g, b]);
     for (const k of ['wallyfit', 'wallydeluxe']) { E_[k].walkFps = E_.wally.walkFps; }
+    E_.bridezilla = enemySet(bridezilla(0), bridezilla(1), bridezilla(2));
+    E_.redcoat = enemySet(redcoat(0), redcoat(1), redcoat(2));
+    // WALLY LIVE!: the boss photo in a silver sequinned suit with a gold cape
+    E_.wallylive = recolorSet(E_.boss, (r, g, b) => {
+      if (blueSuit(r, g, b)) { const v = Math.min(255, lum(r, g, b) * 1.9 + 40), sp = ((r * 7 + g * 13 + b) % 9) > 6 ? 50 : 0; return [Math.min(255, v + sp), Math.min(255, v + sp), Math.min(255, v + 12 + sp)]; }
+      if (orangeTrim(r, g, b)) { const v = lum(r, g, b); return [Math.min(255, v * 1.5), Math.min(255, v * 1.2), v * 0.3]; }
+      return [r, g, b];
+    });
+    E_.wallylive.walkFps = E_.boss.walkFps;
 
     S.proj = {
       skull: [mk(20, 20, g => { flame(g, 4, 12, 4); E(g, '#f2eee6', 12, 10, 7, 7); R(g, '#000', 8, 8, 3, 3); R(g, '#000', 13, 8, 3, 3); R(g, '#000', 9, 14, 6, 1); })],
@@ -427,6 +476,9 @@ const Sprites = (() => {
       chakra: [0, 1].map(k => mk(22, 22, g => { glow(g, 11, 11, 11, 'rgba(140,255,240,1)', 'rgba(0,180,255,0)'); for (let i = 0; i < 6; i++) { const a = i * Math.PI / 3 + k * 0.5; E(g, '#e8fffb', 11 + Math.cos(a) * 5, 11 + Math.sin(a) * 5, 2.5, 1.2, a); } E(g, '#ffffff', 11, 11, 2.5, 2.5); })),
       shout: [0, 1].map(k => mk(30, 30, g => { g.strokeStyle = k ? '#fff6a8' : '#ffffff'; g.lineWidth = 3; for (let i = 0; i < 3; i++) { g.globalAlpha = 1 - i * 0.3; g.beginPath(); g.arc(15, 15, 5 + i * 4.5, 0, Math.PI * 2); g.stroke(); } g.globalAlpha = 1; g.fillStyle = '#ff2a2a'; g.font = 'bold 12px sans-serif'; g.textAlign = 'center'; g.fillText('!', 15, 19); })),
       bat: [0, 1].map(k => mk(22, 14, g => { const f = k ? 2 : 0; P(g, '#e8e8f0', [11, 4, 1, 1 + f, 4, 6, 0, 8 - f, 7, 10, 11, 8, 15, 10, 22, 8 - f, 18, 6, 21, 1 + f]); P(g, '#9a9aa8', [11, 6, 6, 7, 11, 11, 16, 7]); R(g, '#ff2a4a', 9, 5, 1, 1); R(g, '#ff2a4a', 12, 5, 1, 1); })),
+      bouquet: [0, 1].map(k => mk(20, 20, g => { E(g, '#3d8a26', 10, 14, 3, 5); for (let i = 0; i < 5; i++) { const a = i * 1.26 + k; E(g, ['#ff5a8a', '#ffffff', '#ffd0e0'][i % 3], 10 + Math.cos(a) * 4, 8 + Math.sin(a) * 3, 3, 3); } })),
+      ball: [0, 1, 2].map(k => mk(14, 14, g => { E(g, ['#ffd21f', '#3d8bff', '#39ff6a'][k], 7, 7, 6, 6); E(g, '#ffffff', 5, 5, 2, 2); })),
+      spot: [mk(26, 26, g => { glow(g, 13, 13, 13, 'rgba(255,255,230,1)', 'rgba(255,240,150,0)'); E(g, '#ffffff', 13, 13, 4, 4); })],
       phone: [mk(22, 22, g => { glow(g, 11, 11, 11, 'rgba(255,200,60,0.9)', 'rgba(255,60,0,0)'); R(g, '#111', 7, 3, 8, 16); R(g, '#7fd0ff', 8, 5, 6, 11); })],
     };
 
@@ -442,6 +494,7 @@ const Sprites = (() => {
       spark: [mk(3, 3, g => { R(g, '#fff6c0', 0, 0, 3, 3); R(g, '#ffffff', 1, 1, 1, 1); }), mk(3, 3, g => { R(g, '#ffb030', 0, 0, 3, 3); })],
       drop: [mk(4, 4, g => E(g, '#a8001c', 2, 2, 2, 2)), mk(4, 4, g => E(g, '#7a0012', 2, 2, 2, 1.6))],
       gib: [0, 1, 2].map(k => mk(8, 8, g => { E(g, ['#b0102a', '#d84060', '#8a0818'][k], 4, 4, 3.5, 2.5 + k * 0.4, k); E(g, '#ff9aa8', 3, 3, 1.2, 0.8); E(g, '#4a0008', 5, 5, 1.2, 1); })),
+      petals: [mk(24, 24, g => { for (let i = 0; i < 10; i++) { const a = i * 0.63; E(g, i % 2 ? '#ff5a8a' : '#ffd0e0', 12 + Math.cos(a) * 8, 12 + Math.sin(a) * 8, 3, 2, a); } }), mk(28, 28, g => { for (let i = 0; i < 12; i++) { const a = i * 0.52 + 0.2; E(g, i % 2 ? '#ff5a8a' : '#ffffff', 14 + Math.cos(a) * 11, 14 + Math.sin(a) * 11, 2.5, 1.5, a); } })],
       splash: [boom(8, 'rgba(230,170,100,1)', 'rgba(140,80,30,0.3)'), boom(10, 'rgba(200,130,70,0.8)', 'rgba(100,60,20,0)')],
     };
 

@@ -241,6 +241,37 @@ const Sfx = (() => {
         { bars: 8, chords: [MAJ(8), MAJ(10), MAJ(3), MAJ(3), MAJ(8), MAJ(10), MAJ(7), MAJ(7)], drums: 2, bass: 'walk', pad: 'organ', arp: 'up16', lead: 1, seed: 121 },
       ],
     },
+    { // 7: E3M1 - "Something Borrowed, Something Gloom" (a wedding waltz that turns sinister)
+      name: 'Something Borrowed, Something Gloom', key: 45, bpm: 132,
+      sections: [
+        { bars: 8, chords: [MAJ(0), MAJ(5), MAJ(7), MAJ(0), MAJ(5), MAJ(0), MAJ(7), MAJ(7)], drums: 0, bass: 'hold', pad: 'organ', arp: 'up8', lead: 1, seed: 131 },
+        { bars: 8, chords: [M(0), MAJ(8), MAJ(3), MAJ(10), M(5), MAJ(8), MAJ(7), MAJ(7)], drums: 2, bass: 'walk', pad: 'organ', arp: 'broken16', lead: 1, seed: 132 },
+        { bars: 8, chords: [M(0), MAJ(1), M(0), MAJ(1), M(5), MAJ(8), MAJ(7), MAJ(7)], drums: 3, bass: 'sync', pad: 'pad', arp: 'up16', lead: 2, seed: 135 },
+        { bars: 4, chords: [MAJ(0), MAJ(5), MAJ(7), MAJ(7)], drums: 0, bass: 'hold', pad: 'organ', arp: 'slow', lead: 1, seed: 137 },
+        { bars: 8, chords: [M(5), M(0), MAJ(8), MAJ(7), M(5), MAJ(3), MAJ(1), MAJ(7)], drums: 3, bass: 'pulse', pad: 'pad', arp: 'updown16', lead: 2, seed: 139 },
+      ],
+    },
+    { // 8: E3M2 - "Hi-De-Doom" (a soggy holiday-camp march in the rain)
+      name: 'Hi-De-Doom', key: 40, bpm: 138,
+      sections: [
+        { bars: 4, chords: [MAJ(0), MAJ(5), MAJ(7), MAJ(0)], drums: 1, bass: 'walk', pad: 'none', arp: 'up8', lead: 1, seed: 141 },
+        { bars: 8, chords: [M(0), M(0), MAJ(8), MAJ(10), M(5), M(0), MAJ(7), MAJ(7)], drums: 2, bass: 'pulse', pad: 'pad', arp: 'broken16', lead: 1, seed: 142 },
+        { bars: 8, chords: [M(5), MAJ(10), MAJ(3), MAJ(8), M(5), MAJ(1), MAJ(7), MAJ(7)], drums: 3, bass: 'sync', pad: 'organ', arp: 'up16', lead: 2, seed: 145 },
+        { bars: 4, chords: [M(0), M(0), MAJ(8), MAJ(7)], drums: 0, bass: 'hold', pad: 'pad', arp: 'slow', lead: 0, seed: 147 },
+        { bars: 8, chords: [M(0), MAJ(8), MAJ(3), MAJ(10), M(5), MAJ(8), MAJ(7), MAJ(7)], drums: 3, bass: 'sync', pad: 'pad', arp: 'updown16', lead: 2, seed: 149 },
+      ],
+    },
+    { // 9: E3M3 - "Live From Studio 7" (final boss: a game-show theme gone metal)
+      name: 'Live From Studio 7', key: 37, bpm: 166,
+      sections: [
+        { bars: 4, chords: [MAJ(0), MAJ(4), MAJ(7), MAJ(0)], drums: 2, bass: 'walk', pad: 'organ', arp: 'up16', lead: 1, seed: 151 },
+        { bars: 8, chords: [M(0), MAJ(8), MAJ(3), MAJ(10), M(5), MAJ(8), MAJ(7), MAJ(7)], drums: 3, bass: 'sync', pad: 'pad', arp: 'up16', lead: 2, seed: 152 },
+        { bars: 8, chords: [M(5), M(0), MAJ(7), M(0), M(5), MAJ(8), MAJ(1), MAJ(7)], drums: 3, bass: 'pulse', pad: 'organ', arp: 'broken16', lead: 2, seed: 155 },
+        { bars: 4, chords: [MAJ(0), MAJ(4), MAJ(7), MAJ(7)], drums: 1, bass: 'hold', pad: 'organ', arp: 'up8', lead: 1, seed: 157 },
+        { bars: 8, chords: [M(0), MAJ(1), M(0), MAJ(1), M(5), MAJ(8), MAJ(7), MAJ(7)], drums: 3, bass: 'sync', pad: 'pad', arp: 'updown16', lead: 2, seed: 159 },
+        { bars: 8, chords: [MAJ(8), MAJ(10), MAJ(3), MAJ(3), MAJ(8), MAJ(10), MAJ(7), MAJ(7)], drums: 3, bass: 'walk', pad: 'organ', arp: 'up16', lead: 2, seed: 161 },
+      ],
+    },
   ];
 
   // seeded RNG so each section's melody is fixed but different from the others

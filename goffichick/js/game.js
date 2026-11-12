@@ -83,6 +83,10 @@
     wallydeluxe: { name: 'Wally Man DELUXE', hp: 200, speed: 1.2, radius: 0.3, h: 0.86, attack: 'proj', proj: 'phone', range: 20, cooldown: [1.6, 2.8], pain: 0.25, sight: 'phoneRing', atkSound: 'phoneRing' },
     megaorb: { name: 'MEGA SMILEY', hp: 3000, speed: 1.1, radius: 0.8, h: 1.6, z: 0.4, fly: true, attack: 'megaorb', range: 30, cooldown: [0.8, 1.5], pain: 0.03, sight: 'bossRoar', atkSound: 'giggle', boss: true, deathMsg: 'MEGA SMILEY HAS BEEN POPPED!' },
   };
+  // --- Episode 3 ---
+  ENEMY_DEFS.bridezilla = { name: 'Bridezilla', hp: 160, speed: 1.6, radius: 0.32, h: 0.9, attack: 'proj', proj: 'bouquet', melee: [10, 22], range: 15, cooldown: [1.2, 2.2], pain: 0.35, sight: 'brute', atkSound: 'memo', charge: 3.4 };
+  ENEMY_DEFS.redcoat = { name: 'Redcoat Entertainer', hp: 80, speed: 1.9, radius: 0.28, h: 0.88, attack: 'proj', proj: 'ball', count: 3, spread: 0.18, range: 16, cooldown: [1.1, 2.0], pain: 0.5, sight: 'coach', atkSound: 'giggle', dodge: 0.3 };
+  ENEMY_DEFS.wallylive = { name: 'WALLY LIVE!', hp: 3600, speed: 1.3, radius: 0.7, h: 2.0, attack: 'live', range: 30, cooldown: [0.7, 1.3], pain: 0.03, sight: 'bossRoar', atkSound: 'phoneRing', boss: true, deathMsg: 'WALLY LIVE! HAS BEEN CANCELLED!' };
   ENEMY_DEFS.boss.deathMsg = 'WALLY PRIME HAS BEEN UNSUBSCRIBED!';
   const SLOGANS = ['YOU\'VE GOT THIS!', 'LIVE, LAUGH, LOVE!', 'GOOD VIBES ONLY!', 'RISE AND GRIND!', 'SMILE MORE!', 'MANIFEST IT!', 'BE YOUR BEST SELF!', 'NO BAD DAYS!'];
 
@@ -98,6 +102,9 @@
     flame: { speed: 7.5, dmg: [3, 7], size: 0.16, grow: 2.4, life: 0.5, fx: 'flameHit', fxSize: 0.35, sound: null, ignite: 2.2, quiet: true },
     chakra: { speed: 6, dmg: [4, 10], size: 0.24, fx: 'hexHit', fxSize: 0.35, sound: 'hexHit', slow: 1.6 },
     shout: { speed: 7, dmg: [5, 12], size: 0.3, grow: 1.2, fx: 'splash', fxSize: 0.5, sound: 'hexHit', slow: 1.2 },
+    bouquet: { speed: 7, dmg: [8, 16], splash: 1.1, splashDmg: 25, size: 0.26, fx: 'petals', fxSize: 0.6, sound: 'pop' },
+    ball: { speed: 8.5, dmg: [5, 11], size: 0.16, fx: 'splash', fxSize: 0.3, sound: 'hexHit' },
+    spot: { speed: 15, dmg: [12, 22], size: 0.24, fx: 'hexHit', fxSize: 0.45, sound: 'hexHit' },
     // Bat-Bow: a fast silver bat bolt that pierces everything in a line
     bat: { speed: 22, dmg: [30, 55], size: 0.2, fx: 'puff', fxSize: 0.2, sound: null, pierce: true },
     phone: { speed: 9.5, dmg: [15, 30], splash: 1.4, splashDmg: 50, size: 0.26, fx: 'boom', fxSize: 0.9, sound: 'explode' },
@@ -304,6 +311,7 @@
   // monsters, the toxic sludge) add coloured light to the floor tiles around them.
   const LIGHT_OF = {
     skull: [1, 0.55, 0.15], rocket: [1, 0.6, 0.2], flame: [1, 0.5, 0.1], memo: [1, 0.5, 0.15], phone: [1, 0.6, 0.2], sun: [1, 0.85, 0.3],
+    spot: [1, 1, 0.75], bouquet: [1, 0.5, 0.7], ball: [1, 0.4, 0.3], petals: [1, 0.5, 0.75],
     hex: [0.8, 0.3, 1], gloom: [1, 0.25, 0.85], notif: [0.3, 0.6, 1], chakra: [0.3, 1, 0.95], shout: [1, 1, 0.8],
     boom: [1, 0.55, 0.15], hexHit: [0.8, 0.3, 1], gloomHit: [1, 0.3, 0.9], flameHit: [1, 0.5, 0.1], spark: [1, 0.75, 0.3],
   };
@@ -993,6 +1001,7 @@
       if (src && typeof src === 'object' && src.type !== 'barrel') bump('infight');
       if (e.type === 'boss') unlock('wallyprime');
       if (e.type === 'megaorb') unlock('popped');
+      if (e.type === 'wallylive') { unlock('cancelled'); bump('wally'); }
       if (killTag) tagKills++;
       if (e.def.boss) Voice.say('boss', 1, true); else if (src === 'player') Voice.say('kill', 0.18);
       if (e.def.boss) { L.bossDeadT = 3; msg = e.def.deathMsg || 'THE BOSS IS DOWN!'; msgT = 4; }
@@ -1120,6 +1129,17 @@
       if (d.attack === 'melee') return;
       const n = d.count || 1;
       for (let i = 0; i < n; i++) fireProjectile(d.proj, e.x, e.y, z, ang + (i - (n - 1) / 2) * (d.spread || 0), e);
+    } else if (d.attack === 'live') {
+      const enraged = e.hp < d.hp / 2, bz = (e.fz || 0) + 1.1, roll = Math.random();
+      if (roll < 0.45) { // spotlight blasts straight at you
+        const n = enraged ? 5 : 3; for (let i = 0; i < n; i++) fireProjectile('spot', e.x, e.y, bz, ang + (i - (n - 1) / 2) * 0.09, e);
+      } else if (roll < 0.8) { // a ring of applause in every direction
+        const n = enraged ? 18 : 12; for (let i = 0; i < n; i++) fireProjectile('shout', e.x, e.y, (e.fz || 0) + 0.5, ang + i * TAU / n, e);
+        Sfx.play.coach(playerDist);
+      } else if (L.enemies.filter(o => !o.dead && o.type === 'wallyfit').length < 5) { // calls in the backing dancers
+        for (const sgn of [-1, 1]) { spawnEnemy('wallyfit', e.x + Math.cos(ang + sgn * 1.4) * 1.2, e.y + Math.sin(ang + sgn * 1.4) * 1.2); const m = L.enemies[L.enemies.length - 1]; m.state = 'chase'; m.fz = floorAt(m.x, m.y); L.totalKills++; }
+        msg = '"PUT YOUR HANDS TOGETHER FOR THE DANCERS!"'; msgT = 2;
+      } else fireProjectile('phone', e.x, e.y, bz, ang, e);
     } else if (d.attack === 'megaorb') {
       const enraged = e.hp < d.hp / 2, bz = (e.fz || 0) + e.z + 0.6;
       if (Math.random() < 0.65) { const n = enraged ? 9 : 6; for (let i = 0; i < n; i++) fireProjectile('sun', e.x, e.y, bz, ang + (i - (n - 1) / 2) * 0.14, e); }
@@ -1202,11 +1222,12 @@
         }
         e.atkT = 0.2;
       }
-      // move
-      const keepDist = d.attack === 'melee' || d.attack === 'charge' ? d.radius + 0.55 : 1.4;
+      // move (Bridezilla storms in at double speed once she's close)
+      const rush = d.charge && pd < 6 ? d.charge / d.speed : 1;
+      const keepDist = d.attack === 'melee' || d.attack === 'charge' || d.charge ? d.radius + 0.55 : 1.4;
       if (pd > keepDist) {
         const [mx, my] = tg ? [pdx / pd, pdy / pd] : enemyMoveDir(e);
-        const sp = d.speed * sk.speed * dt;
+        const sp = d.speed * sk.speed * dt * rush;
         const nx = e.x + mx * sp, ny = e.y + my * sp;
         // open doors in the way
         const ti = Math.floor(ny) * L.mw + Math.floor(nx);
@@ -1544,6 +1565,7 @@
     { id: 'barrel', name: 'BARREL OF LAUGHS', desc: 'Defeat 3 monsters with one barrel' },
     { id: 'wallyprime', name: "WALLY'S WORST DAY", desc: 'Defeat Wally Prime' },
     { id: 'popped', name: 'POPPED', desc: 'Defeat the Mega Smiley' },
+    { id: 'cancelled', name: 'CANCELLED', desc: 'Defeat Wally Live!' },
     { id: 'theend', name: 'THE END OF CHEER', desc: 'Finish the whole game' },
   ];
   const ACH_KEY = 'goffichick-achievements';
