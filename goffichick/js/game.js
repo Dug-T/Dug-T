@@ -182,7 +182,7 @@
     for (const z of def.lights || []) for (let y = z.y; y < z.y + z.h; y++) for (let x = z.x; x < z.x + z.w; x++) if (x >= 0 && y >= 0 && x < mw && y < mh) light[y * mw + x] = z.level;
     L = { def, mw, mh, grid, block, seen, slime, light, fh, lifts, liftTile, ceilH: def.ceilH || 1, stepTex: def.stepTex || 1, lightNow: new Float32Array(light), zones: (def.lights || []).map(z => ({ ...z, on: true })), totalSecrets: 0,
       slimeTex: Textures.flats.slime.data, doors: new Map(), enemies: [], items: [], decor: [], projs: [], fx: [], parts: [], bolts: [],
-      totalKills: 0, totalItems: 0, exitT: -1, flow: null, flowFrom: -1, fog: def.fog,
+      totalKills: 0, totalItems: 0, starts: [], avatars: [], exitT: -1, flow: null, flowFrom: -1, fog: def.fog,
       floor: Textures.flats[def.floor].data, ceil: Textures.flats[def.ceil].data };
     player = newPlayer(keep);
     for (let y = 0; y < mh; y++) {
@@ -196,7 +196,7 @@
         if (ch === '$') { grid[idx] = DOOR; L.secretAt = L.secretAt || new Set(); L.secretAt.add(idx); L.totalSecrets++; continue; }
         if (ch === '~') { slime[idx] = 1; continue; }
         const cx = x + 0.5, cy = y + 0.5;
-        if ('><^v'.includes(ch)) { player.x = cx; player.y = cy; player.a = { '>': 0, 'v': Math.PI / 2, '<': Math.PI, '^': -Math.PI / 2 }[ch]; }
+        if ('><^v'.includes(ch)) { player.x = cx; player.y = cy; player.a = { '>': 0, 'v': Math.PI / 2, '<': Math.PI, '^': -Math.PI / 2 }[ch]; L.starts.push({ x: cx, y: cy, a: player.a }); }
         else if (ch in ENEMY_CHARS) { spawnEnemy(ENEMY_CHARS[ch], cx, cy); L.totalKills++; }
         else if (ch in ITEM_TYPES) { L.items.push({ x: cx, y: cy, def: ITEM_TYPES[ch], taken: false }); if (!ITEM_TYPES[ch].weapon) L.totalItems++; }
         else if (ch in DECOR_TYPES) {
@@ -218,7 +218,7 @@
     }
     player.fz = fh[Math.floor(player.y) * mw + Math.floor(player.x)];
     for (const e of L.enemies) e.fz = fh[Math.floor(e.y) * mw + Math.floor(e.x)];
-    levelTime = 0; L.flowFrom = -1;
+    levelTime = 0; L.flowFrom = -1; L.baseEnemies = L.enemies.length;
     updateDynLights();
     Sfx.setSong(typeof i === 'number' ? i + 1 : def.song || 1);
     Sfx.setAmbience(def.ambience || (def.weather === 'rain' ? 'rain' : null));
@@ -490,7 +490,7 @@
       const gl = it.def.power || it.def.key || it.def.sprite === 'soul' ? (GLOW_OF[it.def.sprite] || '255,140,230') : null;
       add(it.x, it.y, spr, floorAt(it.x, it.y) + bob, spr.h / 72, it.def.sprite === 'soul' || it.def.sprite === 'souls' || !!it.def.power || !!it.def.key, 1, 0.15, gl);
     }
-    for (const e of L.enemies) {
+    for (const e of bodies()) {
       const spr = enemySprite(e);
       const h = e.dead && e.def.ai !== false ? e.def.h * (spr.h / (enemyBase(e).h)) : e.def.h;
       add(e.x, e.y, spr, (e.fz || 0) + (e.dead ? 0 : e.z), h, false);
@@ -853,7 +853,8 @@
   }
 
   // ------------------------------------------------------------------ combat
-  function shootables() { return L.enemies.filter(e => !e.dead); }
+  const bodies = () => L.avatars.length ? L.enemies.concat(L.avatars) : L.enemies;
+  function shootables() { return bodies().filter(e => !e.dead); }
 
   // Physical particles: sparks off walls, blood spray, and gibs from explosive kills.
   function spawnParts(kind, x, y, z, n, spd = 1.5) {
@@ -927,6 +928,11 @@
   }
 
   function fireProjectile(kind, x, y, z, ang, owner) {
+    if (online && online.inGame) {
+      const rec = [kind, +x.toFixed(2), +y.toFixed(2), +z.toFixed(2), +ang.toFixed(3)];
+      if (owner === 'player') { if (online.pp.length < 6) online.pp.push(rec); }
+      else if (mode === 'coop' && online.host && owner && typeof owner === 'object' && !owner.remote && online.ep.length < 24) online.ep.push(rec);
+    }
     const def = PROJECTILES[kind];
     L.projs.push({ kind, def, x: x + Math.cos(ang) * 0.4, y: y + Math.sin(ang) * 0.4, z, vx: Math.cos(ang) * def.speed, vy: Math.sin(ang) * def.speed,
       owner, frames: S.proj[kind], life: def.life || 6, age: 0, fireA: player.a });
@@ -946,8 +952,9 @@
   }
 
   function splash(x, y, radius, maxDmg, owner) {
+    if (owner === 'ghost') return;
     for (const e of shootables()) {
-      if (e === owner) continue;
+      if (e === owner || (e.remote && owner !== 'player')) continue;
       const dd = Math.hypot(e.x - x, e.y - y) - e.def.radius;
       if (dd < radius && losClear(x, y, e.x, e.y)) damageEnemy(e, maxDmg * (1 - Math.max(0, dd) / radius), owner);
     }
@@ -971,6 +978,11 @@
 
   function damageEnemy(e, dmg, src) {
     if (e.dead) return;
+    if (e.remote) { hitAvatar(e, dmg, src); return; }
+    if (mode === 'coop' && online && !online.host) { // the host runs the monsters: tell it what we hit
+      if (src === 'player') { const i = L.enemies.indexOf(e); online.out.dmg[i] = (online.out.dmg[i] || 0) + dmg * mods.hit; if (e.type !== 'barrel' && Math.random() < e.def.pain) Sfx.play.enemyPain(Math.hypot(e.x - player.x, e.y - player.y)); }
+      return;
+    }
     if (src === 'player') dmg *= mods.hit;
     e.hp -= dmg;
     if (e.type === 'barrel') {
@@ -1002,7 +1014,7 @@
       if (src === 'player') unlock('firstblood');
       if (/^wally|^boss$/.test(e.type)) bump('wally');
       if (e.type === 'bubbly' || e.type === 'mini') bump('orbs');
-      if (src && typeof src === 'object' && src.type !== 'barrel') bump('infight');
+      if (src && typeof src === 'object' && src.type !== 'barrel' && !src.remote) bump('infight');
       if (e.type === 'boss') unlock('wallyprime');
       if (e.type === 'megaorb') unlock('popped');
       if (e.type === 'wallylive') { unlock('cancelled'); bump('wally'); }
@@ -1164,6 +1176,7 @@
   }
 
   function updateEnemies(dt) {
+    if (mode === 'coop' && online && !online.host) { puppetEnemies(dt); return; }
     updateFlow();
     const p = player;
     for (const e of L.enemies) {
@@ -1262,15 +1275,21 @@
         const nx = pr.x + pr.vx * dt / steps, ny = pr.y + pr.vy * dt / steps;
         if (opaqueAt(nx, ny) || pr.z < floorAt(nx, ny) - 0.02) { explode(pr); pr.done = true; break; }
         pr.x = nx; pr.y = ny;
-        if (pr.owner !== 'player') {
+        if (pr.owner !== 'player' && pr.owner !== 'ghost') {
           if (Math.hypot(p.x - pr.x, p.y - pr.y) < 0.3 + pr.def.size / 2) {
             damagePlayer(irand(pr.def.dmg[0], pr.def.dmg[1]), pr.x - pr.vx, pr.y - pr.vy);
             if (pr.def.slow && !p.pw.shroud) p.slowT = Math.max(p.slowT, pr.def.slow);
             explode(pr); pr.done = true; break;
           }
         }
-        for (const e of L.enemies) {
+        if (pr.owner === 'ghost') { // another player's shot, shown for looks: their game decides what it hits
+          if (Math.hypot(p.x - pr.x, p.y - pr.y) < 0.3 + pr.def.size / 2 || bodies().some(e => !e.dead && Math.hypot(e.x - pr.x, e.y - pr.y) < e.def.radius + pr.def.size / 2)) { explode(pr); pr.done = true; }
+          continue;
+        }
+        for (const e of bodies()) {
           if (e.dead || e === pr.owner) continue;
+          if (e.remote && pr.owner !== 'player') continue; // other players dodge monster shots in their own game
+          if (pr.owner.ghostEnemy) continue;
           if (pr.owner !== 'player' && e.type !== 'barrel' && pr.owner.type === e.type) continue; // same kind don't hurt each other
           if (Math.hypot(e.x - pr.x, e.y - pr.y) < e.def.radius + pr.def.size / 2) {
             if (pr.def.pierce) { // flies on through; each monster is hit once
@@ -1371,6 +1390,7 @@
     }
   }
   function doFire(w) {
+    if (online && online.inGame) online.shots++;
     const p = player;
     if (w.type !== 'melee') p.usedGun = true;
     if (w.type !== 'melee') yogaDodge();
@@ -1465,7 +1485,7 @@
     // pickups
     for (const it of L.items) {
       if (it.taken || Math.hypot(it.x - p.x, it.y - p.y) > 0.55) continue;
-      if (pickup(it.def)) { it.taken = true; if (!it.def.weapon) p.items++; pickupFlash = 0.35; }
+      if (pickup(it.def)) { it.taken = true; if (!it.def.weapon) p.items++; pickupFlash = 0.35; netTake(it); }
     }
 
     // weapon switching
@@ -1538,6 +1558,7 @@
     nightfall: () => { completeLevel(); return 'Skipping level...'; },
   };
   function cheatKey(ch) {
+    if (mode === 'dm') return;
     cheatBuf = (cheatBuf + ch).slice(-12);
     for (const [code, fn] of Object.entries(CHEATS)) if (cheatBuf.endsWith(code)) { msg = fn() + '  (achievements off this run)'; msgT = 3; cheatBuf = ''; cheated = true; }
   }
@@ -1597,10 +1618,13 @@
   let scoresTab = Leaderboard.enabled ? 'world' : 'device', posted = null, postStatus = '';
   function openScores() { state = 'scores'; stateT = 0; scoresTab = Leaderboard.enabled ? 'world' : 'device'; Leaderboard.refresh(); }
   const ALPHA = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 ';
-  let initials = [6, 14, 5], initCur = 0, nameFor = 'score'; // "GOF"
+  const NAME_KEY = 'goffichick-name';
+  let initials = (Array.isArray(store.get(NAME_KEY)) && store.get(NAME_KEY).length === 3) ? store.get(NAME_KEY) : [6, 14, 5], initCur = 0, nameFor = 'score', savedInitials = null; // "GOF"
   function saveHighScore() {
     const name = initials.map(i => ALPHA[i]).join('').trim() || '???';
     if (nameFor === 'weekly') { postWeekly(name); return; }
+    if (nameFor === 'online') { store.set(NAME_KEY, initials); nameFor = 'score'; state = 'title'; stateT = 0; ignoreTapUntil = performance.now() + 300; return; }
+    if (nameFor === 'room') { const code = initials.map(i => ALPHA[i]).join('').replace(/ /g, ''); initials = savedInitials; nameFor = 'score'; ignoreTapUntil = performance.now() + 300; if (code.length === 3) joinOnline(code); else { state = 'title'; msg = 'Room codes have 3 letters.'; msgT = 3; } return; }
     const list = highScores(); const entry = { name, score: runScore, diff, date: new Date().toISOString().slice(0, 10) };
     list.push(entry); list.sort((a, b) => b.score - a.score);
     lastEntry = list.indexOf(entry); store.set(SCORES_KEY, list.slice(0, 10));
@@ -1623,14 +1647,22 @@
   }
   // title menu
   let menuSel = 0;
+  let menuPage = 'main', onKind = 'dm', onLvl = 0;
   function menuItems() {
+    if (menuPage === 'online') {
+      const it = [{ id: 'onKind', lr: true, text: `GAME   <  ${onKind === 'dm' ? 'DEATHMATCH' : 'CO-OP CAMPAIGN'}  >` }];
+      if (onKind === 'coop') it.push({ id: 'onLvl', lr: true, text: `START AT   <  ${LEVELS[onLvl].name.split(':')[0]}  >` });
+      it.push({ id: 'onName', text: `YOUR NAME   ${myName()}` }, { id: 'onHost', text: 'HOST A NEW GAME' }, { id: 'onJoin', text: "JOIN A FRIEND'S GAME" }, { id: 'onBack', text: 'BACK' });
+      return it;
+    }
     const items = [], sv = savedGame();
     if (sharedLvl) items.push({ id: 'shared', text: `PLAY FRIEND'S LEVEL: ${sharedLvl.name}` });
     if (sv) items.push({ id: 'continue', text: `CONTINUE  -  ${LEVELS[sv.level].name.split(':')[0]}, ${DIFFS[sv.diff].name}` });
     items.push({ id: 'new', text: 'NEW GAME' });
     items.push({ id: 'weekly', text: `WEEKLY CHALLENGE  -  WEEK ${weeklyInfo().week}` });
     items.push({ id: 'editor', text: 'LEVEL EDITOR' });
-    items.push({ id: 'diff', text: `DIFFICULTY   <  ${DIFFS[diff].name}  >` });
+    items.push({ id: 'online', text: 'PLAY ONLINE  -  DEATHMATCH / CO-OP' });
+    items.push({ id: 'diff', lr: true, text: `DIFFICULTY   <  ${DIFFS[diff].name}  >` });
     items.push({ id: 'gfx', text: `GRAPHICS   ${QUALITY > 1 ? 'HD' : 'CLASSIC'}` });
     items.push({ id: 'scores', text: 'HIGH SCORES' });
     items.push({ id: 'ach', text: `ACHIEVEMENTS   ${Object.keys(ach.unlocked).length} / ${ACHIEVEMENTS.length}` });
@@ -1643,6 +1675,13 @@
     else if (item.id === 'shared') startSolo('custom', customLevelDef(sharedLvl));
     else if (item.id === 'weekly') openWeekly();
     else if (item.id === 'editor') { state = 'editor'; stateT = 0; editor.open(); }
+    else if (item.id === 'online') { menuPage = 'online'; menuSel = 0; Sfx.play.switch(); if (!Net.enabled) { msg = 'Online play needs the Supabase settings in js/leaderboard.js.'; msgT = 4; } }
+    else if (item.id === 'onBack') { menuPage = 'main'; menuSel = 0; Sfx.play.switch(); }
+    else if (item.id === 'onKind') { onKind = onKind === 'dm' ? 'coop' : 'dm'; Sfx.play.switch(); }
+    else if (item.id === 'onLvl') { onLvl = (onLvl + dir + LEVELS.length) % LEVELS.length; Sfx.play.switch(); }
+    else if (item.id === 'onName') { nameFor = 'online'; state = 'enterName'; initCur = 0; stateT = 0; }
+    else if (item.id === 'onHost') hostOnline();
+    else if (item.id === 'onJoin') { nameFor = 'room'; savedInitials = initials; initials = [0, 0, 0]; state = 'enterName'; initCur = 0; stateT = 0; }
     else if (item.id === 'scores') { openScores(); lastEntry = -1; posted = null; postStatus = ''; }
     else if (item.id === 'ach') { state = 'achievements'; stateT = 0; }
     else if (item.id === 'gfx') { QUALITY = QUALITY > 1 ? 1 : 1.5; try { localStorage.setItem('goffichick-quality', String(QUALITY)); } catch (e) {} fitScreen(); Sfx.init(); Sfx.play.switch(); }
@@ -1650,7 +1689,7 @@
     else { diff = (diff + dir + DIFFS.length) % DIFFS.length; store.set(DIFF_KEY, diff); Sfx.init(); Sfx.play.switch(); }
     if (state === 'playing') lockPointer();
   }
-  const MENU_Y = 100, MENU_DY = 11;
+  const MENU_Y = 100, MENU_DY = 10.5;
   // a click / tap on the title screen: pick the menu row under it, or the highlighted one
   // On-screen arrow pad for the title menu (phones have no arrow keys): up / down move the
   // highlight, left / right change the difficulty, OK chooses the highlighted option.
@@ -1689,7 +1728,7 @@
         const it = items[Math.min(menuSel, items.length - 1)];
         if (pb.id === 'up') menuMove(-1);
         else if (pb.id === 'down') menuMove(1);
-        else if (pb.id === 'left' || pb.id === 'right') { if (it.id === 'diff') menuActivate(it, pb.id === 'left' ? -1 : 1); else menuMove(pb.id === 'left' ? -1 : 1); }
+        else if (pb.id === 'left' || pb.id === 'right') { if (it.lr) menuActivate(it, pb.id === 'left' ? -1 : 1); else menuMove(pb.id === 'left' ? -1 : 1); }
         else menuActivate(it, 1);
         return;
       }
@@ -1748,7 +1787,7 @@
     if (document.exitPointerLock && locked()) document.exitPointerLock();
     state = to; stateT = 0; ignoreTapUntil = performance.now() + 400;
   }
-  function quitSolo() { leaveSolo(mode === 'test' ? 'editor' : 'title'); }
+  function quitSolo() { if (online) { leaveOnline(); return; } leaveSolo(mode === 'test' ? 'editor' : 'title'); }
   function soloComplete() {
     soloResult = { time: levelTime, name: L.def.name, kills: L.totalKills ? Math.min(100, Math.round(player.kills / L.totalKills * 100)) : 100 };
     Voice.say('exit', 0.8, true);
@@ -1821,11 +1860,13 @@
     ctx.strokeStyle = '#ff4fb8'; ctx.lineWidth = 1; ctx.strokeRect(b.x + 0.5, b.y + 0.5, b.w - 1, b.h - 1);
     label(mode === 'test' ? 'EDIT' : 'QUIT', b.x + b.w / 2, b.y + 10, '#ffffff', 'center', 7.5);
     ctx.fillStyle = 'rgba(10,0,16,0.6)'; ctx.fillRect(b.x - 48, b.y, 46, b.h);
-    label(fmtMs(levelTime), b.x - 6, b.y + 10, '#ffcf3a', 'right', 8);
+    label(mode === 'dm' ? fmtTime(Math.max(0, DM_TIME - levelTime)) : fmtMs(levelTime), b.x - 6, b.y + 10, '#ffcf3a', 'right', 8);
+    if (online) drawOnlineHud();
   }
   function completeLevel() {
     if (state !== 'playing') return;
-    if (mode !== 'campaign') { soloComplete(); return; }
+    if (mode !== 'campaign' && mode !== 'coop') { soloComplete(); return; }
+    if (mode === 'coop' && !L.exitFromNet) Net.send('exit', { lvl: levelIndex });
     interStats = { name: L.def.name, kills: L.totalKills ? Math.min(100, Math.round(player.kills / L.totalKills * 100)) : 100,
       items: L.totalItems ? Math.round(player.items / L.totalItems * 100) : 100,
       secrets: L.totalSecrets ? Math.round(player.secrets / L.totalSecrets * 100) : 100, time: levelTime, par: L.def.par || 240 };
@@ -1844,14 +1885,17 @@
     if (levelIndex >= LEVELS.length - 1) unlock('theend');
     carry = { health: player.health, armor: player.armor, armorType: player.armorType, ammo: player.ammo, weapons: player.weapons, cur: player.cur, score: runScore };
     state = levelIndex >= LEVELS.length - 1 ? 'victory' : 'intermission'; stateT = 0;
+    if (mode === 'coop') return;
     if (state === 'victory') store.del(SAVE_KEY);
     else { levelIndex++; saveProgress(); levelIndex--; } // a CONTINUE now starts the next level
   }
   function nextLevel() {
+    if (mode === 'coop') { if (!online.host) { msg = 'Waiting for the host to carry on...'; msgT = 2; return; } Net.send('lvl', { i: levelIndex + 1 }); }
     levelIndex++;
     loadLevel(levelIndex, carry); state = 'playing';
   }
   function restartLevel() {
+    if (mode === 'dm' || mode === 'coop') { respawnOnline(); return; }
     if (mode !== 'campaign') { loadSolo(); state = 'playing'; return; }
     loadLevel(levelIndex, carry ? { ...carry, health: 100 } : null); state = 'playing';
   }
@@ -1900,13 +1944,14 @@
     ctx.fillStyle = '#000'; ctx.fillText('GOFFICHICK', 18, 70);
     ctx.shadowColor = '#ff2d95'; ctx.shadowBlur = 14; ctx.fillStyle = '#ff4fb8'; ctx.fillText('GOFFICHICK', 16, 67);
     ctx.restore();
-    label('THE WORLD IS TOO CHEERFUL. FIX IT.', 18, 86, '#c9a6c9', 'left', 8);
+    if (msgT > 0 && state === 'title') label(msg, 18, 86, '#ffcf3a', 'left', 7.5);
+    else label('THE WORLD IS TOO CHEERFUL. FIX IT.', 18, 86, '#c9a6c9', 'left', 8);
     if (state === 'loading') { if (Math.sin(time * 5) > 0) label('SUMMONING...', 18, MENU_Y, '#ffffff', 'left', 10); }
     else {
       const items = menuItems(); menuSel = Math.min(menuSel, items.length - 1);
       items.forEach((it, i) => {
         const sel = i === menuSel, y = MENU_Y + i * MENU_DY;
-        if (sel) { ctx.fillStyle = 'rgba(255,79,184,0.18)'; ctx.fillRect(12, y - 8, 203, 11); }
+        if (sel) { ctx.fillStyle = 'rgba(255,79,184,0.18)'; ctx.fillRect(12, y - 8, 203, 10.5); }
         label((sel ? '> ' : '  ') + it.text, 16, y, sel ? '#ffffff' : '#ff9be0', 'left', 8.5);
       });
       if (state === 'title') drawTitlePad();
@@ -1973,7 +2018,7 @@
   // arcade-style initials: three letter boxes and an OK button
   const NAME_BOX = i => ({ x: W / 2 - 75 + i * 40, y: 112, w: 32, h: 40 }), NAME_OK = () => ({ x: W / 2 + 55, y: 120, w: 44, h: 24 });
   function drawEnterName() {
-    drawTitle(); drawOverlayText(nameFor === 'weekly' ? 'WEEKLY BOARD' : 'NEW HIGH SCORE', nameFor === 'weekly' ? `${fmtMs(soloResult.time)} - enter your initials` : `${runScore.toLocaleString()} points - enter your initials`, []);
+    drawTitle(); drawOverlayText({ weekly: 'WEEKLY BOARD', online: 'YOUR NAME', room: 'JOIN A GAME' }[nameFor] || 'NEW HIGH SCORE', nameFor === 'weekly' ? `${fmtMs(soloResult.time)} - enter your initials` : nameFor === 'online' ? 'Three letters the other players will see' : nameFor === 'room' ? 'Type the 3-letter room code your friend sees' : `${runScore.toLocaleString()} points - enter your initials`, []);
     for (let i = 0; i < 3; i++) {
       const b = NAME_BOX(i);
       ctx.fillStyle = i === initCur ? 'rgba(255,79,184,0.35)' : 'rgba(255,255,255,0.08)'; ctx.fillRect(b.x, b.y, b.w, b.h);
@@ -2003,6 +2048,8 @@
     if (state === 'enterName') { drawEnterName(); return; }
     if (state === 'editor') { editor.draw(1 / 60); return; }
     if (state === 'weekly') { drawWeekly(); return; }
+    if (state === 'lobby') { drawLobby(); return; }
+    if (state === 'dmOver') { drawDmOver(); return; }
     if (state === 'weeklyDone') {
       drawTitle();
       const r = soloResult, canPost = Leaderboard.enabled && !cheated && r.newBest;
@@ -2111,6 +2158,7 @@
         label('Too much positivity. Click to rise again.', W / 2, 110, '#ffd0ec', 'center', 9);
       }
     }
+    if (online && online.inGame) drawNameTags();
     drawSoloHud();
     if (paused) drawOverlayText('PAUSED', mode === 'campaign' ? 'Click to resume' : 'Click to resume  -  press X to quit', []);
     if (isTouch && !sideways && window.innerHeight > window.innerWidth) {
@@ -2138,6 +2186,9 @@
       return true;
     }
     if (state === 'customDone' && stateT > 1.5) { leaveSolo('title'); return true; }
+    if (state === 'lobby') { lobbyTap(ev); return true; }
+    if (state === 'dmOver' && stateT > 2) { leaveOnline(); return true; }
+    if (state === 'victory' && mode === 'coop' && stateT > 2) { leaveOnline(); return true; }
     if (state === 'playing' && mode !== 'campaign' && ev && ev.clientX !== undefined && !locked()) {
       const g = gamePoint(ev.clientX, ev.clientY), b = QUIT_BOX();
       if (g.x >= b.x - 6 && g.x <= b.x + b.w + 6 && g.y >= b.y - 4 && g.y <= b.y + b.h + 8) { quitSolo(); return true; }
@@ -2170,13 +2221,15 @@
     if (['Tab', 'Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault();
     if (state === 'editor') { editor.key(e.code); return; }
     if (state === 'weekly' && (e.code === 'Escape' || e.code === 'Backspace')) { leaveSolo('title'); return; }
+    if (state === 'lobby' && (e.code === 'Escape' || e.code === 'Backspace')) { leaveOnline(); return; }
     keys[e.code] = true;
     if (paused && e.code === 'KeyX' && mode !== 'campaign' && state === 'playing') { quitSolo(); return; }
+    if (state === 'title' && menuPage === 'online' && (e.code === 'Escape' || e.code === 'Backspace')) { menuPage = 'main'; menuSel = 0; return; }
     if (state === 'title') {
       const items = menuItems();
       if (e.code === 'ArrowUp') menuSel = (menuSel + items.length - 1) % items.length;
       if (e.code === 'ArrowDown') menuSel = (menuSel + 1) % items.length;
-      if ((e.code === 'ArrowLeft' || e.code === 'ArrowRight') && items[menuSel].id === 'diff') menuActivate(items[menuSel], e.code === 'ArrowLeft' ? -1 : 1);
+      if ((e.code === 'ArrowLeft' || e.code === 'ArrowRight') && items[menuSel].lr) menuActivate(items[menuSel], e.code === 'ArrowLeft' ? -1 : 1);
     }
     if (state === 'enterName') {
       if (e.code === 'ArrowUp') initials[initCur] = (initials[initCur] + 1) % ALPHA.length;
@@ -2284,6 +2337,322 @@
   }
   for (const ev of ['gesturestart', 'gesturechange', 'dblclick', 'contextmenu']) document.addEventListener(ev, blockGesture, { passive: false });
 
+  // ------------------------------------------------------------------ online play (deathmatch and co-op)
+  // Everyone runs their own game and shares where they are, what they shot and what they picked up.
+  // Deathmatch: whoever fires decides what they hit and tells the player they hit.
+  // Co-op: the host runs the monsters and sends where they are; the others tell the host what they hit.
+  const DM_FRAGS = 10, DM_TIME = 600, DM_HIT = 0.5, AV_DEF = { name: 'player', hp: 100, radius: 0.3, h: 0.92, pain: 0, ai: false };
+  const ST_CODE = { idle: 0, chase: 1, attack: 2, pain: 3, dead: 4, 'attack-charge': 5, static: 6 }, ST_NAME = Object.keys(ST_CODE);
+  const EP_OWNER = { type: '_ep', ghostEnemy: true, x: 0, y: 0 };
+  let online = null;
+  const myName = () => initials.map(i => ALPHA[i]).join('').trim() || '???';
+  const ROOM_ABC = 'ABCDEFGHJKLMNPRSTUVWXYZ';
+  function newOnline(code, host) {
+    return { code, host, kind: onKind, lvl: onLvl, diff, peers: new Map(), hostId: host ? Net.id : null, started: false, inGame: false, frags: {}, names: {},
+      sendT: 0, hiT: 0, ep: [], pp: [], out: { hit: {}, hurt: {}, dmg: {} }, shots: 0, tick: 0, lastHit: null, deathSent: false, status: 'connecting', nextColor: 0, note: '' };
+  }
+  function hostOnline() {
+    if (!Net.enabled) { msg = 'Online play needs the Supabase settings in js/leaderboard.js.'; msgT = 4; return; }
+    let code = ''; for (let i = 0; i < 3; i++) code += ROOM_ABC[irand(0, ROOM_ABC.length - 1)];
+    online = newOnline(code, true); Net.connect(code, onNet, s => { if (online) online.status = s; });
+    state = 'lobby'; stateT = 0;
+  }
+  function joinOnline(code) {
+    online = newOnline(code, false); Net.connect(code, onNet, s => { if (online) online.status = s; });
+    state = 'lobby'; stateT = 0;
+  }
+  function leaveOnline(note) {
+    if (online) { Net.send('bye', {}); Net.close(); }
+    online = null; menuPage = 'online'; menuSel = 0;
+    if (mode !== 'campaign' || state !== 'title') leaveSolo('title');
+    if (note) { msg = note; msgT = 4; }
+  }
+  function peerOf(id, name) {
+    let pe = online.peers.get(id);
+    if (!pe) {
+      const used = new Set([...online.peers.values()].map(q => q.color));
+      let c = 0; while (used.has(c) && c < 3) c++;
+      pe = { id, name: name || '???', x: 0, y: 0, a: 0, fz: 0, w: 'pistol', dead: false, f: 0, seen: time, color: c, lv: -1, tx: null, ty: null, avatar: null };
+      online.peers.set(id, pe);
+      if (online.inGame) { msg = `${pe.name} joined the game.`; msgT = 3; }
+    }
+    if (name) pe.name = name;
+    online.names[id] = pe.name;
+    pe.seen = time;
+    return pe;
+  }
+  function onNet(ev, p) {
+    if (!online) return;
+    const from = p._from;
+    if (ev === 'bye') { const pe = online.peers.get(from); if (pe) dropPeer(pe, `${pe.name} left the game.`); return; }
+    const pe = peerOf(from, p.n);
+    if (ev === 'hi') {
+      if (online.host) {
+        Net.send('room', { kind: online.kind, lvl: online.lvl, diff: online.diff, started: online.started, n: myName() });
+        if (online.started) Net.send('go', { kind: online.kind, lvl: mode === 'coop' ? levelIndex : online.lvl, diff: online.diff, n: myName() });
+      }
+    } else if (ev === 'room') {
+      if (!online.host) { online.hostId = from; online.kind = p.kind; online.lvl = p.lvl; online.diff = p.diff; }
+    } else if (ev === 'go') {
+      if (!online.host && !online.started) { online.hostId = from; online.kind = p.kind; online.lvl = p.lvl; online.diff = p.diff; startOnline(); }
+    } else if (ev === 'st') {
+      if (pe.tx === null) { pe.x = p.x; pe.y = p.y; }
+      pe.tx = p.x; pe.ty = p.y; pe.a = p.a; pe.fz = p.z; pe.dead = !!p.d; pe.lv = p.lv;
+      if (p.f !== pe.f) { if (pe.f !== undefined && online.inGame) remoteShot(pe, p.w); pe.f = p.f; }
+      pe.w = p.w;
+      if (online.inGame && p.pp) for (const r of p.pp) spawnGhost(r, 'ghost');
+      if (online.inGame && mode === 'coop' && !online.host && from === online.hostId && p.lv === levelIndex) {
+        if (p.es) applySnapshot(p.es);
+        if (p.ep) for (const r of p.ep) spawnGhost(r, EP_OWNER);
+      }
+      if (online.inGame && state === 'playing') {
+        for (const h of p.hit || []) if (h[0] === Net.id && mode === 'dm') { online.lastHit = { id: from, t: time }; damagePlayer(Math.max(1, Math.round(h[1])), h[2], h[3]); }
+        for (const h of p.hurt || []) if (h[0] === Net.id && mode === 'coop') damagePlayer(Math.round(h[1]), h[2], h[3]);
+      }
+      if (online.inGame && mode === 'coop' && online.host && p.lv === levelIndex) for (const [i, d] of p.dmg || []) { const e = L.enemies[i]; if (e) damageEnemy(e, d, pe.avatar || 'peer'); }
+    } else if (ev === 'frag') {
+      addFrag(p.k, p.v);
+    } else if (ev === 'take') {
+      const it = L && L.items[p.i];
+      if (online.inGame && it && (mode === 'dm' || p.lv === levelIndex) && !(mode === 'coop' && it.def.key)) { it.taken = true; if (mode === 'dm') it.respawnT = 25; }
+    } else if (ev === 'exit') {
+      if (mode === 'coop' && state === 'playing' && p.lvl === levelIndex) { L.exitFromNet = true; msg = `${pe.name} reached the exit!`; msgT = 3; completeLevel(); }
+    } else if (ev === 'lvl') {
+      if (mode === 'coop' && !online.host && online.inGame) { levelIndex = p.i; if (levelIndex >= LEVELS.length) { leaveOnline('The host finished the game!'); return; } loadLevel(levelIndex, carry); state = 'playing'; stateT = 0; }
+    }
+  }
+  function dropPeer(pe, note) {
+    online.peers.delete(pe.id);
+    if (L && pe.avatar) L.avatars = L.avatars.filter(a => a !== pe.avatar);
+    if (pe.id === online.hostId && (mode === 'coop' || !online.started)) { leaveOnline('The host left the game.'); return; }
+    if (note) { msg = note; msgT = 3; }
+  }
+  function addFrag(k, v) {
+    if (!online) return;
+    online.frags[k] = (online.frags[k] || 0) + (k === v ? -1 : 1);
+    const nk = k === Net.id ? 'You' : online.names[k] || '???', nv = v === Net.id ? 'you' : online.names[v] || '???';
+    msg = k === v ? `${nk === 'You' ? 'You' : nk} took the easy way out.` : `${nk} fragged ${nv}!`; msgT = 3;
+    if (k === Net.id && k !== v) Voice.say('kill', 0.6);
+    if (Object.values(online.frags).some(f => f >= DM_FRAGS)) { state = 'dmOver'; stateT = 0; }
+  }
+  function startOnline() {
+    if (mode === 'campaign') campaignDiff = diff;
+    online.started = true; online.inGame = true; online.frags = {};
+    mode = online.kind; diff = online.diff; god = false; cheated = false; carry = null; runScore = 0; paused = false; mods = { hurt: 1, hit: 1, speed: 1 };
+    if (mode === 'dm') { soloDef = DM_LEVELS[0]; loadLevel(soloDef, null); respawnOnline(true); }
+    else { levelIndex = online.lvl; loadLevel(levelIndex, null); }
+    beginPlay(); stateT = 0;
+    msg = mode === 'dm' ? `DEATHMATCH! First to ${DM_FRAGS} frags wins.` : `CO-OP: ${L.def.name}`; msgT = 4;
+  }
+  function hostStart() {
+    if (!online || !online.host || online.status !== 'ok') return;
+    online.kind = onKind; online.lvl = onLvl; online.diff = diff;
+    Net.send('go', { kind: online.kind, lvl: online.lvl, diff: online.diff, n: myName() });
+    startOnline();
+  }
+  // back into the fight after dying (deathmatch: at the spawn point furthest from everyone)
+  function respawnOnline(first) {
+    const keep = mode === 'coop' && carry ? { ...carry, health: 100 } : null;
+    const was = player; player = newPlayer(keep);
+    let sp = L.starts[0] || { x: was.x, y: was.y, a: was.a };
+    if (mode === 'dm') {
+      let best = -1;
+      for (const s0 of L.starts) {
+        const near = Math.min(99, ...L.avatars.filter(a => !a.dead).map(a => Math.hypot(a.x - s0.x, a.y - s0.y)));
+        const score = near + Math.random() * 2; if (score > best) { best = score; sp = s0; }
+      }
+      for (const w of WEAPONS) player.weapons[w.key] = ['knuckles', 'chainsaw', 'pistol', 'shotgun'].includes(w.key);
+      for (const k in player.ammo) player.ammo[k] = { bullets: 60, shells: 12 }[k] || 0;
+      player.cur = 'shotgun';
+    }
+    player.x = sp.x; player.y = sp.y; player.a = sp.a; player.fz = floorAt(sp.x, sp.y);
+    online.deathSent = false; online.lastHit = null;
+    if (!first) { state = 'playing'; stateT = 0; Sfx.play.weaponUp(); spawnFx('gloomHit', sp.x, sp.y, 0.5, 0.9, 0.5); }
+  }
+  function netTake(it) {
+    if (!online || !online.inGame) return;
+    if (mode === 'dm') it.respawnT = 25;
+    if (!(mode === 'coop' && it.def.key)) Net.send('take', { i: L.items.indexOf(it), lv: mode === 'coop' ? levelIndex : -1, n: myName() });
+  }
+  function spawnGhost(r, owner) {
+    if (!Array.isArray(r) || !PROJECTILES[r[0]]) return;
+    const def = PROJECTILES[r[0]];
+    L.projs.push({ kind: r[0], def, x: r[1] + Math.cos(r[4]) * 0.4, y: r[2] + Math.sin(r[4]) * 0.4, z: r[3], vx: Math.cos(r[4]) * def.speed, vy: Math.sin(r[4]) * def.speed,
+      owner, frames: S.proj[r[0]], life: def.life || 6, age: 0, fireA: r[4] });
+  }
+  function remoteShot(pe, wkey) {
+    const d = Math.hypot(pe.x - player.x, pe.y - player.y), w = weaponByKey(wkey);
+    if (pe.avatar) addLight(pe.x, pe.y, 1, 0.8, 0.4, 0.5, 2.5);
+    if (w && d < 12 && Sfx.play[w.sound] && !w.auto) Sfx.play[w.sound]();
+    else if (w && d < 12 && Math.random() < 0.3 && Sfx.play[w.sound]) Sfx.play[w.sound]();
+  }
+  // a monster gets hit while it's really another player
+  function hitAvatar(e, dmg, src) {
+    if (!online) return;
+    const add = (kind, x, y, d) => { const h = online.out[kind][e.peer] || (online.out[kind][e.peer] = [e.peer, 0, +x.toFixed(2), +y.toFixed(2)]); h[1] += d; };
+    if (mode === 'dm' && src === 'player') add('hit', player.x, player.y, dmg * DM_HIT);
+    else if (mode === 'coop' && online.host && src && typeof src === 'object' && !src.remote) add('hurt', src.x, src.y, dmg);
+  }
+  function applySnapshot(es) {
+    for (let i = 0; i < es.length; i++) {
+      const r = es[i];
+      let e = L.enemies[i];
+      if (!e) { if (!r[5] || !ENEMY_DEFS[r[5]]) continue; spawnEnemy(r[5], r[0] / 50, r[1] / 50); e = L.enemies[i]; if (!e) continue; e.state = 'chase'; }
+      e.nx = r[0] / 50; e.ny = r[1] / 50; e.hp = r[2];
+      const st = ST_NAME[r[3]] || 'chase', pd = Math.hypot(e.x - player.x, e.y - player.y);
+      if (st === 'dead') {
+        if (!e.dead) {
+          e.dead = true; e.state = 'dead'; e.frame = 0; e.t = 0; player.kills++;
+          if (e.type === 'barrel') { spawnFx('boom', e.x, e.y, 0.3, 1.1, 0.45); Sfx.play.explode(pd); }
+          else { Sfx.play[e.def.boss ? 'bossRoar' : 'enemyDie'](pd); spawnParts('drop', e.x, e.y, (e.fz || 0) + e.z + e.def.h * 0.55, 8, 1.6); }
+          if (e.def.boss) { L.bossDeadT = 3; msg = e.def.deathMsg || 'THE BOSS IS DOWN!'; msgT = 4; }
+        }
+        continue;
+      }
+      if (e.state === 'idle' && st !== 'idle') { Sfx.play[e.def.sight] && Sfx.play[e.def.sight](pd); if (e.def.boss) L.bossRef = e; }
+      if (st === 'attack' && e.state !== 'attack') { e.fired = true; Sfx.play[e.def.atkSound] && Sfx.play[e.def.atkSound](pd); }
+      if (st === 'pain' && e.state !== 'pain') Sfx.play.enemyPain(pd);
+      e.state = st;
+    }
+  }
+  function puppetEnemies(dt) {
+    for (const e of L.enemies) {
+      e.animT += dt;
+      if (e.dead) { if (e.type !== 'barrel' && e.frame < S.enemy[e.type].die.length - 1) { e.t += dt; if (e.t > 0.12) { e.t = 0; e.frame++; } } continue; }
+      if (e.nx !== undefined) { const k = Math.min(1, dt * 8); e.x += (e.nx - e.x) * k; e.y += (e.ny - e.y) * k; e.fz = floorAt(e.x, e.y); }
+    }
+  }
+  // keep an avatar in the world for every other player on this level
+  function syncAvatars(dt) {
+    for (const pe of online.peers.values()) {
+      const here = online.inGame && (mode === 'dm' || pe.lv === levelIndex) && pe.tx !== null;
+      if (!here) { if (pe.avatar) { L.avatars = L.avatars.filter(a => a !== pe.avatar); pe.avatar = null; } continue; }
+      if (!pe.avatar || !L.avatars.includes(pe.avatar)) {
+        pe.avatar = { type: 'av' + pe.color, def: AV_DEF, remote: true, peer: pe.id, x: pe.tx, y: pe.ty, fz: pe.fz, z: 0, hp: 100, state: 'static', animT: 0, frame: 0, t: 0, dead: false, target: null };
+        L.avatars.push(pe.avatar);
+      }
+      const av = pe.avatar, k = Math.min(1, dt * 10), ox = av.x, oy = av.y;
+      av.x += (pe.tx - av.x) * k; av.y += (pe.ty - av.y) * k; av.fz = pe.fz || floorAt(av.x, av.y);
+      if (Math.hypot(av.x - ox, av.y - oy) > 0.004) av.animT += dt;
+      if (pe.dead && !av.dead) { av.dead = true; av.frame = 0; av.t = 0; Sfx.play.enemyDie(Math.hypot(av.x - player.x, av.y - player.y)); }
+      if (!pe.dead && av.dead) av.dead = false;
+      if (av.dead && av.frame < S.enemy[av.type].die.length - 1) { av.t += dt; if (av.t > 0.12) { av.t = 0; av.frame++; } }
+    }
+  }
+  // co-op host: monsters also go after the other players
+  function retarget() {
+    for (const e of L.enemies) {
+      if (e.dead || e.type === 'barrel' || e.state === 'static') continue;
+      let best = null, bd = Math.hypot(e.x - player.x, e.y - player.y) * (player.dead ? 99 : 0.85);
+      for (const av of L.avatars) {
+        if (av.dead) continue;
+        const d = Math.hypot(av.x - e.x, av.y - e.y);
+        if (d < bd && d < 22 && losClear(e.x, e.y, av.x, av.y)) { best = av; bd = d; }
+      }
+      if (best && e.state === 'idle') wake(e);
+      if (best && (!e.target || e.target.remote)) e.target = best;
+      else if (!best && e.target && e.target.remote) e.target = null;
+    }
+  }
+  function netUpdate(dt) {
+    const o = online;
+    for (const pe of [...o.peers.values()]) if (time - pe.seen > 8) dropPeer(pe, `${pe.name} lost connection.`);
+    if (!online) return;
+    if (o.status === 'error' && !o.inGame) o.note = "Couldn't connect to the online server. Check your connection.";
+    if (state === 'lobby') {
+      o.hiT -= dt;
+      if (o.hiT <= 0 && o.status === 'ok') { o.hiT = 1.5; Net.send('hi', { n: myName() }); if (o.host) Net.send('room', { kind: onKind, lvl: onLvl, diff, started: false, n: myName() }); }
+      if (o.host) { o.kind = onKind; o.lvl = onLvl; }
+      return;
+    }
+    if (!o.inGame || !L) return;
+    syncAvatars(dt);
+    if (mode === 'coop' && o.host) { o.rt = (o.rt || 0) - dt; if (o.rt <= 0) { o.rt = 0.5; retarget(); } }
+    if (mode === 'dm') {
+      for (const it of L.items) if (it.taken && it.respawnT > 0) { it.respawnT -= dt; if (it.respawnT <= 0) { it.taken = false; spawnFx('gloomHit', it.x, it.y, 0.3, 0.5, 0.4); } }
+      if (player.dead && !o.deathSent) { o.deathSent = true; const k = o.lastHit && time - o.lastHit.t < 4 ? o.lastHit.id : Net.id; Net.send('frag', { k, v: Net.id, n: myName() }); addFrag(k, Net.id); }
+      if (state === 'playing' && levelTime >= DM_TIME) { state = 'dmOver'; stateT = 0; }
+    }
+    o.sendT -= dt;
+    if (o.sendT <= 0) {
+      o.sendT = 1 / 7; o.tick++;
+      const p = player, m = { n: myName(), x: +p.x.toFixed(2), y: +p.y.toFixed(2), a: +p.a.toFixed(2), z: +p.fz.toFixed(2), w: p.cur, d: p.dead ? 1 : 0, f: o.shots, lv: mode === 'coop' ? levelIndex : -1 };
+      if (o.pp.length) { m.pp = o.pp; o.pp = []; }
+      const hits = Object.values(o.out.hit), hurts = Object.values(o.out.hurt), dmgs = Object.entries(o.out.dmg);
+      if (hits.length) m.hit = hits.map(h => [h[0], Math.round(h[1] * 10) / 10, h[2], h[3]]);
+      if (hurts.length) m.hurt = hurts.map(h => [h[0], Math.round(h[1]), h[2], h[3]]);
+      if (dmgs.length) m.dmg = dmgs.map(([i, d]) => [+i, Math.round(d)]);
+      o.out = { hit: {}, hurt: {}, dmg: {} };
+      if (mode === 'coop' && o.host) {
+        if (o.ep.length) { m.ep = o.ep; o.ep = []; }
+        if (o.tick % 2 === 0) m.es = L.enemies.map((e, i) => { const r = [Math.round(e.x * 50), Math.round(e.y * 50), Math.max(0, Math.round(e.hp)), ST_CODE[e.state] ?? 1]; if (i >= L.baseEnemies) { r.push(0, e.type); } return r; });
+      }
+      Net.send('st', m);
+    }
+  }
+  // ---- online screens
+  const LOBBY_BTN = () => ({ start: { x: W / 2 - 110, y: 232, w: 100, h: 20 }, leave: { x: W / 2 + 10, y: 232, w: 100, h: 20 } });
+  function drawLobby() {
+    drawTitle();
+    ctx.fillStyle = 'rgba(5,0,10,0.93)'; ctx.fillRect(0, 0, W, H);
+    const o = online; if (!o) return;
+    ctx.font = '24px "Metal Mania", Impact, serif'; ctx.textAlign = 'center';
+    ctx.fillStyle = '#ff4fb8'; ctx.shadowColor = '#ff2d95'; ctx.shadowBlur = 10; ctx.fillText(o.host ? 'YOUR GAME' : 'JOINING A GAME', W / 2, 30); ctx.shadowBlur = 0;
+    label('ROOM CODE', W / 2, 48, '#c9a6c9', 'center', 8);
+    digits(o.code, W / 2, 80, 30, '#ffffff');
+    const kind = o.host ? onKind : o.kind, lvl = o.host ? onLvl : o.lvl;
+    label(kind === 'dm' ? `DEATHMATCH  -  first to ${DM_FRAGS} frags, ${DM_TIME / 60} minutes` : `CO-OP CAMPAIGN  -  starting at ${LEVELS[lvl].name}`, W / 2, 98, '#ffcf3a', 'center', 8);
+    const st = o.status === 'ok' ? '' : o.status === 'connecting' ? 'Connecting...' : o.note || "Couldn't connect to the online server.";
+    if (st) label(st, W / 2, 112, '#ffd0ec', 'center', 8);
+    label('PLAYERS', W / 2, 128, '#ff9be0', 'center', 8);
+    const list = [{ name: myName() + '  (you)' + (o.host ? '  - host' : ''), c: null }, ...[...o.peers.values()].map(pe => ({ name: pe.name + (pe.id === o.hostId ? '  - host' : ''), c: pe.color }))];
+    list.slice(0, 6).forEach((q, i) => label(q.name, W / 2, 142 + i * 11, q.c === null ? '#ffffff' : ['#ff4fb8', '#28dcff', '#78ff3c', '#ffc81e'][q.c], 'center', 8.5));
+    label(o.host ? (o.status === 'ok' ? 'Tell your friends the room code. Press START when everyone is here.' : '') : (o.status === 'ok' ? (o.hostId ? 'Waiting for the host to start...' : 'Looking for the host... check the room code.') : ''), W / 2, 220, '#c9a6c9', 'center', 7.5);
+    const b = LOBBY_BTN();
+    if (o.host) { ctx.fillStyle = o.status === 'ok' ? '#ff2d95' : '#5a2a45'; ctx.fillRect(b.start.x, b.start.y, b.start.w, b.start.h); label('START', b.start.x + b.start.w / 2, b.start.y + 14, '#ffffff', 'center', 10); }
+    ctx.fillStyle = 'rgba(255,79,184,0.25)'; const lv = o.host ? b.leave : { ...b.leave, x: W / 2 - 50 }; ctx.fillRect(lv.x, lv.y, lv.w, lv.h); label('LEAVE', lv.x + lv.w / 2, lv.y + 14, '#ffffff', 'center', 10);
+  }
+  function lobbyTap(ev) {
+    if (stateT < 0.3) return;
+    if (!ev || ev.clientX === undefined) { if (online.host) hostStart(); return; }
+    const g = gamePoint(ev.clientX, ev.clientY), b = LOBBY_BTN(), inB = r => g.x >= r.x - 4 && g.x <= r.x + r.w + 4 && g.y >= r.y - 4 && g.y <= r.y + r.h + 4;
+    if (online.host && inB(b.start)) hostStart();
+    else if (inB(online.host ? b.leave : { ...b.leave, x: W / 2 - 50 })) leaveOnline();
+  }
+  function fragTable() {
+    const rows = [{ id: Net.id, name: myName(), c: null }, ...[...online.peers.values()].map(pe => ({ id: pe.id, name: pe.name, c: pe.color }))];
+    for (const r of rows) r.f = online.frags[r.id] || 0;
+    return rows.sort((a, b) => b.f - a.f);
+  }
+  function drawOnlineHud() {
+    if (mode === 'dm') fragTable().slice(0, 5).forEach((r, i) => {
+      ctx.fillStyle = 'rgba(10,0,16,0.55)'; ctx.fillRect(W - 92, 20 + i * 10, 88, 9.5);
+      label(r.name, W - 88, 27.5 + i * 10, r.c === null ? '#ffffff' : ['#ff4fb8', '#28dcff', '#78ff3c', '#ffc81e'][r.c], 'left', 7);
+      label(String(r.f), W - 8, 27.5 + i * 10, '#ffcf3a', 'right', 7);
+    });
+    else label(`CO-OP  ${online.peers.size + 1} PLAYERS  -  ROOM ${online.code}`, W - 4, 27, '#ff9be0', 'right', 6.5);
+  }
+  function drawNameTags() {
+    const p = player, dirX = Math.cos(p.a), dirY = Math.sin(p.a);
+    for (const av of L.avatars) {
+      const pe = online.peers.get(av.peer); if (!pe || av.dead) continue;
+      const dx = av.x - p.x, dy = av.y - p.y, depth = dx * dirX + dy * dirY;
+      if (depth < 0.4 || depth > 16) continue;
+      const tX = (dirX * dy - dirY * dx) / PLANE, sx = (W / 2) * (1 + tX / depth);
+      if (sx < 0 || sx >= W) continue;
+      const zc = zbuf[Math.min(RW - 1, Math.max(0, Math.round(sx * QUALITY)))];
+      if (zc < depth - 0.3) continue;
+      const top = HOR + (p.eyeZ - (av.fz || 0) - av.def.h - 0.12) * PROJ / depth;
+      label(pe.name, sx, top, ['#ff4fb8', '#28dcff', '#78ff3c', '#ffc81e'][pe.color], 'center', Math.max(6, Math.min(9, 12 / depth + 5)));
+    }
+  }
+  function drawDmOver() {
+    drawTitle();
+    const rows = fragTable();
+    drawOverlayText(rows[0] && rows[0].id === Net.id ? 'YOU WIN!' : 'MATCH OVER', `${rows[0] ? rows[0].name : '???'} wins the Mosh Pit`, [
+      ...rows.slice(0, 6).map((r, i) => `${i + 1}.  ${r.name}   ${r.f} FRAGS`), '', stateT > 2 ? 'CLICK TO LEAVE' : ''], 14);
+  }
+
   // ------------------------------------------------------------------ level editor and shared levels
   function shareLevel(lvl) {
     const url = location.href.split('#')[0] + '#lvl=' + LevelCode.encode(lvl);
@@ -2325,6 +2694,7 @@
       if (show !== touchShown) { touchShown = show; document.getElementById('touch').style.display = show ? 'block' : 'none'; }
     }
     pollGamepad(dt);
+    if (online) netUpdate(dt);
     if (!paused) update(dt); else time += dt;
     draw();
     requestAnimationFrame(frame);
@@ -2342,6 +2712,6 @@
     titleImg = photos.title;
     state = 'title';
     // expose a tiny debug hook for testing
-    window.GOFFI = { get state() { return state; }, get player() { return player; }, get level() { return L; }, start: startGame, completeLevel, ach, ACHIEVEMENTS, get quality() { return QUALITY; }, get score() { return runScore; }, highScores, get diff() { return diff; }, set diff(v) { diff = v; }, continueGame, savedGame, setLevel: i => { levelIndex = i; loadLevel(i, null); state = 'playing'; }, get mode() { return mode; }, weeklyInfo, editor, LevelCode, get sharedLvl() { return sharedLvl; }, get levelTime() { return levelTime; }, set levelTime(v) { levelTime = v; } };
+    window.GOFFI = { get state() { return state; }, get player() { return player; }, get level() { return L; }, start: startGame, completeLevel, ach, ACHIEVEMENTS, get quality() { return QUALITY; }, get score() { return runScore; }, highScores, get diff() { return diff; }, set diff(v) { diff = v; }, continueGame, savedGame, setLevel: i => { levelIndex = i; loadLevel(i, null); state = 'playing'; }, get mode() { return mode; }, get online() { return online; }, Net, get menuPage() { return menuPage; }, weeklyInfo, editor, LevelCode, get sharedLvl() { return sharedLvl; }, get levelTime() { return levelTime; }, set levelTime(v) { levelTime = v; } };
   });
 })();
