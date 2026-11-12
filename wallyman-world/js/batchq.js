@@ -27,7 +27,7 @@ const Modern = (() => {
     }
     return out;
   }
-  const cache = new WeakMap();
+  const cache = new WeakMap(), painters = new WeakMap(); // painters: hand-made high-resolution versions of a sprite
   function upscale(img, k) {
     let w = img.width, h = img.height, px = new Uint32Array(img.getContext('2d').getImageData(0, 0, w, h).data.buffer);
     for (let s = 1; s < k; s *= 2) { px = epx(px, w, h); w *= 2; h *= 2; }
@@ -40,6 +40,8 @@ const Modern = (() => {
     if (e && e.dyn) return null;
     if (e && e.v === img._mv && e.w === w && e.h === h) return e;
     const changes = e ? (e.changes || 0) + 1 : 0;
+    const pf = painters.get(img);
+    if (pf) { const c = document.createElement('canvas'); c.width = w * 4; c.height = h * 4; const x = c.getContext('2d'); x.scale(4, 4); try { pf(x, w, h); } catch (err) { console.warn(err); } e = { c, k: 4, v: img._mv, w, h, changes: 0 }; cache.set(img, e); return e; }
     if (changes > 3) { cache.set(img, { dyn: true }); return null; } // a canvas redrawn all the time: draw it as it is
     const k = w * h <= 9000 ? 4 : 2;
     try { e = { c: upscale(img, k), k, v: img._mv, w, h, changes }; } catch (err) { e = { dyn: true }; }
@@ -73,7 +75,8 @@ const Modern = (() => {
     on = !!v; try { localStorage.setItem('wallyman-graphics', on ? 'modern' : 'retro'); } catch (e) { /* ignore */ }
     if (!on) { S = 1; cv.width = VW; cv.height = VH; ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.imageSmoothingEnabled = false; }
   }
-  return { on: () => on, set, frameStart, frameEnd, scale: () => S };
+  const paint = (img, fn) => { if (img) { painters.set(img, fn); cache.delete(img); } };
+  return { on: () => on, set, frameStart, frameEnd, scale: () => S, paint, painted: (img) => painters.has(img), _hd: (img) => { const e = hd(img); return e && e.c; } };
 })();
 { // every frame: draw in high resolution, then add the finishing touches
   const _ls = loopStep;
