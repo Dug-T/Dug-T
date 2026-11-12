@@ -66,6 +66,22 @@ flinches when hit, and her eyes glow pink when she picks up a new weapon.
   table with your initials.
 - **World leaderboard:** once the online leaderboard is set up (below), finished games are posted to a shared
   table, so friends anywhere can compete. The High Scores screen has **WORLD** and **THIS DEVICE** tabs.
+- **Weekly challenge:** every Monday a new challenge starts: one level plus a twist, such as Pistol Start,
+  Turbo Monsters, Glass Cannon, Lights Out, Rage Start or Full Arsenal. It's always played on Normal skill.
+  - The fastest time to the exit wins.
+  - Your best time this week is kept on the device.
+  - A new personal best can be signed onto the **weekly speed-run board** that everyone shares (setup below).
+  - The **QUIT** box at the top right (or Esc, then X) leaves a run.
+- **Level editor:** draw your own maps on a phone or a computer:
+  - **Placing things:** pick a tile on the right (walls, doors and keys, monsters, items, decorations) and draw
+    on the map. Tap Goffichick's start again to turn her.
+  - **Tools:** MOVE pans the map, ZOOM and UNDO work as you'd expect, SIZE makes the map 24 to 48 tiles square,
+    and THEME changes the walls, floor, sky and music.
+  - **Testing:** **PLAY** test-plays the level, and the **EDIT** box takes you back.
+  - **Saving:** three levels are kept on the device (tap the SLOT button to switch), and you can tap the name to
+    rename one.
+  - **Sharing:** **SHARE** makes a link with the whole level packed inside it. When friends open the link, the
+    title menu offers **PLAY FRIEND'S LEVEL**. No server is needed.
 
 ## Setting up the world leaderboard (Supabase, free)
 
@@ -87,6 +103,21 @@ flinches when hit, and her eyes glow pink when she picks up a new weapon.
 
    Players can only read scores and add new ones; nobody can edit or delete them from the game. You can
    remove silly entries yourself in Supabase's **Table Editor**.
+   For the **weekly challenge board**, run this too. If you skip it, the game still works and keeps weekly
+   times on each device.
+
+   ```sql
+   create table public.times (
+     id bigint generated always as identity primary key,
+     week integer not null check (week between 1 and 100000),
+     name text not null check (name ~ '^[A-Z0-9 ?]{1,3}$'),
+     time_ms integer not null check (time_ms between 5000 and 36000000),
+     created_at timestamptz not null default now()
+   );
+   alter table public.times enable row level security;
+   create policy "Anyone can read times" on public.times for select to anon using (true);
+   create policy "Anyone can add a time" on public.times for insert to anon with check (true);
+   ```
 3. In **Project Settings → API**, copy the **Project URL** and the **anon public** key into
    `SUPABASE_URL` and `SUPABASE_ANON_KEY` at the top of `js/leaderboard.js`.
 
@@ -194,7 +225,8 @@ js/textures.js      wall, floor and ceiling textures
 js/levels.js        maps and the map legend
 js/audio.js         synthesized sound effects and music (WebAudio)
 js/voice.js         Goffichick's voice lines (browser speech, or your own recordings)
-js/leaderboard.js   the shared world leaderboard (Supabase)
+js/leaderboard.js   the shared world leaderboard and weekly board (Supabase)
+js/editor.js        the level editor, level themes and share-link codes
 js/photo-data.js    the two photos, processed and embedded so the game works from file://
 assets/             the processed photo assets (Wally Man cut-out, HUD faces, title image)
 ```

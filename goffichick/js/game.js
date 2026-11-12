@@ -130,6 +130,9 @@
   let titleImg = null;
   let state = 'loading';
   let levelIndex = 0;
+  // what kind of run this is: 'campaign', 'weekly' (the weekly challenge), 'custom' (a friend's
+  // shared level) or 'test' (play-testing in the level editor)
+  let mode = 'campaign', soloDef = null, mods = { hurt: 1, hit: 1, speed: 1 }, campaignDiff = null;
   let L = null;            // current level runtime
   let player = null;
   let msg = '', msgT = 0;
@@ -159,7 +162,7 @@
 
   // ------------------------------------------------------------------ level loading
   function loadLevel(i, keep) {
-    const def = LEVELS[i];
+    const def = typeof i === 'number' ? LEVELS[i] : i;
     const rows = def.map;
     const mw = Math.max(...rows.map(r => r.length)), mh = rows.length;
     const grid = new Int16Array(mw * mh);
@@ -217,7 +220,7 @@
     for (const e of L.enemies) e.fz = fh[Math.floor(e.y) * mw + Math.floor(e.x)];
     levelTime = 0; L.flowFrom = -1;
     updateDynLights();
-    Sfx.setSong(i + 1);
+    Sfx.setSong(typeof i === 'number' ? i + 1 : def.song || 1);
     Sfx.setAmbience(def.ambience || (def.weather === 'rain' ? 'rain' : null));
     L.rain = []; L.lightningT = 4 + Math.random() * 8; L.flashA = 0;
     Voice.say('levelStart', 0.9, true);
@@ -968,6 +971,7 @@
 
   function damageEnemy(e, dmg, src) {
     if (e.dead) return;
+    if (src === 'player') dmg *= mods.hit;
     e.hp -= dmg;
     if (e.type === 'barrel') {
       if (e.hp <= 0) {
@@ -1021,7 +1025,7 @@
   function damagePlayer(dmg, fromX, fromY) {
     const p = player;
     if (p.dead || god || state !== 'playing' || p.pw.shroud > 0) return;
-    dmg = Math.round(dmg * DIFFS[diff].dmg);
+    dmg = Math.round(dmg * DIFFS[diff].dmg * mods.hurt);
     if (p.armor > 0) {
       const absorb = Math.min(p.armor, Math.floor(dmg * (p.armorType === 2 ? 0.5 : 0.333)));
       p.armor -= absorb; dmg -= absorb; if (p.armor <= 0) p.armorType = 0;
@@ -1227,7 +1231,7 @@
       const keepDist = d.attack === 'melee' || d.attack === 'charge' || d.charge ? d.radius + 0.55 : 1.4;
       if (pd > keepDist) {
         const [mx, my] = tg ? [pdx / pd, pdy / pd] : enemyMoveDir(e);
-        const sp = d.speed * sk.speed * dt * rush;
+        const sp = d.speed * sk.speed * mods.speed * dt * rush;
         const nx = e.x + mx * sp, ny = e.y + my * sp;
         // open doors in the way
         const ti = Math.floor(ny) * L.mw + Math.floor(nx);
@@ -1566,19 +1570,20 @@
     { id: 'wallyprime', name: "WALLY'S WORST DAY", desc: 'Defeat Wally Prime' },
     { id: 'popped', name: 'POPPED', desc: 'Defeat the Mega Smiley' },
     { id: 'cancelled', name: 'CANCELLED', desc: 'Defeat Wally Live!' },
+    { id: 'weekly', name: 'WEEKLY WARRIOR', desc: 'Finish a weekly challenge' },
     { id: 'theend', name: 'THE END OF CHEER', desc: 'Finish the whole game' },
   ];
   const ACH_KEY = 'goffichick-achievements';
   const ach = store.get(ACH_KEY) || { unlocked: {}, counts: {} };
   let cheated = false, achToasts = [], killTag = null, tagKills = 0;
   function unlock(id) {
-    if (cheated || ach.unlocked[id]) return;
+    if (cheated || mode === 'test' || mode === 'custom' || ach.unlocked[id]) return;
     const a = ACHIEVEMENTS.find(x => x.id === id); if (!a) return;
     ach.unlocked[id] = new Date().toISOString().slice(0, 10); store.set(ACH_KEY, ach);
     achToasts.push({ a, t: 0 }); Sfx.play.achievement();
   }
   function bump(counter, n = 1) {
-    if (cheated) return;
+    if (cheated || mode === 'test' || mode === 'custom') return;
     ach.counts[counter] = (ach.counts[counter] || 0) + n; store.set(ACH_KEY, ach);
     for (const a of ACHIEVEMENTS) if (a.count === counter && ach.counts[counter] >= a.need) unlock(a.id);
   }
@@ -1592,9 +1597,10 @@
   let scoresTab = Leaderboard.enabled ? 'world' : 'device', posted = null, postStatus = '';
   function openScores() { state = 'scores'; stateT = 0; scoresTab = Leaderboard.enabled ? 'world' : 'device'; Leaderboard.refresh(); }
   const ALPHA = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 ';
-  let initials = [6, 14, 5], initCur = 0; // "GOF"
+  let initials = [6, 14, 5], initCur = 0, nameFor = 'score'; // "GOF"
   function saveHighScore() {
     const name = initials.map(i => ALPHA[i]).join('').trim() || '???';
+    if (nameFor === 'weekly') { postWeekly(name); return; }
     const list = highScores(); const entry = { name, score: runScore, diff, date: new Date().toISOString().slice(0, 10) };
     list.push(entry); list.sort((a, b) => b.score - a.score);
     lastEntry = list.indexOf(entry); store.set(SCORES_KEY, list.slice(0, 10));
@@ -1619,8 +1625,11 @@
   let menuSel = 0;
   function menuItems() {
     const items = [], sv = savedGame();
+    if (sharedLvl) items.push({ id: 'shared', text: `PLAY FRIEND'S LEVEL: ${sharedLvl.name}` });
     if (sv) items.push({ id: 'continue', text: `CONTINUE  -  ${LEVELS[sv.level].name.split(':')[0]}, ${DIFFS[sv.diff].name}` });
     items.push({ id: 'new', text: 'NEW GAME' });
+    items.push({ id: 'weekly', text: `WEEKLY CHALLENGE  -  WEEK ${weeklyInfo().week}` });
+    items.push({ id: 'editor', text: 'LEVEL EDITOR' });
     items.push({ id: 'diff', text: `DIFFICULTY   <  ${DIFFS[diff].name}  >` });
     items.push({ id: 'gfx', text: `GRAPHICS   ${QUALITY > 1 ? 'HD' : 'CLASSIC'}` });
     items.push({ id: 'scores', text: 'HIGH SCORES' });
@@ -1631,6 +1640,9 @@
   function menuActivate(item, dir = 1) {
     if (item.id === 'continue') continueGame();
     else if (item.id === 'new') startGame();
+    else if (item.id === 'shared') startSolo('custom', customLevelDef(sharedLvl));
+    else if (item.id === 'weekly') openWeekly();
+    else if (item.id === 'editor') { state = 'editor'; stateT = 0; editor.open(); }
     else if (item.id === 'scores') { openScores(); lastEntry = -1; posted = null; postStatus = ''; }
     else if (item.id === 'ach') { state = 'achievements'; stateT = 0; }
     else if (item.id === 'gfx') { QUALITY = QUALITY > 1 ? 1 : 1.5; try { localStorage.setItem('goffichick-quality', String(QUALITY)); } catch (e) {} fitScreen(); Sfx.init(); Sfx.play.switch(); }
@@ -1638,7 +1650,7 @@
     else { diff = (diff + dir + DIFFS.length) % DIFFS.length; store.set(DIFF_KEY, diff); Sfx.init(); Sfx.play.switch(); }
     if (state === 'playing') lockPointer();
   }
-  const MENU_Y = 108, MENU_DY = 13;
+  const MENU_Y = 100, MENU_DY = 11;
   // a click / tap on the title screen: pick the menu row under it, or the highlighted one
   // On-screen arrow pad for the title menu (phones have no arrow keys): up / down move the
   // highlight, left / right change the difficulty, OK chooses the highlighted option.
@@ -1682,12 +1694,138 @@
         return;
       }
     }
-    const row = Math.floor((gy - (MENU_Y - 9)) / MENU_DY);
+    const row = Math.floor((gy - (MENU_Y - 8)) / MENU_DY);
     if (gx !== undefined && gx > 8 && gx < 215 && row >= 0 && row < items.length) { menuSel = row; menuActivate(items[row], 1); }
     else menuActivate(items[Math.min(menuSel, items.length - 1)], 1);
   }
+  // ---------------------------------------------------------------- weekly challenge, shared and test levels
+  const TWISTS = [
+    { id: 'pistol', name: 'PISTOL START', desc: 'Only your fists and the pistol. Find the rest on the way.' },
+    { id: 'turbo', name: 'TURBO MONSTERS', desc: 'Every monster moves 40% faster.' },
+    { id: 'glass', name: 'GLASS CANNON', desc: 'You hit twice as hard - and so do they.' },
+    { id: 'dark', name: 'LIGHTS OUT', desc: 'The power is off. Stay close to the torches.' },
+    { id: 'rage', name: 'RAGE START', desc: 'You start with the rage heart: fists hit ten times harder.' },
+    { id: 'arsenal', name: 'FULL ARSENAL', desc: 'Every weapon, full ammo and the spiked corset.' },
+  ];
+  const WEEK_MS = 7 * 864e5, WEEK_EPOCH = Date.UTC(2026, 0, 5); // weeks start on Monday (UTC)
+  function weeklyInfo(now = Date.now()) {
+    const week = Math.floor((now - WEEK_EPOCH) / WEEK_MS) + 1, m = (a, n) => ((a % n) + n) % n;
+    return { week, lvl: m(week * 4, LEVELS.length), twist: TWISTS[m(week * 5, TWISTS.length)], ends: WEEK_EPOCH + week * WEEK_MS };
+  }
+  const WEEKLY_KEY = 'goffichick-weekly';
+  let weeklyRun = null, soloResult = null, weeklyPost = null, ignoreTapUntil = 0;
+  const fmtMs = t => `${Math.floor(t / 60)}:${(t % 60).toFixed(1).padStart(4, '0')}`;
+  const weeklyBest = wk => { const r = store.get(WEEKLY_KEY); return r && r.week === wk ? r.best : undefined; };
+  function openWeekly() { weeklyRun = weeklyInfo(); weeklyPost = null; state = 'weekly'; stateT = 0; Leaderboard.refreshWeekly(weeklyRun.week); }
+  function applyTwist(t) {
+    const p = player;
+    if (t.id === 'pistol') {
+      for (const w of WEAPONS) p.weapons[w.key] = w.key === 'knuckles' || w.key === 'pistol';
+      for (const k in p.ammo) p.ammo[k] = k === 'bullets' ? 50 : 0;
+      p.cur = 'pistol';
+    } else if (t.id === 'turbo') mods.speed = 1.4;
+    else if (t.id === 'glass') { mods.hurt = 2; mods.hit = 2; }
+    else if (t.id === 'dark') { for (let i = 0; i < L.light.length; i++) { L.light[i] *= 0.45; L.lightNow[i] *= 0.45; } for (const z of L.zones) z.level *= 0.45; }
+    else if (t.id === 'rage') { p.berserk = true; p.cur = 'knuckles'; }
+    else if (t.id === 'arsenal') { for (const k in AMMO_TYPES) p.ammo[k] = AMMO_TYPES[k].max; p.armor = 200; p.armorType = 2; }
+  }
+  function loadSolo() {
+    mods = { hurt: 1, hit: 1, speed: 1 };
+    loadLevel(soloDef, null);
+    if (mode === 'weekly') { applyTwist(weeklyRun.twist); msg = `WEEKLY CHALLENGE: ${weeklyRun.twist.name}`; msgT = 4; }
+  }
+  function startSolo(m, def) {
+    if (mode === 'campaign') campaignDiff = diff;
+    mode = m; soloDef = def; god = false; cheated = false; carry = null; runScore = 0; paused = false;
+    if (m === 'weekly') { diff = 1; weeklyRun = weeklyInfo(); }
+    loadSolo(); beginPlay();
+  }
+  // leave a weekly / shared / test run and go back to the title screen (or the editor)
+  function leaveSolo(to = 'title') {
+    if (campaignDiff !== null) diff = campaignDiff;
+    campaignDiff = null; mode = 'campaign'; mods = { hurt: 1, hit: 1, speed: 1 }; paused = false; fireHeld = false;
+    Sfx.setAmbience(null);
+    if (document.exitPointerLock && locked()) document.exitPointerLock();
+    state = to; stateT = 0; ignoreTapUntil = performance.now() + 400;
+  }
+  function quitSolo() { leaveSolo(mode === 'test' ? 'editor' : 'title'); }
+  function soloComplete() {
+    soloResult = { time: levelTime, name: L.def.name, kills: L.totalKills ? Math.min(100, Math.round(player.kills / L.totalKills * 100)) : 100 };
+    Voice.say('exit', 0.8, true);
+    if (mode === 'test') { leaveSolo('editor'); editor.flash(`Cleared in ${fmtMs(soloResult.time)} with ${soloResult.kills}% kills!`); return; }
+    if (mode === 'weekly') {
+      const best = weeklyBest(weeklyRun.week);
+      soloResult.newBest = best === undefined || soloResult.time < best;
+      soloResult.best = soloResult.newBest ? soloResult.time : best;
+      if (soloResult.newBest) store.set(WEEKLY_KEY, { week: weeklyRun.week, best: soloResult.time });
+      unlock('weekly');
+      state = 'weeklyDone'; stateT = 0; return;
+    }
+    state = 'customDone'; stateT = 0;
+  }
+  function postWeekly(name) {
+    nameFor = 'score';
+    const entry = { week: weeklyRun.week, name, ms: Math.round(soloResult.time * 1000) };
+    weeklyPost = { name, ms: entry.ms, status: 'Posting your time to the weekly board...' };
+    state = 'weekly'; stateT = 0;
+    Leaderboard.submitTime(entry).then(ok => {
+      weeklyPost.status = ok ? 'Your time is on the weekly board!' : Leaderboard.weekly.status === 'missing' ? "The weekly board isn't set up yet (the times table is missing)." : "Couldn't post online (no connection?). Your best is kept on this device.";
+    });
+  }
+  const PLAY_BTN = () => ({ x: W / 2 - 50, y: 236, w: 100, h: 20 });
+  function drawWeekly() {
+    drawTitle();
+    ctx.fillStyle = 'rgba(5,0,10,0.93)'; ctx.fillRect(0, 0, W, H);
+    const wk = weeklyRun, lv = LEVELS[wk.lvl];
+    ctx.font = '24px "Metal Mania", Impact, serif'; ctx.textAlign = 'center';
+    ctx.fillStyle = '#ff4fb8'; ctx.shadowColor = '#ff2d95'; ctx.shadowBlur = 10; ctx.fillText('WEEKLY CHALLENGE', W / 2, 30); ctx.shadowBlur = 0;
+    label(`WEEK ${wk.week}:  ${lv.name}`, W / 2, 46, '#ffffff', 'center', 9);
+    label(`TWIST - ${wk.twist.name}: ${wk.twist.desc}`, W / 2, 58, '#ffcf3a', 'center', 7.5);
+    const left = Math.max(0, wk.ends - Date.now()), dd = Math.floor(left / 864e5), hh = Math.floor(left % 864e5 / 36e5);
+    label(`Fastest time to the exit wins. Normal skill, cheats off. A new challenge in ${dd}d ${hh}h.`, W / 2, 70, '#c9a6c9', 'center', 7);
+    label('FASTEST THIS WEEK', W / 2, 88, '#ff9be0', 'center', 8);
+    const B = Leaderboard.weekly;
+    if (!Leaderboard.enabled) label('The online board is off - your best time is kept on this device.', W / 2, 120, '#ffd0ec', 'center', 8);
+    else if (B.status === 'loading') label('Loading the weekly board...', W / 2, 120, '#ffd0ec', 'center', 8);
+    else if (B.status === 'missing') label("The weekly board isn't set up yet (the times table is missing).", W / 2, 120, '#ffd0ec', 'center', 8);
+    else if (B.status === 'error') label("Couldn't reach the weekly board. Check your connection.", W / 2, 120, '#ffd0ec', 'center', 8);
+    else if (!(B.list || []).length) label('Nobody has finished it yet. Be the first!', W / 2, 120, '#ffd0ec', 'center', 8);
+    else B.list.forEach((e, i) => {
+      const y = 101 + i * 11, me = weeklyPost && e.name === weeklyPost.name && e.ms === weeklyPost.ms;
+      if (me) { ctx.fillStyle = 'rgba(255,79,184,0.25)'; ctx.fillRect(W / 2 - 110, y - 8, 220, 10); }
+      label(`${i + 1}.`, W / 2 - 80, y, '#c9a6c9', 'right', 8);
+      label(e.name, W / 2 - 70, y, me ? '#ffffff' : '#ff9be0', 'left', 8);
+      label(fmtMs(e.ms / 1000), W / 2 + 40, y, '#ffcf3a', 'right', 8);
+      label(e.date.slice(5), W / 2 + 80, y, '#8a6a8a', 'right', 7);
+    });
+    const best = weeklyBest(wk.week);
+    label(best === undefined ? 'You have not finished this week yet.' : `YOUR BEST THIS WEEK: ${fmtMs(best)}`, W / 2, 216, '#ffffff', 'center', 8);
+    if (weeklyPost) label(weeklyPost.status, W / 2, 228, '#ffcf3a', 'center', 7);
+    const b = PLAY_BTN();
+    ctx.fillStyle = '#ff2d95'; ctx.fillRect(b.x, b.y, b.w, b.h);
+    label('PLAY', W / 2, b.y + 14, '#ffffff', 'center', 10);
+    label('ENTER / PLAY to start  -  tap anywhere else to go back', W / 2, 266, '#8a6a8a', 'center', 6.5);
+  }
+  function weeklyTap(ev) {
+    if (stateT < 0.3) return;
+    let play = true;
+    if (ev && ev.clientX !== undefined) { const g = gamePoint(ev.clientX, ev.clientY), b = PLAY_BTN(); play = g.x >= b.x - 6 && g.x <= b.x + b.w + 6 && g.y >= b.y - 6 && g.y <= b.y + b.h + 6; }
+    if (play) startSolo('weekly', LEVELS[weeklyInfo().lvl]); else leaveSolo('title');
+  }
+  // the little QUIT / EDIT box at the top right during a weekly, shared or test run
+  const QUIT_BOX = () => ({ x: W - 44, y: 2, w: 40, h: 14 });
+  function drawSoloHud() {
+    if (mode === 'campaign' || state !== 'playing') return;
+    const b = QUIT_BOX();
+    ctx.fillStyle = 'rgba(10,0,16,0.6)'; ctx.fillRect(b.x, b.y, b.w, b.h);
+    ctx.strokeStyle = '#ff4fb8'; ctx.lineWidth = 1; ctx.strokeRect(b.x + 0.5, b.y + 0.5, b.w - 1, b.h - 1);
+    label(mode === 'test' ? 'EDIT' : 'QUIT', b.x + b.w / 2, b.y + 10, '#ffffff', 'center', 7.5);
+    ctx.fillStyle = 'rgba(10,0,16,0.6)'; ctx.fillRect(b.x - 48, b.y, 46, b.h);
+    label(fmtMs(levelTime), b.x - 6, b.y + 10, '#ffcf3a', 'right', 8);
+  }
   function completeLevel() {
     if (state !== 'playing') return;
+    if (mode !== 'campaign') { soloComplete(); return; }
     interStats = { name: L.def.name, kills: L.totalKills ? Math.min(100, Math.round(player.kills / L.totalKills * 100)) : 100,
       items: L.totalItems ? Math.round(player.items / L.totalItems * 100) : 100,
       secrets: L.totalSecrets ? Math.round(player.secrets / L.totalSecrets * 100) : 100, time: levelTime, par: L.def.par || 240 };
@@ -1714,6 +1852,7 @@
     loadLevel(levelIndex, carry); state = 'playing';
   }
   function restartLevel() {
+    if (mode !== 'campaign') { loadSolo(); state = 'playing'; return; }
     loadLevel(levelIndex, carry ? { ...carry, health: 100 } : null); state = 'playing';
   }
 
@@ -1767,16 +1906,16 @@
       const items = menuItems(); menuSel = Math.min(menuSel, items.length - 1);
       items.forEach((it, i) => {
         const sel = i === menuSel, y = MENU_Y + i * MENU_DY;
-        if (sel) { ctx.fillStyle = 'rgba(255,79,184,0.18)'; ctx.fillRect(12, y - 9, 203, 12); }
-        label((sel ? '> ' : '  ') + it.text, 16, y, sel ? '#ffffff' : '#ff9be0', 'left', 9);
+        if (sel) { ctx.fillStyle = 'rgba(255,79,184,0.18)'; ctx.fillRect(12, y - 8, 203, 11); }
+        label((sel ? '> ' : '  ') + it.text, 16, y, sel ? '#ffffff' : '#ff9be0', 'left', 8.5);
       });
       if (state === 'title') drawTitlePad();
     }
     const lines = ['WASD / ARROWS  move      MOUSE  look (click to lock)', 'CLICK / CTRL   fire      E / SPACE  switches, lifts, secrets',
       '1-9 / Q / WHEEL  weapons   SHIFT run   TAB map   M music'];
-    lines.forEach((l, i) => label(l, 18, 206 + i * 9, '#b78ab7', 'left', 6.5));
-    label('Keys open coloured doors. Stairs and lifts take you up. V toggles her voice. Gamepads work too.', 18, 236, '#8a6a8a', 'left', 6.5);
-    label('ON A PHONE? Left stick moves, drag right side to look.', 18, 246, '#7a5a7a', 'left', 6.5);
+    lines.forEach((l, i) => label(l, 18, 212 + i * 8, '#b78ab7', 'left', 6.5));
+    label('Keys open coloured doors. Stairs and lifts take you up. V toggles her voice. Gamepads work too.', 18, 238, '#8a6a8a', 'left', 6.5);
+    label('ON A PHONE? Left stick moves, drag right side to look.', 18, 247, '#7a5a7a', 'left', 6.5);
   }
 
   function drawOverlayText(title, sub, lines, dy = 16) {
@@ -1834,7 +1973,7 @@
   // arcade-style initials: three letter boxes and an OK button
   const NAME_BOX = i => ({ x: W / 2 - 75 + i * 40, y: 112, w: 32, h: 40 }), NAME_OK = () => ({ x: W / 2 + 55, y: 120, w: 44, h: 24 });
   function drawEnterName() {
-    drawTitle(); drawOverlayText('NEW HIGH SCORE', `${runScore.toLocaleString()} points - enter your initials`, []);
+    drawTitle(); drawOverlayText(nameFor === 'weekly' ? 'WEEKLY BOARD' : 'NEW HIGH SCORE', nameFor === 'weekly' ? `${fmtMs(soloResult.time)} - enter your initials` : `${runScore.toLocaleString()} points - enter your initials`, []);
     for (let i = 0; i < 3; i++) {
       const b = NAME_BOX(i);
       ctx.fillStyle = i === initCur ? 'rgba(255,79,184,0.35)' : 'rgba(255,255,255,0.08)'; ctx.fillRect(b.x, b.y, b.w, b.h);
@@ -1862,6 +2001,21 @@
     if (state === 'scores') { drawScores(); return; }
     if (state === 'achievements') { drawAchievements(); return; }
     if (state === 'enterName') { drawEnterName(); return; }
+    if (state === 'editor') { editor.draw(1 / 60); return; }
+    if (state === 'weekly') { drawWeekly(); return; }
+    if (state === 'weeklyDone') {
+      drawTitle();
+      const r = soloResult, canPost = Leaderboard.enabled && !cheated && r.newBest;
+      drawOverlayText('CHALLENGE COMPLETE', `WEEK ${weeklyRun.week}: ${r.name} - ${weeklyRun.twist.name}`, [
+        `TIME  ${fmtMs(r.time)}`, r.newBest ? 'NEW PERSONAL BEST!' : `YOUR BEST  ${fmtMs(r.best)}`, `KILLS  ${r.kills}%`, cheated ? 'Cheats were used - this run is not posted.' : '',
+        stateT > 1.5 ? (canPost ? 'CLICK TO SIGN THE WEEKLY BOARD' : 'CLICK TO SEE THE WEEKLY BOARD') : ''], 16);
+      return;
+    }
+    if (state === 'customDone') {
+      drawTitle();
+      drawOverlayText('LEVEL CLEARED', soloResult.name, [`TIME  ${fmtMs(soloResult.time)}`, `KILLS  ${soloResult.kills}%`, '', 'Want to make your own? Try the LEVEL EDITOR!', stateT > 1.5 ? 'CLICK TO CONTINUE' : ''], 16);
+      return;
+    }
     if (state === 'intermission' || state === 'victory') {
       if (state === 'victory') {
         drawTitle();
@@ -1957,7 +2111,8 @@
         label('Too much positivity. Click to rise again.', W / 2, 110, '#ffd0ec', 'center', 9);
       }
     }
-    if (paused) drawOverlayText('PAUSED', 'Click to resume', []);
+    drawSoloHud();
+    if (paused) drawOverlayText('PAUSED', mode === 'campaign' ? 'Click to resume' : 'Click to resume  -  press X to quit', []);
     if (isTouch && !sideways && window.innerHeight > window.innerWidth) {
       ctx.fillStyle = 'rgba(10,0,16,0.75)'; ctx.fillRect(0, VIEW_H - 16, W, 16);
       label('Turn your phone sideways for full screen', W / 2, VIEW_H - 5, '#ff9be0', 'center', 8);
@@ -1974,6 +2129,19 @@
   }
   function primaryAction(ev) {
     Sfx.init();
+    if (performance.now() < ignoreTapUntil) return true;
+    if (state === 'editor') return true;
+    if (state === 'weekly') { weeklyTap(ev); return true; }
+    if (state === 'weeklyDone' && stateT > 1.5) {
+      if (Leaderboard.enabled && !cheated && soloResult.newBest) { nameFor = 'weekly'; state = 'enterName'; initCur = 0; stateT = 0; }
+      else { state = 'weekly'; stateT = 0; Leaderboard.refreshWeekly(weeklyRun.week); }
+      return true;
+    }
+    if (state === 'customDone' && stateT > 1.5) { leaveSolo('title'); return true; }
+    if (state === 'playing' && mode !== 'campaign' && ev && ev.clientX !== undefined && !locked()) {
+      const g = gamePoint(ev.clientX, ev.clientY), b = QUIT_BOX();
+      if (g.x >= b.x - 6 && g.x <= b.x + b.w + 6 && g.y >= b.y - 4 && g.y <= b.y + b.h + 8) { quitSolo(); return true; }
+    }
     if (state === 'title') {
       if (ev && ev.clientX !== undefined) { const g = gamePoint(ev.clientX, ev.clientY); titleTap(g.x, g.y); }
       else titleTap();
@@ -2000,7 +2168,10 @@
 
   window.addEventListener('keydown', e => {
     if (['Tab', 'Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault();
+    if (state === 'editor') { editor.key(e.code); return; }
+    if (state === 'weekly' && (e.code === 'Escape' || e.code === 'Backspace')) { leaveSolo('title'); return; }
     keys[e.code] = true;
+    if (paused && e.code === 'KeyX' && mode !== 'campaign' && state === 'playing') { quitSolo(); return; }
     if (state === 'title') {
       const items = menuItems();
       if (e.code === 'ArrowUp') menuSel = (menuSel + items.length - 1) % items.length;
@@ -2043,8 +2214,20 @@
   // without pointer lock (e.g. inside an embedded frame) drag with the mouse to look
   let dragX = null;
   canvas.addEventListener('mousemove', e => { if (!locked() && (e.buttons & 1) && dragX !== null && state === 'playing') mouseDX += (e.clientX - dragX) * 1.5; dragX = e.clientX; });
-  canvas.addEventListener('wheel', e => { if (state === 'playing') { cycleWeapon(e.deltaY > 0 ? 1 : -1); e.preventDefault(); } }, { passive: false });
+  canvas.addEventListener('wheel', e => { if (state === 'editor') { editor.wheel(e.deltaY); e.preventDefault(); return; } if (state === 'playing') { cycleWeapon(e.deltaY > 0 ? 1 : -1); e.preventDefault(); } }, { passive: false });
   document.addEventListener('pointerlockchange', () => { if (!locked() && state === 'playing' && !isTouch) { /* stay running; click relocks */ } });
+
+  // ---- the level editor's own pointer input (mouse and touch)
+  let edPtr = null;
+  canvas.addEventListener('pointerdown', e => {
+    if (state !== 'editor' || performance.now() < ignoreTapUntil) return;
+    edPtr = e.pointerId; try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
+    const g = gamePoint(e.clientX, e.clientY); editor.down(g.x, g.y);
+    if (state !== 'editor') ignoreTapUntil = performance.now() + 400; // it started a test or went back to the title
+  });
+  canvas.addEventListener('pointermove', e => { if (state === 'editor' && e.pointerId === edPtr) { const g = gamePoint(e.clientX, e.clientY); editor.move(g.x, g.y); } });
+  const edUp = e => { if (e.pointerId !== edPtr) return; edPtr = null; if (state === 'editor') editor.up(); };
+  canvas.addEventListener('pointerup', edUp); canvas.addEventListener('pointercancel', edUp);
 
   // ---- touch controls
   let isTouch = false;
@@ -2101,6 +2284,31 @@
   }
   for (const ev of ['gesturestart', 'gesturechange', 'dblclick', 'contextmenu']) document.addEventListener(ev, blockGesture, { passive: false });
 
+  // ------------------------------------------------------------------ level editor and shared levels
+  function shareLevel(lvl) {
+    const url = location.href.split('#')[0] + '#lvl=' + LevelCode.encode(lvl);
+    const copy = () => (navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(url) : Promise.reject(new Error('no clipboard')))
+      .then(() => 'Link copied - paste it to your friends!', () => { window.prompt('Copy this link and send it to your friends:', url); return 'Send that link to your friends!'; });
+    if (navigator.share) return navigator.share({ title: 'Goffichick', text: `Play my Goffichick level "${lvl.name}"!`, url }).then(() => 'Shared!', err => err && err.name === 'AbortError' ? 'Share cancelled.' : copy());
+    return copy();
+  }
+  const editor = makeEditor({
+    get ctx() { return ctx; }, W: () => W, H,
+    label: (...a) => label(...a), sprites: () => S, textures: Textures, sfx: Sfx.play,
+    onTest: (lvl, warn) => { startSolo('test', customLevelDef(lvl)); if (warn) { msg = warn; msgT = 4; } },
+    onExit: () => { state = 'title'; stateT = 0; ignoreTapUntil = performance.now() + 400; },
+    share: shareLevel,
+  });
+  let sharedLvl = null;
+  function readSharedLevel() {
+    const m = /[#&]lvl=([\w-]+)/.exec(location.hash);
+    sharedLvl = m ? LevelCode.decode(m[1], validTile) : null;
+    if (sharedLvl && !checkLevel(sharedLvl).ok) sharedLvl = null;
+    if (sharedLvl) menuSel = 0;
+  }
+  readSharedLevel();
+  window.addEventListener('hashchange', readSharedLevel);
+
   // ------------------------------------------------------------------ boot
   function loadImages(map) {
     return Promise.all(Object.entries(map).map(([k, src]) => new Promise((res, rej) => {
@@ -2134,6 +2342,6 @@
     titleImg = photos.title;
     state = 'title';
     // expose a tiny debug hook for testing
-    window.GOFFI = { get state() { return state; }, get player() { return player; }, get level() { return L; }, start: startGame, completeLevel, ach, ACHIEVEMENTS, get quality() { return QUALITY; }, get score() { return runScore; }, highScores, get diff() { return diff; }, set diff(v) { diff = v; }, continueGame, savedGame, setLevel: i => { levelIndex = i; loadLevel(i, null); state = 'playing'; } };
+    window.GOFFI = { get state() { return state; }, get player() { return player; }, get level() { return L; }, start: startGame, completeLevel, ach, ACHIEVEMENTS, get quality() { return QUALITY; }, get score() { return runScore; }, highScores, get diff() { return diff; }, set diff(v) { diff = v; }, continueGame, savedGame, setLevel: i => { levelIndex = i; loadLevel(i, null); state = 'playing'; }, get mode() { return mode; }, weeklyInfo, editor, LevelCode, get sharedLvl() { return sharedLvl; }, get levelTime() { return levelTime; }, set levelTime(v) { levelTime = v; } };
   });
 })();
