@@ -148,7 +148,7 @@ function PhotoPuzzleScene() {
   const load = (pic) => {
     const c = Sprites.canvas(VW, VH), x = c.getContext('2d');
     if (pic.url) { const im = new Image(); im.onload = () => x.drawImage(im, 0, 0, VW, VH); im.src = pic.url; }
-    else { drawParallax(pic.theme, 40); for (let i = 0; i < 3; i++) Wally.draw(ctx, 70 + i * 58, 200, 'win' + (i & 1), 1, { t: 0, hero: ['wally', 'goth', 'doug'][i], sx: 2, sy: 2 }); try { x.drawImage(cv, 0, 0); } catch (e) { /* ignore */ } }
+    else { drawParallax(pic.theme, 40); for (let i = 0; i < 3; i++) Wally.draw(ctx, 70 + i * 58, 200, 'win' + (i & 1), 1, { t: 0, hero: ['wally', 'goth', 'doug'][i], sx: 2, sy: 2 }); try { x.drawImage(cv, 0, 0, VW, VH); } catch (e) { /* ignore */ } }
     return c;
   };
   const solved = () => tiles.every((v, i) => v === i);

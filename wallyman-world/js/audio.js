@@ -3,7 +3,8 @@
 // plus an echo send for that warm SNES "reverb". All music here is original.
 const Audio8 = (() => {
   let ctx = null, master, musicBus, sfxBus, echoIn, noiseBuf, waves = {};
-  let enabled = true, musicVol = 1, sfxVol = 1;
+  let enabled = true, musicVol = 1, sfxVol = 1, modern = false, revSend = null;
+  try { modern = localStorage.getItem('wallyman-sound-style') === 'modern'; } catch (e) { /* ignore */ }
   try { const m = localStorage.getItem('wallyman-music-vol'), f = localStorage.getItem('wallyman-sfx-vol'); if (m !== null) musicVol = +m; if (f !== null) sfxVol = +f; } catch (e) { /* ignore */ }
   try { enabled = localStorage.getItem('wallyman-sound') !== 'off'; } catch (e) { /* ignore */ }
 
@@ -42,10 +43,41 @@ const Audio8 = (() => {
     const data = noiseBuf.getChannelData(0);
     for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
     waves.p12 = pulseWave(0.125); waves.p25 = pulseWave(0.25); waves.p50 = pulseWave(0.5);
+    // modern style: a warm saw-like lead, a soft bell and a round organ, plus a hall reverb
+    const harm = (fn) => { const n = 32, re = new Float32Array(n), im = new Float32Array(n); for (let i = 1; i < n; i++) im[i] = fn(i); return ctx.createPeriodicWave(re, im); };
+    waves.mWarm = harm((i) => Math.pow(1 / i, 1.35) * (i > 12 ? 0.4 : 1)); waves.mBell = harm((i) => (i === 1 ? 1 : i === 2 ? 0.35 : i === 4 ? 0.2 : i === 6 ? 0.08 : 0)); waves.mOrgan = harm((i) => (i % 2 ? 1 / i : 0.25 / i));
+    try {
+      const len = Math.floor(ctx.sampleRate * 2.4), ir = ctx.createBuffer(2, len, ctx.sampleRate);
+      for (let ch = 0; ch < 2; ch++) { const d = ir.getChannelData(ch); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.6); }
+      const conv = ctx.createConvolver(); conv.buffer = ir; revSend = ctx.createGain(); revSend.gain.value = 0.32;
+      const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 180; revSend.connect(hp); hp.connect(conv); conv.connect(master);
+    } catch (e) { revSend = null; }
     setInterval(tick, 25);
   }
 
+  const MODERN_WAVE = { p12: 'mWarm', p25: 'mWarm', p50: 'mOrgan', square: 'mOrgan', sawtooth: 'mWarm' };
+  function toneModern(wave, f, t, dur, vol, bus, o) { // two detuned voices panned apart, a soft filter, and reverb
+    const mw = bus === musicBus && wave === 'triangle' ? null : MODERN_WAVE[wave] || (wave === 'triangle' ? 'mBell' : null);
+    const out = ctx.createGain(), lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = Math.min(12000, f * (bus === musicBus ? 7 : 10)); lp.Q.value = 0.6;
+    const a = Math.max(o.attack || 0.005, mw ? 0.012 : 0.006), rel = (o.release || 0.05) * 1.8, v = vol * (mw ? 0.85 : 1);
+    out.gain.setValueAtTime(0.0001, t); out.gain.linearRampToValueAtTime(v, t + a);
+    if (o.decay) out.gain.exponentialRampToValueAtTime(Math.max(0.0001, v * o.decay), t + dur); else out.gain.setValueAtTime(v, t + Math.max(a, dur - rel));
+    out.gain.exponentialRampToValueAtTime(0.0001, t + dur + rel);
+    const voices = mw ? [[-7, -0.35], [7, 0.35]] : [[0, 0]];
+    for (const [cents, pan] of voices) {
+      const osc = ctx.createOscillator(); if (mw) osc.setPeriodicWave(waves[mw]); else osc.type = wave === 'triangle' ? 'triangle' : wave;
+      osc.frequency.setValueAtTime(f, t); osc.detune.value = cents;
+      if (o.slide) osc.frequency.exponentialRampToValueAtTime(Math.max(20, o.slide), t + (o.slideT || dur));
+      if (o.vib && dur > 0.25) { const lfo = ctx.createOscillator(), lg = ctx.createGain(); lfo.frequency.value = 5; lg.gain.setValueAtTime(0, t); lg.gain.linearRampToValueAtTime(f * 0.008, t + Math.min(0.4, dur)); lfo.connect(lg); lg.connect(osc.frequency); lfo.start(t); lfo.stop(t + dur + 0.1); }
+      const g = ctx.createGain(); g.gain.value = mw ? 0.55 : 1;
+      let node = g; if (pan && ctx.createStereoPanner) { const p = ctx.createStereoPanner(); p.pan.value = pan; g.connect(p); node = p; }
+      osc.connect(g); node.connect(lp); osc.start(t); osc.stop(t + dur + rel + 0.05);
+    }
+    lp.connect(out); out.connect(bus);
+    if (revSend) { const s = ctx.createGain(); s.gain.value = bus === musicBus ? 0.55 : 0.3; out.connect(s); s.connect(revSend); }
+  }
   function tone(wave, f, t, dur, vol, bus, o = {}) {
+    if (modern) return toneModern(wave, f, t, dur, vol, bus, o);
     const osc = ctx.createOscillator(), g = ctx.createGain();
     if (waves[wave]) osc.setPeriodicWave(waves[wave]); else osc.type = wave;
     osc.frequency.setValueAtTime(f, t);
@@ -75,6 +107,13 @@ const Audio8 = (() => {
     s.start(t, Math.random() * 0.5); s.stop(t + dur + 0.02);
   }
   function drum(kind, t) {
+    if (modern) { // punchier, cleaner kit
+      if (kind === 'k') { tone('sine', 140, t, 0.22, 0.85, musicBus, { slide: 38, slideT: 0.16, decay: 0.01 }); noise(t, 0.02, 0.12, musicBus, 'highpass', 4000); }
+      else if (kind === 's') { noise(t, 0.2, 0.3, musicBus, 'bandpass', 2200, 0.5); tone('triangle', 190, t, 0.08, 0.22, musicBus, { decay: 0.1 }); if (revSend) { const g = ctx.createGain(); g.gain.value = 0.4; noise(t, 0.12, 0.15, g, 'highpass', 1500); g.connect(revSend); } }
+      else if (kind === 'h') noise(t, 0.03, 0.06, musicBus, 'highpass', 9000, 0.7);
+      else if (kind === 'o') noise(t, 0.22, 0.06, musicBus, 'highpass', 8000, 0.7);
+      return;
+    }
     if (kind === 'k') tone('sine', 160, t, 0.12, 0.7, musicBus, { slide: 42, slideT: 0.12, decay: 0.01 });
     else if (kind === 's') { noise(t, 0.13, 0.32, musicBus, 'bandpass', 1900, 0.7); tone('triangle', 210, t, 0.06, 0.2, musicBus, { decay: 0.1 }); }
     else if (kind === 'h') noise(t, 0.035, 0.09, musicBus, 'highpass', 7500);
@@ -504,5 +543,5 @@ const Audio8 = (() => {
     grain(t, len + 0.6, 0.9 * loud, 'lowpass', 160, 0.7, 0.05 + d * 0.3); // deep body for headphones and big speakers
     grain(t + len * 0.4, len * 0.8, 0.5 * loud, 'lowpass', 420, 0.7, 0.2); // a long low tail
   }
-  return { addSong(n, d) { SONGS[n] = d; delete compiled[n]; if (curName === n) { cur = null; curName = null; } }, sfxNames: () => Object.keys(SFX), songStep: () => (cur && ctx ? (ctx.currentTime - t0) / cur.stepDur : -1), songs: () => Object.keys(SONGS), thunder, ambience, setVolume, getVolume, init, unlock: init, play, stop, sfx, setEnabled, isEnabled: () => enabled, current: () => curName };
+  return { addSong(n, d) { SONGS[n] = d; delete compiled[n]; if (curName === n) { cur = null; curName = null; } }, sfxNames: () => Object.keys(SFX), songStep: () => (cur && ctx ? (ctx.currentTime - t0) / cur.stepDur : -1), songs: () => Object.keys(SONGS), thunder, ambience, style: () => (modern ? 'modern' : 'retro'), setStyle(v) { modern = v === 'modern'; try { localStorage.setItem('wallyman-sound-style', modern ? 'modern' : 'retro'); } catch (e) { /* ignore */ } }, setVolume, getVolume, init, unlock: init, play, stop, sfx, setEnabled, isEnabled: () => enabled, current: () => curName };
 })();
