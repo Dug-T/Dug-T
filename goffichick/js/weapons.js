@@ -31,6 +31,7 @@ const AMMO_TYPES = {
   skulls: { name: 'SKULLS', max: 50 },
   rockets: { name: 'ROCKETS', max: 50 },
   fuel: { name: 'FUEL', max: 300 },
+  bolts: { name: 'BOLTS', max: 50 },
   souls: { name: 'SOULS', max: 300 },
 };
 
@@ -154,6 +155,32 @@ const WDraw = (() => {
 })();
 
 const WEAPONS = [
+  {
+    slot: 1, key: 'chainsaw', name: 'CHAINSAW', ammo: null, cost: 0, cooldown: 0.1,
+    type: 'melee', damage: [5, 10], range: 1.35, sound: 'saw', kick: 0, auto: true, saw: true,
+    draw(g, cx, by, phase, flash, t) {
+      const { lin, poly, ell, rr, metal, gripHand, supportHand, supportFingers } = WDraw;
+      const cutting = phase > 0, j = cutting ? (Math.random() - 0.5) * 3 : Math.sin((t || 0) * 30) * 0.8; // idles with a rumble
+      const x = cx + 8 + j, yb = by - 46 + (cutting ? 2 : 0), yf = by - 132;
+      supportHand(g, x - 4, yb - 6, 30, 1.05);
+      // guide bar with a moving chain
+      poly(g, metal(g, x - 14, x + 14, 'steel'), [x - 13, yb, x - 8, yf + 6, x + 8, yf + 6, x + 13, yb]);
+      ell(g, metal(g, x - 8, x + 8, 'steel'), x, yf + 6, 8, 4);
+      const off = ((t || 0) * (cutting ? 90 : 14)) % 6;
+      for (const side of [-1, 1]) for (let k = 0; k < 16; k++) {
+        const f = ((k * 6 + off) % 96) / 96, yy = yb + (yf + 6 - yb) * f, hw = 13 - 5 * f;
+        poly(g, '#1a1a1e', [x + side * hw, yy, x + side * (hw + 3.5 - f * 1.5), yy - 2, x + side * hw, yy - 4]);
+      }
+      // engine body: orange casing, pull handle, exhaust smoke
+      rr(g, lin(g, x - 30, 0, x + 30, 0, [[0, '#7a3a08'], [0.35, '#ff8a1a'], [0.55, '#ffb24a'], [1, '#6a2a04']]), x - 30, yb - 4, 60, 56, 10);
+      rr(g, metal(g, x - 22, x + 22, 'gun'), x - 22, yb + 6, 44, 12, 3);
+      for (let k = 0; k < 5; k++) rr(g, 'rgba(0,0,0,0.5)', x - 18 + k * 8, yb + 9, 4, 6, 1);
+      rr(g, '#141416', x - 34, yb - 14, 12, 26, 4);
+      if (cutting) for (let k = 0; k < 3; k++) ell(g, `rgba(200,200,200,${0.35 - k * 0.1})`, x + 30 + k * 6, yb - 6 - k * 8, 5 + k * 3, 4 + k * 2);
+      supportFingers(g, x - 4, yb - 8, 32, 1.05);
+      gripHand(g, x + 26, by - 6, 1.1, 1);
+    },
+  },
   {
     slot: 1, key: 'knuckles', name: 'SPIKED KNUCKLES', ammo: null, cost: 0, cooldown: 0.42,
     type: 'melee', damage: [10, 28], range: 1.3, sound: 'punch', kick: 0,
@@ -444,6 +471,47 @@ const WEAPONS = [
       g.restore();
       supportFingers(g, x, yb - 28, 36, 1.05);
       gripHand(g, x + 24, by - 6, 1.1, 1);
+    },
+  },
+  {
+    slot: 9, key: 'batbow', name: 'BAT-BOW', ammo: 'bolts', cost: 1, cooldown: 0.7,
+    type: 'projectile', projectile: 'bat', sound: 'bow', kick: 2,
+    draw(g, cx, by, phase, flash) {
+      const { lin, poly, ell, rr, metal, wood, gripHand, supportHand, supportFingers } = WDraw;
+      const rec = phase > 0 ? Math.sin(Math.min(1, phase * 2) * Math.PI) * 10 : 0;
+      const loaded = phase === 0 || phase > 0.6, x = cx + 4, yb = by - 40 + rec, yf = by - 118 + rec;
+      supportHand(g, x, yb - 28, 30, 1.05);
+      // stock
+      wood(g, [x - 10, yb + 60, x - 8, yf + 18, x + 8, yf + 18, x + 10, yb + 60], x - 12, x + 12);
+      // the bow arms swept back like bat wings
+      const pull = loaded ? 10 : 0;
+      for (const sd of [-1, 1]) {
+        poly(g, metal(g, x - 60, x + 60, 'gun'), [x, yf + 14, x + sd * 62, yf + 26, x + sd * 58, yf + 32, x + sd * 34, yf + 26, x + sd * 22, yf + 36, x, yf + 22]);
+        g.strokeStyle = '#d8d8e0'; g.lineWidth = 1; g.beginPath(); g.moveTo(x + sd * 60, yf + 29); g.lineTo(x, yf + 40 + pull); g.stroke();
+      }
+      if (loaded) { // a silver bat bolt on the rail
+        rr(g, metal(g, x - 2, x + 2, 'steel'), x - 1.5, yf + 8, 3, 34, 1);
+        poly(g, metal(g, x - 9, x + 9, 'steel'), [x, yf + 2, x - 9, yf - 1, x - 6, yf + 4, x - 10, yf + 6, x - 3, yf + 9, x, yf + 7, x + 3, yf + 9, x + 10, yf + 6, x + 6, yf + 4, x + 9, yf - 1]);
+      }
+      supportFingers(g, x, yb - 30, 22, 1.05);
+      gripHand(g, x + 22, by - 6, 1.1, 1);
+    },
+  },
+  {
+    slot: 9, key: 'doomscroll', name: 'DOOM SCROLL', ammo: 'souls', cost: 2, cooldown: 0.45,
+    type: 'zap', damage: [28, 46], chain: 2, range: 18, sound: 'zap', kick: 1,
+    draw(g, cx, by, phase, flash, t) {
+      const { lin, rad, poly, ell, rr, gripHand } = WDraw;
+      const x = cx + 30, y = by - 92 + (phase > 0 ? 3 : 0);
+      // phone in hand, screen glowing with an endless feed
+      rr(g, '#0c0c10', x - 22, y, 44, 82, 8); rr(g, '#2a2a34', x - 22, y, 44, 82, 8);
+      rr(g, '#0c0c10', x - 19, y + 3, 38, 76, 6);
+      const scr = lin(g, 0, y + 6, 0, y + 74, [[0, '#ff4fb8'], [0.5, '#8a2be2'], [1, '#2a0a5a']]);
+      rr(g, scr, x - 17, y + 6, 34, 70, 4);
+      const sc = ((t || 0) * 40) % 14;
+      for (let k = 0; k < 6; k++) { const yy = y + 8 + k * 14 - sc; if (yy < y + 6 || yy > y + 70) continue; rr(g, 'rgba(255,255,255,0.75)', x - 13, yy, 26, 3, 1); rr(g, 'rgba(255,255,255,0.4)', x - 13, yy + 5, 18, 2, 1); }
+      if (flash || phase > 0 && phase < 0.25) { g.save(); g.globalCompositeOperation = 'lighter'; ell(g, rad(g, x, y + 2, 40, [[0, 'rgba(220,180,255,0.95)'], [1, 'rgba(120,40,255,0)']]), x, y + 2, 40, 30); g.restore(); }
+      gripHand(g, x + 4, y + 70, 1.1, 1);
     },
   },
   {

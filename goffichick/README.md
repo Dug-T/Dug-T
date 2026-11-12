@@ -17,7 +17,7 @@ Open `goffichick/index.html` in a browser (double-click works, since all art is 
 | Mouse | Look (click the game to lock the mouse) |
 | Left click / Ctrl | Fire |
 | E / Space | Press switches, open secret walls (doors open by themselves) |
-| 1-8, Q, mouse wheel | Change weapon |
+| 1-9, Q, mouse wheel | Change weapon |
 | Shift | Run |
 | Tab | Automap |
 | M | Music on/off |
@@ -51,6 +51,11 @@ flinches when hit, and her eyes glow pink when she picks up a new weapon.
 - **Graphics:** coloured dynamic lighting (rockets, flames, explosions, plasma, torches, muzzle flashes and
   toxic sludge light up their surroundings), glow halos, sparks, blood spray and gibs, a panoramic sky outdoors, a
   shaded weapon that picks up the room's light, and an **HD / Classic** graphics option on the title menu.
+- **Gamepads:** Xbox / PlayStation / Switch-style controllers. Left stick move, right stick turn, RT fire, A use,
+  LB / RB change weapon, click the left stick to run, Back = map, Start = pause; the D-pad and A work in menus.
+- **Achievements:** 15 to unlock (see ACHIEVEMENTS on the title menu). Using cheats switches them off for that run.
+- **Atmosphere:** background sound for each level (wind, fluorescent hum, birds, rain), buzzing flickering lights,
+  a metal clunk on locked doors, footsteps, and rain with lightning and thunder on stormy levels.
 - **Monster infighting:** monsters that get hit by a different kind of monster turn on each other.
 - **Goffichick's voice:** she comments on level starts, kills, bosses, pickups, secrets and getting hurt.
   The lines are spoken with the browser's speech voice and shown as subtitles. Press **V**, or use the title menu,
@@ -127,6 +132,9 @@ same slot), Q, or scroll. Weapon pickups on the maps give ammo for that weapon.
 | 5 | **Skull Launcher** | skulls | Explosive flaming skulls |
 | 6 | **Hexcaster** | souls | Rapid-fire purple plasma |
 | 8 | **Flamethrower** | fuel | Short-range stream of fire; sets enemies (and barrels) alight so they keep burning |
+| 1 | **Chainsaw** | none | Press 1 for the chainsaw, again for the knuckles; cuts continuously |
+| 9 | **Bat-Bow** | bolts | Crossbow firing silver bat bolts that pierce every monster in a line |
+| 9 | **Doom Scroll** | 2 souls | A phone that zaps a monster with lightning, which jumps to 2 more nearby |
 | 7 | **B.F.G. (Big Freakin' Gloom)** | 40 souls | Charges, then fires a gloom orb. On impact it also hits everything in front of you |
 
 ## Music
