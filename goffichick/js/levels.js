@@ -294,6 +294,7 @@ const LEVELS = [
   },
   {
     name: 'E2M3: SUNSHINE PARK', par: 240,
+    sky: true,
     floor: 'grass',
     ceil: 'sky',
     fog: [150, 190, 225],

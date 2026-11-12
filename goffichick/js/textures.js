@@ -323,5 +323,25 @@ const Textures = (() => {
   }, 10));
   F.slime = F.slimeFrames[0];
 
-  return { walls: T, flats: F };
+  // Panoramic sky for outdoor levels (wraps around twice as you turn a full circle)
+  const sky = (() => {
+    const SW = 512, SH = 128, c = document.createElement('canvas'); c.width = SW; c.height = SH;
+    const g = c.getContext('2d');
+    const gr = g.createLinearGradient(0, 0, 0, SH); gr.addColorStop(0, '#2a6fd8'); gr.addColorStop(0.55, '#7ec8ff'); gr.addColorStop(0.85, '#ffd9a8'); gr.addColorStop(1, '#ffb0c8');
+    g.fillStyle = gr; g.fillRect(0, 0, SW, SH);
+    const sun = g.createRadialGradient(140, 52, 0, 140, 52, 46); sun.addColorStop(0, 'rgba(255,250,210,1)'); sun.addColorStop(0.25, 'rgba(255,236,150,0.9)'); sun.addColorStop(1, 'rgba(255,220,120,0)');
+    g.fillStyle = sun; g.fillRect(90, 6, 100, 100);
+    for (let i = 0; i < 14; i++) { // fluffy clouds (drawn twice so they wrap seamlessly)
+      const x = rnd() * SW, y = 14 + rnd() * 60, w = 20 + rnd() * 40;
+      for (const ox of [0, -SW, SW]) for (let k = 0; k < 6; k++) {
+        g.fillStyle = `rgba(255,255,255,${0.55 + rnd() * 0.35})`; g.beginPath(); g.ellipse(x + ox + k * w / 5 - w / 2, y + Math.sin(k * 1.7) * 3, w / 4, w / 7, 0, 0, 7); g.fill();
+      }
+    }
+    g.fillStyle = '#5a9a4a'; g.beginPath(); g.moveTo(0, SH); // distant green hills
+    for (let x = 0; x <= SW; x += 8) g.lineTo(x, SH - 8 - Math.sin(x / SW * Math.PI * 6) * 5 - Math.sin(x / SW * Math.PI * 14) * 2);
+    g.lineTo(SW, SH); g.fill();
+    return { w: SW, h: SH, canvas: c, data: new Uint32Array(g.getImageData(0, 0, SW, SH).data.buffer.slice(0)) };
+  })();
+
+  return { walls: T, flats: F, sky };
 })();

@@ -48,6 +48,9 @@ flinches when hit, and her eyes glow pink when she picks up a new weapon.
   - **Night Shroud:** invulnerable (30s).
   - **Gas Mask:** toxic sludge is harmless (60s).
   - **Rage Heart:** your fists hit 10 times harder for the rest of the level.
+- **Graphics:** coloured dynamic lighting (rockets, flames, explosions, plasma, torches, muzzle flashes and
+  toxic sludge light up their surroundings), glow halos, sparks, blood spray and gibs, a panoramic sky outdoors, a
+  shaded weapon that picks up the room's light, and an **HD / Classic** graphics option on the title menu.
 - **Monster infighting:** monsters that get hit by a different kind of monster turn on each other.
 - **Goffichick's voice:** she comments on level starts, kills, bosses, pickups, secrets and getting hurt.
   The lines are spoken with the browser's speech voice and shown as subtitles. Press **V**, or use the title menu,
