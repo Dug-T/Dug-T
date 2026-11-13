@@ -464,6 +464,8 @@ function OptionsScene() { // eslint-disable-line no-func-assign
     ['DIFFICULTY', { get: () => `< ${DIFF[Settings.get('difficulty')].name} >`, step: (d) => Settings.set('difficulty', order[(order.indexOf(Settings.get('difficulty')) + d + 3) % 3]) }],
     ['MUSIC', { vol: 'music' }], ['SOUND FX', { vol: 'sfx' }],
     ['SOUND', { get: () => (Audio8.isEnabled() ? 'ON' : 'OFF'), set: () => Audio8.setEnabled(!Audio8.isEnabled()) }],
+    ['GRAPHICS', { get: () => `< ${typeof Modern !== 'undefined' && Modern.on() ? 'MODERN' : 'RETRO'} >`, step: () => { if (typeof Modern !== 'undefined') Modern.set(!Modern.on()); } }],
+    ['SOUND STYLE', { get: () => `< ${Audio8.style() === 'modern' ? 'MODERN' : 'RETRO'} >`, step: () => { Audio8.setStyle(Audio8.style() === 'modern' ? 'retro' : 'modern'); Audio8.sfx('coin'); } }],
     ['CRT FILTER', { get: () => (Settings.get('crt') ? 'ON' : 'OFF'), set: () => Settings.set('crt', !Settings.get('crt')) }],
     ['SCREEN SHAKE', { get: () => (Settings.get('shake') ? 'ON' : 'OFF'), set: () => Settings.set('shake', !Settings.get('shake')) }],
     ['RUMBLE', toggle('rumble')], ['PET', toggle('pet')], ['WEATHER', toggle('weather')],
@@ -478,7 +480,7 @@ function OptionsScene() { // eslint-disable-line no-func-assign
     ['TOUCH LAYOUT', { go: () => TouchLayoutScene() }],
     ['CONTROLS', { go: () => ControlsScene() }], ['BACK', { back: true }],
   ];
-  const TIPS = { ASSIST: { OFF: 'ASSIST MODE IS OFF', SLOW: 'SLOW: THE GAME RUNS AT 75% SPEED', HEARTS: 'HEARTS: NEVER RUN OUT OF HEARTS', WIDE: 'WIDE: BIGGER PLATFORMS, NARROWER GAPS', ALL: 'ALL: SLOW + HEARTS + WIDE' }, EVENTS: 'SEASONAL EVENTS SWITCH ON BY DATE', 'HERO QUIPS': 'YOUR HERO SOMETIMES SAYS A LINE OUT LOUD', CAPTIONS: 'SUBTITLES FOR EVERY SPOKEN LINE', 'AUTO-RUN': 'YOUR HERO RUNS BY ITSELF - JUST JUMP!', 'ONE BUTTON': 'AUTO-RUN, AND EVERY BUTTON JUMPS', 'TOUCH LAYOUT': 'MOVE AND RESIZE THE ON-SCREEN BUTTONS', LANGUAGE: 'MENUS IN ENGLISH, SPANISH, FRENCH OR GERMAN', 'INTRO VOICE': 'SOMETIMES A VOICE SAYS HELLO AT THE START', RADAR: 'MAP OF MISSING MEDALS IN BEATEN LEVELS', CONTROLS: 'CHANGE YOUR KEYS AND PAD BUTTONS', COLORS: 'COLOUR FILTERS TO HELP TELL THINGS APART', 'READABLE TEXT': 'BOLD OUTLINES ON ALL TEXT', PET: 'A LITTLE BUDDY WHO TAKES A HIT', WEATHER: 'RAIN, STORMS AND SNOW OUTDOORS' };
+  const TIPS = { GRAPHICS: 'MODERN: HD, SMOOTH SPRITES, SHADOWS', 'SOUND STYLE': 'MODERN: RICHER INSTRUMENTS AND REVERB', ASSIST: { OFF: 'ASSIST MODE IS OFF', SLOW: 'SLOW: THE GAME RUNS AT 75% SPEED', HEARTS: 'HEARTS: NEVER RUN OUT OF HEARTS', WIDE: 'WIDE: BIGGER PLATFORMS, NARROWER GAPS', ALL: 'ALL: SLOW + HEARTS + WIDE' }, EVENTS: 'SEASONAL EVENTS SWITCH ON BY DATE', 'HERO QUIPS': 'YOUR HERO SOMETIMES SAYS A LINE OUT LOUD', CAPTIONS: 'SUBTITLES FOR EVERY SPOKEN LINE', 'AUTO-RUN': 'YOUR HERO RUNS BY ITSELF - JUST JUMP!', 'ONE BUTTON': 'AUTO-RUN, AND EVERY BUTTON JUMPS', 'TOUCH LAYOUT': 'MOVE AND RESIZE THE ON-SCREEN BUTTONS', LANGUAGE: 'MENUS IN ENGLISH, SPANISH, FRENCH OR GERMAN', 'INTRO VOICE': 'SOMETIMES A VOICE SAYS HELLO AT THE START', RADAR: 'MAP OF MISSING MEDALS IN BEATEN LEVELS', CONTROLS: 'CHANGE YOUR KEYS AND PAD BUTTONS', COLORS: 'COLOUR FILTERS TO HELP TELL THINGS APART', 'READABLE TEXT': 'BOLD OUTLINES ON ALL TEXT', PET: 'A LITTLE BUDDY WHO TAKES A HIT', WEATHER: 'RAIN, STORMS AND SNOW OUTDOORS' };
   let sel = 0, t = 0;
   return {
     enter() { Audio8.play('menu'); },

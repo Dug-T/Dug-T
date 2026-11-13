@@ -146,7 +146,7 @@ const PhotoAlbum = (() => {
   const list = () => lsJ(KEY, []);
   return {
     list,
-    add(src) { try { const c = document.createElement('canvas'); c.width = VW; c.height = VH; c.getContext('2d').drawImage(src, 0, 0); const l = list(); l.unshift({ at: Date.now(), img: c.toDataURL('image/jpeg', 0.82) }); while (l.length > 10) l.pop(); lsS(KEY, l); if (!lsJ(KEY, null)) { l.length = Math.max(1, l.length - 3); lsS(KEY, l); } } catch (e) { /* storage full */ } },
+    add(src) { try { const c = document.createElement('canvas'); c.width = VW; c.height = VH; c.getContext('2d').drawImage(src, 0, 0, VW, VH); const l = list(); l.unshift({ at: Date.now(), img: c.toDataURL('image/jpeg', 0.82) }); while (l.length > 10) l.pop(); lsS(KEY, l); if (!lsJ(KEY, null)) { l.length = Math.max(1, l.length - 3); lsS(KEY, l); } } catch (e) { /* storage full */ } },
     remove(i) { const l = list(); l.splice(i, 1); lsS(KEY, l); },
   };
 })();

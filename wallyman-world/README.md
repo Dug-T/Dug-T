@@ -2,7 +2,7 @@
 
 A 16-bit style side-scrolling platformer starring **WallyMan**, built in plain HTML5 + JavaScript (no installs, no build step).
 
-**Current version: Update 1.6.** The update number shows on a ribbon under the title logo. It is set by `GAME_VERSION` at the top of `js/game.js`, and each new update adds 0.1 (1.1, 1.2, 1.3 and so on). Each update also changes the `?v=` number on the script tags in `index.html` and the cache name in `sw.js`, so browsers fetch the new files instead of showing old saved copies.
+**Current version: Update 1.7.** The update number shows on a ribbon under the title logo. It is set by `GAME_VERSION` at the top of `js/game.js`, and each new update adds 0.1 (1.1, 1.2, 1.3 and so on). Each update also changes the `?v=` number on the script tags in `index.html` and the cache name in `sw.js`, so browsers fetch the new files instead of showing old saved copies.
 
 ## Play
 
@@ -24,6 +24,7 @@ Open `index.html` in any modern browser — or enable **GitHub Pages** for this 
 ## What's in it
 
 - **Saves on every device** – the game keeps each player's progress in their own browser. If a browser looks like it won't keep saves (for example a claude.ai link opened while signed out), the title screen says so, S shows a **save code** for each file, and quitting to the title offers one too.
+- **Modern graphics and sound** (Update 1.7, Options → GRAPHICS and SOUND STYLE) – the retro look and chiptune sound stay the default. MODERN graphics draw the screen at your display's real resolution, smooth every sprite, tile and background with a pixel-art upscaler, use a modern typeface, and add soft shadows, sky haze, sunlight and a gentle vignette. Some art is being redrawn by hand for MODERN mode, a little more in each update: WallyMan (every pose and costume), the Grumble, Prickle, Buzzer and Hopper, and the grass, earth, brick and stone tiles of every world are already new; everything else uses the smoothed pixel art for now. On the title screen, press B to switch between RETRO and MODERN. MODERN sound swaps the chiptune pulse waves for warmer instruments with a stereo chorus, adds a hall reverb and punchier drums, and softens the sound effects.
 - **Count Dracula** (Update 1.4) – waits in the middle of Wally's Backyard. When he appears, night falls for the rest of the level: his castle rises on a new background layer under a full moon with clouds drifting past, and a thunderstorm comes and goes with clear moonlit spells in between (each lightning flash is followed by thunder a few seconds later). He bites when you get close (watch for his fangs), and when he wraps his cape around himself he turns into a bat and flies over you to your other side. Stomp him three times while he's in his cape.
 - **Haunted Hollow** – a 12th island (ghost train from the Clockwork Kingdom): furniture that wakes up and chases you (stomp it – wardrobes take two), **mirrors** that open the secret wall they show while you stand in front of them, a pitch-dark library, and the **Phantom Organist**, whose music turns into notes and shockwaves – stomp him while he rests at the bench.
 - **Bug's-Eye Garden** – a 13th island where WallyMan is tiny: giant plants, **ladybirds** to ride over gaps, **dew drops** to bounce on, and **ant hills** that send out marching ants. **Queen Wasp** dives at you – stomp her while her stinger is stuck in the ground.
@@ -272,6 +273,9 @@ js/batchm2.js       Update 1.2: mini golf, pinball, quiz, Garden Defence, kitche
 js/batchn.js        Update 1.3: Haunted Hollow, Bug's-Eye Garden, Baron's Revenge and the new ending, Iron Hero, Mega Boss Rush, Level Maker pieces, Weather Machine
 js/batchn2.js       Update 1.3: Card Battle, Grumble Bowling, Party Board, Arcade Corner, Air Hockey
 js/batchn3.js       Update 1.3: Fossil Museum, Pet Show, Photo Puzzles, menus
+js/batchp.js        Update 1.6: playing sideways (landscape layout, full screen)
+js/batchq.js        Update 1.7: modern graphics (high resolution, smoothed sprites, modern text, shadows, light)
+js/batchr.js        Update 1.7: hand-drawn high-resolution art for modern mode (WallyMan, 4 enemies, ground tiles)
 js/batcho.js        Update 1.4: Count Dracula, his castle, the full moon and the passing storm in Wally's Backyard
 js/batchj2.js       Dino Valley map, completion, mirror/rematch menus, card and photo albums, theatre, Music Maker, Maker worlds, Party Mode
 js/batchi2.js       Pirate Cove map, airship, tower/gold menus, garden, pets, mini-games, hero maker, cloud save, Level of the Week, touch editor, Level Maker parts
