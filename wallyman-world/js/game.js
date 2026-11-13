@@ -5,7 +5,7 @@ const ctx = cv.getContext('2d');
 ctx.imageSmoothingEnabled = false;
 let frame = 0;
 // the game's update number, shown on the title screen: 1.0 is the first, and each new update adds 0.1 (1.1, 1.2, ...)
-const GAME_VERSION = '1.7';
+const GAME_VERSION = '1.8';
 const SOLID = new Set(['#', 'B', 'W', 'P', 'S', 'O', 'A', 'V', 'Q', 'D', 'N', 'T', 'E', 'H', '[', ']', '{', 'F', '+', '}', '?', '`', 'U', 'X', '^', 'J', 'R', '<', '>', 'Y']);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const approach = (v, t, d) => (v < t ? Math.min(t, v + d) : Math.max(t, v - d));
@@ -42,12 +42,62 @@ const Input = (() => {
     if (v && !touch[k]) hit[k] = 1;
     touch[k] = v ? 1 : 0; el.classList.toggle('on', v);
   });
+  const exactKey = (x, y) => { const el = document.elementFromPoint(x, y), btn = el && el.closest ? el.closest('[data-k]') : null; return btn ? btn.dataset.k : null; };
+  // Button reach (Update 1.8), like a modern mobile shooter: a thumb doesn't have to
+  // land exactly on a button. A thumb near the D-pad becomes a stick: its direction is
+  // read from the D-pad's centre wherever it slides, and the centre follows a thumb that
+  // goes too far so turning back is instant. A thumb near A, B or S takes the nearest
+  // one and keeps it held while it drifts, until it slides onto another of them.
+  // OFF gives the old exact buttons. Every finger is re-read on every touch event, so
+  // nothing can stay stuck down.
+  const REACH = [null, { act: 48, stick: 110, start: 10 }, { act: 80, stick: 170, start: 16 }];
+  const reachLevel = () => { try { const v = localStorage.getItem('wallyman-touch-reach'); return v === '0' ? 0 : v === '2' ? 2 : 1; } catch (e) { return 1; } };
+  const fingers = new Map(), DIRS = ['up', 'down', 'left', 'right'], ACTS = ['jump', 'run', 'special'];
+  const edgeDist = (r, x, y) => Math.hypot(Math.max(r.left - x, 0, x - r.right), Math.max(r.top - y, 0, y - r.bottom));
+  const nearest = (x, y, keys, maxD) => {
+    let best = null, bd = Infinity;
+    for (const el of btns) { if (!keys.includes(el.dataset.k)) continue; const r = el.getBoundingClientRect(); if (!r.width || !r.height) continue; const e = edgeDist(r, x, y); if (e > maxD) continue; const d = e + 0.01 * Math.hypot(x - (r.left + r.right) / 2, y - (r.top + r.bottom) / 2); if (d < bd) { bd = d; best = el.dataset.k; } }
+    return best;
+  };
+  const dpadGeo = () => {
+    const g = document.querySelector('#pad .dpad'), b = (k) => { const el = g && g.querySelector(`[data-k="${k}"]`); return el ? el.getBoundingClientRect() : null; };
+    const up = b('up'), dn = b('down'); if (!g || !up || !dn || !dn.width) return null;
+    return { rect: g.getBoundingClientRect(), cx: (dn.left + dn.right) / 2, cy: (up.bottom + dn.top) / 2, size: dn.width };
+  };
+  const stickDirs = (f, x, y, held) => {
+    const geo = dpadGeo(); if (!geo) return;
+    const R = geo.size * 1.1, dead = geo.size * 0.2;
+    let dx = x - f.ax, dy = y - f.ay; const d = Math.hypot(dx, dy);
+    if (d > R) { f.ax = x - (dx * R) / d; f.ay = y - (dy * R) / d; dx = x - f.ax; dy = y - f.ay; } // the centre follows the thumb
+    if (Math.abs(dx) > dead && Math.abs(dx) >= Math.abs(dy) * 0.5) held.add(dx < 0 ? 'left' : 'right');
+    if (Math.abs(dy) > dead && Math.abs(dy) > Math.abs(dx)) held.add(dy < 0 ? 'up' : 'down');
+  };
   const fromTouches = (list) => {
-    const held = new Set();
+    const held = new Set(), lv = reachLevel(), T = REACH[lv];
+    if (!T) { fingers.clear(); for (const t of list) { const k = exactKey(t.clientX, t.clientY); if (k) held.add(k); } press(held); return; }
+    const live = new Set();
     for (const t of list) {
-      const el = document.elementFromPoint(t.clientX, t.clientY), btn = el && el.closest ? el.closest('[data-k]') : null;
-      if (btn) held.add(btn.dataset.k);
+      const x = t.clientX, y = t.clientY, id = t.identifier; live.add(id);
+      let f = fingers.get(id);
+      if (!f) { // a new finger: decide what it belongs to
+        const k = exactKey(x, y), geo = dpadGeo();
+        if (k && DIRS.includes(k) && geo) f = { kind: 'stick', ax: geo.cx, ay: geo.cy };
+        else if (k) f = { kind: 'btn', k };
+        else {
+          const a = nearest(x, y, ACTS, T.act), nearPad = geo && edgeDist(geo.rect, x, y) <= T.stick && x < innerWidth / 2;
+          if (a && !(nearPad && edgeDist(geo.rect, x, y) < 8)) f = { kind: 'btn', k: a };
+          else if (nearPad) f = { kind: 'stick', ax: geo.cx, ay: geo.cy };
+          else { const st = nearest(x, y, ['start', 'back'], T.start); f = st ? { kind: 'btn', k: st } : { kind: 'none' }; }
+        }
+        fingers.set(id, f);
+      }
+      if (f.kind === 'stick') stickDirs(f, x, y, held);
+      else if (f.kind === 'btn') {
+        if (ACTS.includes(f.k)) { const k = exactKey(x, y); if (k && ACTS.includes(k)) f.k = k; held.add(f.k); } // slide between A, B and S
+        else if (nearest(x, y, [f.k], T.start + 24)) held.add(f.k); // START lets go if the thumb slides well away
+      }
     }
+    for (const id of [...fingers.keys()]) if (!live.has(id)) fingers.delete(id);
     press(held);
   };
   for (const type of ['touchstart', 'touchmove', 'touchend', 'touchcancel']) {
