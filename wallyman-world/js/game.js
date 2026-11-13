@@ -5,7 +5,7 @@ const ctx = cv.getContext('2d');
 ctx.imageSmoothingEnabled = false;
 let frame = 0;
 // the game's update number, shown on the title screen: 1.0 is the first, and each new update adds 0.1 (1.1, 1.2, ...)
-const GAME_VERSION = '1.8';
+const GAME_VERSION = '1.9';
 const SOLID = new Set(['#', 'B', 'W', 'P', 'S', 'O', 'A', 'V', 'Q', 'D', 'N', 'T', 'E', 'H', '[', ']', '{', 'F', '+', '}', '?', '`', 'U', 'X', '^', 'J', 'R', '<', '>', 'Y']);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const approach = (v, t, d) => (v < t ? Math.min(t, v + d) : Math.max(t, v - d));
@@ -17,6 +17,11 @@ const pad = (n, l) => String(Math.max(0, n | 0)).padStart(l, '0');
 // Input: keyboard, gamepad and on-screen touch buttons
 // =====================================================================
 const P2_KEYS = { KeyW: 'up', KeyA: 'left', KeyS: 'down', KeyD: 'right', KeyF: 'jump', KeyG: 'run', KeyH: 'special', KeyT: 'jump', KeyR: 'run', KeyY: 'special' };
+// small saved settings for Update 1.9 (smoothness, reduce motion, adaptive music, touch extras)
+const Opt19 = (() => {
+  const K = 'wallyman-o19-';
+  return { get: (k, d) => { try { const v = localStorage.getItem(K + k); return v === null ? d : v; } catch (e) { return d; } }, set: (k, v) => { try { localStorage.setItem(K + k, String(v)); } catch (e) { /* ignore */ } } };
+})();
 const coopActive = () => typeof game !== 'undefined' && !!game && !!game.coop && typeof Play !== 'undefined' && scene instanceof Play && !!scene.p2;
 const coopOwns = (code) => coopActive() && code in P2_KEYS;
 const Input = (() => {
@@ -39,7 +44,7 @@ const Input = (() => {
   const btns = [...document.querySelectorAll('[data-k]')];
   const press = (held) => btns.forEach((el) => {
     const k = el.dataset.k, v = held.has(k);
-    if (v && !touch[k]) hit[k] = 1;
+    if (v && !touch[k]) { hit[k] = 1; if (Opt19.get('buzz', '1') === '1' && navigator.vibrate && document.body.classList.contains('touch')) try { navigator.vibrate(9); } catch (e) { /* ignore */ } }
     touch[k] = v ? 1 : 0; el.classList.toggle('on', v);
   });
   const exactKey = (x, y) => { const el = document.elementFromPoint(x, y), btn = el && el.closest ? el.closest('[data-k]') : null; return btn ? btn.dataset.k : null; };
@@ -64,16 +69,25 @@ const Input = (() => {
     const up = b('up'), dn = b('down'); if (!g || !up || !dn || !dn.width) return null;
     return { rect: g.getBoundingClientRect(), cx: (dn.left + dn.right) / 2, cy: (up.bottom + dn.top) / 2, size: dn.width };
   };
+  let stickRun = false, stickRunOn = false, stickView = null;
+  const analogue = () => Opt19.get('stick', 'DPAD') === 'ANALOGUE';
   const stickDirs = (f, x, y, held) => {
     const geo = dpadGeo(); if (!geo) return;
-    const R = geo.size * 1.1, dead = geo.size * 0.2;
+    const an = analogue(), R = geo.size * (an ? 1.25 : 1.1), dead = geo.size * 0.2;
     let dx = x - f.ax, dy = y - f.ay; const d = Math.hypot(dx, dy);
     if (d > R) { f.ax = x - (dx * R) / d; f.ay = y - (dy * R) / d; dx = x - f.ax; dy = y - f.ay; } // the centre follows the thumb
+    if (an) { stickView = { dx: dx / R, dy: dy / R, ax: f.ax, ay: f.ay }; if (Math.abs(dx) > R * 0.72) stickRun = true; } // analogue: push far to run
     if (Math.abs(dx) > dead && Math.abs(dx) >= Math.abs(dy) * 0.5) held.add(dx < 0 ? 'left' : 'right');
     if (Math.abs(dy) > dead && Math.abs(dy) > Math.abs(dx)) held.add(dy < 0 ? 'up' : 'down');
   };
+  // gestures on the game screen (Update 1.9, optional): swipe up to jump, swipe down to ground-pound, double-tap to dash
+  const synth = {}; let lastTapT = 0;
+  const onScreen = (x, y) => { const r = cv.getBoundingClientRect(); return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom; };
+  const gestureOn = () => Opt19.get('gestures', '0') === '1' && typeof api.gestureOK === 'function' && api.gestureOK();
   const fromTouches = (list) => {
-    const held = new Set(), lv = reachLevel(), T = REACH[lv];
+    const held = new Set(), lv = reachLevel(); let T = REACH[lv];
+    stickRun = false; stickView = null;
+    if (!T && analogue()) T = { act: 0, stick: 0, start: 0 };
     if (!T) { fingers.clear(); for (const t of list) { const k = exactKey(t.clientX, t.clientY); if (k) held.add(k); } press(held); return; }
     const live = new Set();
     for (const t of list) {
@@ -87,9 +101,16 @@ const Input = (() => {
           const a = nearest(x, y, ACTS, T.act), nearPad = geo && edgeDist(geo.rect, x, y) <= T.stick && x < innerWidth / 2;
           if (a && !(nearPad && edgeDist(geo.rect, x, y) < 8)) f = { kind: 'btn', k: a };
           else if (nearPad) f = { kind: 'stick', ax: geo.cx, ay: geo.cy };
-          else { const st = nearest(x, y, ['start', 'back'], T.start); f = st ? { kind: 'btn', k: st } : { kind: 'none' }; }
+          else { const st = nearest(x, y, ['start', 'back'], T.start); f = st ? { kind: 'btn', k: st } : gestureOn() && onScreen(x, y) ? { kind: 'gest', sx: x, sy: y, st: performance.now() } : { kind: 'none' }; }
         }
         fingers.set(id, f);
+      }
+      if (f.kind === 'gest') {
+        const dx = x - f.sx, dy = y - f.sy, age = performance.now() - f.st;
+        if (!f.done && dy < -28 && Math.abs(dy) > Math.abs(dx) && age < 400) { f.done = 'jump'; }
+        if (!f.done && dy > 28 && Math.abs(dy) > Math.abs(dx) && age < 400) { f.done = 'pound'; synth.down = 6; }
+        if (Math.hypot(dx, dy) > 14) f.moved = true;
+        if (f.done === 'jump') held.add('jump');
       }
       if (f.kind === 'stick') stickDirs(f, x, y, held);
       else if (f.kind === 'btn') {
@@ -97,7 +118,13 @@ const Input = (() => {
         else if (nearest(x, y, [f.k], T.start + 24)) held.add(f.k); // START lets go if the thumb slides well away
       }
     }
-    for (const id of [...fingers.keys()]) if (!live.has(id)) fingers.delete(id);
+    for (const id of [...fingers.keys()]) if (!live.has(id)) {
+      const f = fingers.get(id);
+      if (f.kind === 'gest' && !f.done && !f.moved && performance.now() - f.st < 220) { // a tap: two quick taps make a dash
+        const now = performance.now(); if (now - lastTapT < 320) { lastTapT = 0; if (typeof api.onGesture === 'function') api.onGesture('dash'); } else lastTapT = now;
+      }
+      fingers.delete(id);
+    }
     press(held);
   };
   for (const type of ['touchstart', 'touchmove', 'touchend', 'touchcancel']) {
@@ -132,13 +159,18 @@ const Input = (() => {
   }
   function poll() {
     pollPad();
-    names.forEach((n) => { prev[n] = st[n]; st[n] = kb[n] || hit[n] || touch[n] || gp[n] ? 1 : 0; hit[n] = 0; });
+    names.forEach((n) => { prev[n] = st[n]; st[n] = kb[n] || hit[n] || touch[n] || gp[n] || synth[n] > 0 ? 1 : 0; hit[n] = 0; if (synth[n] > 0) synth[n]--; });
+    if (pulses.length) { const q = pulses[0]; if (q[0]) synth[q[0]] = Math.max(synth[q[0]] || 0, 1); if (--q[1] <= 0) pulses.shift(); }
+    stickRunOn = stickRun;
   }
-  return {
-    map, gpMap, poll, down: (k) => !!st[k], pressed: (k) => !!(st[k] && !prev[k]),
+  const pulses = []; // timed presses, e.g. [['right', 3], [null, 2], ['right', 3]] for a dash
+  const api = {
+    map, gpMap, poll, down: (k) => !!st[k] || (k === 'run' && stickRunOn), pressed: (k) => !!(st[k] && !prev[k]),
+    pulse: (seq) => { pulses.push(...seq.map((q) => q.slice())); }, stickInfo: () => stickView, synth,
     takeTyped: () => typed.splice(0), clearTyped: () => { typed.length = 0; },
     confirm: () => !!((st.start && !prev.start) || (st.jump && !prev.jump)),
   };
+  return api;
 })();
 
 // =====================================================================
@@ -1857,8 +1889,12 @@ class Play {
       }
       if (p.x + p.w > this.cam.x + VW) p.x = this.cam.x + VW - p.w;
     } else {
-      const target = p.x + p.w / 2 - VW / 2 + p.face * 16;
-      this.cam.x += (target - this.cam.x) * 0.1;
+      let look = p.face * 16, ease = 0.1;
+      if (typeof Modern !== 'undefined' && Modern.on() && Opt19.get('reduce', '0') !== '1') { // modern: look further ahead the faster you run, and ease in gently
+        const want = clamp(p.vx * 20, -46, 46) + p.face * 10; this.look = this.look === undefined ? look : this.look + (want - this.look) * 0.035; look = this.look; ease = 0.085;
+      }
+      const target = p.x + p.w / 2 - VW / 2 + look;
+      this.cam.x += (target - this.cam.x) * ease;
       this.cam.x = clamp(this.cam.x, this.camMin, camMax);
     }
     if (this.arena) { if (p.x < this.arena.min) { p.x = this.arena.min; if (p.vx < 0) p.vx = 0; } if (p.x + p.w > this.arena.max) { p.x = this.arena.max - p.w; if (p.vx > 0) p.vx = 0; } }
@@ -3190,7 +3226,8 @@ function loopStep(now) {
   scene.draw();
   if (Settings.get('crt')) ctx.drawImage(CRT, 0, 0);
   Ach.drawToast(); Sticker.drawFlash();
-  if (fade > 0) {
+  if (fade > 0 && typeof Modern !== 'undefined' && Modern.on() && Modern.drawFade) Modern.drawFade(fade, fadeDir);
+  else if (fade > 0) {
     // SNES-style "iris" fade: a shrinking/growing circle mask
     const r = (1 - fade) * 190;
     ctx.save(); ctx.fillStyle = '#000'; ctx.beginPath(); ctx.rect(0, 0, VW, VH); ctx.arc(128, 112, Math.max(0, r), 0, Math.PI * 2, true); ctx.fill(); ctx.restore();

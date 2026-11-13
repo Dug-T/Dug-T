@@ -161,7 +161,7 @@ const HD = (() => {
       rrect(x, 4, 4, 8, 8, 1.4); const g2 = x.createLinearGradient(16, 16, 0, 0); g2.addColorStop(0, shade(solid, 0.15)); g2.addColorStop(1, shade(solid, -0.12)); x.fillStyle = g2; x.fill();
     });
   }
-  return { wally, grumble, prickle, buzzer, hopper };
+  return { wally, grumble, prickle, buzzer, hopper, util: { INK, hex, rgb, shade, path, limb, blob, rrect, tintHD, eye, PAL0 } };
 })();
 UPDATES[0][1].splice(3, 0, 'REDRAWN: WALLYMAN, 4 ENEMIES, GROUND');
 UPDATES.unshift(['1.8', ['NEW: BUTTON REACH (OPTIONS)', 'THUMBS NEEDN\'T HIT BUTTONS EXACTLY', 'THE D-PAD WORKS LIKE A STICK:', 'SLIDE ANYWHERE NEAR IT TO STEER', 'A, B AND S STAY HELD AS YOU DRIFT', 'SLIDE FROM B ONTO A TO JUMP', 'CHOOSE OFF, NORMAL OR WIDE']]);
