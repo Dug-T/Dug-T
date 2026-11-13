@@ -2,7 +2,7 @@
 
 A 16-bit style side-scrolling platformer starring **WallyMan**, built in plain HTML5 + JavaScript (no installs, no build step).
 
-**Current version: Update 1.8.** The update number shows on a ribbon under the title logo. It is set by `GAME_VERSION` at the top of `js/game.js`, and each new update adds 0.1 (1.1, 1.2, 1.3 and so on). Each update also changes the `?v=` number on the script tags in `index.html` and the cache name in `sw.js`, so browsers fetch the new files instead of showing old saved copies.
+**Current version: Update 1.9.** The update number shows on a ribbon under the title logo. It is set by `GAME_VERSION` at the top of `js/game.js`, and each new update adds 0.1 (1.1, 1.2, 1.3 and so on). Each update also changes the `?v=` number on the script tags in `index.html` and the cache name in `sw.js`, so browsers fetch the new files instead of showing old saved copies.
 
 ## Play
 
@@ -24,6 +24,13 @@ Open `index.html` in any modern browser — or enable **GitHub Pages** for this 
 ## What's in it
 
 - **Saves on every device** – the game keeps each player's progress in their own browser. If a browser looks like it won't keep saves (for example a claude.ai link opened while signed out), the title screen says so, S shows a **save code** for each file, and quitting to the title offers one too.
+- **Update 1.9: more modern, smoother, and more comfortable**
+  - *Modern art:* GothChick (and Ninja Nell and the Frost Queen), Doug, Robo-Wally, Dracula and his bat form, Baron Static, the Ice Yeti, the Clockmaker, coins, every power-up and the HUD icons are now hand-drawn at high resolution in MODERN mode.
+  - *Modern effects:* dust puffs when you run, skid and land; sparkles on coins; embers over lava; bubbles underwater; lava that glows; torch-lit caves, castles and haunted houses; glowing castle windows and power-ups; a camera that looks further ahead the faster you run; glass menus and HUD with hearts and coins that pop; and a sliding screen transition.
+  - *Adaptive music* (Options → ADAPTIVE MUSIC): the music is muffled underwater, gets busier as a boss gets near, and gains a driving beat on Time Attack and Boss Rush.
+  - *Smoothness* (Options → SMOOTHNESS): AUTO draws in-between frames on 90/120 Hz screens; BATTERY draws 30 frames a second (and caps modern mode's resolution) to keep phones cool; CLASSIC is the old behaviour.
+  - *Reduce motion* (Options → REDUCE MOTION): no screen shake, soft instead of bright flashes, still backgrounds, calmer effects and a plain fade between screens.
+  - *Touch:* Options → STICK → ANALOGUE turns the D-pad into an analogue stick (a small push walks, a big push runs); GESTURES lets you swipe up on the game screen to jump, swipe down to ground-pound and double-tap to dash (with the Dash upgrade); BUTTON BUZZ gives a tiny vibration on each press (on phones that support it); and TOUCH LAYOUT can now move, resize and fade each button on its own.
 - **Button reach** (Update 1.8, Options → BUTTON REACH: OFF, NORMAL or WIDE) – on touch screens your thumbs don't have to land exactly on a button. A thumb near the D-pad works like a stick: slide anywhere around it to steer, and the centre follows a thumb that goes too far so turning back is instant. A thumb near A, B or S presses the nearest one and keeps it held while it drifts, and sliding from B onto A still works. OFF gives the old exact buttons.
 - **Modern graphics and sound** (Update 1.7, Options → GRAPHICS and SOUND STYLE) – the retro look and chiptune sound stay the default. MODERN graphics draw the screen at your display's real resolution, smooth every sprite, tile and background with a pixel-art upscaler, use a modern typeface, and add soft shadows, sky haze, sunlight and a gentle vignette. Some art is being redrawn by hand for MODERN mode, a little more in each update: WallyMan (every pose and costume), the Grumble, Prickle, Buzzer and Hopper, and the grass, earth, brick and stone tiles of every world are already new; everything else uses the smoothed pixel art for now. On the title screen, press B to switch between RETRO and MODERN. MODERN sound swaps the chiptune pulse waves for warmer instruments with a stereo chorus, adds a hall reverb and punchier drums, and softens the sound effects.
 - **Count Dracula** (Update 1.4) – waits in the middle of Wally's Backyard. When he appears, night falls for the rest of the level: his castle rises on a new background layer under a full moon with clouds drifting past, and a thunderstorm comes and goes with clear moonlit spells in between (each lightning flash is followed by thunder a few seconds later). He bites when you get close (watch for his fangs), and when he wraps his cape around himself he turns into a bat and flies over you to your other side. Stomp him three times while he's in his cape.
@@ -277,6 +284,8 @@ js/batchn3.js       Update 1.3: Fossil Museum, Pet Show, Photo Puzzles, menus
 js/batchp.js        Update 1.6: playing sideways (landscape layout, full screen)
 js/batchq.js        Update 1.7: modern graphics (high resolution, smoothed sprites, modern text, shadows, light)
 js/batchr.js        Update 1.7: hand-drawn high-resolution art for modern mode (WallyMan, 4 enemies, ground tiles)
+js/batchs.js        Update 1.9: more hand-drawn art (GothChick, Doug, Robo-Wally, Dracula, bosses, coins, power-ups, HUD icons)
+js/batchs2.js       Update 1.9: modern effects, adaptive music hooks, smoothness, reduce motion, touch extras
 js/batcho.js        Update 1.4: Count Dracula, his castle, the full moon and the passing storm in Wally's Backyard
 js/batchj2.js       Dino Valley map, completion, mirror/rematch menus, card and photo albums, theatre, Music Maker, Maker worlds, Party Mode
 js/batchi2.js       Pirate Cove map, airship, tower/gold menus, garden, pets, mini-games, hero maker, cloud save, Level of the Week, touch editor, Level Maker parts

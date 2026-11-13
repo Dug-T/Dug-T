@@ -58,8 +58,8 @@ const Modern = (() => {
   };
   ctx.drawImage = mainDraw;
   // resolution: up to 3x the game's pixels, and it steps down to 2x by itself if frames start taking too long
-  let maxS = 3, lastT = 0, slowN = 0;
-  const wantS = () => { const r = cv.getBoundingClientRect(), css = r.width || VW * 2; return clamp(Math.round((css / VW) * (window.devicePixelRatio || 1)), 2, maxS); };
+  let maxS = 3, capS = 3, lastT = 0, slowN = 0;
+  const wantS = () => { const r = cv.getBoundingClientRect(), css = r.width || VW * 2; return clamp(Math.round((css / VW) * (window.devicePixelRatio || 1)), 2, Math.min(maxS, capS)); };
   function frameStart() {
     if (!on) return;
     const now = performance.now(), dt = now - lastT; lastT = now;
@@ -76,7 +76,7 @@ const Modern = (() => {
     if (!on) { S = 1; cv.width = VW; cv.height = VH; ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.imageSmoothingEnabled = false; }
   }
   const paint = (img, fn) => { if (img) { painters.set(img, fn); cache.delete(img); } };
-  return { on: () => on, set, frameStart, frameEnd, scale: () => S, paint, painted: (img) => painters.has(img), _hd: (img) => { const e = hd(img); return e && e.c; } };
+  return { on: () => on, set, frameStart, frameEnd, scale: () => S, paint, painted: (img) => painters.has(img), _hd: (img) => { const e = hd(img); return e && e.c; }, cap: (n) => { capS = n; } };
 })();
 { // every frame: draw in high resolution, then add the finishing touches
   const _ls = loopStep;

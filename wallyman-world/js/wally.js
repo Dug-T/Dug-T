@@ -425,6 +425,6 @@ const Wally = (() => {
     const hat = o.hat !== undefined ? o.hat : api.hat;
     if (hat && hat !== 'none' && !o.ghost && !o.black) drawHat(ctx, img, X, Y, w / W, h / H, hat, o.t);
   }
-  const api = { draw, frame, drawHat, POSES, W, H, COSTUMES, HATS, current: 'classic', hero: 'wally', hat: 'none' };
+  const api = { draw, frame, drawHat, POSES, W, H, COSTUMES, HATS, GOTH, GOTH_COSTUMES, DOUG, DOUG_COSTUMES, current: 'classic', hero: 'wally', hat: 'none' };
   return api;
 })();

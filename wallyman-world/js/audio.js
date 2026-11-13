@@ -2,7 +2,8 @@
 // Tiny 16-bit-style sound engine: pulse-wave lead, triangle bass, noise drums,
 // plus an echo send for that warm SNES "reverb". All music here is original.
 const Audio8 = (() => {
-  let ctx = null, master, musicBus, sfxBus, echoIn, noiseBuf, waves = {};
+  let ctx = null, master, musicBus, sfxBus, echoIn, noiseBuf, waves = {}, muf = null; // muf: the music filter (muffles music underwater)
+  const mfx = { muffle: 0, intensity: 0, drums: 0 }; let lstep = 0; // adaptive music (Update 1.9)
   let enabled = true, musicVol = 1, sfxVol = 1, modern = false, revSend = null;
   try { modern = localStorage.getItem('wallyman-sound-style') === 'modern'; } catch (e) { /* ignore */ }
   try { const m = localStorage.getItem('wallyman-music-vol'), f = localStorage.getItem('wallyman-sfx-vol'); if (m !== null) musicVol = +m; if (f !== null) sfxVol = +f; } catch (e) { /* ignore */ }
@@ -31,7 +32,8 @@ const Audio8 = (() => {
     const comp = ctx.createDynamicsCompressor();
     comp.threshold.value = -14; comp.ratio.value = 4;
     master.connect(comp); comp.connect(ctx.destination);
-    musicBus = ctx.createGain(); musicBus.gain.value = 0.55 * musicVol; musicBus.connect(master);
+    muf = ctx.createBiquadFilter(); muf.type = 'lowpass'; muf.frequency.value = 22000; muf.Q.value = 0.7; muf.connect(master);
+    musicBus = ctx.createGain(); musicBus.gain.value = 0.55 * musicVol; musicBus.connect(muf);
     sfxBus = ctx.createGain(); sfxBus.gain.value = 0.7 * sfxVol; sfxBus.connect(master);
     // echo
     echoIn = ctx.createGain(); echoIn.gain.value = 0.28;
@@ -406,9 +408,21 @@ const Audio8 = (() => {
     else if (e.c === 'arp') tone('p25', freq(e.m), t, dur * 0.7, 0.04, musicBus, { echo: true, decay: 0.2 });
     else if (e.c === 'drum') drum(e.d, t);
   }
+  // adaptive layers on top of the song: busier drums as a boss gets near, a driving beat on speed runs
+  function layer(k, t) {
+    const I = mfx.intensity, hat = (I > 0.3 && k % 2 === 1) || (mfx.drums && k % 2 === 1);
+    if (hat) drum('h', t);
+    if (I > 0.6 && k % 8 === 4) drum('k', t);
+    if (I > 0.85 && k % 16 === 14) drum('s', t);
+    if (mfx.drums && k % 32 >= 28 && k % 2 === 0) drum('s', t);
+    if (mfx.drums && k % 8 === 6) drum('o', t);
+  }
   function tick() {
     if (!cur || !ctx) return;
     const ahead = ctx.currentTime + 0.15;
+    if (mfx.intensity > 0.3 || mfx.drums) {
+      for (let g = 0; g < 64; g++) { const tt = t0 + lstep * cur.stepDur; if (tt > ahead) break; if (tt >= ctx.currentTime - 0.05) layer(lstep, tt); lstep++; }
+    } else lstep = Math.max(lstep, Math.ceil((ctx.currentTime - t0) / cur.stepDur));
     for (let guard = 0; guard < 256; guard++) {
       const e = cur.ev[idx];
       if (!e) { if (cur.once) { cur = null; return; } idx = 0; loopN++; continue; }
@@ -424,7 +438,7 @@ const Audio8 = (() => {
     if (!ctx || curName === name && cur) return;
     stop();
     compiled[name] = compiled[name] || compile(name);
-    cur = compiled[name]; curName = name; idx = 0; loopN = 0; t0 = ctx.currentTime + 0.06;
+    cur = compiled[name]; curName = name; idx = 0; loopN = 0; t0 = ctx.currentTime + 0.06; lstep = 0;
   }
   function stop() {
     cur = null; curName = null;
@@ -432,7 +446,7 @@ const Audio8 = (() => {
     // fade out lingering notes quickly by swapping the music bus
     const old = musicBus; old.gain.setTargetAtTime(0, ctx.currentTime, 0.03);
     setTimeout(() => old.disconnect(), 400);
-    musicBus = ctx.createGain(); musicBus.gain.value = 0.55 * musicVol; musicBus.connect(master);
+    musicBus = ctx.createGain(); musicBus.gain.value = 0.55 * musicVol; musicBus.connect(muf || master);
   }
 
   // ---------- sound effects ----------
@@ -543,5 +557,10 @@ const Audio8 = (() => {
     grain(t, len + 0.6, 0.9 * loud, 'lowpass', 160, 0.7, 0.05 + d * 0.3); // deep body for headphones and big speakers
     grain(t + len * 0.4, len * 0.8, 0.5 * loud, 'lowpass', 420, 0.7, 0.2); // a long low tail
   }
-  return { addSong(n, d) { SONGS[n] = d; delete compiled[n]; if (curName === n) { cur = null; curName = null; } }, sfxNames: () => Object.keys(SFX), songStep: () => (cur && ctx ? (ctx.currentTime - t0) / cur.stepDur : -1), songs: () => Object.keys(SONGS), thunder, ambience, style: () => (modern ? 'modern' : 'retro'), setStyle(v) { modern = v === 'modern'; try { localStorage.setItem('wallyman-sound-style', modern ? 'modern' : 'retro'); } catch (e) { /* ignore */ } }, setVolume, getVolume, init, unlock: init, play, stop, sfx, setEnabled, isEnabled: () => enabled, current: () => curName };
+  // muffle 0..1 (underwater), intensity 0..1 (a boss is near), drums true/false (speed runs)
+  function setMusicFx(o = {}) {
+    mfx.muffle = Math.max(0, Math.min(1, o.muffle || 0)); mfx.intensity = Math.max(0, Math.min(1, o.intensity || 0)); mfx.drums = o.drums ? 1 : 0;
+    if (ctx && muf) { const f = 650 * Math.pow(22000 / 650, 1 - mfx.muffle); muf.frequency.setTargetAtTime(f, ctx.currentTime, 0.18); }
+  }
+  return { setMusicFx, musicFx: () => Object.assign({}, mfx, { cutoff: muf ? Math.round(muf.frequency.value) : 0 }), addSong(n, d) { SONGS[n] = d; delete compiled[n]; if (curName === n) { cur = null; curName = null; } }, sfxNames: () => Object.keys(SFX), songStep: () => (cur && ctx ? (ctx.currentTime - t0) / cur.stepDur : -1), songs: () => Object.keys(SONGS), thunder, ambience, style: () => (modern ? 'modern' : 'retro'), setStyle(v) { modern = v === 'modern'; try { localStorage.setItem('wallyman-sound-style', modern ? 'modern' : 'retro'); } catch (e) { /* ignore */ } }, setVolume, getVolume, init, unlock: init, play, stop, sfx, setEnabled, isEnabled: () => enabled, current: () => curName };
 })();
