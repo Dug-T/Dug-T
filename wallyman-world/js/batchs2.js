@@ -207,7 +207,7 @@ const U19 = (() => {
       if (pl.bossLock || pl.arena) I = 1;
       else if (pl.def.boss && pl.lv) { const d = (pl.lv.w - 16) * TS - p.x; I = clamp(1 - d / (48 * TS), 0, 1) * 0.9; }
       for (const e of pl.ents) if ((e.boss || e.yeti || e.type === 'dracula') && e.alive !== false && !e.dying && Math.abs(e.x - p.x) < 220) I = Math.max(I, 0.75);
-      o = { muffle: pl.def.water ? 1 : 0, intensity: I, drums: !!(pl.ta || pl.rush) };
+      o = { muffle: pl.def.water ? 1 : pl.focusT > 0 ? 0.55 : 0, intensity: I, drums: !!(pl.ta || pl.rush) }; // (Update 2.1: FOCUS muffles the music too)
     }
     const key = `${o.muffle | 0}|${(o.intensity || 0).toFixed(1)}|${o.drums ? 1 : 0}`;
     if (key !== lastFx) { lastFx = key; if (Audio8.setMusicFx) Audio8.setMusicFx(o); }

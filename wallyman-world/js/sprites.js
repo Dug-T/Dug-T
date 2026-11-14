@@ -781,5 +781,6 @@ const Sprites = (() => {
   S.dougPortrait.src = 'assets/doug-portrait.png';
 
   S.canvas = canvas; S.fromRows = fromRows; S.flip = flip; S.rng = rng;
+  S.addTheme = (name, pal) => { THEMES[name] = pal; S.tiles[name] = tileSet(name); return S.tiles[name]; }; // Update 2.1: new worlds
   return S;
 })();

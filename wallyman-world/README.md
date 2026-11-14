@@ -2,7 +2,7 @@
 
 A 16-bit style side-scrolling platformer starring **WallyMan**, built in plain HTML5 + JavaScript (no installs, no build step).
 
-**Current version: Update 2.0.** The update number shows on a ribbon under the title logo. It is set by `GAME_VERSION` at the top of `js/game.js`, and each new update adds 0.1 (1.1, 1.2, 1.3 and so on). Each update also changes the `?v=` number on the script tags in `index.html` and the cache name in `sw.js`, so browsers fetch the new files instead of showing old saved copies.
+**Current version: Update 2.1.** The update number shows on a ribbon under the title logo. It is set by `GAME_VERSION` at the top of `js/game.js`, and each new update adds 0.1 (1.1, 1.2, 1.3 and so on). Each update also changes the `?v=` number on the script tags in `index.html` and the cache name in `sw.js`, so browsers fetch the new files instead of showing old saved copies.
 
 ## Play
 
@@ -24,6 +24,16 @@ Open `index.html` in any modern browser — or enable **GitHub Pages** for this 
 ## What's in it
 
 - **Saves on every device** – the game keeps each player's progress in their own browser. If a browser looks like it won't keep saves (for example a claude.ai link opened while signed out), the title screen says so, S shows a **save code** for each file, and quitting to the title offers one too.
+- **Update 2.1: new places and new moves**
+  - *Dream World* (15th island, by balloon from Baron's Revenge): every level has its own dream rule – **Pillow Peaks** (bouncy ground; hold A to bounce higher), **Floaty Fields** (floaty jumps), **Topsy-Turvy Towers** (fall upwards in the purple glow), **Sleepwalk Street** (enemies in nightcaps sleepwalk slowly and wake up when you get close), **Melting Clouds** (clouds melt soon after you land) – and **The Nightmare**, a shadow cloud that throws shadow orbs, then sinks down for a nap: stomp it then.
+  - *Kitchen Kingdom* (16th island): **Countertop Capers** (hot plates), **Frying Pan Flip** (pans flip now and then and fling you up high), **Oven Escape** (the oven heat chases you across the screen), **Jelly Jungle** (bouncy jellies), **Pantry Peril** (giant rolling peas – jump or stomp them) and **Chef Gateau**, who walks, throws pies, has a stomping tantrum, then gets dizzy.
+  - *Starlight Summit* (secret 17th island): the star portal in the Kitchen Kingdom opens once you have **150 medals**. Four levels mix every dream rule, then **The Dreamweaver** weaves rings of stars and dives; beat it for the **true ending**, the credits and an **epilogue**.
+  - *Surf's Up* – a new ride in Wally Town's RIDES: ride the waves, jump off the crests and press B for tricks.
+  - *Lawnmower Chase* – a new bonus level in Bug's-Eye Garden (after Puddle Crossing): a giant lawnmower chases the tiny hero across the garden.
+  - *Parry:* press B just as an enemy or a shot hits you to knock it back (a parried shot can hit a boss). It doesn't work on spikes, lava or falls.
+  - *Power suits:* the first energy-drink block in many levels holds a **Bee Suit** (hold A in the air to fly in short bursts), a **Rock Suit** (heavy: sinks in water and smashes bricks when you land hard) or a **Balloon Suit** (hold A to float up, let go to drift down). A hit takes the suit away instead of a heart.
+  - *Focus* (from the first energy-drink block in other levels): everything except you moves at half speed for 6 seconds, and the music goes soft.
+  - *Weather Orb* (likewise): press S to switch between rain and sun. Rain fills every pit with water you can swim across; sun dries it out again.
 - **Update 2.0: the modern look finished, and comfort for everyone**
   - *Modern art:* every remaining enemy (bats, chargers, turrets, fish, jellyfish, ghosts, slimes, boomers, magnet drones, asteroids, beam-down aliens, the Zappling squadron) and boss (Giant Squid, T-Rex, Volt, Baron's Mega-Mech, the Mothership, the Crab, the Drill Mole, Nimbus) is now hand-drawn at high resolution in MODERN mode.
   - *Painted backgrounds:* every world's background layers are re-painted with soft brush edges, light from above, depth haze and a canvas grain; skies are smooth painted gradients.
@@ -300,6 +310,8 @@ js/batchs2.js       Update 1.9: modern effects, adaptive music hooks, smoothness
 js/batcht.js        Update 2.0: hand-drawn art for the remaining enemies and bosses
 js/batcht2.js       Update 2.0: painted backgrounds, living scenery, the painted island map
 js/batcht3.js       Update 2.0: QR codes, quick resume, big text, read aloud, one hand, show me the way
+js/batchu.js        Update 2.1: Dream World, Kitchen Kingdom, Starlight Summit, true ending, Surf's Up, Lawnmower Chase
+js/batchu2.js       Update 2.1: parry, power suits, focus, weather orb
 js/batcho.js        Update 1.4: Count Dracula, his castle, the full moon and the passing storm in Wally's Backyard
 js/batchj2.js       Dino Valley map, completion, mirror/rematch menus, card and photo albums, theatre, Music Maker, Maker worlds, Party Mode
 js/batchi2.js       Pirate Cove map, airship, tower/gold menus, garden, pets, mini-games, hero maker, cloud save, Level of the Week, touch editor, Level Maker parts
