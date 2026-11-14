@@ -671,7 +671,7 @@ function PlusScene() {
       t++;
       if (Input.pressed('back') || Input.pressed('run')) { go(() => HouseScene(4)); return; }
       if (t > 20 && Input.pressed('jump')) {
-        game.plus = (game.plus || 0) + 1; game.cleared = Array(140).fill(false); game.medals = Array(140).fill(0); game.stars = Array(140).fill(0); game.bars = Array(140).fill(0); game.missions = []; for (let k = 4; k <= 16; k++) game['node' + k] = 0; if (typeof ngPlusStart === 'function') ngPlusStart();
+        game.plus = (game.plus || 0) + 1; game.cleared = Array(Math.max(140, LEVELS.length)).fill(false); game.medals = Array(Math.max(140, LEVELS.length)).fill(0); game.stars = Array(Math.max(140, LEVELS.length)).fill(0); game.bars = Array(Math.max(140, LEVELS.length)).fill(0); game.missions = []; for (let k = 4; k <= 16; k++) game['node' + k] = 0; if (typeof ngPlusStart === 'function') ngPlusStart();
         game.secrets = {}; game.world = 0; game.node = 0; game.node2 = 0; game.node3 = 0; game.seenTalk = {}; Save.persist(); Audio8.sfx('secret'); go(() => MapScene());
       }
     },

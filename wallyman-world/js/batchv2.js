@@ -17,20 +17,42 @@ const U22b = (() => {
   const PHRASES = ['HERE WE GO!', 'WAHOO!', 'UH-OH...', 'NOT AGAIN!', 'I GOT THIS!', 'BOING!', 'THE END!', '?!'];
   const imgCache = new Map();
   const getImg = (src, onload) => { let im = imgCache.get(src); if (!im) { im = new Image(); im.onload = onload; im.src = src; imgCache.set(src, im); } return im.complete && im.naturalWidth ? im : null; };
+  // Update 2.6: 3, 4 or 6 panels, a caption box and a sticker in every panel
+  const STICKERS = ['NONE', 'POW!', 'BOOM!', 'ZAP!', 'STAR', 'HEART', 'COIN', 'WALLYMAN', 'DINO', 'ZZZ'];
+  const LAYOUTS = [3, 4, 6];
+  const panelRects = (n) => (n === 3 ? [[12, 52, 488, 188], [12, 252, 238, 188], [262, 252, 238, 188]] : n === 6 ? [0, 1, 2, 3, 4, 5].map((i) => [12 + (i % 3) * 164, 52 + Math.floor(i / 3) * 200, 158, 188]) : [[12, 52, 238, 188], [262, 52, 238, 188], [12, 252, 238, 188], [262, 252, 238, 188]]);
+  const wrapW = (x, s, maxW) => { const words = String(s).split(' '), lines = []; let cur = ''; for (const wd of words) { const tryL = (cur + ' ' + wd).trim(); if (x.measureText(tryL).width > maxW && cur) { lines.push(cur.trim()); cur = wd; } else cur = tryL; } if (cur) lines.push(cur.trim()); return lines; };
+  function drawSticker(x, kind, cx, cy, sz) {
+    const burst = (txt_, c1, c2) => { x.save(); x.translate(cx, cy); x.rotate(-0.15); x.beginPath(); for (let i = 0; i < 24; i++) { const a = (i / 24) * Math.PI * 2, r = i % 2 ? sz * 0.62 : sz; x.lineTo(Math.cos(a) * r * 1.25, Math.sin(a) * r); } x.closePath(); x.fillStyle = c1; x.fill(); x.lineWidth = 3; x.strokeStyle = '#1a1020'; x.stroke(); x.font = `900 ${Math.round(sz * 0.62)}px "Trebuchet MS", sans-serif`; x.textAlign = 'center'; x.textBaseline = 'middle'; x.lineWidth = 4; x.strokeStyle = '#1a1020'; x.strokeText(txt_, 0, 2); x.fillStyle = c2; x.fillText(txt_, 0, 2); x.restore(); x.textBaseline = 'alphabetic'; };
+    if (kind === 'POW!') return burst('POW!', '#ffe040', '#e83850');
+    if (kind === 'BOOM!') return burst('BOOM!', '#ff8a30', '#ffffff');
+    if (kind === 'ZAP!') return burst('ZAP!', '#7ae8ff', '#2f3ad0');
+    x.save(); x.translate(cx, cy); x.lineWidth = 3; x.strokeStyle = '#1a1020';
+    if (kind === 'STAR') { x.beginPath(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + (i / 10) * Math.PI * 2, r = i % 2 ? sz * 0.45 : sz; x.lineTo(Math.cos(a) * r, Math.sin(a) * r); } x.closePath(); x.fillStyle = '#ffd030'; x.fill(); x.stroke(); }
+    else if (kind === 'HEART') { x.beginPath(); x.moveTo(0, sz * 0.8); x.bezierCurveTo(-sz * 1.3, -sz * 0.1, -sz * 0.6, -sz * 1.1, 0, -sz * 0.35); x.bezierCurveTo(sz * 0.6, -sz * 1.1, sz * 1.3, -sz * 0.1, 0, sz * 0.8); x.fillStyle = '#ff4a7a'; x.fill(); x.stroke(); }
+    else if (kind === 'COIN') { x.beginPath(); x.ellipse(0, 0, sz * 0.72, sz, 0, 0, Math.PI * 2); x.fillStyle = '#ffcc30'; x.fill(); x.stroke(); x.fillStyle = '#fff3a0'; x.fillRect(-sz * 0.12, -sz * 0.55, sz * 0.24, sz * 1.1); }
+    else if (kind === 'ZZZ') { x.font = `900 ${Math.round(sz * 0.9)}px "Trebuchet MS", sans-serif`; x.textAlign = 'center'; x.lineWidth = 4; ['Z', 'z', 'z'].forEach((z, i) => { x.strokeText(z, -sz * 0.5 + i * sz * 0.55, sz * 0.3 - i * sz * 0.5); x.fillStyle = '#9ab8ff'; x.fillText(z, -sz * 0.5 + i * sz * 0.55, sz * 0.3 - i * sz * 0.5); }); }
+    else if (kind === 'WALLYMAN') { x.imageSmoothingEnabled = false; Wally.draw(x, 0, sz, 'win0', 1, { t: 0, sx: sz / 12, sy: sz / 12 }); }
+    else if (kind === 'DINO') { x.imageSmoothingEnabled = false; const im = Sprites.dino.r[0], k = (sz * 2) / im.width; x.drawImage(im, -im.width * k / 2, sz - im.height * k, im.width * k, im.height * k); }
+    x.restore();
+  }
   function renderComic(st, photos, onload) {
     const c = document.createElement('canvas'); c.width = 512; c.height = 448; const x = c.getContext('2d');
     x.fillStyle = '#fffaf0'; x.fillRect(0, 0, 512, 448); x.fillStyle = '#1a1020'; x.font = 'bold 28px "Trebuchet MS", sans-serif'; x.textAlign = 'center'; x.fillText(st.title, 256, 38);
-    const P = [[12, 52], [262, 52], [12, 252], [262, 252]];
-    P.forEach(([px, py], i) => {
-      const w = 238, h = 188; x.save(); x.beginPath(); x.rect(px, py, w, h); x.clip(); x.fillStyle = '#c8d8f0'; x.fillRect(px, py, w, h);
+    const R = panelRects(st.layout || 4);
+    R.forEach(([px, py, w, h], i) => {
+      x.save(); x.beginPath(); x.rect(px, py, w, h); x.clip(); x.fillStyle = '#c8d8f0'; x.fillRect(px, py, w, h);
       const ph = photos[st.pick[i] % Math.max(1, photos.length)], im = ph && getImg(ph.img, onload);
       if (im) { const k = Math.max(w / im.width, h / im.height); x.drawImage(im, px + (w - im.width * k) / 2, py + (h - im.height * k) / 2, im.width * k, im.height * k); }
+      const sk = STICKERS[(st.stk || [])[i] | 0]; if (sk && sk !== 'NONE') drawSticker(x, sk, px + w - 40, py + h - (st.cap[i] ? 64 : 40), 26);
+      const cap = (st.cap || [])[i];
+      if (cap) { x.font = 'bold 13px "Trebuchet MS", sans-serif'; x.textAlign = 'left'; const lines = wrapW(x, cap, w - 24).slice(0, 2), ch = lines.length * 15 + 8, cw = Math.min(w - 8, Math.max(...lines.map((l) => x.measureText(l).width)) + 14); x.fillStyle = '#ffe9a0'; x.strokeStyle = '#1a1020'; x.lineWidth = 2; x.fillRect(px + 4, py + h - ch - 4, cw, ch); x.strokeRect(px + 4, py + h - ch - 4, cw, ch); x.fillStyle = '#1a1020'; lines.forEach((l, k) => x.fillText(l, px + 11, py + h - ch + 10 + k * 15)); x.textAlign = 'center'; }
       x.restore(); x.strokeStyle = '#1a1020'; x.lineWidth = 4; x.strokeRect(px, py, w, h);
       const s = st.say[i]; if (!s) return;
-      x.font = 'bold 15px "Trebuchet MS", sans-serif'; const words = s.split(' '), lines = []; let cur = ''; for (const wd of words) { if ((cur + ' ' + wd).trim().length > 16) { lines.push(cur.trim()); cur = wd; } else cur += ' ' + wd; } lines.push(cur.trim());
-      const bw = Math.min(200, Math.max(...lines.map((l) => x.measureText(l).width)) + 24), bh = lines.length * 17 + 12, bx = px + 10 + (i % 2) * (w - bw - 20), by = py + 10;
+      x.font = 'bold 15px "Trebuchet MS", sans-serif'; x.textAlign = 'center'; const lines = wrapW(x, s, Math.min(176, w - 44));
+      const bw = Math.min(w - 20, Math.max(...lines.map((l) => x.measureText(l).width)) + 24), bh = lines.length * 17 + 12, right = i % 2 === 1 || (st.layout === 6 && i % 3 === 2), bx = px + 10 + (right ? w - bw - 20 : 0), by = py + 10;
       x.fillStyle = '#ffffff'; x.strokeStyle = '#1a1020'; x.lineWidth = 2.5; x.beginPath(); x.ellipse(bx + bw / 2, by + bh / 2, bw / 2, bh / 2, 0, 0, Math.PI * 2); x.fill(); x.stroke();
-      x.beginPath(); x.moveTo(bx + bw / 2 - 8, by + bh - 4); x.lineTo(bx + bw / 2 + (i % 2 ? 18 : -18), by + bh + 16); x.lineTo(bx + bw / 2 + 8, by + bh - 2); x.closePath(); x.fill(); x.stroke();
+      x.beginPath(); x.moveTo(bx + bw / 2 - 8, by + bh - 4); x.lineTo(bx + bw / 2 + (right ? 18 : -18), by + bh + 16); x.lineTo(bx + bw / 2 + 8, by + bh - 2); x.closePath(); x.fill(); x.stroke();
       x.fillStyle = '#ffffff'; x.fillRect(bx + bw / 2 - 7, by + bh - 6, 14, 5);
       x.fillStyle = '#1a1020'; lines.forEach((l, k) => x.fillText(l, bx + bw / 2, by + 20 + k * 17));
     });
@@ -38,32 +60,58 @@ const U22b = (() => {
     return c;
   }
   function ComicMakerScene() {
-    const photos = PhotoAlbum.list(), st = { title: 'MY ADVENTURE', pick: [0, 1, 2, 3], say: [PHRASES[0], PHRASES[1], PHRASES[2], PHRASES[6]] };
-    let sel = 0, t = 0, dom = false, page = null, msg = ''; const dirty = () => { page = null; };
-    const ROWS = ['TITLE', 'PANEL 1', 'PANEL 2', 'PANEL 3', 'PANEL 4', 'SAVE + SHARE', 'BACK'];
+    const photos = PhotoAlbum.list(), st = { title: 'MY ADVENTURE', layout: 4, pick: [0, 1, 2, 3, 4, 5], say: [PHRASES[0], PHRASES[1], PHRASES[2], PHRASES[6], '', ''], cap: ['', '', '', '', '', ''], stk: [0, 0, 0, 0, 0, 0] };
+    let sel = 0, t = 0, dom = false, page = null, msg = '', edit = -1, es = 0; const dirty = () => { page = null; };
+    const EROWS = ['PHOTO', 'WORDS', 'QUICK WORDS', 'CAPTION', 'STICKER', 'DONE'];
+    const rows = () => ['TITLE', 'LAYOUT'].concat(Array.from({ length: st.layout }, (_, i) => `PANEL ${i + 1}`), ['SAVE + SHARE', 'BACK']);
     return {
+      _s: () => ({ st, sel, edit, es }),
       enter() { Audio8.play('menu'); },
       update() {
         t++; if (dom) return;
         if (!photos.length) { if (Input.confirm() || Input.pressed('back')) go(() => ExtrasList('COMIC MAKER')); return; }
-        if (Input.pressed('down')) { sel = (sel + 1) % ROWS.length; Audio8.sfx('select'); } if (Input.pressed('up')) { sel = (sel + ROWS.length - 1) % ROWS.length; Audio8.sfx('select'); }
         const d = (Input.pressed('right') ? 1 : 0) - (Input.pressed('left') ? 1 : 0);
-        if (d && sel >= 1 && sel <= 4) { st.pick[sel - 1] = (st.pick[sel - 1] + d + photos.length) % photos.length; dirty(); Audio8.sfx('select'); }
-        if (Input.pressed('special') && sel >= 1 && sel <= 4) { const k = PHRASES.indexOf(st.say[sel - 1]); st.say[sel - 1] = PHRASES[(k + 1) % PHRASES.length]; dirty(); Audio8.sfx('select'); }
-        if (Input.pressed('back') || (Input.confirm() && sel === 6)) { go(() => ExtrasList('COMIC MAKER')); return; }
-        if (Input.confirm() && sel === 0) { dom = true; editText('COMIC TITLE', st.title, (v) => { dom = false; if (v) { st.title = String(v).toUpperCase().slice(0, 28); dirty(); } }); }
-        if (Input.confirm() && sel >= 1 && sel <= 4) { dom = true; editText(`WHAT DO THEY SAY IN PANEL ${sel}?`, st.say[sel - 1], (v) => { dom = false; if (v !== null && v !== undefined) { st.say[sel - 1] = String(v).toUpperCase().slice(0, 40); dirty(); } }); }
-        if (Input.confirm() && sel === 5) { const c = renderComic(st, photos, dirty); if (typeof shareCard === 'function') shareCard(c, 'comic'); msg = 'SAVED TO YOUR PHOTO ALBUM!'; Audio8.sfx('oneup'); try { Ach.unlock('comic'); } catch (e) { /* ignore */ } }
+        if (edit >= 0) { // one panel's menu
+          const i = edit;
+          if (Input.pressed('down')) { es = (es + 1) % EROWS.length; Audio8.sfx('select'); } if (Input.pressed('up')) { es = (es + EROWS.length - 1) % EROWS.length; Audio8.sfx('select'); }
+          const r = EROWS[es];
+          if (d && r === 'PHOTO') { st.pick[i] = (st.pick[i] + d + photos.length) % photos.length; dirty(); Audio8.sfx('select'); }
+          if (d && r === 'STICKER') { st.stk[i] = (st.stk[i] + d + STICKERS.length) % STICKERS.length; dirty(); Audio8.sfx('select'); }
+          if (Input.pressed('back') || Input.pressed('run') || (Input.confirm() && r === 'DONE')) { edit = -1; Audio8.sfx('select'); return; }
+          if (!Input.confirm()) return;
+          if (r === 'PHOTO') { st.pick[i] = (st.pick[i] + 1) % photos.length; dirty(); }
+          else if (r === 'STICKER') { st.stk[i] = (st.stk[i] + 1) % STICKERS.length; dirty(); }
+          else if (r === 'QUICK WORDS') { const k = PHRASES.indexOf(st.say[i]); st.say[i] = PHRASES[(k + 1) % PHRASES.length]; dirty(); }
+          else if (r === 'WORDS') { dom = true; editText(`WHAT DO THEY SAY IN PANEL ${i + 1}?`, st.say[i], (v) => { dom = false; if (v !== null && v !== undefined) { st.say[i] = String(v).toUpperCase().slice(0, 40); dirty(); } }); }
+          else if (r === 'CAPTION') { dom = true; editText(`CAPTION FOR PANEL ${i + 1} (E.G. MEANWHILE...)`, st.cap[i], (v) => { dom = false; if (v !== null && v !== undefined) { st.cap[i] = String(v).toUpperCase().slice(0, 40); dirty(); } }); }
+          Audio8.sfx('select'); return;
+        }
+        const R = rows(), r = R[sel];
+        if (Input.pressed('down')) { sel = (sel + 1) % R.length; Audio8.sfx('select'); } if (Input.pressed('up')) { sel = (sel + R.length - 1) % R.length; Audio8.sfx('select'); }
+        if (d && r === 'LAYOUT') { st.layout = LAYOUTS[(LAYOUTS.indexOf(st.layout) + d + 3) % 3]; dirty(); Audio8.sfx('select'); }
+        if (d && /^PANEL/.test(r)) { const i = +r.slice(6) - 1; st.pick[i] = (st.pick[i] + d + photos.length) % photos.length; dirty(); Audio8.sfx('select'); }
+        if (Input.pressed('back') || (Input.confirm() && r === 'BACK')) { go(() => ExtrasList('COMIC MAKER')); return; }
+        if (!Input.confirm()) return;
+        if (r === 'TITLE') { dom = true; editText('COMIC TITLE', st.title, (v) => { dom = false; if (v) { st.title = String(v).toUpperCase().slice(0, 28); dirty(); } }); }
+        else if (r === 'LAYOUT') { st.layout = LAYOUTS[(LAYOUTS.indexOf(st.layout) + 1) % 3]; dirty(); Audio8.sfx('select'); }
+        else if (/^PANEL/.test(r)) { edit = +r.slice(6) - 1; es = 0; Audio8.sfx('confirm'); }
+        else if (r === 'SAVE + SHARE') { const c = renderComic(st, photos, dirty); if (typeof shareCard === 'function') shareCard(c, 'comic'); msg = 'SAVED TO YOUR PHOTO ALBUM!'; Audio8.sfx('oneup'); try { Ach.unlock('comic'); } catch (e) { /* ignore */ } }
+        sel = Math.min(sel, rows().length - 1);
       },
       draw() {
         drawParallax('sky', t * 0.3);
         if (!photos.length) { drawWindow(24, 70, 208, 70); txt('NO PHOTOS YET!', 128, 82, '#ffe040', { align: 'center' }); txt('PAUSE IN A LEVEL AND PICK', 128, 100, '#fff', { align: 'center' }); txt('PHOTO MODE TO TAKE SOME.', 128, 112, '#fff', { align: 'center' }); return; }
         if (!page) page = renderComic(st, photos, dirty);
         ctx.fillStyle = '#1a1020'; ctx.fillRect(4, 22, 132, 118); ctx.drawImage(page, 6, 24, 128, 112);
+        if (edit >= 0) { const [px, py, w, h] = panelRects(st.layout)[edit]; ctx.strokeStyle = (t >> 3) & 1 ? '#ffe040' : '#ff4060'; ctx.lineWidth = 2; ctx.strokeRect(6 + px / 4, 24 + py / 4, w / 4, h / 4); ctx.lineWidth = 1; }
         txt('COMIC MAKER', 128, 6, '#ffe040', { align: 'center', outline: '#101848' });
-        drawWindow(140, 22, 112, 118); ROWS.forEach((r, i) => { const y = 30 + i * 14; txt(r, 154, y, i === sel ? '#ffe040' : '#fff'); if (i === sel) txt('>', 144 + ((t >> 3) & 1), y, '#ffe040'); });
+        drawWindow(140, 22, 112, 118);
+        if (edit >= 0) { txt(`PANEL ${edit + 1}`, 196, 28, '#ffe040', { align: 'center' }); EROWS.forEach((r, i) => { const y = 44 + i * 14; txt(r, 154, y, i === es ? '#ffe040' : '#fff'); if (i === es) txt('>', 144 + ((t >> 3) & 1), y, '#ffe040'); }); }
+        else rows().forEach((r, i) => { const y = 28 + i * 11; txt(r === 'LAYOUT' ? `LAYOUT < ${st.layout} >` : r, 154, y, i === sel ? '#ffe040' : '#fff'); if (i === sel) txt('>', 144 + ((t >> 3) & 1), y, '#ffe040'); });
         drawWindow(4, 146, 248, 62);
-        const tips = sel === 0 ? ['A: TYPE A TITLE'] : sel <= 4 ? [`PHOTO ${st.pick[sel - 1] + 1}/${photos.length}  <> CHANGE PHOTO`, 'A: TYPE WORDS  S: QUICK WORDS', `"${st.say[sel - 1]}"`.replace(/"/g, "'")] : sel === 5 ? ['A: SAVE THE COMIC (512X448)', 'TO YOUR PHOTO ALBUM AND', 'SHARE OR DOWNLOAD IT'] : ['A: BACK TO EXTRAS'];
+        const R = rows(), r = R[sel], i = edit, q = (v) => `'${String(v).replace(/"/g, "'")}'`;
+        const tips = edit >= 0 ? ({ PHOTO: [`PHOTO ${st.pick[i] + 1}/${photos.length}`, '<> OR A: CHANGE PHOTO'], WORDS: ['A: TYPE WHAT THEY SAY', q(st.say[i] || '...')], 'QUICK WORDS': ['A: PICK READY-MADE WORDS', q(st.say[i] || '...')], CAPTION: ['A: TYPE A CAPTION BOX', q(st.cap[i] || 'MEANWHILE...')], STICKER: [`STICKER: ${STICKERS[st.stk[i]]}`, '<> OR A: CHANGE STICKER'], DONE: ['A OR B: BACK TO THE PAGE'] })[EROWS[es]]
+          : r === 'TITLE' ? ['A: TYPE A TITLE'] : r === 'LAYOUT' ? [`${st.layout} PANELS ON THE PAGE`, '<> OR A: 3, 4 OR 6 PANELS'] : /^PANEL/.test(r) ? [`PHOTO ${st.pick[+r.slice(6) - 1] + 1}/${photos.length}  <> CHANGE PHOTO`, 'A: WORDS, CAPTION AND STICKER'] : r === 'SAVE + SHARE' ? ['A: SAVE THE COMIC (512X448)', 'TO YOUR PHOTO ALBUM AND', 'SHARE OR DOWNLOAD IT'] : ['A: BACK TO EXTRAS'];
         tips.forEach((l, k) => txt(l, 128, 154 + k * 12, '#fff', { align: 'center' }));
         if (msg) txt(msg, 128, 196, '#40e090', { align: 'center' });
       },
@@ -128,9 +176,25 @@ const U22b = (() => {
     else { ctx.fillStyle = '#1a1020'; for (const d of [-1, 1]) { ctx.beginPath(); ctx.ellipse(cx + d * 6 * k, ey, 5 * k, 3.4 * k, 0, 0, Math.PI * 2); ctx.fill(); } ctx.fillRect(cx - 2 * k, ey - 1 * k, 4 * k, 1.6 * k); ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.fillRect(cx - 9 * k, ey - 2 * k, 3 * k, 1.2 * k); }
     ctx.restore();
   }
+  // share codes: WMB1- then the settings packed as base64 JSON
+  const BossCode = {
+    encode: (c) => 'WMB1-' + btoa(JSON.stringify([c.name, c.body, c.color, c.eyes, c.size, c.hp, c.speed, c.atk1, c.atk2, c.taunt])),
+    decode(code) {
+      try {
+        const m = String(code || '').replace(/\s+/g, '').match(/^WMB1-([A-Za-z0-9+/=]+)$/); if (!m) return null;
+        const a = JSON.parse(atob(m[1])); if (!Array.isArray(a) || a.length !== 10) return null;
+        const lim = [0, 4, 8, 4, 3, 13, 3, 5, 5, TAUNTS.length], o = {};
+        const keys = ['name', 'body', 'color', 'eyes', 'size', 'hp', 'speed', 'atk1', 'atk2', 'taunt'];
+        for (let i = 1; i < 10; i++) { if (!Number.isInteger(a[i]) || a[i] < 0 || a[i] >= lim[i]) return null; o[keys[i]] = a[i]; }
+        if (o.hp < 3) return null;
+        o.name = String(a[0]).toUpperCase().replace(/[^A-Z0-9 !?'.-]/g, '').slice(0, 16) || 'BIG BOSS';
+        return o;
+      } catch (e) { return null; }
+    },
+  };
   function BossMakerScene(note) {
     const cfg = load(); let sel = 0, t = 0, dom = false, msg = note || '';
-    const ROWS = ['NAME', 'BODY', 'COLOUR', 'EYES', 'SIZE', 'HEALTH', 'SPEED', 'ATTACK 1', 'ATTACK 2', 'TAUNT', 'TEST FIGHT', 'SAVE', 'BACK'];
+    const ROWS = ['NAME', 'BODY', 'COLOUR', 'EYES', 'SIZE', 'HEALTH', 'SPEED', 'ATTACK 1', 'ATTACK 2', 'TAUNT', 'TEST FIGHT', 'SAVE', 'SHARE CODE', 'LOAD CODE', 'BACK'];
     const val = (r) => ({ NAME: cfg.name, BODY: OPT.body[cfg.body], COLOUR: COLNAMES[cfg.color], EYES: OPT.eyes[cfg.eyes], SIZE: OPT.size[cfg.size], HEALTH: String(cfg.hp), SPEED: OPT.speed[cfg.speed], 'ATTACK 1': OPT.atk[cfg.atk1], 'ATTACK 2': OPT.atk[cfg.atk2], TAUNT: String(cfg.taunt + 1) }[r]);
     const step = (r, d) => { const cyc = (k, n) => { cfg[k] = (cfg[k] + d + n) % n; }; ({ BODY: () => cyc('body', 4), COLOUR: () => cyc('color', 8), EYES: () => cyc('eyes', 4), SIZE: () => cyc('size', 3), HEALTH: () => { cfg.hp = clamp(cfg.hp + d, 3, 12); }, SPEED: () => cyc('speed', 3), 'ATTACK 1': () => cyc('atk1', 5), 'ATTACK 2': () => cyc('atk2', 5), TAUNT: () => cyc('taunt', TAUNTS.length) }[r] || (() => {}))(); };
     return {
@@ -143,17 +207,19 @@ const U22b = (() => {
         if (Input.confirm()) {
           if (r === 'NAME') { dom = true; editText('NAME YOUR BOSS', cfg.name, (v) => { dom = false; if (v) cfg.name = String(v).toUpperCase().replace(/[^A-Z0-9 !?'.-]/g, '').slice(0, 16) || cfg.name; }); }
           else if (r === 'SAVE') { lsS(KEY, cfg); msg = 'SAVED! PICK MY BOSS IN THE LEVEL MAKER'; Audio8.sfx('oneup'); try { Ach.unlock('bossmaker'); } catch (e) { /* ignore */ } }
+          else if (r === 'SHARE CODE') { dom = true; codeBox(`BOSS CODE: ${cfg.name}`, BossCode.encode(cfg), null, () => { dom = false; }); }
+          else if (r === 'LOAD CODE') { dom = true; codeBox('PASTE A BOSS CODE', '', (code) => { const nb = BossCode.decode(code); if (!nb) return false; Object.assign(cfg, nb); lsS(KEY, cfg); msg = 'LOADED ' + cfg.name.slice(0, 10) + '!'; Audio8.sfx('oneup'); return true; }, () => { dom = false; }); }
           else if (r === 'TEST FIGHT') { lsS(KEY, cfg); TEST.on = true; Audio8.sfx('confirm'); go(() => IntroScene(TLI, false)); }
           else if (d === 0) { step(r, 1); Audio8.sfx('select'); }
         }
       },
       draw() {
         drawParallax('castle', t * 0.3); txt('BOSS CREATOR', 128, 4, '#ffe040', { align: 'center', outline: '#101848' });
-        drawWindow(4, 16, 132, 196); ROWS.forEach((r, i) => { const y = 24 + i * 14, on = i === sel; txt(r, 18, y, on ? '#ffe040' : '#fff'); const v = val(r); if (v) txt(v.length > 9 ? v.slice(0, 9) : v, 130, y, on ? '#ffe040' : '#a8f0ff', { align: 'right' }); if (on) txt('>', 8 + ((t >> 3) & 1), y, '#ffe040'); });
+        drawWindow(4, 16, 132, 196); ROWS.forEach((r, i) => { const y = 24 + i * 12, on = i === sel; txt(r, 18, y, on ? '#ffe040' : '#fff'); const v = val(r); if (v) txt(v.length > 9 ? v.slice(0, 9) : v, 130, y, on ? '#ffe040' : '#a8f0ff', { align: 'right' }); if (on) txt('>', 8 + ((t >> 3) & 1), y, '#ffe040'); });
         drawWindow(140, 16, 112, 140); const k = [0.8, 1, 1.3][cfg.size]; drawMyBoss(cfg, 196 - 16 * k, 120 - 32 * k, frame, null);
         txt(cfg.name, 196, 128, '#ffe040', { align: 'center' }); txt(`HP ${cfg.hp}`, 196, 140, '#fff', { align: 'center' });
         drawWindow(140, 160, 112, 52); const tl = TAUNTS[cfg.taunt].split(' '), l1 = []; while (tl.length && (l1.join(' ') + ' ' + tl[0]).length <= 16) l1.push(tl.shift()); txt(`'${l1.join(' ')}`, 196, 168, '#fff', { align: 'center' }); txt(`${tl.join(' ')}'`, 196, 180, '#fff', { align: 'center' });
-        if (msg) txt(msg, 196, 196, '#40e090', { align: 'center' });
+        if (msg) txt(msg, 128, 215, '#40e090', { align: 'center', outline: '#101848' });
       },
     };
   }
@@ -212,7 +278,7 @@ const U22b = (() => {
 
   // ---------------- the Extras menu ----------------
   ExtrasList = function (start) { // eslint-disable-line no-func-assign
-    const items = [['LEVEL MAKER', () => LevelMakerScene(null)], ['MAKER WORLDS', () => MakerWorldScene()], ['MUSIC MAKER', () => MusicMakerScene()], ['MUSIC STUDIO', () => Studio.StudioScene()], ['SONG CODES', () => SongCodesScene()], ['BOSS CREATOR', () => BossMakerScene()], ['COMIC MAKER', () => ComicMakerScene()], ['COURSE WORLD', () => CourseWorldScene()], ['HERO MAKER', () => HeroMakerScene()], ['COMPLETION', () => CompletionScene()], ['TITLES', () => TitlesScene()],
+    const items = [['LEVEL MAKER', () => LevelMakerScene(null)], ['MAKER WORLDS', () => MakerWorldScene()], ['MUSIC MAKER', () => MusicMakerScene()], ['MUSIC STUDIO', () => Studio.StudioScene()], ['SONG CODES', () => SongCodesScene()], ['BOSS CREATOR', () => BossMakerScene()], ['COMIC MAKER', () => ComicMakerScene()], ['COURSE WORLD', () => CourseWorldScene()], ['HERO MAKER', () => HeroMakerScene()], ['COMPLETION', () => CompletionScene()], ['TITLES', () => TitlesScene()], ['REWARD CALENDAR', () => CalendarScene(() => ExtrasList('REWARD CALENDAR'))],
       ['TROPHY ROOM', () => TrophyScene()], ['STICKER BOOK', () => StickerScene()], ['CARD ALBUM', () => CardScene()], ['BESTIARY', () => BestiaryScene()], ['PHOTO ALBUM', () => PhotoAlbumScene()], ['ART GALLERY', () => ArtScene()], ['JUKEBOX', () => JukeboxScene()],
       ['GALLERY', () => GalleryScene()], ['THEATRE', () => TheatreScene()], ['BOSS REMATCH', () => RematchScene()], ['REPLAYS', () => ReplaysScene()], ['GHOST RACES', () => GhostScene()], ['LEADERBOARDS', () => LeaderScene()], ['HELP BOOK', () => HelpScene()], ['UPDATES', () => UpdatesScene()], ['CREDITS', () => CreditsScene()],
       ['IMPORT SAVE', () => ImportSaveScene()], ['BACKUPS', () => BackupScene()], ['INSTALL APP', () => InstallScene()], ['OPTIONS', () => OptionsScene()], ['BACK', null]];
@@ -235,7 +301,7 @@ const U22b = (() => {
       },
     };
   };
-  return { renderComic, ComicMakerScene, SongCode, SongCodesScene, BossMakerScene, drawMyBoss, load, TEST, TLI };
+  return { renderComic, ComicMakerScene, SongCode, SongCodesScene, BossMakerScene, drawMyBoss, BossCode, load, TEST, TLI };
 })();
 UPDATES.unshift(['2.2', [
   'CHALLENGES: RANDOMIZER (SEEDS!)', ' EXPLORE CASTLE: 4 RELICS', ' PRACTICE: ANY PART, SLOWER', 'WALLY TOWN: BOUNTY BOARD', 'EMOTES: HOLD B, THEN A DIRECTION',

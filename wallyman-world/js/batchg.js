@@ -286,7 +286,7 @@ const FURNITURE = {
   rugstar: { name: 'STAR RUG', kind: 'rug', price: 30, draw: (x, y) => { ctx.fillStyle = '#3050c0'; ctx.fillRect(x - 40, y, 80, 10); for (let k = 0; k < 5; k++) txt('#', x - 34 + k * 15, y + 2, '#ffe040', { shadow: null }); } },
 };
 function TownScene() {
-  const buildings = [{ x: 40, name: "DINO'S HOUSE", go: () => HouseScene(), col: '#e0a040' }, { x: 160, name: 'QUEST BOARD', go: () => QuestBoardScene(), col: '#a06a2a', board: true }, { x: 236, name: 'BOUNTY BOARD', go: () => BountyScene(), col: '#7a4a2a', board: true }, { x: 300, name: 'RIDES', go: () => RidesScene(), col: '#d05050' }, { x: 430, name: 'MY HOME', go: () => HomeScene(), col: '#5080e0' }];
+  const buildings = [{ x: 40, name: "DINO'S HOUSE", go: () => HouseScene(), col: '#e0a040' }, { x: 160, name: 'QUEST BOARD', go: () => QuestBoardScene(), col: '#a06a2a', board: true }, { x: 236, name: 'BOUNTY BOARD', go: () => BountyScene(), col: '#7a4a2a', board: true }, { x: 300, name: 'RIDES', go: () => RidesScene(), col: '#d05050' }, { x: 366, name: 'HIDE & SEEK', go: () => HideSeekScene(), col: '#3a8a3a', board: true }, { x: 430, name: 'MY HOME', go: () => HomeScene(), col: '#5080e0' }];
   const npcs = QUESTS.map((q, i) => ({ q, x: 100 + i * 82 }));
   let px = 60, face = 1, t = 0, talk = null;
   game.quests = game.quests || {}; questCheck();
@@ -367,9 +367,9 @@ function RidesScene() {
     draw() {
       drawParallax('neon', t * 0.5); drawWindow(24, 30, 208, 150);
       txt('WALLY TOWN RIDES', 128, 38, '#ffe040', { align: 'center' });
-      const tips = ['SNOWBOARD DOWNHILL: B FOR TRICKS', 'PILOT A SUB: B FIRES TORPEDOES', 'RIDE THE ROOF: DOWN TO DUCK', 'NEON CITY ROOFTOPS', 'NEON CITY: THE TOP FLOORS', 'RIDE THE WAVES: B FOR TRICKS'];
-      RIDES.forEach((li, i) => { const y = 58 + i * 18, on = i === sel; if (on) txt('>', 36 + ((t >> 3) & 1), y, '#ffe040'); txt(open(i) ? LEVELS[li].name : '???', 46, y, on ? '#ffe040' : '#fff'); if (game.cleared[li]) txt('#', 220, y, '#ffe040'); if (on) txt(open(i) ? tips[i] : 'CLEAR ROOFTOP RUN FIRST', 46, y + 8, '#a8b0d8'); });
-      const y = 58 + RIDES.length * 18; txt('BACK', 46, y, sel === RIDES.length ? '#ffe040' : '#fff'); if (sel === RIDES.length) txt('>', 36 + ((t >> 3) & 1), y, '#ffe040');
+      const tips = ['SNOWBOARD DOWNHILL: B FOR TRICKS', 'PILOT A SUB: B FIRES TORPEDOES', 'RIDE THE ROOF: DOWN TO DUCK', 'NEON CITY ROOFTOPS', 'NEON CITY: THE TOP FLOORS', 'RIDE THE WAVES: B FOR TRICKS', 'BMX: A HOPS, B FOR TRICKS', 'GLIDE ON WARM AIR: UP/DOWN'];
+      RIDES.forEach((li, i) => { const y = 52 + i * 13, on = i === sel; if (on) txt('>', 36 + ((t >> 3) & 1), y, '#ffe040'); txt(open(i) ? LEVELS[li].name : '???', 46, y, on ? '#ffe040' : '#fff'); if (game.cleared[li]) txt('#', 220, y, '#ffe040'); if (on) txt(open(i) ? tips[i] : 'CLEAR ROOFTOP RUN FIRST', 128, 168, '#a8b0d8', { align: 'center' }); });
+      const y = 52 + RIDES.length * 13; txt('BACK', 46, y, sel === RIDES.length ? '#ffe040' : '#fff'); if (sel === RIDES.length) txt('>', 36 + ((t >> 3) & 1), y, '#ffe040');
     },
   };
 }
