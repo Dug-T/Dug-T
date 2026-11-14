@@ -212,11 +212,11 @@ const U22b = (() => {
 
   // ---------------- the Extras menu ----------------
   ExtrasList = function (start) { // eslint-disable-line no-func-assign
-    const items = [['LEVEL MAKER', () => LevelMakerScene(null)], ['MAKER WORLDS', () => MakerWorldScene()], ['MUSIC MAKER', () => MusicMakerScene()], ['SONG CODES', () => SongCodesScene()], ['BOSS CREATOR', () => BossMakerScene()], ['COMIC MAKER', () => ComicMakerScene()], ['COURSE WORLD', () => CourseWorldScene()], ['HERO MAKER', () => HeroMakerScene()], ['COMPLETION', () => CompletionScene()], ['TITLES', () => TitlesScene()],
+    const items = [['LEVEL MAKER', () => LevelMakerScene(null)], ['MAKER WORLDS', () => MakerWorldScene()], ['MUSIC MAKER', () => MusicMakerScene()], ['MUSIC STUDIO', () => Studio.StudioScene()], ['SONG CODES', () => SongCodesScene()], ['BOSS CREATOR', () => BossMakerScene()], ['COMIC MAKER', () => ComicMakerScene()], ['COURSE WORLD', () => CourseWorldScene()], ['HERO MAKER', () => HeroMakerScene()], ['COMPLETION', () => CompletionScene()], ['TITLES', () => TitlesScene()],
       ['TROPHY ROOM', () => TrophyScene()], ['STICKER BOOK', () => StickerScene()], ['CARD ALBUM', () => CardScene()], ['BESTIARY', () => BestiaryScene()], ['PHOTO ALBUM', () => PhotoAlbumScene()], ['ART GALLERY', () => ArtScene()], ['JUKEBOX', () => JukeboxScene()],
       ['GALLERY', () => GalleryScene()], ['THEATRE', () => TheatreScene()], ['BOSS REMATCH', () => RematchScene()], ['REPLAYS', () => ReplaysScene()], ['GHOST RACES', () => GhostScene()], ['LEADERBOARDS', () => LeaderScene()], ['HELP BOOK', () => HelpScene()], ['UPDATES', () => UpdatesScene()], ['CREDITS', () => CreditsScene()],
       ['IMPORT SAVE', () => ImportSaveScene()], ['BACKUPS', () => BackupScene()], ['INSTALL APP', () => InstallScene()], ['OPTIONS', () => OptionsScene()], ['BACK', null]];
-    let sel = typeof start === 'string' ? Math.max(0, items.findIndex((k) => k[0] === start)) : (start || 0), t = 0; const SHOW = 11, NEWS = ['SONG CODES', 'BOSS CREATOR', 'COMIC MAKER'];
+    let sel = typeof start === 'string' ? Math.max(0, items.findIndex((k) => k[0] === start)) : (start || 0), t = 0; const SHOW = 11, NEWS = ['MUSIC STUDIO'];
     return {
       enter() { Audio8.play('menu'); },
       update() {

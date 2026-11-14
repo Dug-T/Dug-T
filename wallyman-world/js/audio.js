@@ -60,7 +60,7 @@ const Audio8 = (() => {
   const MODERN_WAVE = { p12: 'mWarm', p25: 'mWarm', p50: 'mOrgan', square: 'mOrgan', sawtooth: 'mWarm', mWarm: 'mWarm', mBell: 'mBell', mOrgan: 'mOrgan' };
   function toneModern(wave, f, t, dur, vol, bus, o) { // two detuned voices panned apart, a soft filter, and reverb
     const mw = bus === musicBus && wave === 'triangle' ? null : MODERN_WAVE[wave] || (wave === 'triangle' ? 'mBell' : null);
-    const out = ctx.createGain(), lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = Math.min(12000, f * (bus === musicBus ? 7 : 10)); lp.Q.value = 0.6;
+    const out = ctx.createGain(), lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = Math.min(12000, f * (o.cut || (bus === musicBus ? 7 : 10))); lp.Q.value = 0.6;
     const a = Math.max(o.attack || 0.005, mw ? 0.012 : 0.006), rel = (o.release || 0.05) * 1.8, v = vol * (mw ? 0.85 : 1);
     out.gain.setValueAtTime(0.0001, t); out.gain.linearRampToValueAtTime(v, t + a);
     if (o.decay) out.gain.exponentialRampToValueAtTime(Math.max(0.0001, v * o.decay), t + dur); else out.gain.setValueAtTime(v, t + Math.max(a, dur - rel));
@@ -76,7 +76,7 @@ const Audio8 = (() => {
       osc.connect(g); node.connect(lp); osc.start(t); osc.stop(t + dur + rel + 0.05);
     }
     lp.connect(out); out.connect(bus);
-    if (revSend) { const s = ctx.createGain(); s.gain.value = bus === musicBus ? 0.55 : 0.3; out.connect(s); s.connect(revSend); }
+    if (revSend) { const s = ctx.createGain(); s.gain.value = o.rev !== undefined ? o.rev : bus === musicBus ? 0.55 : 0.3; out.connect(s); s.connect(revSend); }
   }
   function tone(wave, f, t, dur, vol, bus, o = {}) {
     if (modern) return toneModern(wave, f, t, dur, vol, bus, o);
@@ -375,6 +375,7 @@ const Audio8 = (() => {
   }
   function compile(name) {
     const s = SONGS[name], bar = s.bar || 16, ev = [];
+    if (s.events) return { ev: s.events.slice().sort((a, b) => a.s - b.s), total: s.total || 32, stepDur: 60 / s.bpm / 4, swing: s.swing || 0, lead: 'p25', once: false, studio: s }; // Music Studio songs
     let step = 0;
     for (const tok of s.mel.replace(/\|/g, ' ').split(/\s+/).filter(Boolean)) {
       const [n, l] = tok.split('/'); const len = parseInt(l || '2', 10);
@@ -400,7 +401,28 @@ const Audio8 = (() => {
   const compiled = {};
   let cur = null, curName = null, idx = 0, loopN = 0, t0 = 0;
 
+  // ---------- Music Studio (Update 2.3): modern instruments and drum kits, always in the modern sound ----------
+  const ST_LEAD = [['mBell', { decay: 0.18, release: 0.35 }, 0.16, 0], ['mWarm', { release: 0.12, vib: true }, 0.1, 0], ['mBell', { decay: 0.05, release: 0.7 }, 0.12, 12], ['mWarm', { decay: 0.02, release: 0.08, cut: 4 }, 0.15, 0], ['mWarm', { attack: 0.18, release: 0.45, vib: true }, 0.09, 0], ['sine', { attack: 0.05, release: 0.15, vib: true }, 0.17, 12]];
+  const ST_CHORD = [['mWarm', { attack: 0.4, release: 0.7, cut: 4 }, 0.035], ['mWarm', { attack: 0.2, release: 0.5 }, 0.04], ['mBell', { decay: 0.3, release: 0.4 }, 0.05], ['mOrgan', { release: 0.1, cut: 5 }, 0.035], null];
+  const ST_BASS = [['sine', { release: 0.05 }, 0.42], ['triangle', { decay: 0.45, release: 0.06 }, 0.42], ['mWarm', { release: 0.06, cut: 3 }, 0.2], null];
+  function studioDrum(kind, t, kit) {
+    if (kit === 1) { // 808
+      if (kind === 'k') { toneModern('sine', 130, t, 0.55, 1.0, musicBus, { slide: 38, slideT: 0.4, decay: 0.05, rev: 0.05 }); return; }
+      if (kind === 's') { for (let i = 0; i < 3; i++) noise(t + i * 0.012, 0.09, 0.22, musicBus, 'bandpass', 1500, 0.8); noise(t + 0.03, 0.2, 0.16, musicBus, 'bandpass', 1200, 0.6); return; }
+      if (kind === 'h') { noise(t, 0.025, 0.07, musicBus, 'highpass', 9500, 0.8); return; }
+      noise(t, 0.3, 0.07, musicBus, 'highpass', 8000, 0.7); return;
+    }
+    const was = modern; modern = kit !== 2; try { drum(kind, t); } finally { modern = was; } // 0: modern kit, 2: lo-fi (the chip kit)
+  }
+  function studioEvent(S, e, t, sd) {
+    const dur = e.l * sd, rev = [0.05, 0.3, 0.6, 0.95][S.rev | 0] || 0.3;
+    if (e.c === 'L') { const I = ST_LEAD[S.lead | 0] || ST_LEAD[0]; toneModern(I[0], freq(e.m + I[3]), t, dur * 0.95, I[2], musicBus, Object.assign({ rev }, I[1])); }
+    else if (e.c === 'C') { const I = ST_CHORD[S.chordInst | 0]; if (!I) return; e.ms.forEach((m, i) => toneModern(I[0], freq(m), t + i * 0.01, dur * 0.97, I[2], musicBus, Object.assign({ rev }, I[1]))); }
+    else if (e.c === 'B') { const I = ST_BASS[S.bassInst | 0]; if (!I) return; toneModern(I[0], freq(e.m), t, dur * 0.9, I[2], musicBus, Object.assign({ rev: rev * 0.3 }, I[1])); }
+    else if (e.c === 'D') studioDrum(e.d, t, S.kit | 0);
+  }
   function playEvent(e, t, sd) {
+    if (cur && cur.studio) return studioEvent(cur.studio, e, t, sd);
     const dur = e.l * sd;
     if (modern) { // remastered arrangement: a warm chord pad, a sub-bass, and a soft octave under the melody
       if (e.c === 'rp') { e.ms.forEach((m, i) => tone('mWarm', freq(m), t + i * 0.012, dur * 0.98, 0.028, musicBus, { attack: 0.35, release: 0.4 })); return; }
