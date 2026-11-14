@@ -2,7 +2,7 @@
 
 A 16-bit style side-scrolling platformer starring **WallyMan**, built in plain HTML5 + JavaScript (no installs, no build step).
 
-**Current version: Update 1.9.** The update number shows on a ribbon under the title logo. It is set by `GAME_VERSION` at the top of `js/game.js`, and each new update adds 0.1 (1.1, 1.2, 1.3 and so on). Each update also changes the `?v=` number on the script tags in `index.html` and the cache name in `sw.js`, so browsers fetch the new files instead of showing old saved copies.
+**Current version: Update 2.2.** The update number shows on a ribbon under the title logo. It is set by `GAME_VERSION` at the top of `js/game.js`, and each new update adds 0.1 (1.1, 1.2, 1.3 and so on). Each update also changes the `?v=` number on the script tags in `index.html` and the cache name in `sw.js`, so browsers fetch the new files instead of showing old saved copies.
 
 ## Play
 
@@ -24,6 +24,36 @@ Open `index.html` in any modern browser — or enable **GitHub Pages** for this 
 ## What's in it
 
 - **Saves on every device** – the game keeps each player's progress in their own browser. If a browser looks like it won't keep saves (for example a claude.ai link opened while signed out), the title screen says so, S shows a **save code** for each file, and quitting to the title offers one too.
+- **Update 2.2: new modes and things to make**
+  - *Emotes:* stand still and hold B, then press UP to wave, LEFT/RIGHT to dance or DOWN to sit.
+  - *Randomizer* (Challenges): 8 real levels in a shuffled order with shuffled enemies and blocks, from a seed. The results screen shows the seed code (WR-…) to share – the same seed always gives the same run – and ENTER A SEED CODE plays a friend's.
+  - *Explore Castle* (Challenges): one big castle where four relics open new ways on – the **Feather** (hold A while falling to glide over a huge gap), **Bounce Boots** (double jump over a high wall), **Dash Gem** (press S to dash through crystal) and **Iron Fist** (land hard to smash cracked stone). Three hidden **castle gems** need relics you only find later, so come back for them. A map of the rooms you've seen and your relics sits in the corner, and a Castle Golem guards the throne room.
+  - *Practice* (Challenges): pick any level you've beaten, a start point and a speed (full, 3/4 or half). A fall or a last hit puts you back at your start point without losing a life.
+  - *Bounty Board* (Wally Town, next to the Quest Board): three hunts at a time ("wanted: 10 bats", "wanted: 1 boss"…). Claim the coins when one is done and a new one takes its place; claim more to raise your rank from Rookie to Legend. (The Quest Board's five quests are one-off; the bounties never run out.)
+  - *Comic Maker* (Extras): pick four of your photos, add a title and speech bubbles, then save the 512×448 comic to your photo album and share or download it.
+  - *Song Codes* (Extras): share a Music Maker song as a code (with a QR code) and load songs friends send you into any of your 3 song slots.
+  - *Boss Creator* (Extras): build a boss from a body (blob, robot, beast or ghost), colour, eyes, size, health, speed, two attacks (shoot, hop with shockwaves, dive, summon Grumbles) and a taunt; test-fight it, then choose MY BOSS for a Level Maker course.
+- **Update 2.1: new places and new moves**
+  - *Dream World* (15th island, by balloon from Baron's Revenge): every level has its own dream rule – **Pillow Peaks** (bouncy ground; hold A to bounce higher), **Floaty Fields** (floaty jumps), **Topsy-Turvy Towers** (fall upwards in the purple glow), **Sleepwalk Street** (enemies in nightcaps sleepwalk slowly and wake up when you get close), **Melting Clouds** (clouds melt soon after you land) – and **The Nightmare**, a shadow cloud that throws shadow orbs, then sinks down for a nap: stomp it then.
+  - *Kitchen Kingdom* (16th island): **Countertop Capers** (hot plates), **Frying Pan Flip** (pans flip now and then and fling you up high), **Oven Escape** (the oven heat chases you across the screen), **Jelly Jungle** (bouncy jellies), **Pantry Peril** (giant rolling peas – jump or stomp them) and **Chef Gateau**, who walks, throws pies, has a stomping tantrum, then gets dizzy.
+  - *Starlight Summit* (secret 17th island): the star portal in the Kitchen Kingdom opens once you have **150 medals**. Four levels mix every dream rule, then **The Dreamweaver** weaves rings of stars and dives; beat it for the **true ending**, the credits and an **epilogue**.
+  - *Surf's Up* – a new ride in Wally Town's RIDES: ride the waves, jump off the crests and press B for tricks.
+  - *Lawnmower Chase* – a new bonus level in Bug's-Eye Garden (after Puddle Crossing): a giant lawnmower chases the tiny hero across the garden.
+  - *Parry:* press B just as an enemy or a shot hits you to knock it back (a parried shot can hit a boss). It doesn't work on spikes, lava or falls.
+  - *Power suits:* the first energy-drink block in many levels holds a **Bee Suit** (hold A in the air to fly in short bursts), a **Rock Suit** (heavy: sinks in water and smashes bricks when you land hard) or a **Balloon Suit** (hold A to float up, let go to drift down). A hit takes the suit away instead of a heart.
+  - *Focus* (from the first energy-drink block in other levels): everything except you moves at half speed for 6 seconds, and the music goes soft.
+  - *Weather Orb* (likewise): press S to switch between rain and sun. Rain fills every pit with water you can swim across; sun dries it out again.
+- **Update 2.0: the modern look finished, and comfort for everyone**
+  - *Modern art:* every remaining enemy (bats, chargers, turrets, fish, jellyfish, ghosts, slimes, boomers, magnet drones, asteroids, beam-down aliens, the Zappling squadron) and boss (Giant Squid, T-Rex, Volt, Baron's Mega-Mech, the Mothership, the Crab, the Drill Mole, Nimbus) is now hand-drawn at high resolution in MODERN mode.
+  - *Painted backgrounds:* every world's background layers are re-painted with soft brush edges, light from above, depth haze and a canvas grain; skies are smooth painted gradients.
+  - *Living scenery:* grass sways and parts around your feet, leaves drift through green worlds, light ripples down through the water, and a pennant flaps on the Signal Tower.
+  - *Painted island map:* surf along every shore, a shimmering sea, drifting clouds and their shadows, and cleared levels glowing gold.
+  - *Remastered soundtrack:* with MODERN sound, every song gains a warm chord pad, a sub-bass and a soft octave under the melody.
+  - *Quick resume:* if the page is hidden or closed during a level, the game pauses and remembers where you were; the title screen then offers to carry on.
+  - *QR codes:* every share box (ghost races, Level Maker courses and worlds, save codes) shows a QR code; scanning it opens the game with the code ready to load.
+  - *Tablets:* bigger buttons and a bigger picture on iPads and other large touch screens.
+  - *Comfort options:* BIG TEXT (taller, bolder letters; uses modern graphics), READ ALOUD (menus and signs spoken by the device's voice) and ONE HAND (all touch buttons on one side, with auto-run in levels).
+  - *Show me the way:* after three lost lives on the same level, press S at the start and a ghost of your hero plays through the tricky part, then hands control back.
 - **Update 1.9: more modern, smoother, and more comfortable**
   - *Modern art:* GothChick (and Ninja Nell and the Frost Queen), Doug, Robo-Wally, Dracula and his bat form, Baron Static, the Ice Yeti, the Clockmaker, coins, every power-up and the HUD icons are now hand-drawn at high resolution in MODERN mode.
   - *Modern effects:* dust puffs when you run, skid and land; sparkles on coins; embers over lava; bubbles underwater; lava that glows; torch-lit caves, castles and haunted houses; glowing castle windows and power-ups; a camera that looks further ahead the faster you run; glass menus and HUD with hearts and coins that pop; and a sliding screen transition.
@@ -286,6 +316,13 @@ js/batchq.js        Update 1.7: modern graphics (high resolution, smoothed sprit
 js/batchr.js        Update 1.7: hand-drawn high-resolution art for modern mode (WallyMan, 4 enemies, ground tiles)
 js/batchs.js        Update 1.9: more hand-drawn art (GothChick, Doug, Robo-Wally, Dracula, bosses, coins, power-ups, HUD icons)
 js/batchs2.js       Update 1.9: modern effects, adaptive music hooks, smoothness, reduce motion, touch extras
+js/batcht.js        Update 2.0: hand-drawn art for the remaining enemies and bosses
+js/batcht2.js       Update 2.0: painted backgrounds, living scenery, the painted island map
+js/batcht3.js       Update 2.0: QR codes, quick resume, big text, read aloud, one hand, show me the way
+js/batchu.js        Update 2.1: Dream World, Kitchen Kingdom, Starlight Summit, true ending, Surf's Up, Lawnmower Chase
+js/batchu2.js       Update 2.1: parry, power suits, focus, weather orb
+js/batchv.js        Update 2.2: emotes, randomizer, explore castle, practice, bounty board
+js/batchv2.js       Update 2.2: comic maker, song codes, boss creator
 js/batcho.js        Update 1.4: Count Dracula, his castle, the full moon and the passing storm in Wally's Backyard
 js/batchj2.js       Dino Valley map, completion, mirror/rematch menus, card and photo albums, theatre, Music Maker, Maker worlds, Party Mode
 js/batchi2.js       Pirate Cove map, airship, tower/gold menus, garden, pets, mini-games, hero maker, cloud save, Level of the Week, touch editor, Level Maker parts

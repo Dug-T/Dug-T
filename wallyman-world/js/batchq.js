@@ -41,7 +41,7 @@ const Modern = (() => {
     if (e && e.v === img._mv && e.w === w && e.h === h) return e;
     const changes = e ? (e.changes || 0) + 1 : 0;
     const pf = painters.get(img);
-    if (pf) { const c = document.createElement('canvas'); c.width = w * 4; c.height = h * 4; const x = c.getContext('2d'); x.scale(4, 4); try { pf(x, w, h); } catch (err) { console.warn(err); } e = { c, k: 4, v: img._mv, w, h, changes: 0 }; cache.set(img, e); return e; }
+    if (pf) { const pk = pf.k || 4, c = document.createElement('canvas'); c.width = w * pk; c.height = h * pk; const x = c.getContext('2d'); x.scale(pk, pk); try { pf(x, w, h); } catch (err) { console.warn(err); } e = { c, k: pk, v: img._mv, w, h, changes: 0 }; cache.set(img, e); return e; }
     if (changes > 3) { cache.set(img, { dyn: true }); return null; } // a canvas redrawn all the time: draw it as it is
     const k = w * h <= 9000 ? 4 : 2;
     try { e = { c: upscale(img, k), k, v: img._mv, w, h, changes }; } catch (err) { e = { dyn: true }; }

@@ -5,7 +5,7 @@ const ctx = cv.getContext('2d');
 ctx.imageSmoothingEnabled = false;
 let frame = 0;
 // the game's update number, shown on the title screen: 1.0 is the first, and each new update adds 0.1 (1.1, 1.2, ...)
-const GAME_VERSION = '1.9';
+const GAME_VERSION = '2.2';
 const SOLID = new Set(['#', 'B', 'W', 'P', 'S', 'O', 'A', 'V', 'Q', 'D', 'N', 'T', 'E', 'H', '[', ']', '{', 'F', '+', '}', '?', '`', 'U', 'X', '^', 'J', 'R', '<', '>', 'Y']);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const approach = (v, t, d) => (v < t ? Math.min(t, v + d) : Math.max(t, v - d));
@@ -1129,7 +1129,7 @@ function MapScene() {
     const nd = NODES_[n];
     if (nd.kind === 'door' || nd.kind === 'town') return true;
     if (nd.side) return !!game.cleared[nd.after];
-    if (nd.kind === 'portal') return W === 0 ? !!game.cleared[7] : nd.to === 2 && W === 1 ? !!game.cleared[14] : nd.to === 3 ? !!game.cleared[20] : nd.to === 4 ? !!game.cleared[27] : nd.to === 5 ? !!game.cleared[44] : nd.to === 6 ? !!game.cleared[55] : nd.to === 7 ? !!game.cleared[62] : nd.to === 8 ? !!game.cleared[69] : nd.to === 9 ? !!game.cleared[78] : nd.to === 10 ? !!game.cleared[85] : nd.to === 11 ? !!game.cleared[91] : nd.to === 12 ? !!game.cleared[105] : nd.to === 13 ? !!game.cleared[111] : true;
+    if (nd.kind === 'portal') return W === 0 ? !!game.cleared[7] : nd.to === 2 && W === 1 ? !!game.cleared[14] : nd.to === 3 ? !!game.cleared[20] : nd.to === 4 ? !!game.cleared[27] : nd.to === 5 ? !!game.cleared[44] : nd.to === 6 ? !!game.cleared[55] : nd.to === 7 ? !!game.cleared[62] : nd.to === 8 ? !!game.cleared[69] : nd.to === 9 ? !!game.cleared[78] : nd.to === 10 ? !!game.cleared[85] : nd.to === 11 ? !!game.cleared[91] : nd.to === 12 ? !!game.cleared[105] : nd.to === 13 ? !!game.cleared[111] : nd.to === 14 ? !!game.cleared[115] : nd.to === 15 ? !!game.cleared[121] : nd.to === 16 ? (typeof U21 !== 'undefined' && U21.medalSum() >= 150) : true;
     if (nd.gate && !dimensionOpen()) return false;
     if (W === 0) return nd.kind === 'bonus' ? !!(game.secrets[nd.li] || game.cleared[7]) : (n <= 1 || game.cleared[n - 2]);
     const prev = NODES_.slice(0, n).filter((k) => k.li !== undefined && k.kind !== 'door' && !k.side).pop();
@@ -3198,8 +3198,9 @@ class Play {
 function resize() {
   const touch = document.body.classList.contains('touch');
   const land = innerWidth > innerHeight;
-  const side = innerHeight < 500 ? 170 : 195; // room each side for the touch buttons when sideways
-  const availH = innerHeight - (touch && !land ? 300 : 0), availW = innerWidth - (touch && land ? 2 * side : 0);
+  const big = touch && Math.min(innerWidth, innerHeight) >= 700; // a tablet: roomier buttons
+  const side = big ? 240 : innerHeight < 500 ? 170 : 195; // room each side for the touch buttons when sideways
+  const availH = innerHeight - (touch && !land ? (big ? 330 : 300) : 0), availW = innerWidth - (touch && land ? 2 * side : 0);
   let s = Math.min(availW / VW, availH / VH);
   if (s >= 2 && !(touch && land)) s = Math.floor(s);
   cv.style.width = Math.floor(VW * s) + 'px';

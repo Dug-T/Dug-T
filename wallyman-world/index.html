@@ -20,6 +20,14 @@
   #stickKnob { position: absolute; left: 30%; top: 30%; width: 40%; height: 40%; border-radius: 50%; background: radial-gradient(circle at 35% 35%, rgba(255,255,255,0.75), rgba(160,190,255,0.45)); border: 2px solid rgba(255,255,255,0.8); box-sizing: border-box; }
   body.analog.touch #stickBase { display: block; }
   body.analog #pad .dpad button { opacity: 0 !important; }
+  body.touch.tablet #pad button { width: 84px; height: 84px; font-size: 22px; }
+  body.touch.tablet #pad button.small { width: 76px; height: 44px; border-radius: 22px; font-size: 13px; }
+  body.touch.tablet #pad button[data-k="special"] { width: 64px !important; height: 52px !important; border-radius: 26px !important; font-size: 17px !important; }
+  body.touch.tablet #pad .dpad { grid-template-columns: 72px 72px 72px; grid-template-rows: 72px 72px; gap: 6px; }
+  body.touch.tablet #pad .dpad button { width: 72px; height: 72px; }
+  body.onehand-right #pad, body.onehand-left #pad { flex-direction: column; justify-content: flex-end; gap: 12px; }
+  body.onehand-right #pad { align-items: flex-end; } body.onehand-left #pad { align-items: flex-start; }
+  @media (orientation: landscape) { body.onehand-left #pad .dpad, body.onehand-right #pad .dpad { grid-template-columns: 40px 40px 40px; grid-template-rows: 40px 40px; } body.onehand-left #pad .dpad button, body.onehand-right #pad .dpad button { width: 40px; height: 40px; } }
   #pad button { width: 64px; height: 64px; border-radius: 50%; border: 2px solid #fff; background: var(--btn); text-shadow: 0 0 2px #000; color: var(--ink); font: bold 18px monospace; touch-action: none; }
   #pad button.on { background: var(--btn-on); }
   #pad button.small { width: 56px; height: 34px; border-radius: 17px; font-size: 11px; }
@@ -65,40 +73,47 @@
     <button data-k="jump" style="margin-bottom:28px">A</button>
   </div>
 </div>
-<script src="js/font.js?v=1.9"></script>
-<script src="js/audio.js?v=1.9"></script>
-<script src="js/sprites.js?v=1.9"></script>
-<script src="js/wally.js?v=1.9"></script>
-<script src="js/levels.js?v=1.9"></script>
-<script src="js/online-config.js?v=1.9"></script>
-<script src="js/game.js?v=1.9"></script>
-<script src="js/maker.js?v=1.9"></script>
-<script src="js/extra.js?v=1.9"></script>
-<script src="js/batche.js?v=1.9"></script>
-<script src="js/batchf.js?v=1.9"></script>
-<script src="js/batchf2.js?v=1.9"></script>
-<script src="js/batchg.js?v=1.9"></script>
-<script src="js/batchh.js?v=1.9"></script>
-<script src="js/batchh2.js?v=1.9"></script>
-<script src="js/batchh3.js?v=1.9"></script>
-<script src="js/batchi.js?v=1.9"></script>
-<script src="js/batchi2.js?v=1.9"></script>
-<script src="js/batchj.js?v=1.9"></script>
-<script src="js/batchj2.js?v=1.9"></script>
-<script src="js/batchk.js?v=1.9"></script>
-<script src="js/batchk2.js?v=1.9"></script>
-<script src="js/batchl.js?v=1.9"></script>
-<script src="js/batchl2.js?v=1.9"></script>
-<script src="js/batchm.js?v=1.9"></script>
-<script src="js/batchm2.js?v=1.9"></script>
-<script src="js/batchn.js?v=1.9"></script>
-<script src="js/batchn2.js?v=1.9"></script>
-<script src="js/batchn3.js?v=1.9"></script>
-<script src="js/batcho.js?v=1.9"></script>
-<script src="js/batchp.js?v=1.9"></script>
-<script src="js/batchq.js?v=1.9"></script>
-<script src="js/batchr.js?v=1.9"></script>
-<script src="js/batchs.js?v=1.9"></script>
-<script src="js/batchs2.js?v=1.9"></script>
+<script src="js/font.js?v=2.2"></script>
+<script src="js/audio.js?v=2.2"></script>
+<script src="js/sprites.js?v=2.2"></script>
+<script src="js/wally.js?v=2.2"></script>
+<script src="js/levels.js?v=2.2"></script>
+<script src="js/online-config.js?v=2.2"></script>
+<script src="js/game.js?v=2.2"></script>
+<script src="js/maker.js?v=2.2"></script>
+<script src="js/extra.js?v=2.2"></script>
+<script src="js/batche.js?v=2.2"></script>
+<script src="js/batchf.js?v=2.2"></script>
+<script src="js/batchf2.js?v=2.2"></script>
+<script src="js/batchg.js?v=2.2"></script>
+<script src="js/batchh.js?v=2.2"></script>
+<script src="js/batchh2.js?v=2.2"></script>
+<script src="js/batchh3.js?v=2.2"></script>
+<script src="js/batchi.js?v=2.2"></script>
+<script src="js/batchi2.js?v=2.2"></script>
+<script src="js/batchj.js?v=2.2"></script>
+<script src="js/batchj2.js?v=2.2"></script>
+<script src="js/batchk.js?v=2.2"></script>
+<script src="js/batchk2.js?v=2.2"></script>
+<script src="js/batchl.js?v=2.2"></script>
+<script src="js/batchl2.js?v=2.2"></script>
+<script src="js/batchm.js?v=2.2"></script>
+<script src="js/batchm2.js?v=2.2"></script>
+<script src="js/batchn.js?v=2.2"></script>
+<script src="js/batchn2.js?v=2.2"></script>
+<script src="js/batchn3.js?v=2.2"></script>
+<script src="js/batcho.js?v=2.2"></script>
+<script src="js/batchp.js?v=2.2"></script>
+<script src="js/batchq.js?v=2.2"></script>
+<script src="js/batchr.js?v=2.2"></script>
+<script src="js/batchs.js?v=2.2"></script>
+<script src="js/batchs2.js?v=2.2"></script>
+<script src="js/batcht.js?v=2.2"></script>
+<script src="js/batcht2.js?v=2.2"></script>
+<script src="js/batcht3.js?v=2.2"></script>
+<script src="js/batchu.js?v=2.2"></script>
+<script src="js/batchu2.js?v=2.2"></script>
+<script src="js/batchv.js?v=2.2"></script>
+<script src="js/batchv2.js?v=2.2"></script>
 </body>
 </html>
