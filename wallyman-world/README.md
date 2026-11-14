@@ -2,7 +2,7 @@
 
 A 16-bit style side-scrolling platformer starring **WallyMan**, built in plain HTML5 + JavaScript (no installs, no build step).
 
-**Current version: Update 2.4.** The update number shows on a ribbon under the title logo. It is set by `GAME_VERSION` at the top of `js/game.js`, and each new update adds 0.1 (1.1, 1.2, 1.3 and so on). Each update also changes the `?v=` number on the script tags in `index.html` and the cache name in `sw.js`, so browsers fetch the new files instead of showing old saved copies.
+**Current version: Update 2.5.** The update number shows on a ribbon under the title logo. It is set by `GAME_VERSION` at the top of `js/game.js`, and each new update adds 0.1 (1.1, 1.2, 1.3 and so on). Each update also changes the `?v=` number on the script tags in `index.html` and the cache name in `sw.js`, so browsers fetch the new files instead of showing old saved copies.
 
 ## Play
 
@@ -24,6 +24,13 @@ Open `index.html` in any modern browser — or enable **GitHub Pages** for this 
 ## What's in it
 
 - **Saves on every device** – the game keeps each player's progress in their own browser. If a browser looks like it won't keep saves (for example a claude.ai link opened while signed out), the title screen says so, S shows a **save code** for each file, and quitting to the title offers one too.
+- **Update 2.5: games with friends**
+  - *Three new mini-games in Dino's House*: **Penalty Shootout** (5 kicks each – stop the moving aim for the side, then the height; when Dino shoots, hold Left or Right to dive), **Tennis vs Dino** (A swings, hold Left/Right as you hit to aim for a corner, first to 3 games) and **Checkers vs Dino** (Easy, Normal or Hard; jumps are a must and multi-jumps chain).
+  - *Hide & Seek* (Wally Town, the new sign between Rides and My Home): five friends hide around town – press UP at a bush, barrel, tree or crate to look, and watch for hiding spots that wiggle when someone giggles. 90 seconds; coins for every friend found and a trophy for finding them all.
+  - *Online Co-op* (Challenges): host a game to get a 5-letter room code (with a QR code to share), your friend types it on their own device, and you play the same level together – you see each other run, a checkpoint one of you reaches counts for both, and when one of you reaches the goal you both clear it. It uses the same Firebase settings as the high scores (see below); the rules file now has a small `coop` collection for the rooms.
+  - *Tag* (Challenges): whoever is IT chases, a tag passes it on, and the least time spent as IT after 60 seconds wins. Play against GothChick, or with 2 players on one keyboard (player 2: T F G H to move, R to jump, or the number pad or a second gamepad).
+  - *Problem Spots* (Challenges): every time you lose a life the spot is marked. See your worst levels, look at a mini-map with red crosses where you fell, and practise from any spot with no lives lost.
+  - *Boss Creator share codes*: SHARE CODE gives your boss as a code with a QR code; LOAD CODE loads a friend's.
 - **Update 2.4: magic, time travel and two new rides**
   - *Wizard's Academy* (18th island, by broomstick from the Kitchen Kingdom once Chef Gateau is beaten): pick up a spell book and press S to cast – **Float** (in the air, a magic platform appears under your feet; 3 charges), **Freeze** (nearby water turns to ice for 8 seconds and freezes the jellyfish in it) or **Light** (lights up dark rooms and turns hidden blocks into real ones). Levels: Spellbook Steps, Frozen Moat, Midnight Library, The Spell Tower (all three spells), then **Archmage Zora**, who teleports and casts – stomp her when she's dizzy.
   - *Time Machine Island* (19th island): every level has a **past** and a **future** – press S to jump between them (a wall in the future can be a doorway in the past, a broken bridge in one is whole in the other; you can't swap into a wall). Levels: Clockwork Crossing, Overgrown Ruins, Neon Tomorrow (you start in the future), The Time Storm (time also swaps by itself), then **The Chrono Clock**, which fires lasers in the future and opens its gears in the past.
@@ -330,6 +337,8 @@ js/batchv.js        Update 2.2: emotes, randomizer, explore castle, practice, bo
 js/batchv2.js       Update 2.2: comic maker, song codes, boss creator
 js/batchw.js        Update 2.3: Music Studio (a modern music maker)
 js/batchx.js        Update 2.4: Wizard's Academy (spells), Time Machine Island (past/future), BMX and hang-glider rides
+js/batchy.js        Update 2.5: Penalty Shootout, Tennis and Checkers vs Dino, Hide & Seek in Wally Town
+js/batchy2.js       Update 2.5: Tag, online co-op rooms, Problem Spots, the Challenges menu
 js/batcho.js        Update 1.4: Count Dracula, his castle, the full moon and the passing storm in Wally's Backyard
 js/batchj2.js       Dino Valley map, completion, mirror/rematch menus, card and photo albums, theatre, Music Maker, Maker worlds, Party Mode
 js/batchi2.js       Pirate Cove map, airship, tower/gold menus, garden, pets, mini-games, hero maker, cloud save, Level of the Week, touch editor, Level Maker parts

@@ -128,9 +128,25 @@ const U22b = (() => {
     else { ctx.fillStyle = '#1a1020'; for (const d of [-1, 1]) { ctx.beginPath(); ctx.ellipse(cx + d * 6 * k, ey, 5 * k, 3.4 * k, 0, 0, Math.PI * 2); ctx.fill(); } ctx.fillRect(cx - 2 * k, ey - 1 * k, 4 * k, 1.6 * k); ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.fillRect(cx - 9 * k, ey - 2 * k, 3 * k, 1.2 * k); }
     ctx.restore();
   }
+  // share codes: WMB1- then the settings packed as base64 JSON
+  const BossCode = {
+    encode: (c) => 'WMB1-' + btoa(JSON.stringify([c.name, c.body, c.color, c.eyes, c.size, c.hp, c.speed, c.atk1, c.atk2, c.taunt])),
+    decode(code) {
+      try {
+        const m = String(code || '').replace(/\s+/g, '').match(/^WMB1-([A-Za-z0-9+/=]+)$/); if (!m) return null;
+        const a = JSON.parse(atob(m[1])); if (!Array.isArray(a) || a.length !== 10) return null;
+        const lim = [0, 4, 8, 4, 3, 13, 3, 5, 5, TAUNTS.length], o = {};
+        const keys = ['name', 'body', 'color', 'eyes', 'size', 'hp', 'speed', 'atk1', 'atk2', 'taunt'];
+        for (let i = 1; i < 10; i++) { if (!Number.isInteger(a[i]) || a[i] < 0 || a[i] >= lim[i]) return null; o[keys[i]] = a[i]; }
+        if (o.hp < 3) return null;
+        o.name = String(a[0]).toUpperCase().replace(/[^A-Z0-9 !?'.-]/g, '').slice(0, 16) || 'BIG BOSS';
+        return o;
+      } catch (e) { return null; }
+    },
+  };
   function BossMakerScene(note) {
     const cfg = load(); let sel = 0, t = 0, dom = false, msg = note || '';
-    const ROWS = ['NAME', 'BODY', 'COLOUR', 'EYES', 'SIZE', 'HEALTH', 'SPEED', 'ATTACK 1', 'ATTACK 2', 'TAUNT', 'TEST FIGHT', 'SAVE', 'BACK'];
+    const ROWS = ['NAME', 'BODY', 'COLOUR', 'EYES', 'SIZE', 'HEALTH', 'SPEED', 'ATTACK 1', 'ATTACK 2', 'TAUNT', 'TEST FIGHT', 'SAVE', 'SHARE CODE', 'LOAD CODE', 'BACK'];
     const val = (r) => ({ NAME: cfg.name, BODY: OPT.body[cfg.body], COLOUR: COLNAMES[cfg.color], EYES: OPT.eyes[cfg.eyes], SIZE: OPT.size[cfg.size], HEALTH: String(cfg.hp), SPEED: OPT.speed[cfg.speed], 'ATTACK 1': OPT.atk[cfg.atk1], 'ATTACK 2': OPT.atk[cfg.atk2], TAUNT: String(cfg.taunt + 1) }[r]);
     const step = (r, d) => { const cyc = (k, n) => { cfg[k] = (cfg[k] + d + n) % n; }; ({ BODY: () => cyc('body', 4), COLOUR: () => cyc('color', 8), EYES: () => cyc('eyes', 4), SIZE: () => cyc('size', 3), HEALTH: () => { cfg.hp = clamp(cfg.hp + d, 3, 12); }, SPEED: () => cyc('speed', 3), 'ATTACK 1': () => cyc('atk1', 5), 'ATTACK 2': () => cyc('atk2', 5), TAUNT: () => cyc('taunt', TAUNTS.length) }[r] || (() => {}))(); };
     return {
@@ -143,17 +159,19 @@ const U22b = (() => {
         if (Input.confirm()) {
           if (r === 'NAME') { dom = true; editText('NAME YOUR BOSS', cfg.name, (v) => { dom = false; if (v) cfg.name = String(v).toUpperCase().replace(/[^A-Z0-9 !?'.-]/g, '').slice(0, 16) || cfg.name; }); }
           else if (r === 'SAVE') { lsS(KEY, cfg); msg = 'SAVED! PICK MY BOSS IN THE LEVEL MAKER'; Audio8.sfx('oneup'); try { Ach.unlock('bossmaker'); } catch (e) { /* ignore */ } }
+          else if (r === 'SHARE CODE') { dom = true; codeBox(`BOSS CODE: ${cfg.name}`, BossCode.encode(cfg), null, () => { dom = false; }); }
+          else if (r === 'LOAD CODE') { dom = true; codeBox('PASTE A BOSS CODE', '', (code) => { const nb = BossCode.decode(code); if (!nb) return false; Object.assign(cfg, nb); lsS(KEY, cfg); msg = 'LOADED ' + cfg.name.slice(0, 10) + '!'; Audio8.sfx('oneup'); return true; }, () => { dom = false; }); }
           else if (r === 'TEST FIGHT') { lsS(KEY, cfg); TEST.on = true; Audio8.sfx('confirm'); go(() => IntroScene(TLI, false)); }
           else if (d === 0) { step(r, 1); Audio8.sfx('select'); }
         }
       },
       draw() {
         drawParallax('castle', t * 0.3); txt('BOSS CREATOR', 128, 4, '#ffe040', { align: 'center', outline: '#101848' });
-        drawWindow(4, 16, 132, 196); ROWS.forEach((r, i) => { const y = 24 + i * 14, on = i === sel; txt(r, 18, y, on ? '#ffe040' : '#fff'); const v = val(r); if (v) txt(v.length > 9 ? v.slice(0, 9) : v, 130, y, on ? '#ffe040' : '#a8f0ff', { align: 'right' }); if (on) txt('>', 8 + ((t >> 3) & 1), y, '#ffe040'); });
+        drawWindow(4, 16, 132, 196); ROWS.forEach((r, i) => { const y = 24 + i * 12, on = i === sel; txt(r, 18, y, on ? '#ffe040' : '#fff'); const v = val(r); if (v) txt(v.length > 9 ? v.slice(0, 9) : v, 130, y, on ? '#ffe040' : '#a8f0ff', { align: 'right' }); if (on) txt('>', 8 + ((t >> 3) & 1), y, '#ffe040'); });
         drawWindow(140, 16, 112, 140); const k = [0.8, 1, 1.3][cfg.size]; drawMyBoss(cfg, 196 - 16 * k, 120 - 32 * k, frame, null);
         txt(cfg.name, 196, 128, '#ffe040', { align: 'center' }); txt(`HP ${cfg.hp}`, 196, 140, '#fff', { align: 'center' });
         drawWindow(140, 160, 112, 52); const tl = TAUNTS[cfg.taunt].split(' '), l1 = []; while (tl.length && (l1.join(' ') + ' ' + tl[0]).length <= 16) l1.push(tl.shift()); txt(`'${l1.join(' ')}`, 196, 168, '#fff', { align: 'center' }); txt(`${tl.join(' ')}'`, 196, 180, '#fff', { align: 'center' });
-        if (msg) txt(msg, 196, 196, '#40e090', { align: 'center' });
+        if (msg) txt(msg, 128, 215, '#40e090', { align: 'center', outline: '#101848' });
       },
     };
   }
@@ -235,7 +253,7 @@ const U22b = (() => {
       },
     };
   };
-  return { renderComic, ComicMakerScene, SongCode, SongCodesScene, BossMakerScene, drawMyBoss, load, TEST, TLI };
+  return { renderComic, ComicMakerScene, SongCode, SongCodesScene, BossMakerScene, drawMyBoss, BossCode, load, TEST, TLI };
 })();
 UPDATES.unshift(['2.2', [
   'CHALLENGES: RANDOMIZER (SEEDS!)', ' EXPLORE CASTLE: 4 RELICS', ' PRACTICE: ANY PART, SLOWER', 'WALLY TOWN: BOUNTY BOARD', 'EMOTES: HOLD B, THEN A DIRECTION',

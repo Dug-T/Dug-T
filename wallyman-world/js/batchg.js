@@ -286,7 +286,7 @@ const FURNITURE = {
   rugstar: { name: 'STAR RUG', kind: 'rug', price: 30, draw: (x, y) => { ctx.fillStyle = '#3050c0'; ctx.fillRect(x - 40, y, 80, 10); for (let k = 0; k < 5; k++) txt('#', x - 34 + k * 15, y + 2, '#ffe040', { shadow: null }); } },
 };
 function TownScene() {
-  const buildings = [{ x: 40, name: "DINO'S HOUSE", go: () => HouseScene(), col: '#e0a040' }, { x: 160, name: 'QUEST BOARD', go: () => QuestBoardScene(), col: '#a06a2a', board: true }, { x: 236, name: 'BOUNTY BOARD', go: () => BountyScene(), col: '#7a4a2a', board: true }, { x: 300, name: 'RIDES', go: () => RidesScene(), col: '#d05050' }, { x: 430, name: 'MY HOME', go: () => HomeScene(), col: '#5080e0' }];
+  const buildings = [{ x: 40, name: "DINO'S HOUSE", go: () => HouseScene(), col: '#e0a040' }, { x: 160, name: 'QUEST BOARD', go: () => QuestBoardScene(), col: '#a06a2a', board: true }, { x: 236, name: 'BOUNTY BOARD', go: () => BountyScene(), col: '#7a4a2a', board: true }, { x: 300, name: 'RIDES', go: () => RidesScene(), col: '#d05050' }, { x: 366, name: 'HIDE & SEEK', go: () => HideSeekScene(), col: '#3a8a3a', board: true }, { x: 430, name: 'MY HOME', go: () => HomeScene(), col: '#5080e0' }];
   const npcs = QUESTS.map((q, i) => ({ q, x: 100 + i * 82 }));
   let px = 60, face = 1, t = 0, talk = null;
   game.quests = game.quests || {}; questCheck();
