@@ -416,7 +416,7 @@ const Audio8 = (() => {
   }
   function studioEvent(S, e, t, sd) {
     const dur = e.l * sd, rev = [0.05, 0.3, 0.6, 0.95][S.rev | 0] || 0.3;
-    if (e.c === 'L') { const I = ST_LEAD[S.lead | 0] || ST_LEAD[0]; toneModern(I[0], freq(e.m + I[3]), t, dur * 0.95, I[2], musicBus, Object.assign({ rev }, I[1])); }
+    if (e.c === 'L') { const I = ST_LEAD[(e.inst !== undefined ? e.inst : S.lead) | 0] || ST_LEAD[0]; toneModern(I[0], freq(e.m + I[3]), t, dur * 0.95, I[2], musicBus, Object.assign({ rev }, I[1])); }
     else if (e.c === 'C') { const I = ST_CHORD[S.chordInst | 0]; if (!I) return; e.ms.forEach((m, i) => toneModern(I[0], freq(m), t + i * 0.01, dur * 0.97, I[2], musicBus, Object.assign({ rev }, I[1]))); }
     else if (e.c === 'B') { const I = ST_BASS[S.bassInst | 0]; if (!I) return; toneModern(I[0], freq(e.m), t, dur * 0.9, I[2], musicBus, Object.assign({ rev: rev * 0.3 }, I[1])); }
     else if (e.c === 'D') studioDrum(e.d, t, S.kit | 0);
@@ -590,5 +590,16 @@ const Audio8 = (() => {
     mfx.muffle = Math.max(0, Math.min(1, o.muffle || 0)); mfx.intensity = Math.max(0, Math.min(1, o.intensity || 0)); mfx.drums = o.drums ? 1 : 0;
     if (ctx && muf) { const f = 650 * Math.pow(22000 / 650, 1 - mfx.muffle); muf.frequency.setTargetAtTime(f, ctx.currentTime, 0.18); }
   }
-  return { setMusicFx, musicFx: () => Object.assign({}, mfx, { cutoff: muf ? Math.round(muf.frequency.value) : 0 }), addSong(n, d) { SONGS[n] = d; delete compiled[n]; if (curName === n) { cur = null; curName = null; } }, sfxNames: () => Object.keys(SFX), songStep: () => (cur && ctx ? (ctx.currentTime - t0) / cur.stepDur : -1), songs: () => Object.keys(SONGS), thunder, ambience, style: () => (modern ? 'modern' : 'retro'), setStyle(v) { modern = v === 'modern'; try { localStorage.setItem('wallyman-sound-style', modern ? 'modern' : 'retro'); } catch (e) { /* ignore */ } }, setVolume, getVolume, init, unlock: init, play, stop, sfx, setEnabled, isEnabled: () => enabled, current: () => curName };
+  // change a playing song's notes without starting it again (Music Studio edits and live recording)
+  function swapSong(name, d) {
+    if (!ctx || curName !== name || !cur) { SONGS[name] = d; delete compiled[name]; return false; }
+    SONGS[name] = d; const nc = compile(name);
+    if (!nc || Math.abs(nc.stepDur - cur.stepDur) > 1e-9 || nc.total !== cur.total) { delete compiled[name]; cur = null; curName = null; play(name); return true; }
+    const pos = (ctx.currentTime + 0.15 - t0) / cur.stepDur - loopN * cur.total;
+    compiled[name] = nc; cur = nc; idx = nc.ev.findIndex((e) => e.s > pos); if (idx < 0) idx = nc.ev.length;
+    return true;
+  }
+  // play one Music Studio note right now, over whatever song is playing (live recording)
+  function studioTap(S, e) { if (!ctx || !enabled) return; const sd = 60 / (S.bpm || 112) / 4; try { studioEvent(S, e, ctx.currentTime + 0.01, sd); } catch (er) { /* ignore */ } }
+  return { studioTap, swapSong, setMusicFx, musicFx: () => Object.assign({}, mfx, { cutoff: muf ? Math.round(muf.frequency.value) : 0 }), addSong(n, d) { SONGS[n] = d; delete compiled[n]; if (curName === n) { cur = null; curName = null; } }, sfxNames: () => Object.keys(SFX), songStep: () => (cur && ctx ? (ctx.currentTime - t0) / cur.stepDur : -1), songs: () => Object.keys(SONGS), thunder, ambience, style: () => (modern ? 'modern' : 'retro'), setStyle(v) { modern = v === 'modern'; try { localStorage.setItem('wallyman-sound-style', modern ? 'modern' : 'retro'); } catch (e) { /* ignore */ } }, setVolume, getVolume, init, unlock: init, play, stop, sfx, setEnabled, isEnabled: () => enabled, current: () => curName };
 })();

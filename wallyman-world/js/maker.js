@@ -27,9 +27,9 @@ const Maker = (() => {
   slots = slots.map((s) => (s && validRows(s.rows) && THEME_LIST.includes(s.theme) ? { theme: s.theme, boss: s.boss || '', rows: s.rows.map((r) => r.split('')) } : null));
   const persist = () => { try { localStorage.setItem(KEY, JSON.stringify(slots.map((s) => (s ? { theme: s.theme, boss: s.boss || '', rows: s.rows.map((r) => r.join('')) } : null)))); } catch (e) { /* ignore */ } };
   // Share codes: theme + boss + run-length encoded grid, wrapped in base64
-  const CHARS = '.#BWPSOAVQDXRI=^LJ<>o' + 'gpzhbctuelmnasMxC@G' + 'NTEY~;fji' + '◢◣φβπΠΓ╱╲εωχσμζψκ¤ξ' + 'ΨϟΩ«»⚙ѲⓡЖӁҨʘĴŦϻ';
+  const CHARS = '.#BWPSOAVQDXRI=^LJ<>o' + 'gpzhbctuelmnasMxC@G' + 'NTEY~;fji' + '◢◣φβπΠΓ╱╲εωχσμζψκ¤ξ' + 'ΨϟΩ«»⚙ѲⓡЖӁҨʘĴŦϻ' + 'ƒǒźƀɍƃǿ';
   // newer tiles are stored as plain ASCII inside share codes
-  const ENC = { '◢': '1', '◣': '2', 'φ': '3', 'β': '4', 'π': '5', 'Π': '6', 'Γ': '7', '╱': '8', '╲': '9', 'ε': '0', 'ω': '!', 'χ': '?', 'σ': '$', 'μ': '%', 'ζ': '&', 'ψ': '*', 'κ': '+', '¤': ',', 'ξ': '-', 'Ψ': '(', 'ϟ': ')', 'Ω': '[', '«': ']', '»': '{', '⚙': '}', 'Ѳ': '/', 'ⓡ': ':', 'Ж': '_', 'Ӂ': '"', 'Ҩ': "'", 'ʘ': '`', 'Ĵ': 'U', 'Ŧ': 'F', 'ϻ': 'H' }, DEC = {};
+  const ENC = { '◢': '1', '◣': '2', 'φ': '3', 'β': '4', 'π': '5', 'Π': '6', 'Γ': '7', '╱': '8', '╲': '9', 'ε': '0', 'ω': '!', 'χ': '?', 'σ': '$', 'μ': '%', 'ζ': '&', 'ψ': '*', 'κ': '+', '¤': ',', 'ξ': '-', 'Ψ': '(', 'ϟ': ')', 'Ω': '[', '«': ']', '»': '{', '⚙': '}', 'Ѳ': '/', 'ⓡ': ':', 'Ж': '_', 'Ӂ': '"', 'Ҩ': "'", 'ʘ': '`', 'Ĵ': 'U', 'Ŧ': 'F', 'ϻ': 'H', 'ƒ': 'K', 'ǒ': 'Z', 'ź': 'd', 'ƀ': 'k', 'ɍ': 'q', 'ƃ': 'r', 'ǿ': 'v' }, DEC = {};
   for (const k of Object.keys(ENC)) DEC[ENC[k]] = k;
   function encode(lv) {
     const flat = lv.rows.map((r) => r.join('')).join('').replace(/[^\x00-\x7f]/g, (c) => ENC[c] || '.');
@@ -45,7 +45,7 @@ const Maker = (() => {
       if (!theme || !boss) return null;
       let flat = '';
       for (let i = 2; i < body.length;) { const c = body[i]; if (body[i + 1] === '|') { const e = body.indexOf('|', i + 2); flat += c.repeat(parseInt(body.slice(i + 2, e), 36)); i = e + 1; } else { flat += c; i++; } if (flat.length > WW * H) return null; }
-      flat = flat.replace(/[0-9!?$%&*+,\-()[\]{}\/:_"'`UFH]/g, (c) => DEC[c] || c);
+      flat = flat.replace(/[0-9!?$%&*+,\-()[\]{}\/:_"'`UFHKZdkqrv]/g, (c) => DEC[c] || c);
       if (flat.length !== WW * H || [...flat].some((c) => !CHARS.includes(c))) return null;
       return { theme, boss: boss[0], rows: Array.from({ length: H }, (_, y) => flat.slice(y * WW, (y + 1) * WW).split('')) };
     } catch (e) { return null; }

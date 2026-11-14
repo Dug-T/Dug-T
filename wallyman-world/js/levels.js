@@ -709,7 +709,7 @@ function buildLevel(i) {
     if (b.g[ky][kx] !== '.') { let best = null; for (let x = kx - 12; x <= kx + 12; x++) for (let y = 2; y <= 9; y++) if (x > 0 && x < b.w && b.g[y][x] === '.' && b.g[y - 1][x] === '.' && firm.includes(b.g[y + 1][x]) && (!best || y < best[1])) best = [x, y]; if (best) [kx, ky] = best; }
     b.g[ky][kx] = '&';
   }
-  const ENT = 'gpzhmnCGKabctuMfjeykZsqwvlxi1234567&r890d*§'; // § = your own boss from the Boss Creator (Update 2.2)
+  const ENT = 'gpzhmnCGKabctuMfjeykZsqwvlxi1234567&r890d*§ƀɍƃǿ'; // ƀ ɍ ƃ = bee, rock, balloon suits, ǿ = weather orb (Level Maker, 2.6) // § = your own boss from the Boss Creator (Update 2.2)
   for (let y = 0; y < 14; y++) for (let x = 0; x < b.w; x++) {
     const c = b.g[y][x];
     if (c === '@') { start = { x, y }; b.g[y][x] = '.'; } else if (ENT.includes(c)) {
