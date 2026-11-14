@@ -2,7 +2,7 @@
 
 A 16-bit style side-scrolling platformer starring **WallyMan**, built in plain HTML5 + JavaScript (no installs, no build step).
 
-**Current version: Update 1.9.** The update number shows on a ribbon under the title logo. It is set by `GAME_VERSION` at the top of `js/game.js`, and each new update adds 0.1 (1.1, 1.2, 1.3 and so on). Each update also changes the `?v=` number on the script tags in `index.html` and the cache name in `sw.js`, so browsers fetch the new files instead of showing old saved copies.
+**Current version: Update 2.0.** The update number shows on a ribbon under the title logo. It is set by `GAME_VERSION` at the top of `js/game.js`, and each new update adds 0.1 (1.1, 1.2, 1.3 and so on). Each update also changes the `?v=` number on the script tags in `index.html` and the cache name in `sw.js`, so browsers fetch the new files instead of showing old saved copies.
 
 ## Play
 
@@ -24,6 +24,17 @@ Open `index.html` in any modern browser — or enable **GitHub Pages** for this 
 ## What's in it
 
 - **Saves on every device** – the game keeps each player's progress in their own browser. If a browser looks like it won't keep saves (for example a claude.ai link opened while signed out), the title screen says so, S shows a **save code** for each file, and quitting to the title offers one too.
+- **Update 2.0: the modern look finished, and comfort for everyone**
+  - *Modern art:* every remaining enemy (bats, chargers, turrets, fish, jellyfish, ghosts, slimes, boomers, magnet drones, asteroids, beam-down aliens, the Zappling squadron) and boss (Giant Squid, T-Rex, Volt, Baron's Mega-Mech, the Mothership, the Crab, the Drill Mole, Nimbus) is now hand-drawn at high resolution in MODERN mode.
+  - *Painted backgrounds:* every world's background layers are re-painted with soft brush edges, light from above, depth haze and a canvas grain; skies are smooth painted gradients.
+  - *Living scenery:* grass sways and parts around your feet, leaves drift through green worlds, light ripples down through the water, and a pennant flaps on the Signal Tower.
+  - *Painted island map:* surf along every shore, a shimmering sea, drifting clouds and their shadows, and cleared levels glowing gold.
+  - *Remastered soundtrack:* with MODERN sound, every song gains a warm chord pad, a sub-bass and a soft octave under the melody.
+  - *Quick resume:* if the page is hidden or closed during a level, the game pauses and remembers where you were; the title screen then offers to carry on.
+  - *QR codes:* every share box (ghost races, Level Maker courses and worlds, save codes) shows a QR code; scanning it opens the game with the code ready to load.
+  - *Tablets:* bigger buttons and a bigger picture on iPads and other large touch screens.
+  - *Comfort options:* BIG TEXT (taller, bolder letters; uses modern graphics), READ ALOUD (menus and signs spoken by the device's voice) and ONE HAND (all touch buttons on one side, with auto-run in levels).
+  - *Show me the way:* after three lost lives on the same level, press S at the start and a ghost of your hero plays through the tricky part, then hands control back.
 - **Update 1.9: more modern, smoother, and more comfortable**
   - *Modern art:* GothChick (and Ninja Nell and the Frost Queen), Doug, Robo-Wally, Dracula and his bat form, Baron Static, the Ice Yeti, the Clockmaker, coins, every power-up and the HUD icons are now hand-drawn at high resolution in MODERN mode.
   - *Modern effects:* dust puffs when you run, skid and land; sparkles on coins; embers over lava; bubbles underwater; lava that glows; torch-lit caves, castles and haunted houses; glowing castle windows and power-ups; a camera that looks further ahead the faster you run; glass menus and HUD with hearts and coins that pop; and a sliding screen transition.
@@ -286,6 +297,9 @@ js/batchq.js        Update 1.7: modern graphics (high resolution, smoothed sprit
 js/batchr.js        Update 1.7: hand-drawn high-resolution art for modern mode (WallyMan, 4 enemies, ground tiles)
 js/batchs.js        Update 1.9: more hand-drawn art (GothChick, Doug, Robo-Wally, Dracula, bosses, coins, power-ups, HUD icons)
 js/batchs2.js       Update 1.9: modern effects, adaptive music hooks, smoothness, reduce motion, touch extras
+js/batcht.js        Update 2.0: hand-drawn art for the remaining enemies and bosses
+js/batcht2.js       Update 2.0: painted backgrounds, living scenery, the painted island map
+js/batcht3.js       Update 2.0: QR codes, quick resume, big text, read aloud, one hand, show me the way
 js/batcho.js        Update 1.4: Count Dracula, his castle, the full moon and the passing storm in Wally's Backyard
 js/batchj2.js       Dino Valley map, completion, mirror/rematch menus, card and photo albums, theatre, Music Maker, Maker worlds, Party Mode
 js/batchi2.js       Pirate Cove map, airship, tower/gold menus, garden, pets, mini-games, hero maker, cloud save, Level of the Week, touch editor, Level Maker parts

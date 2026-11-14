@@ -57,7 +57,7 @@ const Audio8 = (() => {
     setInterval(tick, 25);
   }
 
-  const MODERN_WAVE = { p12: 'mWarm', p25: 'mWarm', p50: 'mOrgan', square: 'mOrgan', sawtooth: 'mWarm' };
+  const MODERN_WAVE = { p12: 'mWarm', p25: 'mWarm', p50: 'mOrgan', square: 'mOrgan', sawtooth: 'mWarm', mWarm: 'mWarm', mBell: 'mBell', mOrgan: 'mOrgan' };
   function toneModern(wave, f, t, dur, vol, bus, o) { // two detuned voices panned apart, a soft filter, and reverb
     const mw = bus === musicBus && wave === 'triangle' ? null : MODERN_WAVE[wave] || (wave === 'triangle' ? 'mBell' : null);
     const out = ctx.createGain(), lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = Math.min(12000, f * (bus === musicBus ? 7 : 10)); lp.Q.value = 0.6;
@@ -391,6 +391,7 @@ const Audio8 = (() => {
       if (s.harm === 'waltz') for (const st of [4, 8]) triad.forEach((m) => ev.push({ s: b0 + st, c: 'harm', m, l: 2 }));
       if (s.harm === 'pad') triad.forEach((m) => ev.push({ s: b0, c: 'pad', m, l: bar - 1 }));
       if (s.harm === 'arp') for (let st = 0; st < bar; st += 2) ev.push({ s: b0 + st, c: 'arp', m: triad[(st / 2) % 3] + 12, l: 1 });
+      ev.push({ s: b0, c: 'rp', ms: triad.map((m) => m - 12), l: bar }); // the remastered pad (modern sound only)
       if (s.drums) for (let st = 0; st < bar; st++) { const d = s.drums[st % s.drums.length]; if (d && d !== '.') ev.push({ s: b0 + st, c: 'drum', d }); }
     });
     ev.sort((a, b) => a.s - b.s);
@@ -401,6 +402,11 @@ const Audio8 = (() => {
 
   function playEvent(e, t, sd) {
     const dur = e.l * sd;
+    if (modern) { // remastered arrangement: a warm chord pad, a sub-bass, and a soft octave under the melody
+      if (e.c === 'rp') { e.ms.forEach((m, i) => tone('mWarm', freq(m), t + i * 0.012, dur * 0.98, 0.028, musicBus, { attack: 0.35, release: 0.4 })); return; }
+      if (e.c === 'bass') tone('sine', freq(e.m) / 2, t, dur * 0.9, 0.22, musicBus, { release: 0.05 });
+      if (e.c === 'lead') tone('mBell', freq(e.m) / 2, t + 0.02, dur * 0.85, 0.045, musicBus, { release: 0.1 });
+    } else if (e.c === 'rp') return;
     if (e.c === 'lead') tone(cur.lead, freq(e.m), t, dur * 0.92, 0.16, musicBus, { vib: true, echo: true, release: 0.06 });
     else if (e.c === 'bass') tone('triangle', freq(e.m), t, dur * 0.85, 0.42, musicBus, { release: 0.03 });
     else if (e.c === 'harm') tone('p50', freq(e.m), t, dur * 0.8, 0.035, musicBus, { echo: true, decay: 0.3 });

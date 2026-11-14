@@ -5,7 +5,7 @@ const ctx = cv.getContext('2d');
 ctx.imageSmoothingEnabled = false;
 let frame = 0;
 // the game's update number, shown on the title screen: 1.0 is the first, and each new update adds 0.1 (1.1, 1.2, ...)
-const GAME_VERSION = '1.9';
+const GAME_VERSION = '2.0';
 const SOLID = new Set(['#', 'B', 'W', 'P', 'S', 'O', 'A', 'V', 'Q', 'D', 'N', 'T', 'E', 'H', '[', ']', '{', 'F', '+', '}', '?', '`', 'U', 'X', '^', 'J', 'R', '<', '>', 'Y']);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const approach = (v, t, d) => (v < t ? Math.min(t, v + d) : Math.max(t, v - d));
@@ -3198,8 +3198,9 @@ class Play {
 function resize() {
   const touch = document.body.classList.contains('touch');
   const land = innerWidth > innerHeight;
-  const side = innerHeight < 500 ? 170 : 195; // room each side for the touch buttons when sideways
-  const availH = innerHeight - (touch && !land ? 300 : 0), availW = innerWidth - (touch && land ? 2 * side : 0);
+  const big = touch && Math.min(innerWidth, innerHeight) >= 700; // a tablet: roomier buttons
+  const side = big ? 240 : innerHeight < 500 ? 170 : 195; // room each side for the touch buttons when sideways
+  const availH = innerHeight - (touch && !land ? (big ? 330 : 300) : 0), availW = innerWidth - (touch && land ? 2 * side : 0);
   let s = Math.min(availW / VW, availH / VH);
   if (s >= 2 && !(touch && land)) s = Math.floor(s);
   cv.style.width = Math.floor(VW * s) + 'px';
