@@ -367,9 +367,9 @@ function RidesScene() {
     draw() {
       drawParallax('neon', t * 0.5); drawWindow(24, 30, 208, 150);
       txt('WALLY TOWN RIDES', 128, 38, '#ffe040', { align: 'center' });
-      const tips = ['SNOWBOARD DOWNHILL: B FOR TRICKS', 'PILOT A SUB: B FIRES TORPEDOES', 'RIDE THE ROOF: DOWN TO DUCK', 'NEON CITY ROOFTOPS', 'NEON CITY: THE TOP FLOORS', 'RIDE THE WAVES: B FOR TRICKS'];
-      RIDES.forEach((li, i) => { const y = 58 + i * 18, on = i === sel; if (on) txt('>', 36 + ((t >> 3) & 1), y, '#ffe040'); txt(open(i) ? LEVELS[li].name : '???', 46, y, on ? '#ffe040' : '#fff'); if (game.cleared[li]) txt('#', 220, y, '#ffe040'); if (on) txt(open(i) ? tips[i] : 'CLEAR ROOFTOP RUN FIRST', 46, y + 8, '#a8b0d8'); });
-      const y = 58 + RIDES.length * 18; txt('BACK', 46, y, sel === RIDES.length ? '#ffe040' : '#fff'); if (sel === RIDES.length) txt('>', 36 + ((t >> 3) & 1), y, '#ffe040');
+      const tips = ['SNOWBOARD DOWNHILL: B FOR TRICKS', 'PILOT A SUB: B FIRES TORPEDOES', 'RIDE THE ROOF: DOWN TO DUCK', 'NEON CITY ROOFTOPS', 'NEON CITY: THE TOP FLOORS', 'RIDE THE WAVES: B FOR TRICKS', 'BMX: A HOPS, B FOR TRICKS', 'GLIDE ON WARM AIR: UP/DOWN'];
+      RIDES.forEach((li, i) => { const y = 52 + i * 13, on = i === sel; if (on) txt('>', 36 + ((t >> 3) & 1), y, '#ffe040'); txt(open(i) ? LEVELS[li].name : '???', 46, y, on ? '#ffe040' : '#fff'); if (game.cleared[li]) txt('#', 220, y, '#ffe040'); if (on) txt(open(i) ? tips[i] : 'CLEAR ROOFTOP RUN FIRST', 128, 168, '#a8b0d8', { align: 'center' }); });
+      const y = 52 + RIDES.length * 13; txt('BACK', 46, y, sel === RIDES.length ? '#ffe040' : '#fff'); if (sel === RIDES.length) txt('>', 36 + ((t >> 3) & 1), y, '#ffe040');
     },
   };
 }
