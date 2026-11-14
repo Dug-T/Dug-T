@@ -2,7 +2,7 @@
 
 A 16-bit style side-scrolling platformer starring **WallyMan**, built in plain HTML5 + JavaScript (no installs, no build step).
 
-**Current version: Update 2.2.** The update number shows on a ribbon under the title logo. It is set by `GAME_VERSION` at the top of `js/game.js`, and each new update adds 0.1 (1.1, 1.2, 1.3 and so on). Each update also changes the `?v=` number on the script tags in `index.html` and the cache name in `sw.js`, so browsers fetch the new files instead of showing old saved copies.
+**Current version: Update 2.3.** The update number shows on a ribbon under the title logo. It is set by `GAME_VERSION` at the top of `js/game.js`, and each new update adds 0.1 (1.1, 1.2, 1.3 and so on). Each update also changes the `?v=` number on the script tags in `index.html` and the cache name in `sw.js`, so browsers fetch the new files instead of showing old saved copies.
 
 ## Play
 
@@ -24,6 +24,7 @@ Open `index.html` in any modern browser — or enable **GitHub Pages** for this 
 ## What's in it
 
 - **Saves on every device** – the game keeps each player's progress in their own browser. If a browser looks like it won't keep saves (for example a claude.ai link opened while signed out), the title screen says so, S shows a **save code** for each file, and quitting to the title offers one too.
+- **Update 2.3: Music Studio** (Extras) – a modern music maker to go with the classic Music Maker. Four tracks over two bars: **Melody** (a 12-note grid; S makes a note longer), **Chords** (one per half bar, picked from the key – I, IV, V, vi and so on), **Bass** (an 8-note grid) and **Drums** (kick, snare, hi-hat, open hat; S fills every other step). The **Song** tab sets the name, tempo, key (any of 12), scale (major, minor, pentatonic, dorian, blues), swing, reverb (dry to cathedral) and the sounds: piano, synth, bells, pluck, strings or flute for the melody; pad, strings, e-piano or organ for chords; sub, electric or synth bass; and a modern, 808 or lo-fi drum kit. START plays it with a moving playhead and changes are heard straight away. Save 3 songs, set one as the music for a Level Maker course (USE IN MAKER), and share songs as codes with a QR code. Studio songs always use the modern instruments, whichever sound style is on.
 - **Update 2.2: new modes and things to make**
   - *Emotes:* stand still and hold B, then press UP to wave, LEFT/RIGHT to dance or DOWN to sit.
   - *Randomizer* (Challenges): 8 real levels in a shuffled order with shuffled enemies and blocks, from a seed. The results screen shows the seed code (WR-…) to share – the same seed always gives the same run – and ENTER A SEED CODE plays a friend's.
@@ -323,6 +324,7 @@ js/batchu.js        Update 2.1: Dream World, Kitchen Kingdom, Starlight Summit, 
 js/batchu2.js       Update 2.1: parry, power suits, focus, weather orb
 js/batchv.js        Update 2.2: emotes, randomizer, explore castle, practice, bounty board
 js/batchv2.js       Update 2.2: comic maker, song codes, boss creator
+js/batchw.js        Update 2.3: Music Studio (a modern music maker)
 js/batcho.js        Update 1.4: Count Dracula, his castle, the full moon and the passing storm in Wally's Backyard
 js/batchj2.js       Dino Valley map, completion, mirror/rematch menus, card and photo albums, theatre, Music Maker, Maker worlds, Party Mode
 js/batchi2.js       Pirate Cove map, airship, tower/gold menus, garden, pets, mini-games, hero maker, cloud save, Level of the Week, touch editor, Level Maker parts
