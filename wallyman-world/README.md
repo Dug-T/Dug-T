@@ -2,7 +2,7 @@
 
 A 16-bit style side-scrolling platformer starring **WallyMan**, built in plain HTML5 + JavaScript (no installs, no build step).
 
-**Current version: Update 2.8.** The update number shows on a ribbon under the title logo. It is set by `GAME_VERSION` at the top of `js/game.js`, and each new update adds 0.1 (1.1, 1.2, 1.3 and so on). Each update also changes the `?v=` number on the script tags in `index.html` and the cache name in `sw.js`, so browsers fetch the new files instead of showing old saved copies.
+**Current version: Update 2.9.** The update number shows on a ribbon under the title logo. It is set by `GAME_VERSION` at the top of `js/game.js`, and each new update adds 0.1 (1.1, 1.2, 1.3 and so on). Each update also changes the `?v=` number on the script tags in `index.html` and the cache name in `sw.js`, so browsers fetch the new files instead of showing old saved copies.
 
 ## Play
 
@@ -24,6 +24,14 @@ Open `index.html` in any modern browser — or enable **GitHub Pages** for this 
 ## What's in it
 
 - **Saves on every device** – the game keeps each player's progress in their own browser. If a browser looks like it won't keep saves (for example a claude.ai link opened while signed out), the title screen says so, S shows a **save code** for each file, and quitting to the title offers one too.
+- **Update 2.9: make, share and keep track**
+  - *Enemy Maker* (Extras): design an enemy - a blob, bug, bird or robot, its colour, eyes and size, how it moves (walk, hop, fly, chase or shoot), its speed and whether it is spiky (no stomping!). Try it on a test field, keep three designs, share them as codes (`WME1-`, with a QR code), and pick one to use in the Level Maker with the new **MY ENEMY** piece.
+  - *Level Maker rooms*: a **ROOM WALL** piece splits a course into separate rooms (the camera never shows past it) and **DOOR** pieces join them - press UP at a door to go to its partner (doors pair up left to right). Pipes still work as before.
+  - *Music Studio*: a **FORM** setting plays a 4- or 8-bar song as verse, verse, chorus, chorus, and **DRUM FILLS** adds a snare fill at the end of each section. Share codes carry both.
+  - *Photo filters and frames* (Extras, Photo Album): UP/DOWN tries Retro, Comic, Sepia, Black and White and Night filters, START picks a Polaroid, Stickers, Gold or Film frame, and A saves a copy to the album and downloads it.
+  - *Sound cues* (Options): short beeps warn of a gap, spikes or an enemy just ahead (a low beep for a gap, two for spikes, a high one for a foe), with a small word on screen too.
+  - *Automatic cloud backup* (Options, CLOUD BACKUP: AUTO): when Firebase is set up, your file is uploaded to the cloud after you clear a level (at most every two minutes). Your cloud key is shown in Dino's House, Cloud Save.
+  - *Progress Book* (Extras): page by page, the levels still hiding medals and stars, the treasure map pieces you have not found (and where), costumes still locked with how to get them, and every trophy left with what it needs.
 - **Update 2.8: Dino joins the team, and life in Wally Town**
   - *Dino, a new hero* (pick him once the first castle is beaten): heavy but mighty. **S does a tail spin** that knocks out anything close (no limit, just a short wait between spins), and the **ground pound** (DOWN in the air) lands with a shockwave that knocks out enemies on the ground nearby. He jumps a little lower than the others.
   - *Grip Gloves*: found near the start of one level in nine. While you wear them, hold UP under a ceiling to hang from it and swing along hand over hand, and any hero can wall-jump (Doug and the Upgrade Tree's wall jump already did this; the gloves lend it to everyone for that level).
@@ -367,6 +375,7 @@ js/batchy2.js       Update 2.5: Tag, online co-op rooms, Problem Spots, the Chal
 js/batchz.js        Update 2.6: Level Maker themes and pieces, modern story comics and logo, run toggle, difficulty stars, reward calendar
 js/batch27.js       Update 2.7: Toy Box Island, Paper Craft Isle, Beat Island, treasure maps, boss rematches
 js/batch28.js       Update 2.8: Dino hero, Grip Gloves, gift codes, the farm, cooking mini-game, weekend festival, mini-game records
+js/batch29.js       Update 2.9: Enemy Maker, Level Maker rooms and doors, photo filters and frames, sound cues, auto cloud backup, Progress Book
 js/batcho.js        Update 1.4: Count Dracula, his castle, the full moon and the passing storm in Wally's Backyard
 js/batchj2.js       Dino Valley map, completion, mirror/rematch menus, card and photo albums, theatre, Music Maker, Maker worlds, Party Mode
 js/batchi2.js       Pirate Cove map, airship, tower/gold menus, garden, pets, mini-games, hero maker, cloud save, Level of the Week, touch editor, Level Maker parts
