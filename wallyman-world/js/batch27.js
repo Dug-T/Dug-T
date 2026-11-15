@@ -8,7 +8,7 @@
 //   BEAT ISLAND      (blocks and spikes move to the beat of the music;
 //                     boss THE BASS DROP)
 // plus TREASURE MAPS (15 torn pieces hidden in levels; finish a map
-// and dig at the X) and BOSS REMATCHES (harder second forms).
+// and dig at the X) and BOSS SECOND FORMS (harder rematches).
 // =====================================================================
 const U27 = (() => {
   const PP = Play.prototype;
@@ -95,7 +95,7 @@ const U27 = (() => {
     L({ name: 'ENCORE', theme: 'beat', width: 200, tag: 'BI4', world: 'BEAT ISLAND 4', tip: 'ONE MORE TIME! EVERYTHING MOVES TO THE BEAT.', beatA: [[26, 10, 29, 10], [90, 11, 93, 11], [150, 9, 153, 9]], beatB: [[34, 11, 37, 11], [98, 9, 101, 9], [106, 11, 109, 11], [158, 11, 161, 11]], beatSpikes: [[58, 11, 61, 11], [124, 11, 127, 11], [176, 11, 178, 11]],
       build(b) { b.ground(0, 24).set(2, 11, '@').coins(8, 9, 4); b.ground(40, 88).set(50, 11, 'g').set(70, 11, 'C').fill(74, 7, 80, 7, '=').coins(74, 5, 7); b.ground(112, 148).set(138, 11, 'h'); b.ground(164, 199).set(190, 11, 'G'); } }),
     L({ name: 'THE BASS DROP', theme: 'beat', width: 80, boss: true, bossHp: 10, bossName: 'THE BASS DROP', bossType: 'bassdrop', talk: 'bassdrop', tag: 'BI5', world: 'BEAT ISLAND 5',
-      bossMsg: ['THE GIANT SPEAKER CRACKLES...', '...AND PLAYS A GENTLE LULLABY.', '', 'THE PARTY IS OVER - AND YOU', 'SAVED THE THREE NEW ISLANDS!', 'TRY THE BOSS REMATCHES NEXT.'],
+      bossMsg: ['THE GIANT SPEAKER CRACKLES...', '...AND PLAYS A GENTLE LULLABY.', '', 'THE PARTY IS OVER - AND YOU', 'SAVED THE THREE NEW ISLANDS!', 'TRY THE BOSS SECOND FORMS NEXT.'],
       build(b) { b.ground(0, 79).set(2, 11, '@').coins(8, 9, 4).set(74, 11, '*'); } }),
   ];
   const BASE = LEVELS.length; // 150
@@ -407,8 +407,8 @@ const U27 = (() => {
   { const _db = PP.damageBoss;
     PP.damageBoss = function (e) { const r = _db.call(this, e); if (this.rematch && !e.alive && !this._rmWon) { this._rmWon = true; REM.won = true; game.rematch = game.rematch || {}; const first = !game.rematch[this.li]; game.rematch[this.li] = true; if (first) payCoins(30); Save.persist(); try { if (Object.keys(game.rematch).length >= 5) Ach.unlock('rematch'); } catch (er) { /* ignore */ } } return r; };
   }
-  { const _M = MapScene; MapScene = function (...a) { if (REM.on) { REM.on = false; const w = REM.won; REM.won = false; return RematchScene(w ? 'YOU BEAT ITS SECOND FORM! +30 COINS THE FIRST TIME' : 'TRY AGAIN SOME TIME!'); } return _M(...a); }; } // eslint-disable-line no-func-assign
-  function RematchScene(note) {
+  { const _M = MapScene; MapScene = function (...a) { if (REM.on) { REM.on = false; const w = REM.won; REM.won = false; return SecondFormScene(w ? 'YOU BEAT ITS SECOND FORM! +30 COINS THE FIRST TIME' : 'TRY AGAIN SOME TIME!'); } return _M(...a); }; } // eslint-disable-line no-func-assign
+  function SecondFormScene(note) {
     let sel = 0, t = 0; const msg = note || '';
     return {
       _s: () => ({ list: bossLevels(), sel }),
@@ -421,7 +421,7 @@ const U27 = (() => {
         if (Input.confirm() && t > 10) { Object.assign(REM, { on: true, li: L[sel], won: false }); Audio8.sfx('confirm'); go(() => IntroScene(L[sel], false)); }
       },
       draw() {
-        drawParallax('castle', t * 0.4); drawWindow(12, 8, 232, 208); txt('BOSS REMATCHES', 128, 14, '#ff6060', { align: 'center', scale: 2 });
+        drawParallax('castle', t * 0.4); drawWindow(12, 8, 232, 208); txt('SECOND FORMS', 128, 14, '#ff6060', { align: 'center', scale: 2 });
         const L = bossLevels();
         if (!L.length) { ['BEAT A BOSS FIRST, THEN COME', 'BACK FOR ITS SECOND FORM!'].forEach((l, i) => txt(l, 128, 90 + i * 12, '#fff', { align: 'center' })); return; }
         txt('MORE HEALTH, NEW ATTACKS, AND A', 128, 34, '#a8b0d8', { align: 'center' }); txt('FASTER SECOND FORM AT HALF HEALTH', 128, 44, '#a8b0d8', { align: 'center' });
@@ -431,11 +431,11 @@ const U27 = (() => {
       },
     };
   }
-  // the Challenges menu, now with BOSS REMATCHES
+  // the Challenges menu, now with BOSS SECOND FORMS
   ChallengeScene = function (start = 0) { // eslint-disable-line no-func-assign
-    const items = ['TIME ATTACK', 'BOSS RUSH', 'DAILY CHALLENGE', 'ENDLESS RUN', 'VERSUS', 'SURVIVAL ARENA', 'HARD REMIX', "DOUG'S STORY", 'ROGUELIKE TOWER', 'GOLDEN LEVELS', 'TUTORIAL', 'MIRROR MODE', 'PARTY MODE', 'SPEEDRUN', 'WEEKLY CHALLENGE', 'MEGA BOSS RUSH', 'IRON HERO', 'RANDOMIZER', 'EXPLORE CASTLE', 'PRACTICE', 'TAG', 'ONLINE CO-OP', 'PROBLEM SPOTS', 'BOSS REMATCHES', 'BACK'];
+    const items = ['TIME ATTACK', 'BOSS RUSH', 'DAILY CHALLENGE', 'ENDLESS RUN', 'VERSUS', 'SURVIVAL ARENA', 'HARD REMIX', "DOUG'S STORY", 'ROGUELIKE TOWER', 'GOLDEN LEVELS', 'TUTORIAL', 'MIRROR MODE', 'PARTY MODE', 'SPEEDRUN', 'WEEKLY CHALLENGE', 'MEGA BOSS RUSH', 'IRON HERO', 'RANDOMIZER', 'EXPLORE CASTLE', 'PRACTICE', 'TAG', 'ONLINE CO-OP', 'PROBLEM SPOTS', 'BOSS SECOND FORMS', 'BACK'];
     const tips = ['RACE ANY LEVEL YOU HAVE BEATEN', 'EVERY BOSS BACK TO BACK!', "TODAY'S LEVEL WITH A TWIST", 'HOW FAR CAN YOU RUN?', 'TWO PLAYERS: RACE OR BATTLE', 'ENDLESS WAVES OF FOES', 'MEANER VERSIONS OF WALLY ISLAND', 'PLAY AS DOUG IN 3 NEW LEVELS', 'RANDOM FLOORS, UPGRADES, ONE LIFE', 'HUNT 100 GOLD COINS PER LEVEL', 'LEARN ALL THE MOVES', 'EVERY LEVEL FLIPPED AROUND', 'UP TO 4 PLAYERS, 3 MINI-GAMES', 'ONE TIMER FOR THE WHOLE GAME', '3 LEVELS, 1 RULE, NEW EVERY WEEK', 'EVERY BOSS IN THE GAME IN A ROW', 'ONE LIFE FOR THE WHOLE GAME', '8 SHUFFLED LEVELS FROM A SEED', 'ONE BIG CASTLE, 4 RELICS', 'ANY BIT OF A LEVEL, SLOWED DOWN', 'CHASE OR BE CHASED! 1 OR 2 PLAYERS', 'PLAY A LEVEL WITH A FRIEND ONLINE', 'SEE WHERE YOU LOSE LIVES, PRACTISE', 'HARDER SECOND FORMS OF EVERY BOSS', ''];
-    const go_ = [() => TimeAttackSelect(), () => RushIntroScene(), () => DailyScene(), () => EndlessIntro(), () => VersusScene(), () => ArenaIntro(), () => RemixScene(), () => StoryMenu(Math.min(2, storyDone())), () => RogueIntro(), () => GoldScene(), () => startTutorial(false), () => MirrorScene(), () => PartyScene(), () => SpeedrunScene(), () => WeeklyScene(), () => MegaIntro(), () => IronScene(), () => U22.RandomizerScene(), () => U22.ExploreIntro(), () => U22.PracticeScene(), () => TagScene(), () => CoopScene(), () => ProblemScene(-1), () => RematchScene()];
+    const go_ = [() => TimeAttackSelect(), () => RushIntroScene(), () => DailyScene(), () => EndlessIntro(), () => VersusScene(), () => ArenaIntro(), () => RemixScene(), () => StoryMenu(Math.min(2, storyDone())), () => RogueIntro(), () => GoldScene(), () => startTutorial(false), () => MirrorScene(), () => PartyScene(), () => SpeedrunScene(), () => WeeklyScene(), () => MegaIntro(), () => IronScene(), () => U22.RandomizerScene(), () => U22.ExploreIntro(), () => U22.PracticeScene(), () => TagScene(), () => CoopScene(), () => ProblemScene(-1), () => SecondFormScene()];
     let sel = Math.min(start, items.length - 1), t = 0;
     return {
       _sel: () => sel,
@@ -480,8 +480,8 @@ const U27 = (() => {
     if (id === 'bassdrop') { ctx.save(); ctx.translate(x, y); ctx.scale(0.45, 0.45); drawBassdrop(-20, -24, null, t); ctx.restore(); return; }
     return _sa(id, x, y, t); }; }
   if (typeof ACH_LIST !== 'undefined') ACH_LIST.push(['treasure', 'X MARKS THE SPOT', 'DIG UP ALL 5 TREASURES'], ['rematch', 'SECOND FORM, SECOND WIN', 'BEAT 5 BOSS REMATCHES']);
-  UPDATES.unshift(['2.7', ['NEW ISLAND: TOY BOX ISLAND', ' TOY TRAINS AND WIND-UP TOYS', ' BOSS: JACK-IN-THE-BOX', 'NEW ISLAND: PAPER CRAFT ISLE', ' FOLD THE PAGES, DODGE SCISSORS', ' BOSS: THE ORIGAMI DRAGON', 'NEW ISLAND: BEAT ISLAND', ' EVERYTHING MOVES TO THE MUSIC', ' BOSS: THE BASS DROP', 'TREASURE MAPS: 15 PIECES TO FIND', 'BOSS REMATCHES (CHALLENGES)']]);
-  return { LI, NEW, W0, portalOpen, spots, tm, MAPS, TreasureScene, RematchScene, REM, bossLevels, drawJackbox, drawOrigami, drawBassdrop };
+  UPDATES.unshift(['2.7', ['NEW ISLAND: TOY BOX ISLAND', ' TOY TRAINS AND WIND-UP TOYS', ' BOSS: JACK-IN-THE-BOX', 'NEW ISLAND: PAPER CRAFT ISLE', ' FOLD THE PAGES, DODGE SCISSORS', ' BOSS: THE ORIGAMI DRAGON', 'NEW ISLAND: BEAT ISLAND', ' EVERYTHING MOVES TO THE MUSIC', ' BOSS: THE BASS DROP', 'TREASURE MAPS: 15 PIECES TO FIND', 'BOSS SECOND FORMS (CHALLENGES)']]);
+  return { LI, NEW, W0, portalOpen, spots, tm, MAPS, TreasureScene, SecondFormScene, REM, bossLevels, drawJackbox, drawOrigami, drawBassdrop };
 })();
 function TreasureScene(back) { return U27.TreasureScene(back); }
-function RematchScene(note) { return U27.RematchScene(note); }
+function SecondFormScene(note) { return U27.SecondFormScene(note); }
