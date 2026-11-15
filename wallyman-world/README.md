@@ -2,7 +2,7 @@
 
 A 16-bit style side-scrolling platformer starring **WallyMan**, built in plain HTML5 + JavaScript (no installs, no build step).
 
-**Current version: Update 2.7.** The update number shows on a ribbon under the title logo. It is set by `GAME_VERSION` at the top of `js/game.js`, and each new update adds 0.1 (1.1, 1.2, 1.3 and so on). Each update also changes the `?v=` number on the script tags in `index.html` and the cache name in `sw.js`, so browsers fetch the new files instead of showing old saved copies.
+**Current version: Update 2.8.** The update number shows on a ribbon under the title logo. It is set by `GAME_VERSION` at the top of `js/game.js`, and each new update adds 0.1 (1.1, 1.2, 1.3 and so on). Each update also changes the `?v=` number on the script tags in `index.html` and the cache name in `sw.js`, so browsers fetch the new files instead of showing old saved copies.
 
 ## Play
 
@@ -24,6 +24,16 @@ Open `index.html` in any modern browser — or enable **GitHub Pages** for this 
 ## What's in it
 
 - **Saves on every device** – the game keeps each player's progress in their own browser. If a browser looks like it won't keep saves (for example a claude.ai link opened while signed out), the title screen says so, S shows a **save code** for each file, and quitting to the title offers one too.
+- **Update 2.8: Dino joins the team, and life in Wally Town**
+  - *Dino, a new hero* (pick him once the first castle is beaten): heavy but mighty. **S does a tail spin** that knocks out anything close (no limit, just a short wait between spins), and the **ground pound** (DOWN in the air) lands with a shockwave that knocks out enemies on the ground nearby. He jumps a little lower than the others.
+  - *Grip Gloves*: found near the start of one level in nine. While you wear them, hold UP under a ceiling to hang from it and swing along hand over hand, and any hero can wall-jump (Doug and the Upgrade Tree's wall jump already did this; the gloves lend it to everyone for that level).
+  - *Online co-op for up to 4 players*: friends join the same room code and take slots B, C and D; checkpoints and the goal are shared with everyone, and in a boss level **every player's hits come off the same boss**, so you fight it together.
+  - *Gift codes* (Dino's House): wrap up 10 or 25 coins, a 1-UP, eggs or carrots as a code (with a QR code) for a friend. Each gift can be opened once per file, and not by the file that sent it.
+  - *The Farm* (Wally Town, past My Home): feed the hens for 2 eggs and milk Daisy the cow once a day. Strawberries and corn can now be grown in the garden too.
+  - *Cooking*: Dino's Kitchen has four new recipes (pancakes, strawberry shake, corn bread and a farmer's feast) and cooking is now a **timing mini-game** - chop, stir and bake by pressing A in the green. A perfect 3-star dish gives 20 extra coins when you eat it.
+  - *Weekend Festival* (Wally Town): on Saturdays and Sundays the town is decorated and the festival is open - a lucky dip, ring toss, a parade and a parade gift once a weekend.
+  - *Mini-game records* (Dino's House): your five best games of Penalty Shootout, Tennis, Hide & Seek and Tag.
+  - (The farm plot and cooking ideas built on the garden and Dino's Kitchen that were already in the game.)
 - **Update 2.7: three new islands, treasure and rematches**
   - *Toy Box Island* (20th island, by wind-up key from Time Machine Island once the Chrono Clock is beaten): a giant playroom with push-and-stack toy blocks, wind-up toys and toy soldiers, and **toy trains** that shuttle you across the gaps. Boss: **Jack-in-the-Box**, who winds up, springs out and bounces after you, then flops over dizzy - stomp his head.
   - *Paper Craft Isle* (21st island): touch a **paper tab** to fold the page and open a new path (a bridge, a stair, a doorway) - touch it again to fold it back. **Scissors** snip when open; stomp them while they are shut. Boss: the **Origami Dragon**, who drops paper flames, swoops low, then folds up on the ground.
@@ -42,7 +52,7 @@ Open `index.html` in any modern browser — or enable **GitHub Pages** for this 
 - **Update 2.5: games with friends**
   - *Three new mini-games in Dino's House*: **Penalty Shootout** (5 kicks each – stop the moving aim for the side, then the height; when Dino shoots, hold Left or Right to dive), **Tennis vs Dino** (A swings, hold Left/Right as you hit to aim for a corner, first to 3 games) and **Checkers vs Dino** (Easy, Normal or Hard; jumps are a must and multi-jumps chain).
   - *Hide & Seek* (Wally Town, the new sign between Rides and My Home): five friends hide around town – press UP at a bush, barrel, tree or crate to look, and watch for hiding spots that wiggle when someone giggles. 90 seconds; coins for every friend found and a trophy for finding them all.
-  - *Online Co-op* (Challenges): host a game to get a 5-letter room code (with a QR code to share), your friend types it on their own device, and you play the same level together – you see each other run, a checkpoint one of you reaches counts for both, and when one of you reaches the goal you both clear it. It uses the same Firebase settings as the high scores (see below); the rules file now has a small `coop` collection for the rooms.
+  - *Online Co-op* (Challenges): host a game to get a 5-letter room code (with a QR code to share), your friend types it on their own device, and you play the same level together – you see each other run, a checkpoint one of you reaches counts for both, and when one of you reaches the goal you both clear it. It uses the same Firebase settings as the high scores (see below); the rules file now has a small `coop` collection for the rooms (slots A to D since Update 2.8).
   - *Tag* (Challenges): whoever is IT chases, a tag passes it on, and the least time spent as IT after 60 seconds wins. Play against GothChick, or with 2 players on one keyboard (player 2: T F G H to move, R to jump, or the number pad or a second gamepad).
   - *Problem Spots* (Challenges): every time you lose a life the spot is marked. See your worst levels, look at a mini-map with red crosses where you fell, and practise from any spot with no lives lost.
   - *Boss Creator share codes*: SHARE CODE gives your boss as a code with a QR code; LOAD CODE loads a friend's.
@@ -356,6 +366,7 @@ js/batchy.js        Update 2.5: Penalty Shootout, Tennis and Checkers vs Dino, H
 js/batchy2.js       Update 2.5: Tag, online co-op rooms, Problem Spots, the Challenges menu
 js/batchz.js        Update 2.6: Level Maker themes and pieces, modern story comics and logo, run toggle, difficulty stars, reward calendar
 js/batch27.js       Update 2.7: Toy Box Island, Paper Craft Isle, Beat Island, treasure maps, boss rematches
+js/batch28.js       Update 2.8: Dino hero, Grip Gloves, gift codes, the farm, cooking mini-game, weekend festival, mini-game records
 js/batcho.js        Update 1.4: Count Dracula, his castle, the full moon and the passing storm in Wally's Backyard
 js/batchj2.js       Dino Valley map, completion, mirror/rematch menus, card and photo albums, theatre, Music Maker, Maker worlds, Party Mode
 js/batchi2.js       Pirate Cove map, airship, tower/gold menus, garden, pets, mini-games, hero maker, cloud save, Level of the Week, touch editor, Level Maker parts

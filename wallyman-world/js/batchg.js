@@ -286,7 +286,7 @@ const FURNITURE = {
   rugstar: { name: 'STAR RUG', kind: 'rug', price: 30, draw: (x, y) => { ctx.fillStyle = '#3050c0'; ctx.fillRect(x - 40, y, 80, 10); for (let k = 0; k < 5; k++) txt('#', x - 34 + k * 15, y + 2, '#ffe040', { shadow: null }); } },
 };
 function TownScene() {
-  const buildings = [{ x: 40, name: "DINO'S HOUSE", go: () => HouseScene(), col: '#e0a040' }, { x: 160, name: 'QUEST BOARD', go: () => QuestBoardScene(), col: '#a06a2a', board: true }, { x: 236, name: 'BOUNTY BOARD', go: () => BountyScene(), col: '#7a4a2a', board: true }, { x: 300, name: 'RIDES', go: () => RidesScene(), col: '#d05050' }, { x: 366, name: 'HIDE & SEEK', go: () => HideSeekScene(), col: '#3a8a3a', board: true }, { x: 430, name: 'MY HOME', go: () => HomeScene(), col: '#5080e0' }];
+  const buildings = [{ x: 40, name: "DINO'S HOUSE", go: () => HouseScene(), col: '#e0a040' }, { x: 160, name: 'QUEST BOARD', go: () => QuestBoardScene(), col: '#a06a2a', board: true }, { x: 236, name: 'BOUNTY BOARD', go: () => BountyScene(), col: '#7a4a2a', board: true }, { x: 300, name: 'RIDES', go: () => RidesScene(), col: '#d05050' }, { x: 366, name: 'HIDE & SEEK', go: () => HideSeekScene(), col: '#3a8a3a', board: true }, { x: 430, name: 'MY HOME', go: () => HomeScene(), col: '#5080e0' }, { x: 500, name: 'FARM', go: () => FarmScene(), col: '#c05030' }, { x: 572, name: 'FESTIVAL', go: () => FestivalScene(), col: '#d040a0', board: true }];
   const npcs = QUESTS.map((q, i) => ({ q, x: 100 + i * 82 }));
   let px = 60, face = 1, t = 0, talk = null;
   game.quests = game.quests || {}; questCheck();
@@ -302,7 +302,7 @@ function TownScene() {
         }
         return;
       }
-      const d = (Input.down('right') ? 1 : 0) - (Input.down('left') ? 1 : 0); if (d) { px = clamp(px + d * 1.6, 10, 500); face = d; }
+      const d = (Input.down('right') ? 1 : 0) - (Input.down('left') ? 1 : 0); if (d) { px = clamp(px + d * 1.6, 10, 620); face = d; }
       if (Input.pressed('back') || Input.pressed('start')) { go(() => MapScene()); return; }
       if (Input.pressed('up') || Input.pressed('jump')) {
         const b = buildings.find((k) => Math.abs(px - (k.x + 24)) < 22);
@@ -318,7 +318,7 @@ function TownScene() {
       }
     },
     draw() {
-      const cam = clamp(px - 128, 0, 512 - VW);
+      const cam = clamp(px - 128, 0, 640 - VW);
       drawParallax('grass', cam * 0.5 + t * 0.1);
       ctx.fillStyle = '#c8a878'; ctx.fillRect(0, 186, VW, 38); ctx.fillStyle = '#b09060'; for (let x = -(cam % 16); x < VW; x += 16) ctx.fillRect(x, 186, 1, 38); ctx.fillStyle = '#7a5a3a'; ctx.fillRect(0, 186, VW, 2);
       for (const b of buildings) {
