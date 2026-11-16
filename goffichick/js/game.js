@@ -22,7 +22,7 @@
   const RES = 3;
   const viewC = document.createElement('canvas');
   const viewCtx = viewC.getContext('2d');
-  let img, buf, zbuf, occD, occY, occN;
+  let img, buf, zbuf, occD, occY, occN, wallBot, wallTop;
   // Graphics quality: the 3D view is rendered at QUALITY x the game's base resolution
   // (1 = Classic chunky pixels, 1.5 = HD). The HUD and weapons are always drawn sharp.
   let QUALITY = 1, RW = 480, RH = 222;
@@ -50,7 +50,7 @@
       canvas.width = W * RES; canvas.height = H * RES;
       RW = Math.round(W * QUALITY); RH = Math.round(VIEW_H * QUALITY);
       viewC.width = RW; viewC.height = RH;
-      img = viewCtx.createImageData(RW, RH); buf = new Uint32Array(img.data.buffer); zbuf = new Float32Array(RW);
+      img = viewCtx.createImageData(RW, RH); buf = new Uint32Array(img.data.buffer); zbuf = new Float32Array(RW); wallBot = new Int16Array(RW); wallTop = new Int16Array(RW);
       occD = new Float32Array(RW * OCC); occY = new Int16Array(RW * OCC); occN = new Uint8Array(RW);
       if (hudBg) buildHudBg();
     }
@@ -138,6 +138,12 @@
   let msg = '', msgT = 0;
   let automap = false;
   let shake = 0, lightBoost = 0, painFlash = 0, pickupFlash = 0;
+  // combat feedback and effects state
+  let hitMarkT = 0, killMarkT = 0, slowMoT = 0, announce = null, killChain = [], dmgDirs = [], heartT = 0;
+  // EFFECTS setting: HIGH turns on bloom, reflections, ambient occlusion, film grain and extra particles
+  // fxDrop: 0 = everything; 1 = no bloom; 2 = also no reflections or corner shadows (set automatically on slow devices)
+  let fxDrop = 0, frameAvg = 1 / 60, slowFor = 0;
+  let FX_HIGH = true; try { FX_HIGH = localStorage.getItem('goffichick-fx') !== 'low'; } catch (e) {}
   let time = 0, levelTime = 0, stateT = 0;
   let god = false;
   let cheatBuf = '';
@@ -181,7 +187,7 @@
     const lockAt = new Map();
     for (const z of def.lights || []) for (let y = z.y; y < z.y + z.h; y++) for (let x = z.x; x < z.x + z.w; x++) if (x >= 0 && y >= 0 && x < mw && y < mh) light[y * mw + x] = z.level;
     L = { def, mw, mh, grid, block, seen, slime, light, fh, lifts, liftTile, ceilH: def.ceilH || 1, stepTex: def.stepTex || 1, lightNow: new Float32Array(light), zones: (def.lights || []).map(z => ({ ...z, on: true })), totalSecrets: 0,
-      slimeTex: Textures.flats.slime.data, doors: new Map(), enemies: [], items: [], decor: [], projs: [], fx: [], parts: [], bolts: [],
+      slimeTex: Textures.flats.slime.data, doors: new Map(), enemies: [], items: [], decor: [], projs: [], fx: [], parts: [], bolts: [], vfx: [], vfxN: {}, fdec: new Map(), wdec: new Map(),
       totalKills: 0, totalItems: 0, starts: [], avatars: [], exitT: -1, flow: null, flowFrom: -1, fog: def.fog,
       floor: Textures.flats[def.floor].data, ceil: Textures.flats[def.ceil].data };
     player = newPlayer(keep);
@@ -216,6 +222,14 @@
       const lock = lockAt.get(y * mw + x) || null;
       L.doors.set(y * mw + x, { x, y, open: 0, state: 'closed', t: 0, vertical: solidNS, secret, lock, tex: secret ? (near > 0 && near !== DOOR ? near : 1) : lock ? KEYS[lock].tex : 5 });
     }
+    // which sides of each floor tile touch a wall (for the soft shadows in corners)
+    L.wmask = new Uint8Array(mw * mh);
+    for (let y = 0; y < mh; y++) for (let x = 0; x < mw; x++) {
+      const i = y * mw + x; if (grid[i]) continue;
+      L.wmask[i] = (isWallTile(x - 1, y) ? 1 : 0) | (isWallTile(x + 1, y) ? 2 : 0) | (isWallTile(x, y - 1) ? 4 : 0) | (isWallTile(x, y + 1) ? 8 : 0);
+    }
+    L.shiny = def.shiny ?? ['tiles', 'studio', 'parquet', 'checker'].includes(def.floor);
+    L.slimeTiles = []; for (let i = 0; i < slime.length; i++) if (slime[i]) L.slimeTiles.push(i);
     player.fz = fh[Math.floor(player.y) * mw + Math.floor(player.x)];
     for (const e of L.enemies) e.fz = fh[Math.floor(e.y) * mw + Math.floor(e.x)];
     levelTime = 0; L.flowFrom = -1; L.baseEnemies = L.enemies.length;
@@ -309,6 +323,123 @@
     hit.dist = 64; hit.tex = 1; return hit;
   }
 
+  // ------------------------------------------------------------------ post effects
+  const bloomC = document.createElement('canvas'), bloomX = bloomC.getContext('2d', { willReadFrequently: true });
+  // bloom: the brightest parts of the picture (lamps, fire, explosions) spill a soft glow around them
+  function drawBloom(ox, oy) {
+    const bw = Math.max(16, Math.round(W / 6)), bh = Math.max(8, Math.round(VIEW_H / 6)), th = 236;
+    if (bloomC.width !== bw || bloomC.height !== bh) { bloomC.width = bw; bloomC.height = bh; }
+    bloomX.globalCompositeOperation = 'copy'; bloomX.imageSmoothingEnabled = true; bloomX.drawImage(viewC, 0, 0, bw, bh);
+    const id = bloomX.getImageData(0, 0, bw, bh), d = id.data;
+    for (let i = 0; i < d.length; i += 4) {
+      const m = Math.max(d[i], d[i + 1], d[i + 2]);
+      if (m < th) { d[i] = d[i + 1] = d[i + 2] = 0; } else { let k = (m - th) / (255 - th); k *= k; d[i] *= k; d[i + 1] *= k; d[i + 2] *= k; }
+    }
+    bloomX.putImageData(id, 0, 0);
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.imageSmoothingEnabled = true;
+    ctx.globalAlpha = 0.85; ctx.drawImage(bloomC, ox - 5, oy - 4, W + 10, VIEW_H + 8);
+    ctx.restore();
+  }
+  // the sky above the walls: a clip path that follows the tops of the walls on screen
+  function skyClip() {
+    ctx.beginPath(); ctx.moveTo(0, 0);
+    for (let x = 0; x <= W; x += 3) { const d = zbuf[Math.min(RW - 1, Math.round(x * QUALITY))] || 64; ctx.lineTo(x, HOR - (L.ceilH - player.eyeZ) * PROJ / d); }
+    ctx.lineTo(W, 0); ctx.closePath(); ctx.clip();
+  }
+  function makeSkyBolt() {
+    const pts = []; let x = rand(W * 0.1, W * 0.9), y = -5;
+    while (y < HOR * 0.75) { pts.push([x, y]); x += rand(-14, 14); y += rand(6, 14); }
+    pts.push([x, y]); return { pts, branch: pts.slice(irand(2, Math.max(3, pts.length - 3))).map(([bx, by], i) => [bx + i * rand(4, 9), by + i * 2]) };
+  }
+  const SUN_A = -2.3;
+  function drawSkyFx() {
+    ctx.save(); skyClip();
+    if (L.def.weather === 'rain') {
+      if (L.skyBolt && L.flashA > 0.12) {
+        ctx.globalCompositeOperation = 'lighter'; ctx.lineJoin = 'round';
+        for (const [wdt, col] of [[6, `rgba(150,170,255,${0.35 * L.flashA})`], [1.6, `rgba(255,255,255,${L.flashA})`]]) {
+          ctx.strokeStyle = col; ctx.lineWidth = wdt;
+          for (const line of [L.skyBolt.pts, L.skyBolt.branch]) { ctx.beginPath(); line.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.stroke(); }
+        }
+      }
+      ctx.restore(); return;
+    }
+    let da = SUN_A - player.a; while (da > Math.PI) da -= TAU; while (da < -Math.PI) da += TAU;
+    if (Math.abs(da) < 1.3) {
+      const sx = W / 2 * (1 + Math.tan(da) / PLANE), sy = HOR * 0.3;
+      ctx.globalCompositeOperation = 'lighter';
+      const g = ctx.createRadialGradient(sx, sy, 0, sx, sy, 70);
+      g.addColorStop(0, 'rgba(255,250,225,0.95)'); g.addColorStop(0.12, 'rgba(255,240,190,0.75)'); g.addColorStop(0.4, 'rgba(255,210,140,0.18)'); g.addColorStop(1, 'rgba(255,200,120,0)');
+      ctx.fillStyle = g; ctx.fillRect(sx - 70, sy - 70, 140, 140);
+      ctx.restore();
+      // lens flare when the sun itself is in view (not behind a wall)
+      const d = zbuf[Math.max(0, Math.min(RW - 1, Math.round(sx * QUALITY)))] || 64, top = HOR - (L.ceilH - player.eyeZ) * PROJ / d;
+      if (sx > 0 && sx < W && sy < top) {
+        const k = 1 - Math.abs(sx - W / 2) / W;
+        ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.beginPath(); ctx.rect(0, 0, W, VIEW_H); ctx.clip();
+        ctx.fillStyle = `rgba(255,235,200,${0.1 * k})`; ctx.fillRect(0, sy - 0.8, W, 1.6);
+        for (const [t, r, c] of [[0.5, 9, '255,180,120'], [1.15, 5, '160,220,255'], [1.5, 14, '200,140,255'], [1.9, 7, '255,230,150']]) {
+          const fx = sx + (W / 2 - sx) * t, fy = sy + (HOR - sy) * t, g2 = ctx.createRadialGradient(fx, fy, 0, fx, fy, r);
+          g2.addColorStop(0, `rgba(${c},${0.22 * k})`); g2.addColorStop(1, `rgba(${c},0)`); ctx.fillStyle = g2; ctx.fillRect(fx - r, fy - r, r * 2, r * 2);
+        }
+        ctx.restore();
+      }
+      return;
+    }
+    ctx.restore();
+  }
+  // colour grading, haze on the horizon and fine film grain, done in one pass over the 3D view's pixels
+  let gradeRows = null, gradeKey = '';
+  const grainTab = Int8Array.from({ length: 8192 }, () => (Math.random() * 12 - 6) | 0);
+  function gradePass() {
+    const key = RW + '|' + RH + '|' + L.def.name + '|' + FX_HIGH;
+    if (key !== gradeKey) {
+      gradeKey = key; const n = RH, mr = new Float32Array(n), mg = new Float32Array(n), mb = new Float32Array(n), ar = new Float32Array(n), ag = new Float32Array(n), ab = new Float32Array(n);
+      const [fr, fg, fb] = L.fog, top = L.def.sky ? [1.05, 1.01, 0.94] : [0.96, 0.95, 1.07], bot = [1.06, 0.96, 1.01];
+      for (let y = 0; y < n; y++) {
+        const t = y / n, h = FX_HIGH ? Math.max(0, 1 - Math.abs(y - n / 2) / (n * 0.11)) * 0.13 : 0, k = FX_HIGH ? 1 : 0;
+        const r = 1 + (top[0] + (bot[0] - top[0]) * t - 1) * k, g = 1 + (top[1] + (bot[1] - top[1]) * t - 1) * k, b = 1 + (top[2] + (bot[2] - top[2]) * t - 1) * k;
+        mr[y] = r * (1 - h); mg[y] = g * (1 - h); mb[y] = b * (1 - h); ar[y] = fr * h; ag[y] = fg * h; ab[y] = fb * h;
+      }
+      gradeRows = { mr, mg, mb, ar, ag, ab };
+    }
+    const { mr, mg, mb, ar, ag, ab } = gradeRows, off = (Math.random() * 8192) | 0, grain = FX_HIGH;
+    for (let y = 0, i = 0; y < RH; y++) {
+      const r = mr[y], g = mg[y], b = mb[y], xr = ar[y], xg = ag[y], xb = ab[y];
+      for (let x = 0; x < RW; x++, i++) {
+        const c = buf[i], nz = grain ? grainTab[(i + off) & 8191] : 0;
+        let R = (c & 255) * r + xr + nz, Gc = (c >> 8 & 255) * g + xg + nz, B = (c >> 16 & 255) * b + xb + nz;
+        R = R < 0 ? 0 : R > 255 ? 255 : R; Gc = Gc < 0 ? 0 : Gc > 255 ? 255 : Gc; B = B < 0 ? 0 : B > 255 ? 255 : B;
+        buf[i] = 0xff000000 | (B << 16) | (Gc << 8) | R;
+      }
+    }
+  }
+  function drawGrade() {
+    if (player.health < 30 && !player.dead && state === 'playing') { // near death: colour drains away and the edges pulse red
+      const k = (30 - player.health) / 30, beat = 0.5 + 0.5 * Math.sin(time * (6 + k * 4));
+      ctx.save(); ctx.globalCompositeOperation = 'saturation'; ctx.fillStyle = `rgba(128,128,128,${0.75 * k})`; ctx.fillRect(0, 0, W, VIEW_H); ctx.restore();
+      const vg = ctx.createRadialGradient(W / 2, HOR, VIEW_H * 0.35, W / 2, HOR, W * 0.6);
+      vg.addColorStop(0, 'rgba(120,0,0,0)'); vg.addColorStop(1, `rgba(150,0,10,${(0.25 + 0.3 * beat) * k})`); ctx.fillStyle = vg; ctx.fillRect(0, 0, W, VIEW_H);
+    }
+  }
+  function drawCombatOverlays() {
+    const p = player;
+    for (const d of dmgDirs) { // red arcs showing where the hit came from
+      let a = Math.atan2(d.y - p.y, d.x - p.x) - p.a - Math.PI / 2;
+      const al = (1 - d.t) * 0.85;
+      ctx.strokeStyle = `rgba(255,30,40,${al})`; ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(W / 2, HOR, 52, a - 0.35, a + 0.35); ctx.stroke();
+      ctx.strokeStyle = `rgba(255,160,160,${al * 0.8})`; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(W / 2, HOR, 52, a - 0.3, a + 0.3); ctx.stroke();
+    }
+    if (announce) { // DOUBLE KILL! and friends
+      const t = announce.t, sc = t < 0.15 ? 1.8 - t / 0.15 * 0.8 : 1, al = t > 1.3 ? 1 - (t - 1.3) / 0.5 : 1;
+      ctx.save(); ctx.globalAlpha = Math.max(0, al); ctx.translate(W / 2, 62); ctx.scale(sc, sc);
+      ctx.font = '22px "Metal Mania", Impact, serif'; ctx.textAlign = 'center';
+      ctx.fillStyle = '#000'; ctx.fillText(announce.text, 1.5, 1.5); ctx.shadowColor = '#ff2d95'; ctx.shadowBlur = 12; ctx.fillStyle = '#ffcf3a'; ctx.fillText(announce.text, 0, 0);
+      ctx.restore();
+    }
+    if (slowMoT > 0) { ctx.fillStyle = `rgba(255,220,120,${Math.min(0.12, slowMoT * 0.1)})`; ctx.fillRect(0, 0, W, VIEW_H); }
+  }
+
   // ------------------------------------------------------------------ dynamic coloured light
   // Every frame, glowing things (fireballs, explosions, plasma, torches, muzzle flashes, burning
   // monsters, the toxic sludge) add coloured light to the floor tiles around them.
@@ -349,6 +480,27 @@
     for (const it of L.items) if (!it.taken && (it.def.power || it.def.key)) { const g = (GLOW_OF[it.def.sprite] || '255,255,255').split(',').map(v => v / 255); addLight(it.x, it.y, g[0], g[1], g[2], 0.18, 1.6); }
   }
 
+  // ------------------------------------------------------------------ texture relief
+  // Give every wall and floor texture a little depth: light from the top left catches raised
+  // edges and leaves grooves in shadow (an emboss "bump map" baked in once at start-up).
+  function enhanceTextures() {
+    const bump = (t, k) => {
+      if (!t || !t.data || t.data.length !== 4096 || t.bumped) return; t.bumped = true;
+      const d = t.data, lum = new Float32Array(4096), out = new Uint32Array(4096);
+      for (let i = 0; i < 4096; i++) { const c = d[i]; lum[i] = (c & 255) * 0.3 + (c >> 8 & 255) * 0.59 + (c >> 16 & 255) * 0.11; }
+      for (let y = 0; y < 64; y++) for (let x = 0; x < 64; x++) {
+        const i = y * 64 + x, a = lum[((y + 63) & 63) * 64 + ((x + 63) & 63)], b = lum[((y + 1) & 63) * 64 + ((x + 1) & 63)];
+        const f = clamp(1 + (a - b) / 255 * k, 0.6, 1.4), c = d[i];
+        out[i] = (c & 0xff000000) | (Math.min(255, (c >> 16 & 255) * f) << 16) | (Math.min(255, (c >> 8 & 255) * f) << 8) | Math.min(255, (c & 255) * f);
+      }
+      d.set(out);
+    };
+    for (const k in Textures.walls) bump(Textures.walls[k], 1.6);
+    for (const k in Textures.flats) if (k !== 'sky' && k !== 'slimeFrames' && k !== 'slime') bump(Textures.flats[k], 1.1);
+  }
+  enhanceTextures();
+  const mixC = (c, d) => { const a = (d >>> 24) / 255, ia = 1 - a; return 0xff000000 | (((c >> 16 & 255) * ia + (d >> 16 & 255) * a) << 16) | (((c >> 8 & 255) * ia + (d >> 8 & 255) * a) << 8) | ((c & 255) * ia + (d & 255) * a); };
+
   // ------------------------------------------------------------------ rendering
   function render3D() {
     const RHOR = RH / 2, RPROJ = PROJ * QUALITY;
@@ -361,6 +513,9 @@
     const boost = lightBoost;
     const walls = Textures.walls;
     const mw = L.mw;
+    const aoOn = FX_HIGH && fxDrop < 2, wmask = L.wmask, reflOn = FX_HIGH && fxDrop < 2 && L.shiny;
+    // soft shadow where a floor or ceiling meets a wall
+    const aoAt = (m, lx, ly) => { let d = 1; if (m & 1 && lx < d) d = lx; if (m & 2 && 1 - lx < d) d = 1 - lx; if (m & 4 && ly < d) d = ly; if (m & 8 && 1 - ly < d) d = 1 - ly; return d < 0.32 ? 0.58 + d * 1.31 : 1; };
 
     // --- ceiling: one height per level, drawn row by row above the horizon
     const r0x = dirX - plX, r0y = dirY - plY, r1x = dirX + plX, r1y = dirY + plY;
@@ -382,7 +537,8 @@
       for (let x = 0; x < RW; x++, o++) {
         const cx = fx | 0, cy = fy | 0;
         const inside = cx >= 0 && cy >= 0 && cx < mw && cy < mh, ci = cy * mw + cx;
-        const ls = inside ? lightNow[ci] : 1;
+        let ls = inside ? lightNow[ci] : 1;
+        if (aoOn && inside) { const m = wmask[ci]; if (m) ls *= aoAt(m, fx - cx, fy - cy); }
         const c = ceilT[((fy * 64) & 63) * 64 + ((fx * 64) & 63)];
         fx += stepX; fy += stepY;
         if (inside && dR[ci] + dG[ci] + dB[ci] > 0.02) putA(o, c, s * ls, dR[ci] * 75, dG[ci] * 75, dB[ci] * 75);
@@ -405,25 +561,40 @@
       const yB = Math.min(dNear < 0.02 ? RH : Math.ceil(RHOR + e * RPROJ / dNear), clip);
       const isSlime = slimeMap[idx], tex = isSlime ? slimeT : floorT, ls = isSlime ? Math.max(lightNow[idx], 0.9) : lightNow[idx];
       const aR = dR[idx] * 115, aG = dG[idx] * 115, aB = dB[idx] * 115, lit = aR + aG + aB > 3;
+      const dec = L.fdec.size ? L.fdec.get(idx) : undefined, m = aoOn ? wmask[idx] : 0, tx0 = idx % mw, ty0 = (idx / mw) | 0;
       for (let y = yA, o = yA * RW + x; y < yB; y++, o += RW) {
         const rowDist = e * RPROJ / (y + 0.5 - RHOR);
         const wx = p.x + rdx * rowDist, wy = p.y + rdy * rowDist;
-        const c = tex[((wy * 64) & 63) * 64 + ((wx * 64 + (isSlime ? slimeShift : 0)) & 63)], q = clamp(1.3 - rowDist * 0.05 + boost, 0.25, 1) * ls;
+        let c = tex[((wy * 64) & 63) * 64 + ((wx * 64 + (isSlime ? slimeShift : 0)) & 63)], q = clamp(1.3 - rowDist * 0.05 + boost, 0.25, 1) * ls;
+        if (dec) { const dd = dec[((wy * 64) & 63) * 64 + ((wx * 64) & 63)]; if (dd) c = mixC(c, dd); }
+        if (m) q *= aoAt(m, wx - tx0, wy - ty0);
         if (lit) putA(o, c, q, aR, aG, aB); else put(o, c, q);
       }
       return Math.min(clip, yA);
     }
     // a vertical surface (wall or the front of a raised floor) from height zLo to zHi at distance d
-    function vSpan(x, d, zLo, zHi, texId, u, side, lightIdx, clip, glow) {
-      const y0 = Math.max(0, Math.ceil(RHOR - (zHi - eyeZ) * RPROJ / d)), y1 = Math.min(clip, Math.ceil(RHOR + (eyeZ - zLo) * RPROJ / d));
+    function vSpan(x, d, zLo, zHi, texId, u, side, lightIdx, clip, glow, dec) {
+      const yTopF = RHOR - (zHi - eyeZ) * RPROJ / d;
+      const y0 = Math.max(0, Math.ceil(yTopF)), y1 = Math.min(clip, Math.ceil(RHOR + (eyeZ - zLo) * RPROJ / d));
       if (y0 >= y1) return Math.min(clip, Math.max(0, y0));
       const tex = (walls[texId] || walls[1]).data, tx = Math.min(63, (u * 64) | 0);
       let q = clamp(1.3 - d * 0.05 + boost, 0.25, 1) * (side ? 0.86 : 1) * (lightIdx >= 0 ? lightNow[lightIdx] : 1);
       if (glow) q = Math.max(q, 0.85);
       const vStep = d / RPROJ * 64; let v = (zHi - eyeZ + (y0 + 0.5 - RHOR) * d / RPROJ) * 64 + (ceilH - zHi) * 64;
       const aR = lightIdx >= 0 ? dR[lightIdx] * 115 : 0, aG = lightIdx >= 0 ? dG[lightIdx] * 115 : 0, aB = lightIdx >= 0 ? dB[lightIdx] * 115 : 0;
-      if (aR + aG + aB > 3) { for (let y = y0, o = y0 * RW + x; y < y1; y++, o += RW, v += vStep) putA(o, tex[((v | 0) & 63) * 64 + tx], q, aR, aG, aB); }
-      else for (let y = y0, o = y0 * RW + x; y < y1; y++, o += RW, v += vStep) put(o, tex[((v | 0) & 63) * 64 + tx], q);
+      const lit = aR + aG + aB > 3, ao = aoOn && d < 16, zpp = d / RPROJ, full = zHi >= ceilH - 0.001;
+      if (!ao && !dec) {
+        if (lit) { for (let y = y0, o = y0 * RW + x; y < y1; y++, o += RW, v += vStep) putA(o, tex[((v | 0) & 63) * 64 + tx], q, aR, aG, aB); }
+        else for (let y = y0, o = y0 * RW + x; y < y1; y++, o += RW, v += vStep) put(o, tex[((v | 0) & 63) * 64 + tx], q);
+        return Math.min(clip, y0);
+      }
+      for (let y = y0, o = y0 * RW + x; y < y1; y++, o += RW, v += vStep) {
+        const vi = v | 0;
+        let c = tex[(vi & 63) * 64 + tx], qq = q;
+        if (dec && vi >= 0 && vi < 192) { const dd = dec[vi * 64 + tx]; if (dd) c = mixC(c, dd); }
+        if (ao) { const z = zHi - (y + 0.5 - yTopF) * zpp, b = z - zLo, t = zHi - z; if (b < 0.28) qq *= 0.6 + b * 1.43; else if (full && t < 0.22) qq *= 0.74 + t * 1.18; }
+        if (lit) putA(o, c, qq, aR, aG, aB); else put(o, c, qq);
+      }
       return Math.min(clip, y0);
     }
     const occlude = (x, d, y) => { const n = occN[x]; if (n < OCC) { occD[x * OCC + n] = d; occY[x * OCC + n] = y; occN[x] = n + 1; } };
@@ -438,7 +609,7 @@
       if (rdx < 0) { stepX = -1; sdx = (p.x - mx) * ddx; } else { stepX = 1; sdx = (mx + 1 - p.x) * ddx; }
       if (rdy < 0) { stepY = -1; sdy = (p.y - my) * ddy; } else { stepY = 1; sdy = (my + 1 - p.y) * ddy; }
       let curIdx = my * mw + mx, curH = fhm[curIdx] || 0, dNear = 0.01, clip = RH, wallD = 64, prevDoor = false;
-      occN[x] = 0;
+      occN[x] = 0; wallBot[x] = -1;
       for (let i = 0; i < 160 && clip > 0; i++) {
         let d;
         if (sdx < sdy) { d = sdx; sdx += ddx; mx += stepX; side = 0; } else { d = sdy; sdy += ddy; my += stepY; side = 1; }
@@ -461,8 +632,10 @@
           }
           curIdx = idx; curH = dh; dNear = d; prevDoor = !dr.secret; continue;
         }
-        if (t > 0) { // solid wall
-          vSpan(x, d, curH, ceilH, prevDoor ? 10 : t, u, side, curIdx, clip, t === 7 || t === 11);
+        if (t > 0) { // solid wall (with any bullet holes or blood on this face)
+          const dec = L.wdec.size ? L.wdec.get(idx * 4 + (side === 0 ? (rdx > 0 ? 0 : 1) : (rdy > 0 ? 2 : 3))) : undefined;
+          vSpan(x, d, curH, ceilH, prevDoor ? 10 : t, u, side, curIdx, clip, t === 7 || t === 11, dec);
+          if (reflOn && occN[x] === 0 && curH === 0) { const yb = Math.ceil(RHOR + eyeZ * RPROJ / d); if (yb < clip) { wallBot[x] = yb; wallTop[x] = Math.max(0, Math.ceil(RHOR - (ceilH - eyeZ) * RPROJ / d)); } }
           L.seen[idx] = 1; wallD = d; break;
         }
         prevDoor = false;
@@ -472,6 +645,38 @@
         curIdx = idx; curH = nh; dNear = d;
       }
       zbuf[x] = wallD;
+    }
+
+    // --- polished floors mirror the walls standing on them
+    if (reflOn) for (let x = 0; x < RW; x++) {
+      const b = wallBot[x]; if (b < 0) continue;
+      const len = Math.min(RH - b, ((b - wallTop[x]) * 0.45) | 0);
+      for (let k = 0; k < len; k++) {
+        const sy = b - 1 - k; if (sy < wallTop[x]) break;
+        const o = (b + k) * RW + x, a = 0.3 * (1 - k / len), ia = 1 - a, c = buf[o], m = buf[sy * RW + x];
+        buf[o] = 0xff000000 | (((c >> 16 & 255) * ia + (m >> 16 & 255) * a) << 16) | (((c >> 8 & 255) * ia + (m >> 8 & 255) * a) << 8) | ((c & 255) * ia + (m & 255) * a);
+      }
+    }
+    // --- soft round shadows under monsters, items and decorations
+    if (FX_HIGH) {
+      const blob = (wx, wy, r, fz, k) => {
+        const dx = wx - p.x, dy = wy - p.y, depth = dx * dirX + dy * dirY; if (depth < 0.3) return;
+        const e = eyeZ - fz; if (e <= 0.02) return;
+        const sx = (RW / 2) * (1 + ((dirX * dy - dirY * dx) / PLANE) / depth), cy = RHOR + e * RPROJ / depth, rx = r * RPROJ / depth, ry = Math.max(1, rx * Math.min(0.6, e / depth));
+        const x0 = Math.max(0, Math.floor(sx - rx)), x1 = Math.min(RW - 1, Math.ceil(sx + rx)), y0 = Math.max(0, Math.floor(cy - ry)), y1 = Math.min(RH - 1, Math.ceil(cy + ry));
+        for (let x = x0; x <= x1; x++) {
+          if (zbuf[x] < depth) continue;
+          const ux = (x - sx) / rx, ux2 = ux * ux; if (ux2 >= 1) continue;
+          for (let y = y0, o = y0 * RW + x; y <= y1; y++, o += RW) {
+            const uy = (y - cy) / ry, t = ux2 + uy * uy; if (t >= 1) continue;
+            const f = 1 - k * (1 - t), c = buf[o];
+            buf[o] = 0xff000000 | (((c >> 16 & 255) * f) << 16) | (((c >> 8 & 255) * f) << 8) | ((c & 255) * f);
+          }
+        }
+      };
+      for (const e of bodies()) if (!e.dead || e.type === 'barrel') { if (e.dead) continue; const fl = floorAt(e.x, e.y); blob(e.x, e.y, e.def.radius * 1.15, fl, e.z > 0.2 || e.def.fly ? 0.25 : 0.5); }
+      for (const it of L.items) if (!it.taken) blob(it.x, it.y, 0.17, floorAt(it.x, it.y), 0.4);
+      for (const d of L.decor) if (d.def.block) blob(d.x, d.y, 0.26, floorAt(d.x, d.y), 0.45);
     }
 
     // --- sprites
@@ -588,7 +793,8 @@
     ctx.save();
     ctx.beginPath(); ctx.rect(0, 0, W, VIEW_H); ctx.clip();
     // weapons are authored at 1x and drawn scaled up around the bottom-centre of the view
-    ctx.translate(W / 2 + bobX, VIEW_H + 10 + bobY + lower); ctx.scale(0.8, 0.8);
+    const sway = (p.swayX || 0) + Math.sin(time * 1.3) * 1.2, dip = (p.landT > 0 ? Math.sin(p.landT / 0.3 * Math.PI) * 9 : 0) + Math.sin(time * 1.7) * 1.1;
+    ctx.translate(W / 2 + bobX + sway, VIEW_H + 10 + bobY + lower + dip); ctx.rotate(sway * 0.004); ctx.scale(0.8, 0.8);
     w.draw(ctx, 0, 0, p.firePhase, p.flashT > 0, time);
     ctx.restore();
   }
@@ -693,9 +899,15 @@
     }
     if (player.berserk) label('RAGE', W - 4, 26, '#ff2a4a', 'right', 8);
     // crosshair
+    const gap = 1 + player.move * 2.5 + (player.flashT > 0 ? 2.5 : 0);
     ctx.fillStyle = 'rgba(255,80,180,0.75)';
-    ctx.fillRect(W / 2 - 1, HOR - 4, 2, 3); ctx.fillRect(W / 2 - 1, HOR + 2, 2, 3);
-    ctx.fillRect(W / 2 - 5, HOR - 0.5, 3, 2); ctx.fillRect(W / 2 + 3, HOR - 0.5, 3, 2);
+    ctx.fillRect(W / 2 - 1, HOR - 3 - gap, 2, 3); ctx.fillRect(W / 2 - 1, HOR + 1 + gap, 2, 3);
+    ctx.fillRect(W / 2 - 4 - gap, HOR - 0.5, 3, 2); ctx.fillRect(W / 2 + 2 + gap, HOR - 0.5, 3, 2);
+    if (hitMarkT > 0 || killMarkT > 0) { // hit marker: white for a hit, red for a kill
+      ctx.strokeStyle = killMarkT > 0 ? `rgba(255,50,70,${Math.min(1, killMarkT * 4)})` : `rgba(255,255,255,${Math.min(1, hitMarkT * 7)})`; ctx.lineWidth = 1.2; ctx.beginPath();
+      for (const [sx, sy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) { ctx.moveTo(W / 2 + sx * 4, HOR + sy * 4); ctx.lineTo(W / 2 + sx * 8, HOR + sy * 8); }
+      ctx.stroke();
+    }
   }
 
   function drawAutomap() {
@@ -774,7 +986,7 @@
         toggleDoor(d); return;
       }
       if (L.liftTile[idx]) { const lf = L.lifts.find(l => l.tiles.includes(idx)); if (lf && lf.state === 'up') { lf.state = 'lowering'; Sfx.play.door(); } return; }
-      if (t === 6) { L.grid[idx] = 11; Sfx.play.switch(); Sfx.play.exit(); L.exitT = 1.0; msg = 'Level complete!'; msgT = 2; return; }
+      if (t === 6) { confettiFx(player.x + Math.cos(player.a) * 0.9, player.y + Math.sin(player.a) * 0.9, player.eyeZ + 0.3, 70); L.grid[idx] = 11; Sfx.play.switch(); Sfx.play.exit(); L.exitT = 1.0; msg = 'Level complete!'; msgT = 2; return; }
       if (t > 0) { Sfx.play.oof(); return; }
     }
   }
@@ -852,6 +1064,219 @@
     }
   }
 
+  // ------------------------------------------------------------------ decals and soft particles
+  const BLOOD = [104, 0, 14], BLOODLESS = /orb|bubbly|mini|barrel|^av/;
+  // paint a splat onto the floor (64 pixels per tile, kept for the rest of the level)
+  function floorDecal(wx, wy, r, rgb, alpha, lumpy = 0.3) {
+    const mw = L.mw, R = r * 64, seed = Math.random() * 10, cx = wx * 64, cy = wy * 64;
+    for (let py = Math.floor(cy - R); py <= cy + R; py++) for (let px = Math.floor(cx - R); px <= cx + R; px++) {
+      const tx = px >> 6, ty = py >> 6; if (tx < 0 || ty < 0 || tx >= mw || ty >= L.mh) continue;
+      const ti = ty * mw + tx, g = L.grid[ti]; if (g && g !== DOOR) continue;
+      const dx = px + 0.5 - cx, dy = py + 0.5 - cy, dist = Math.hypot(dx, dy), ang = Math.atan2(dy, dx);
+      const rr = R * (1 - lumpy + lumpy * (0.5 + 0.5 * Math.sin(ang * 3 + seed) * Math.cos(ang * 5 - seed)));
+      if (dist > rr) continue;
+      let arr = L.fdec.get(ti); if (!arr) { if (L.fdec.size > 500) continue; arr = new Uint32Array(4096); L.fdec.set(ti, arr); }
+      const li = (py & 63) * 64 + (px & 63), na = Math.max(arr[li] >>> 24, Math.min(255, alpha * Math.min(1, (rr - dist) / 2.5) * 255)) | 0;
+      arr[li] = ((na << 24) | (rgb[2] << 16) | (rgb[1] << 8) | rgb[0]) >>> 0;
+    }
+  }
+  // paint onto one face of a wall tile. u = across the face (0..1), z = height
+  function wallDecal(mx, my, face, u, z, r, rgb, alpha, lumpy = 0.25) {
+    const key = (my * L.mw + mx) * 4 + face;
+    let arr = L.wdec.get(key); if (!arr) { if (L.wdec.size > 400) return; arr = new Uint32Array(64 * 192); L.wdec.set(key, arr); }
+    const cu = u * 64, cv = (L.ceilH - z) * 64, R = r * 64, seed = Math.random() * 10;
+    for (let v = Math.floor(cv - R); v <= cv + R; v++) for (let t = Math.floor(cu - R); t <= cu + R; t++) {
+      if (v < 0 || v >= 192 || t < 0 || t >= 64) continue;
+      const dx = t + 0.5 - cu, dy = v + 0.5 - cv, dist = Math.hypot(dx, dy), ang = Math.atan2(dy, dx);
+      const rr = R * (1 - lumpy + lumpy * (0.5 + 0.5 * Math.sin(ang * 4 + seed) * Math.cos(ang * 3 - seed))) + (dy > 0 && Math.abs(dx) < R * 0.25 ? R * lumpy * 1.5 : 0); // drips run down
+      if (dist > rr) continue;
+      const li = v * 64 + t, na = Math.max(arr[li] >>> 24, Math.min(255, alpha * Math.min(1, (rr - dist) / 1.5) * 255)) | 0;
+      arr[li] = ((na << 24) | (rgb[2] << 16) | (rgb[1] << 8) | rgb[0]) >>> 0;
+    }
+  }
+  const wallFace = (side, c, s) => side === 0 ? (c > 0 ? 0 : 1) : (s > 0 ? 2 : 3);
+  // soft particles: drawn with real transparency and glow on top of the 3D view
+  function vfx(kind, x, y, z, o) {
+    if (L.vfx.length >= (FX_HIGH ? 700 : 260)) return;
+    L.vfx.push({ kind, x, y, z, vx: o.vx || 0, vy: o.vy || 0, vz: o.vz || 0, t: 0, life: o.life || 1, size: o.size || 0.05, grow: o.grow || 0, col: o.col || '255,255,255',
+      add: !!o.add, grav: o.grav || 0, drag: o.drag || 0, bounce: o.bounce || 0, rot: Math.random() * TAU, spin: o.spin || 0, shape: o.shape || 'dot', a: o.a ?? 1, wob: o.wob || 0, phase: Math.random() * TAU, tink: !!o.tink });
+  }
+  function updateVfx(dt) {
+    const cnt = {};
+    for (const q of L.vfx) {
+      q.t += dt;
+      if (q.drag) { const f = Math.max(0, 1 - q.drag * dt); q.vx *= f; q.vy *= f; if (!q.grav) q.vz *= f; }
+      q.vz -= q.grav * dt;
+      let nx = q.x + q.vx * dt, ny = q.y + q.vy * dt;
+      if (q.wob) { nx += Math.sin(q.t * 2.3 + q.phase) * q.wob * dt; ny += Math.cos(q.t * 1.9 + q.phase * 1.3) * q.wob * dt; }
+      if (!opaqueAt(nx, ny)) { q.x = nx; q.y = ny; } else { q.vx *= -0.4; q.vy *= -0.4; }
+      q.z += q.vz * dt; q.rot += q.spin * dt;
+      if (q.grav > 0) {
+        const fl = floorAt(q.x, q.y) + 0.006;
+        if (q.z < fl) {
+          q.z = fl;
+          if (q.bounce && q.vz < -0.9) { q.vz *= -q.bounce; q.vx *= 0.6; q.vy *= 0.6; q.spin *= 0.6; if (q.tink && Math.random() < 0.5 && Math.hypot(q.x - player.x, q.y - player.y) < 3) Sfx.play.tink(); }
+          else { q.vz = 0; q.vx *= 0.7; q.vy *= 0.7; q.spin = 0; }
+        }
+      }
+      if (!L.def.sky && q.z > L.ceilH) q.t = q.life;
+      cnt[q.kind] = (cnt[q.kind] || 0) + 1;
+    }
+    L.vfx = L.vfx.filter(q => q.t < q.life); L.vfxN = cnt;
+  }
+  const dotCache = new Map();
+  function softDot(col) {
+    let c = dotCache.get(col);
+    if (!c) {
+      c = document.createElement('canvas'); c.width = c.height = 32; const g = c.getContext('2d');
+      const gr = g.createRadialGradient(16, 16, 0, 16, 16, 16);
+      gr.addColorStop(0, `rgba(${col},1)`); gr.addColorStop(0.35, `rgba(${col},0.55)`); gr.addColorStop(1, `rgba(${col},0)`);
+      g.fillStyle = gr; g.fillRect(0, 0, 32, 32); dotCache.set(col, c);
+    }
+    return c;
+  }
+  function drawVfx() {
+    const p = player, dirX = Math.cos(p.a), dirY = Math.sin(p.a), list = [];
+    for (const q of L.vfx) {
+      const dx = q.x - p.x, dy = q.y - p.y, depth = dx * dirX + dy * dirY;
+      if (depth < (q.shape === 'rect' ? 0.28 : 0.15) || depth > 26) continue;
+      const sx = (W / 2) * (1 + ((dirX * dy - dirY * dx) / PLANE) / depth);
+      if (sx < -30 || sx > W + 30) continue;
+      if (zbuf[Math.max(0, Math.min(RW - 1, Math.round(sx * QUALITY)))] < depth - 0.05) continue;
+      list.push([depth, sx, q]);
+    }
+    list.sort((a, b) => b[0] - a[0]);
+    ctx.save(); ctx.beginPath(); ctx.rect(0, 0, W, VIEW_H); ctx.clip();
+    for (const [depth, sx, q] of list) {
+      const sy = HOR + (p.eyeZ - q.z) * PROJ / depth, k = q.t / q.life, s = Math.max(0.35, q.size * (1 + q.grow * q.t) * PROJ / depth);
+      let a = q.a * Math.min(1, q.t * 10 + (q.shape === 'rect' ? 1 : 0)) * (1 - k * k);
+      if (q.kind === 'firefly') a *= 0.35 + 0.65 * Math.max(0, Math.sin(q.t * 4 + q.phase));
+      if (a <= 0.01) continue;
+      ctx.globalAlpha = Math.min(1, a); ctx.globalCompositeOperation = q.add ? 'lighter' : 'source-over';
+      if (q.shape === 'rect') { ctx.save(); ctx.translate(sx, sy); ctx.rotate(q.rot); ctx.fillStyle = `rgb(${q.col})`; ctx.fillRect(-s, -s * 0.45, s * 2, s * 0.9); ctx.restore(); }
+      else if (q.shape === 'ring' || q.shape === 'ripple') {
+        const ry = q.shape === 'ring' ? s * 0.35 : s * Math.min(0.6, Math.max(0.05, (p.eyeZ - q.z) / depth));
+        ctx.strokeStyle = `rgb(${q.col})`; ctx.lineWidth = q.shape === 'ring' ? Math.max(0.8, s * 0.18) : 0.6; ctx.beginPath(); ctx.ellipse(sx, sy, s, ry, 0, 0, TAU); ctx.stroke();
+      } else if (q.shape === 'star') {
+        ctx.drawImage(softDot(q.col), sx - s, sy - s, s * 2, s * 2); ctx.fillStyle = `rgb(${q.col})`;
+        const l = s * 1.7 * (0.6 + 0.4 * Math.sin(q.t * 20 + q.phase)); ctx.fillRect(sx - l, sy - 0.3, l * 2, 0.6); ctx.fillRect(sx - 0.3, sy - l, 0.6, l * 2);
+      } else ctx.drawImage(softDot(q.col), sx - s, sy - s, s * 2, s * 2);
+    }
+    ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+    // health bars over monsters you've just hurt
+    for (const e of L.enemies) {
+      if (e.dead || !(e.barT > 0) || e.def.boss || e.type === 'barrel') continue;
+      const dx = e.x - p.x, dy = e.y - p.y, depth = dx * dirX + dy * dirY; if (depth < 0.5 || depth > 18) continue;
+      const sx = (W / 2) * (1 + ((dirX * dy - dirY * dx) / PLANE) / depth);
+      if (sx < 0 || sx >= W || zbuf[Math.max(0, Math.min(RW - 1, Math.round(sx * QUALITY)))] < depth - 0.2) continue;
+      const top = HOR + (p.eyeZ - (e.fz || 0) - e.z - e.def.h - 0.08) * PROJ / depth, bw = Math.max(10, Math.min(30, 9 * PROJ / depth / 10)), fr = Math.max(0, e.hp / (e.maxHp || e.def.hp));
+      ctx.globalAlpha = Math.min(1, e.barT); ctx.fillStyle = 'rgba(0,0,0,0.65)'; ctx.fillRect(sx - bw / 2 - 1, top - 1, bw + 2, 4);
+      ctx.fillStyle = fr > 0.5 ? '#5cff6a' : fr > 0.25 ? '#ffcf3a' : '#ff3a4a'; ctx.fillRect(sx - bw / 2, top, bw * fr, 2);
+    }
+    ctx.restore();
+  }
+  // ---- effect recipes
+  function goreFx(e, hx, hy, hz, c, s) {
+    if (BLOODLESS.test(e.type)) { spawnParts('spark', hx, hy, hz, 3, 1.2); return; }
+    for (let i = 0; i < 3; i++) vfx('mist', hx, hy, hz, { vx: c * rand(0.2, 0.8) + rand(-0.3, 0.3), vy: s * rand(0.2, 0.8) + rand(-0.3, 0.3), vz: rand(-0.1, 0.3), drag: 3, life: rand(0.35, 0.6), size: 0.035, grow: 2.5, col: '150,0,20', a: 0.55 });
+    floorDecal(e.x + c * rand(0.15, 0.6) + rand(-0.1, 0.1), e.y + s * rand(0.15, 0.6) + rand(-0.1, 0.1), rand(0.05, 0.12), BLOOD, 0.85);
+    const wh = cast(e.x, e.y, c, s);
+    if (wh.dist < 1.3 && L.grid[wh.my * L.mw + wh.mx] !== DOOR) wallDecal(wh.mx, wh.my, wallFace(wh.side, c, s), wh.u, clamp(hz + rand(-0.1, 0.05), 0.05, L.ceilH - 0.05), rand(0.08, 0.16), BLOOD, 0.85, 0.45);
+  }
+  function wallHitFx(wh, c, s, wx, wy, wz) {
+    if (L.grid[wh.my * L.mw + wh.mx] !== DOOR) {
+      const f = wallFace(wh.side, c, s);
+      wallDecal(wh.mx, wh.my, f, wh.u, wz, 0.06, [30, 26, 24], 0.35, 0.2);
+      wallDecal(wh.mx, wh.my, f, wh.u, wz, 0.022, [12, 10, 10], 0.95, 0.1);
+    }
+    vfx('dust', wx, wy, wz, { vx: -c * 0.5, vy: -s * 0.5, vz: 0.15, drag: 2.5, life: 0.7, size: 0.03, grow: 2.2, col: '170,165,155', a: 0.4 });
+    for (let i = 0; i < 2; i++) vfx('chip', wx, wy, wz, { shape: 'rect', vx: -c * rand(0.8, 1.8) + rand(-0.6, 0.6), vy: -s * rand(0.8, 1.8) + rand(-0.6, 0.6), vz: rand(0.5, 1.6), grav: 9, bounce: 0.3, spin: rand(-15, 15), life: 1.2, size: 0.008, col: '120,112,105' });
+  }
+  function explosionFx(x, y, z, r) {
+    const fl = floorAt(x, y);
+    vfx('ring', x, y, fl + 0.05, { shape: 'ring', life: 0.4, size: 0.15, grow: r * 10, col: '255,190,110', add: true, a: 0.8 });
+    for (let i = 0; i < (FX_HIGH ? 10 : 5); i++) vfx('smoke', x + rand(-0.3, 0.3), y + rand(-0.3, 0.3), z + rand(0, 0.3), { vz: rand(0.35, 0.9), vx: rand(-0.5, 0.5), vy: rand(-0.5, 0.5), drag: 1.2, life: rand(1.6, 3), size: rand(0.12, 0.2), grow: 1.3, col: '58,52,52', a: 0.5, wob: 0.2 });
+    for (let i = 0; i < (FX_HIGH ? 16 : 8); i++) { const a = rand(0, TAU), v = rand(1, 3.5); vfx('ember', x, y, z, { vx: Math.cos(a) * v, vy: Math.sin(a) * v, vz: rand(1, 3), grav: 4, drag: 0.6, bounce: 0.3, life: rand(0.6, 1.5), size: 0.018, col: '255,170,60', add: true }); }
+    for (let i = 0; i < 6; i++) { const a = rand(0, TAU), v = rand(1, 3); vfx('chip', x, y, z, { shape: 'rect', vx: Math.cos(a) * v, vy: Math.sin(a) * v, vz: rand(1.5, 3.5), grav: 9, bounce: 0.35, spin: rand(-14, 14), life: rand(1.5, 2.5), size: 0.022, col: '70,62,58' }); }
+    floorDecal(x, y, Math.min(0.55, r * 0.25), [20, 15, 14], 0.55, 0.4);
+  }
+  function muzzleFx(w) {
+    if (w.type === 'melee') return;
+    const p = player, c = Math.cos(p.a), s = Math.sin(p.a), rx = -s, ry = c;
+    if (w.key !== 'flamethrower') for (let i = 0; i < 2; i++) vfx('smoke', p.x + c * 0.5 + rx * 0.05, p.y + s * 0.5 + ry * 0.05, p.eyeZ - 0.1, { vz: rand(0.15, 0.35), vx: c * 0.5, vy: s * 0.5, drag: 2, life: rand(0.8, 1.3), size: 0.03, grow: 2.5, col: '200,200,205', a: 0.22, wob: 0.2 });
+    if (w.ammo === 'bullets' || w.ammo === 'shells') {
+      const sh = w.ammo === 'shells';
+      vfx('casing', p.x + c * 0.32 + rx * 0.12, p.y + s * 0.32 + ry * 0.12, p.eyeZ - 0.14, { shape: 'rect', vx: rx * rand(1.2, 2) + c * rand(0, 0.5), vy: ry * rand(1.2, 2) + s * rand(0, 0.5), vz: rand(1.2, 2.2), grav: 9, bounce: 0.45, spin: rand(-22, 22), life: 3, size: sh ? 0.02 : 0.013, col: sh ? '190,35,35' : '222,170,70', tink: true });
+    }
+  }
+  function pickupFx(it) {
+    const fl = floorAt(it.x, it.y), col = GLOW_OF[it.def.sprite] || (it.def.health ? '255,90,130' : it.def.armor ? '120,200,255' : it.def.weapon ? '255,200,90' : '255,230,150');
+    for (let i = 0; i < 12; i++) { const a = rand(0, TAU), v = rand(0.4, 1.2); vfx('sparkle', it.x, it.y, fl + 0.2, { shape: 'star', vx: Math.cos(a) * v, vy: Math.sin(a) * v, vz: rand(0.4, 1.4), drag: 2, life: rand(0.4, 0.8), size: 0.03, col, add: true }); }
+    vfx('ring', it.x, it.y, fl + 0.02, { shape: 'ring', life: 0.35, size: 0.05, grow: 6, col, add: true, a: 0.7 });
+  }
+  function confettiFx(x, y, z, n) {
+    const cols = ['255,79,184', '255,207,58', '80,220,255', '140,255,90', '255,255,255', '190,90,255'];
+    for (let i = 0; i < n; i++) { const a = rand(0, TAU), v = rand(0.5, 3); vfx('confetti', x, y, z, { shape: 'rect', vx: Math.cos(a) * v, vy: Math.sin(a) * v, vz: rand(1, 4), grav: 2.2, drag: 1.6, wob: 1.2, spin: rand(-14, 14), life: rand(2.5, 4), size: 0.016, col: cols[i % cols.length] }); }
+  }
+  function swirlFx(x, y, z, col) {
+    for (let i = 0; i < 26; i++) { const a = i / 26 * TAU; vfx('swirl', x + Math.cos(a) * 0.4, y + Math.sin(a) * 0.4, z + rand(0, 0.3), { vx: -Math.sin(a) * 1.2, vy: Math.cos(a) * 1.2, vz: rand(0.6, 1.4), drag: 1, life: rand(0.7, 1.2), size: 0.025, col, add: true }); }
+    vfx('ring', x, y, floorAt(x, y) + 0.03, { shape: 'ring', life: 0.5, size: 0.1, grow: 5, col, add: true });
+  }
+  function killFx(e, src) {
+    if (e.type === 'barrel') return;
+    const fz = e.fz || 0;
+    if (!BLOODLESS.test(e.type)) floorDecal(e.x + rand(-0.1, 0.1), e.y + rand(-0.1, 0.1), rand(0.28, 0.42) * (e.def.boss ? 2.2 : 1), [92, 0, 12], 0.85, 0.35);
+    for (let i = 0; i < (e.def.boss ? 30 : 5); i++) vfx('wisp', e.x + rand(-0.2, 0.2), e.y + rand(-0.2, 0.2), fz + e.z + e.def.h * rand(0.3, 0.8), { vz: rand(0.3, 0.8), wob: 0.8, life: rand(1.2, 2.2), size: rand(0.02, 0.035), col: e.def.boss ? '255,210,90' : '210,120,255', add: true, a: 0.8 });
+    if (e.def.boss) { confettiFx(e.x, e.y, fz + 1.4, 120); if (!online) slowMoT = 1.6; shake = Math.max(shake, 6); }
+    if (src === 'player') {
+      killMarkT = 0.35;
+      killChain = killChain.filter(t => time - t < 1.6); killChain.push(time);
+      const n = killChain.length;
+      if (n >= 2) { announce = { text: ['', '', 'DOUBLE KILL!', 'TRIPLE KILL!', 'MULTI KILL!'][n] || 'MASSACRE!', t: 0 }; Sfx.play.achievement(); }
+    }
+  }
+  // little things that keep the world alive: embers, smoke, bubbles, rain splashes, fireflies, dust
+  function ambientFx(dt) {
+    const p = player, near = (x, y, r) => Math.abs(x - p.x) < r && Math.abs(y - p.y) < r, N = L.vfxN, hi = FX_HIGH;
+    for (const d of L.decor) {
+      if (!near(d.x, d.y, 9)) continue;
+      const sp = d.def.sprite, fl = floorAt(d.x, d.y);
+      if (sp === 'torch' && Math.random() < dt * (hi ? 8 : 3)) vfx('ember', d.x + rand(-0.05, 0.05), d.y + rand(-0.05, 0.05), fl + 0.86, { vz: rand(0.3, 0.8), life: rand(0.8, 1.6), size: 0.014, col: '225,130,255', add: true, wob: 0.6 });
+      else if (sp === 'candelabra' && Math.random() < dt * (hi ? 4 : 1.5)) vfx('smoke', d.x + rand(-0.12, 0.12), d.y, fl + 0.74, { vz: 0.22, life: 2.4, size: 0.022, grow: 1.4, col: '210,205,215', a: 0.16, wob: 0.25 });
+    }
+    if (L.slimeTiles.length && Math.random() < dt * (hi ? 14 : 5)) {
+      const i = L.slimeTiles[irand(0, L.slimeTiles.length - 1)], x = i % L.mw + rand(0.1, 0.9), y = ((i / L.mw) | 0) + rand(0.1, 0.9);
+      if (near(x, y, 10)) {
+        const fl = floorAt(x, y);
+        vfx('bubble', x, y, fl + 0.01, { vz: 0.12, life: rand(0.5, 1), size: 0.022, grow: 0.8, col: '120,255,80', add: true, a: 0.6 });
+        if (Math.random() < 0.35) vfx('steam', x, y, fl + 0.05, { vz: 0.18, life: 2, size: 0.08, grow: 1.5, col: '90,200,70', a: 0.12, wob: 0.3 });
+      }
+    }
+    if (L.def.weather === 'rain') for (let i = 0; i < (hi ? 7 : 3); i++) {
+      const x = p.x + rand(-6, 6), y = p.y + rand(-6, 6); if (solidAt(x, y, true)) continue;
+      const z = floorAt(x, y);
+      vfx('splash', x, y, z + 0.01, { vz: rand(0.6, 1.2), vx: rand(-0.3, 0.3), vy: rand(-0.3, 0.3), grav: 6, life: 0.3, size: 0.01, col: '220,230,255', add: true, a: 0.7 });
+      if (Math.random() < 0.3) vfx('ripple', x, y, z + 0.005, { shape: 'ripple', life: 0.7, size: 0.03, grow: 4, col: '190,205,240', a: 0.4 });
+    }
+    if (L.def.sky && L.def.weather !== 'rain' && (N.firefly || 0) < (hi ? 18 : 8) && Math.random() < dt * 6) {
+      vfx('firefly', p.x + rand(-6, 6), p.y + rand(-6, 6), floorAt(p.x, p.y) + rand(0.15, 1.1), { vz: rand(-0.05, 0.05), wob: 1.1, life: rand(5, 9), size: 0.012, col: '210,255,110', add: true });
+    }
+    if (hi && !L.def.sky && (N.mote || 0) < 30 && Math.random() < dt * 8) {
+      vfx('mote', p.x + rand(-4, 4), p.y + rand(-4, 4), p.fz + rand(0.1, 1.2), { vx: rand(-0.04, 0.04), vy: rand(-0.04, 0.04), vz: rand(-0.02, 0.03), wob: 0.15, life: rand(5, 9), size: 0.006, col: '255,240,215', add: true, a: 0.45 });
+    }
+    for (const it of L.items) if (!it.taken && (it.def.power || it.def.key || it.def.sprite === 'soul') && near(it.x, it.y, 8) && Math.random() < dt * 3)
+      vfx('sparkle', it.x + rand(-0.2, 0.2), it.y + rand(-0.2, 0.2), floorAt(it.x, it.y) + rand(0.1, 0.5), { shape: 'star', vz: 0.2, life: 0.6, size: 0.025, col: GLOW_OF[it.def.sprite] || '255,200,255', add: true });
+    for (const e of L.enemies) if (!e.dead && e.burnT > 0 && near(e.x, e.y, 12) && Math.random() < dt * 14) {
+      const z = (e.fz || 0) + e.z + e.def.h * rand(0.2, 0.9);
+      vfx('ember', e.x + rand(-0.2, 0.2), e.y + rand(-0.2, 0.2), z, { vz: rand(0.5, 1.2), wob: 0.5, life: rand(0.5, 1), size: 0.016, col: '255,150,50', add: true });
+      if (Math.random() < 0.4) vfx('smoke', e.x, e.y, z + 0.2, { vz: 0.5, life: 1.5, size: 0.06, grow: 1.5, col: '40,36,36', a: 0.35 });
+    }
+    for (const pr of L.projs) {
+      if (pr.def.trail && Math.random() < dt * 40) vfx('smoke', pr.x, pr.y, pr.z, { vz: 0.1, life: rand(0.6, 1.1), size: 0.035, grow: 2, col: '170,165,165', a: 0.35, wob: 0.15 });
+      else if ((pr.kind === 'gloom' || pr.kind === 'hex') && Math.random() < dt * 30) vfx('sparkle', pr.x + rand(-0.1, 0.1), pr.y + rand(-0.1, 0.1), pr.z + rand(-0.1, 0.1), { shape: 'star', life: 0.4, size: 0.02, col: pr.kind === 'gloom' ? '150,255,120' : '220,140,255', add: true });
+    }
+  }
+
   // ------------------------------------------------------------------ combat
   const bodies = () => L.avatars.length ? L.enemies.concat(L.avatars) : L.enemies;
   function shootables() { return bodies().filter(e => !e.dead); }
@@ -875,7 +1300,7 @@
       const fl = floorAt(q.x, q.y) + q.size / 2;
       if (q.z < fl) {
         q.z = fl;
-        if (q.kind === 'gib' && q.vz < -1) { q.vz *= -0.35; q.vx *= 0.6; q.vy *= 0.6; }
+        if (q.kind === 'gib' && q.vz < -1) { q.vz *= -0.35; q.vx *= 0.6; q.vy *= 0.6; floorDecal(q.x, q.y, rand(0.04, 0.09), BLOOD, 0.8, 0.4); }
         else { q.vz = 0; q.vx *= 0.5; q.vy *= 0.5; if (q.kind !== 'gib') q.t = Math.max(q.t, q.life - 0.12); }
       }
     }
@@ -915,12 +1340,14 @@
     if (best) {
       damageEnemy(best, dmg, fromEnemy || 'player');
       const hx = ox + c * (bestA - 0.3), hy = oy + s * (bestA - 0.3), hz = (best.fz || 0) + best.z + best.def.h * 0.6;
+      if (!best.remote) goreFx(best, hx, hy, hz, c, s);
       spawnFx(best.type === 'barrel' ? 'puff' : 'blood', hx, hy, hz, 0.12, 0.3);
       spawnParts(best.type === 'barrel' ? 'spark' : 'drop', hx, hy, hz, best.type === 'barrel' ? 4 : 5, 1.4);
       return true;
     }
     if (wallDist < range) {
       const wx = ox + c * (wallDist - 0.05), wy = oy + s * (wallDist - 0.05), wz = player.eyeZ + rand(-0.08, 0.08);
+      if (!fromEnemy && wh.dist < range) wallHitFx(wh, c, s, wx, wy, wz);
       spawnFx('puff', wx, wy, wz, 0.1, 0.3);
       spawnParts('spark', wx - c * 0.05, wy - s * 0.05, wz, 4, 1.8);
     }
@@ -944,6 +1371,7 @@
     const pd = Math.hypot(pr.x - player.x, pr.y - player.y);
     if (d.sound) Sfx.play[d.sound] && Sfx.play[d.sound](pd);
     if (d.splash) {
+      explosionFx(pr.x, pr.y, pr.z, d.splash);
       spawnParts('spark', pr.x, pr.y, pr.z, 10, 3);
       splash(pr.x, pr.y, d.splash, d.splashDmg, pr.owner);
       if (pd < 4) shake = Math.max(shake, (4 - pd) * 2);
@@ -984,12 +1412,13 @@
       return;
     }
     if (src === 'player') dmg *= mods.hit;
+    if (src === 'player' && e.type !== 'barrel') { hitMarkT = 0.18; e.barT = 2.5; if (!e.maxHp) e.maxHp = Math.max(e.hp, e.def.hp); }
     e.hp -= dmg;
     if (e.type === 'barrel') {
       if (e.hp <= 0) {
         e.dead = true;
         setTimeout(() => { // a beat later, like the real thing
-          spawnFx('boom', e.x, e.y, 0.3, 1.1, 0.45);
+          spawnFx('boom', e.x, e.y, 0.3, 1.1, 0.45); explosionFx(e.x, e.y, 0.3, 1.8);
           Sfx.play.explode(Math.hypot(e.x - player.x, e.y - player.y));
           const prevTag = killTag, prevKills = tagKills; killTag = 'barrel'; tagKills = 0;
           splash(e.x, e.y, 1.8, 120, src);
@@ -1010,7 +1439,7 @@
       const mz = (e.fz || 0) + e.z + e.def.h * 0.55;
       spawnParts('drop', e.x, e.y, mz, 8, 1.6);
       if (dmg >= 40 && !e.def.boss) spawnParts('gib', e.x, e.y, mz, 9, 2.2); // blown apart
-      player.kills++;
+      player.kills++; killFx(e, src);
       if (src === 'player') unlock('firstblood');
       if (/^wally|^boss$/.test(e.type)) bump('wally');
       if (e.type === 'bubbly' || e.type === 'mini') bump('orbs');
@@ -1047,6 +1476,7 @@
     painFlash = Math.min(1, painFlash + dmg / 30);
     p.painT = 0.35;
     if (fromX !== undefined) {
+      dmgDirs.push({ x: fromX, y: fromY, t: 0 }); if (dmgDirs.length > 6) dmgDirs.shift();
       let da = normAng(Math.atan2(fromY - p.y, fromX - p.x) - p.a); if (da > Math.PI) da -= TAU;
       p.faceLook = Math.abs(da) < 0.5 ? 0 : da < 0 ? 1 : 2; p.faceT = 1;
     }
@@ -1390,6 +1820,7 @@
     }
   }
   function doFire(w) {
+    muzzleFx(w);
     if (online && online.inGame) online.shots++;
     const p = player;
     if (w.type !== 'melee') p.usedGun = true;
@@ -1444,11 +1875,13 @@
     const p = player;
     if (p.dead) { p.eyeZ = Math.max(p.fz + 0.12, p.eyeZ - dt * 0.6); return; }
     // turning
-    const turnSpeed = 2.8;
+    const turnSpeed = 2.8, prevA = p.a;
     if (keys.ArrowLeft) p.a -= turnSpeed * dt;
     if (keys.ArrowRight) p.a += turnSpeed * dt;
     p.a += mouseDX * 0.0028 + touch.turn + pad.turn; mouseDX = 0; touch.turn = 0;
     p.a = normAng(p.a);
+    { let da = p.a - prevA; if (da > Math.PI) da -= TAU; if (da < -Math.PI) da += TAU; // the gun lags behind when turning
+      p.swayX = (p.swayX || 0) + (clamp(-da / Math.max(dt, 0.001) * 4, -16, 16) - (p.swayX || 0)) * Math.min(1, dt * 8); }
     // movement
     let fwd = 0, str = 0;
     if (keys.KeyW || keys.ArrowUp) fwd += 1;
@@ -1471,7 +1904,8 @@
     // climb stairs smoothly, ride lifts, and drop off ledges with a little gravity
     const ground = floorAt(p.x, p.y);
     if (ground > p.fz) { p.fz = Math.min(ground, p.fz + dt * 2.8); p.vz = 0; }
-    else if (ground < p.fz) { p.vz -= 9.8 * dt; p.fz = Math.max(ground, p.fz + p.vz * dt); if (p.fz <= ground) p.vz = 0; }
+    else if (ground < p.fz) { p.vz -= 9.8 * dt; p.fz = Math.max(ground, p.fz + p.vz * dt); if (p.fz <= ground) { if (p.vz < -2) p.landT = 0.3; p.vz = 0; } }
+    if (p.landT > 0) p.landT -= dt;
     p.eyeZ = p.fz + 0.5 + Math.sin(p.bobT * 2) * 0.012 * p.move;
     for (const k in p.pw) if (p.pw[k] > 0) { p.pw[k] -= dt; if (p.pw[k] <= 0) { p.pw[k] = 0; msg = { veil: 'The Shadow Veil fades.', shroud: 'The Night Shroud fades.', mask: 'The gas mask runs out.' }[k]; msgT = 2; } }
     p.rageT = Math.max(0, p.rageT - dt);
@@ -1485,7 +1919,7 @@
     // pickups
     for (const it of L.items) {
       if (it.taken || Math.hypot(it.x - p.x, it.y - p.y) > 0.55) continue;
-      if (pickup(it.def)) { it.taken = true; if (!it.def.weapon) p.items++; pickupFlash = 0.35; netTake(it); }
+      if (pickup(it.def)) { it.taken = true; if (!it.def.weapon) p.items++; pickupFlash = 0.35; pickupFx(it); netTake(it); }
     }
 
     // weapon switching
@@ -1664,6 +2098,7 @@
     items.push({ id: 'online', text: 'PLAY ONLINE  -  DEATHMATCH / CO-OP' });
     items.push({ id: 'diff', lr: true, text: `DIFFICULTY   <  ${DIFFS[diff].name}  >` });
     items.push({ id: 'gfx', text: `GRAPHICS   ${QUALITY > 1 ? 'HD' : 'CLASSIC'}` });
+    items.push({ id: 'fx', text: `EFFECTS   ${FX_HIGH ? 'HIGH' : 'LOW (faster)'}` });
     items.push({ id: 'scores', text: 'HIGH SCORES' });
     items.push({ id: 'ach', text: `ACHIEVEMENTS   ${Object.keys(ach.unlocked).length} / ${ACHIEVEMENTS.length}` });
     items.push({ id: 'voice', text: `GOFFICHICK'S VOICE   ${Voice.on ? 'ON' : 'OFF'}` });
@@ -1685,11 +2120,12 @@
     else if (item.id === 'scores') { openScores(); lastEntry = -1; posted = null; postStatus = ''; }
     else if (item.id === 'ach') { state = 'achievements'; stateT = 0; }
     else if (item.id === 'gfx') { QUALITY = QUALITY > 1 ? 1 : 1.5; try { localStorage.setItem('goffichick-quality', String(QUALITY)); } catch (e) {} fitScreen(); Sfx.init(); Sfx.play.switch(); }
+    else if (item.id === 'fx') { FX_HIGH = !FX_HIGH; fxDrop = 0; slowFor = 0; try { localStorage.setItem('goffichick-fx', FX_HIGH ? 'high' : 'low'); } catch (e) {} Sfx.init(); Sfx.play.switch(); }
     else if (item.id === 'voice') { Voice.toggle(); Sfx.init(); Sfx.play.switch(); if (Voice.on) Voice.say('levelStart', 1, true); }
     else { diff = (diff + dir + DIFFS.length) % DIFFS.length; store.set(DIFF_KEY, diff); Sfx.init(); Sfx.play.switch(); }
     if (state === 'playing') lockPointer();
   }
-  const MENU_Y = 100, MENU_DY = 10.5;
+  const MENU_Y = 100, MENU_DY = 10;
   // a click / tap on the title screen: pick the menu row under it, or the highlighted one
   // On-screen arrow pad for the title menu (phones have no arrow keys): up / down move the
   // highlight, left / right change the difficulty, OK chooses the highlighted option.
@@ -1913,11 +2349,17 @@
       updateEnemies(dt);
       updateProjectiles(dt);
       updateParts(dt);
+      updateVfx(dt); if (state === 'playing') ambientFx(dt);
+      hitMarkT = Math.max(0, hitMarkT - dt); killMarkT = Math.max(0, killMarkT - dt);
+      for (const e of L.enemies) if (e.barT > 0) e.barT -= dt;
+      for (const d of dmgDirs) d.t += dt; dmgDirs = dmgDirs.filter(d => d.t < 1);
+      if (announce) { announce.t += dt; if (announce.t > 1.8) announce = null; }
+      if (state === 'playing' && !player.dead && player.health < 30) { heartT -= dt; if (heartT <= 0) { heartT = 0.45 + player.health / 30 * 0.55; Sfx.play.heartbeat(); } }
       for (const b of L.bolts) b.t += dt; L.bolts = L.bolts.filter(b => b.t < b.life);
       updateDynLights();
       if (L.def.weather === 'rain') { // lightning every so often, thunder a moment later
         L.lightningT -= dt; L.flashA = Math.max(0, L.flashA - dt * 3);
-        if (L.lightningT <= 0) { L.lightningT = 7 + Math.random() * 12; L.flashA = 1; lightBoost = Math.max(lightBoost, 0.7); setTimeout(() => Sfx.play.thunder(), 300 + Math.random() * 1200); }
+        if (L.lightningT <= 0) { L.lightningT = 7 + Math.random() * 12; L.flashA = 1; L.skyBolt = makeSkyBolt(); lightBoost = Math.max(lightBoost, 0.7); setTimeout(() => Sfx.play.thunder(), 300 + Math.random() * 1200); }
       }
       if (L.exitT > 0) { L.exitT -= dt; if (L.exitT <= 0) completeLevel(); }
       if (L.bossDeadT > 0) { L.bossDeadT -= dt; if (L.bossDeadT <= 0) completeLevel(); }
@@ -1951,16 +2393,16 @@
       const items = menuItems(); menuSel = Math.min(menuSel, items.length - 1);
       items.forEach((it, i) => {
         const sel = i === menuSel, y = MENU_Y + i * MENU_DY;
-        if (sel) { ctx.fillStyle = 'rgba(255,79,184,0.18)'; ctx.fillRect(12, y - 8, 203, 10.5); }
+        if (sel) { ctx.fillStyle = 'rgba(255,79,184,0.18)'; ctx.fillRect(12, y - 8, 203, 10); }
         label((sel ? '> ' : '  ') + it.text, 16, y, sel ? '#ffffff' : '#ff9be0', 'left', 8.5);
       });
       if (state === 'title') drawTitlePad();
     }
     const lines = ['WASD / ARROWS  move      MOUSE  look (click to lock)', 'CLICK / CTRL   fire      E / SPACE  switches, lifts, secrets',
       '1-9 / Q / WHEEL  weapons   SHIFT run   TAB map   M music'];
-    lines.forEach((l, i) => label(l, 18, 212 + i * 8, '#b78ab7', 'left', 6.5));
-    label('Keys open coloured doors. Stairs and lifts take you up. V toggles her voice. Gamepads work too.', 18, 238, '#8a6a8a', 'left', 6.5);
-    label('ON A PHONE? Left stick moves, drag right side to look.', 18, 247, '#7a5a7a', 'left', 6.5);
+    lines.forEach((l, i) => label(l, 18, 222 + i * 7.5, '#b78ab7', 'left', 6));
+    label('Keys open coloured doors. Stairs and lifts take you up. V toggles her voice. Gamepads work too.', 18, 246, '#8a6a8a', 'left', 6.5);
+    label('ON A PHONE? Left stick moves, drag right side to look.', 18, 254, '#7a5a7a', 'left', 6.5);
   }
 
   function drawOverlayText(title, sub, lines, dy = 16) {
@@ -2078,7 +2520,7 @@
       }
       return;
     }
-    render3D();
+    render3D(); gradePass();
     const sx = shake ? (Math.random() - 0.5) * shake * 2 : 0, sy = shake ? (Math.random() - 0.5) * shake * 2 : 0;
     const pw = player.pw;
     if (pw.shroud > 0 && (pw.shroud > 3 || Math.sin(time * 18) > 0)) { // Night Shroud: inverted greyscale, like the classic invulnerability
@@ -2086,6 +2528,8 @@
     }
     viewCtx.putImageData(img, 0, 0);
     ctx.imageSmoothingEnabled = false; ctx.drawImage(viewC, sx | 0, sy | 0, W, VIEW_H); ctx.imageSmoothingEnabled = true;
+    if (FX_HIGH && fxDrop < 1) drawBloom(sx | 0, sy | 0);
+    if (L.def.sky) drawSkyFx();
     // glow halos around fireballs, explosions, torches and power-ups
     if (glows.length) {
       ctx.save(); ctx.globalCompositeOperation = 'lighter';
@@ -2097,6 +2541,7 @@
       }
       ctx.restore();
     }
+    drawVfx();
     if (L.bolts.length) { // Doom Scroll lightning, projected from world space onto the screen
       const dirX = Math.cos(player.a), dirY = Math.sin(player.a), pr = q => {
         const dx = q[0] - player.x, dy = q[1] - player.y, depth = Math.max(0.2, dx * dirX + dy * dirY);
@@ -2129,6 +2574,7 @@
       ctx.stroke(); ctx.restore();
       if (L.flashA > 0) { ctx.fillStyle = `rgba(230,235,255,${L.flashA * 0.45})`; ctx.fillRect(0, 0, W, VIEW_H); }
     }
+    drawGrade();
     { // soft vignette: darker screen edges
       const vg = ctx.createRadialGradient(W / 2, HOR, VIEW_H * 0.45, W / 2, HOR, W * 0.62);
       vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.38)');
@@ -2141,6 +2587,7 @@
     if (player.slowT > 0) { ctx.fillStyle = `rgba(80,200,255,${Math.min(0.22, player.slowT * 0.15)})`; ctx.fillRect(0, 0, W, VIEW_H); }
     if (player.rageT > 0) { ctx.fillStyle = `rgba(255,0,0,${Math.min(0.35, player.rageT * 0.04)})`; ctx.fillRect(0, 0, W, VIEW_H); }
     if (pw.veil > 0) { const g = ctx.createRadialGradient(W / 2, HOR, 40, W / 2, HOR, W * 0.6); g.addColorStop(0, 'rgba(60,0,90,0)'); g.addColorStop(1, 'rgba(60,0,90,0.45)'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, VIEW_H); }
+    drawCombatOverlays();
     if (automap) drawAutomap();
     drawMessages();
     drawAchievementToast(1 / 60);
@@ -2467,7 +2914,7 @@
     }
     player.x = sp.x; player.y = sp.y; player.a = sp.a; player.fz = floorAt(sp.x, sp.y);
     online.deathSent = false; online.lastHit = null;
-    if (!first) { state = 'playing'; stateT = 0; Sfx.play.weaponUp(); spawnFx('gloomHit', sp.x, sp.y, 0.5, 0.9, 0.5); }
+    if (!first) { state = 'playing'; stateT = 0; Sfx.play.weaponUp(); spawnFx('gloomHit', sp.x, sp.y, 0.5, 0.9, 0.5); swirlFx(sp.x, sp.y, player.fz, '255,90,200'); }
   }
   function netTake(it) {
     if (!online || !online.inGame) return;
@@ -2695,7 +3142,11 @@
     }
     pollGamepad(dt);
     if (online) netUpdate(dt);
-    if (!paused) update(dt); else time += dt;
+    if (slowMoT > 0) slowMoT -= dt;
+    // keep it smooth: if frames stay slow while playing, quietly turn off the heaviest effects
+    frameAvg += (dt - frameAvg) * 0.05;
+    if (state === 'playing' && !paused && FX_HIGH && fxDrop < 2) { slowFor = frameAvg > 1 / 38 ? slowFor + dt : Math.max(0, slowFor - dt); if (slowFor > 3) { fxDrop++; slowFor = 0; } }
+    if (!paused) update(slowMoT > 0 ? dt * 0.35 : dt); else time += dt;
     draw();
     requestAnimationFrame(frame);
   }
@@ -2712,6 +3163,6 @@
     titleImg = photos.title;
     state = 'title';
     // expose a tiny debug hook for testing
-    window.GOFFI = { get state() { return state; }, get player() { return player; }, get level() { return L; }, start: startGame, completeLevel, ach, ACHIEVEMENTS, get quality() { return QUALITY; }, get score() { return runScore; }, highScores, get diff() { return diff; }, set diff(v) { diff = v; }, continueGame, savedGame, setLevel: i => { levelIndex = i; loadLevel(i, null); state = 'playing'; }, get mode() { return mode; }, get online() { return online; }, Net, get menuPage() { return menuPage; }, weeklyInfo, editor, LevelCode, get sharedLvl() { return sharedLvl; }, get levelTime() { return levelTime; }, set levelTime(v) { levelTime = v; } };
+    window.GOFFI = { get state() { return state; }, get player() { return player; }, get level() { return L; }, start: startGame, completeLevel, ach, ACHIEVEMENTS, get quality() { return QUALITY; }, get score() { return runScore; }, highScores, get diff() { return diff; }, set diff(v) { diff = v; }, continueGame, savedGame, setLevel: i => { levelIndex = i; loadLevel(i, null); state = 'playing'; }, get mode() { return mode; }, get fxHigh() { return FX_HIGH; }, set fxHigh(v) { FX_HIGH = v; }, get fxDrop() { return fxDrop; }, set fxDrop(v) { fxDrop = v; }, get online() { return online; }, Net, get menuPage() { return menuPage; }, weeklyInfo, editor, LevelCode, get sharedLvl() { return sharedLvl; }, get levelTime() { return levelTime; }, set levelTime(v) { levelTime = v; } };
   });
 })();
