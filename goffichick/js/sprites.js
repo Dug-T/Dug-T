@@ -456,6 +456,24 @@ const Sprites = (() => {
       return [r, g, b];
     });
     E_.wallylive.walkFps = E_.boss.walkFps;
+    // --- new monsters (recoloured from existing ones)
+    E_.hypeman = recolorSet(E_.coach, (r, g, b) => [Math.min(255, r * 1.1 + 40), Math.min(255, g * 0.95 + 25), b * 0.35]);   // gold
+    E_.ghost = recolorSet(E_.skull, (r, g, b) => { const v = lum(r, g, b); return [v * 0.7 + 40, Math.min(255, v * 0.95 + 50), Math.min(255, v * 1.1 + 70)]; }); // pale blue
+    E_.popper = recolorSet(E_.orb, (r, g, b) => [r, Math.min(255, b + 20), g]);                                             // party magenta
+    E_.guru = recolorSet(E_.yoga, (r, g, b) => [g * 0.6, Math.min(255, g * 1.1 + 20), r * 0.6]);                             // wellness green
+    const withShield = set => {
+      const add = spr => {
+        const c = document.createElement('canvas'); c.width = spr.w; c.height = spr.h; const g = c.getContext('2d'); g.drawImage(spr.canvas, 0, 0);
+        const sw = spr.w * 0.5, sh = spr.h * 0.5, x = spr.w * 0.26, y = spr.h * 0.4;
+        g.fillStyle = 'rgba(150,190,230,0.95)'; g.fillRect(x, y, sw, sh); g.strokeStyle = '#2a3a5a'; g.lineWidth = Math.max(1, spr.w / 30); g.strokeRect(x, y, sw, sh);
+        g.fillStyle = 'rgba(255,255,255,0.5)'; g.fillRect(x + sw * 0.1, y + sh * 0.08, sw * 0.12, sh * 0.8);
+        g.fillStyle = '#1a2440'; g.font = `bold ${Math.max(5, sw / 3.5)}px sans-serif`; g.textAlign = 'center'; g.fillText('HR', x + sw / 2, y + sh * 0.6);
+        return fromCanvas(c);
+      };
+      const out = {}; for (const k of Object.keys(set)) out[k] = Array.isArray(set[k]) ? (k === 'die' ? set[k] : set[k].map(add)) : set[k]; return out;
+    };
+    E_.riot = withShield(recolorSet(E_.manager, (r, g, b) => [r * 0.55, g * 0.65, Math.min(255, b * 1.3 + 40)]));            // navy suit + riot shield
+    for (const [k, from] of [['hypeman', 'coach'], ['ghost', 'skull'], ['popper', 'orb'], ['guru', 'yoga'], ['riot', 'manager']]) if (E_[from].walkFps) E_[k].walkFps = E_[from].walkFps;
     // other players online: Wally Man in goth black with a coloured trim (pink, cyan, lime, gold)
     [[255, 60, 170], [40, 220, 255], [120, 255, 60], [255, 200, 30]].forEach((c, i) => {
       E_['av' + i] = recolorSet(E_.wally, (r, g, b) => {
@@ -467,6 +485,7 @@ const Sprites = (() => {
     });
 
     S.proj = {
+      grenade: [0, 1].map(k => mk(12, 12, g => { E(g, '#141018', 6, 7, 4.5, 4.5); R(g, '#3a3440', 4.5, 1, 3, 3); E(g, k ? '#ffe070' : '#ff4fb8', 6, 1, 1.4, 1.4); E(g, '#ffffff', 4, 5, 0.9, 0.9); })),
       skull: [mk(20, 20, g => { flame(g, 4, 12, 4); E(g, '#f2eee6', 12, 10, 7, 7); R(g, '#000', 8, 8, 3, 3); R(g, '#000', 13, 8, 3, 3); R(g, '#000', 9, 14, 6, 1); })],
       hex: [ball(8, 'rgba(255,170,255,1)', 'rgba(140,40,255,0)'), ball(8, 'rgba(255,120,240,1)', 'rgba(120,20,220,0)')],
       gloom: [mk(48, 48, g => { glow(g, 24, 24, 24, 'rgba(255,60,180,1)', 'rgba(60,0,80,0)'); E(g, '#14001c', 24, 24, 12, 12); E(g, '#ff4fb8', 24, 24, 4, 4); }),
@@ -545,6 +564,10 @@ const Sprites = (() => {
 
     // ===================== PICKUPS =====================
     S.item = {
+      rose: mk(16, 28, g => { R(g, '#2f7a2a', 7, 10, 2, 18); E(g, '#2f7a2a', 4, 18, 3, 1.5, -0.5); E(g, '#2f7a2a', 12, 21, 3, 1.5, 0.5); E(g, '#ff2d6a', 8, 7, 7, 6.5); E(g, '#120008', 8, 7, 6, 5.5); E(g, '#3a0018', 8, 6, 3.5, 3); E(g, '#120008', 8, 6, 1.5, 1.5); E(g, '#ff4f8a', 6, 4, 1, 1); }),
+      gloomOrb: mk(24, 24, g => { glow(g, 12, 12, 12, 'rgba(200,90,255,1)', 'rgba(60,0,100,0)'); E(g, '#1a0024', 12, 12, 7, 7); g.fillStyle = '#e8b0ff'; g.font = 'bold 8px monospace'; g.textAlign = 'center'; g.fillText('x2', 12, 15); }),
+      wings: mk(30, 20, g => { glow(g, 15, 10, 10, 'rgba(255,120,200,0.8)', 'rgba(120,0,80,0)'); for (const sgn of [-1, 1]) { g.fillStyle = '#16020c'; g.beginPath(); g.moveTo(15, 8); g.lineTo(15 + sgn * 14, 2); g.lineTo(15 + sgn * 11, 9); g.lineTo(15 + sgn * 13, 15); g.lineTo(15 + sgn * 7, 12); g.lineTo(15, 14); g.fill(); g.strokeStyle = '#ff4fb8'; g.lineWidth = 0.8; g.stroke(); } E(g, '#16020c', 15, 10, 2.5, 4); }),
+      nades: mk(22, 16, g => { for (const x of [6, 15]) { E(g, '#141018', x, 10, 5, 5); R(g, '#3a3440', x - 1.5, 3, 3, 3); R(g, '#ff4fb8', x - 0.5, 1, 1, 2); E(g, '#ffffff', x - 2, 8, 1, 1); } }),
       vial: mk(14, 20, g => { R(g, '#8b5a2b', 5, 0, 4, 3); E(g, '#d0e8ff', 7, 12, 6, 7); E(g, '#e0003a', 7, 13, 5, 5); R(g, '#fff', 4, 9, 2, 2); }),
       heart: mk(24, 22, g => {
         g.fillStyle = '#16020a'; g.beginPath(); g.moveTo(12, 21); g.bezierCurveTo(-6, 8, 4, -4, 12, 6); g.bezierCurveTo(20, -4, 30, 8, 12, 21); g.fill();

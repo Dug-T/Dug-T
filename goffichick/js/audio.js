@@ -71,6 +71,8 @@ const Sfx = (() => {
     locked: () => { tone(90, 0.12, 'square', 0.3, 70); noise(0.1, 600, 0.3, 'bandpass'); tone(140, 0.08, 'square', 0.2, null, 0.12); },
     buzz: (d) => { const v = vol(d) * 0.5; tone(120, 0.08, 'square', 0.1 * v); noise(0.05, 5000, 0.08 * v, 'highpass'); },
     step: () => noise(0.05, 260, 0.09, 'lowpass'),
+    jump: () => { tone(260, 0.12, 'triangle', 0.07, 480); noise(0.06, 900, 0.05, 'lowpass'); },
+    crash: () => { noise(0.35, 2400, 0.35, 'highpass', 1, 600); tone(180, 0.15, 'square', 0.08, 60); },
     tink: () => { tone(2600 + Math.random() * 900, 0.05, 'triangle', 0.035, 1900); },
     heartbeat: () => { tone(62, 0.13, 'sine', 0.45, 38); tone(55, 0.13, 'sine', 0.35, 34, 0.2); },
     thunder: () => { noise(2.2, 160, 0.9, 'lowpass', 1, 50); noise(0.4, 1200, 0.5, 'lowpass', 1, 200); },
