@@ -20,7 +20,7 @@ const Studio = (() => {
   const N = 32, MROWS = 12, BROWS = 8; // N = steps shown on one page (2 bars)
   const LEN = (s) => (s.bars || 2) * 16;
   const demo = () => {
-    const s = { name: 'MY TRACK', bpm: 112, swing: 0, key: 0, scale: 0, rev: 2, lead: 0, chordInst: 0, bassInst: 0, kit: 0, bars: 2, lead2: 2, mel: Array(N).fill(null), mel2: Array(N).fill(null), chords: [0, 4, 5, 3], bass: Array(N).fill(-1), drums: DRUMS.map(() => Array(N).fill(false)) };
+    const s = { name: 'MY TRACK', bpm: 112, swing: 0, key: 0, scale: 0, rev: 2, lead: 0, chordInst: 0, bassInst: 0, kit: 0, bars: 2, lead2: 2, form: 0, fills: false, mel: Array(N).fill(null), mel2: Array(N).fill(null), chords: [0, 4, 5, 3], bass: Array(N).fill(-1), drums: DRUMS.map(() => Array(N).fill(false)) };
     [[0, 7, 2], [2, 9, 2], [4, 11, 4], [8, 8, 2], [10, 7, 2], [12, 4, 4], [16, 5, 2], [18, 7, 2], [20, 9, 4], [24, 7, 2], [26, 4, 2], [28, 2, 4]].forEach(([i, p, l]) => { s.mel[i] = { p, l }; });
     [0, 6, 8, 14, 16, 22, 24, 30].forEach((i, k) => { s.bass[i] = [0, 0, 4, 4, 5, 5, 3, 3][k]; });
     for (let i = 0; i < N; i++) { s.drums[0][i] = i % 8 === 0 || i % 16 === 10; s.drums[1][i] = i % 8 === 4; s.drums[2][i] = i % 2 === 0; s.drums[3][i] = i % 16 === 14; }
@@ -34,7 +34,7 @@ const Studio = (() => {
   // songs from before 2.6 are 2 bars with no second melody
   function fix(s) {
     if (!s) return s; if (![2, 4, 8].includes(s.bars)) s.bars = 2; const L = LEN(s);
-    if (s.lead2 === undefined) s.lead2 = 2; if (!Array.isArray(s.mel2)) s.mel2 = Array(L).fill(null);
+    if (s.lead2 === undefined) s.lead2 = 2; if (s.form !== 1) s.form = 0; s.fills = !!s.fills; if (!Array.isArray(s.mel2)) s.mel2 = Array(L).fill(null);
     const fit = (a, n, v) => { a = Array.isArray(a) ? a.slice(0, n) : []; while (a.length < n) a.push(v); return a; };
     s.mel = fit(s.mel, L, null); s.mel2 = fit(s.mel2, L, null); s.bass = fit(s.bass, L, -1); s.drums = (s.drums || []).map((r) => fit(r, L, false)); s.chords = fit(s.chords, s.bars * 2, -1);
     return s;
@@ -52,20 +52,24 @@ const Studio = (() => {
     s.chords.forEach((d, k) => { if (d >= 0) ev.push({ s: k * 8, c: 'C', ms: chordMidis(s, d), l: 8 }); });
     s.bass.forEach((r, i) => { if (r >= 0) { let l = 1; while (i + l < L && s.bass[i + l] < 0 && l < 4) l++; ev.push({ s: i, c: 'B', m: bassMidi(s, r), l }); } });
     s.drums.forEach((row, k) => row.forEach((on, i) => { if (on) ev.push({ s: i, c: 'D', d: DRUMS[k][1] }); }));
-    return { studio: true, events: ev, total: L, bpm: s.bpm, swing: [0, 0.12, 0.24, 0.36][s.swing], rev: s.rev, lead: s.lead, chordInst: s.chordInst, bassInst: s.bassInst, kit: s.kit };
+    // Update 2.9: drum fills at the end of each section, and a verse + chorus song form
+    let out = ev, total = L;
+    if (s.fills) { const sec = s.form && s.bars >= 4 ? L / 2 : 32; for (let e0 = sec; e0 <= L; e0 += sec) { for (let k = 4; k >= 1; k--) ev.push({ s: e0 - k, c: 'D', d: 's' }); ev.push({ s: e0 - 4, c: 'D', d: 'k' }); ev.push({ s: e0 - 2, c: 'D', d: 'k' }); } }
+    if (s.form && s.bars >= 4) { const h = L / 2; out = []; for (const e of ev) { if (e.s < h) out.push(e, Object.assign({}, e, { s: e.s + h })); else out.push(Object.assign({}, e, { s: e.s + h }), Object.assign({}, e, { s: e.s + L })); } total = L * 2; }
+    return { studio: true, events: out, total, bpm: s.bpm, swing: [0, 0.12, 0.24, 0.36][s.swing], rev: s.rev, lead: s.lead, chordInst: s.chordInst, bassInst: s.bassInst, kit: s.kit };
   }
   const songs = (() => { try { const a = JSON.parse(localStorage.getItem(KEY) || 'null'); return Array.isArray(a) ? [0, 1, 2].map((i) => fix(a[i] || null)) : [null, null, null]; } catch (e) { return [null, null, null]; } })();
   const register = (i) => { if (songs[i]) Audio8.addSong('studio' + (i + 1), toDef(songs[i])); };
   songs.forEach((_, i) => register(i));
   const save = (i, s) => { songs[i] = JSON.parse(JSON.stringify(s)); try { localStorage.setItem(KEY, JSON.stringify(songs)); } catch (e) { /* ignore */ } register(i); try { Ach.unlock('studio'); } catch (e) { /* ignore */ } };
   // share codes: WMM1-<base64 json>
-  const pack = (s) => [s.name, s.bpm, s.swing, s.key, s.scale, s.rev, s.lead, s.chordInst, s.bassInst, s.kit, s.mel.map((n) => (n ? n.p.toString(36) + n.l.toString(36) : '..')).join(''), s.chords.join(','), s.bass.map((r) => (r < 0 ? '.' : r)).join(''), s.drums.map((row) => row.map((b) => (b ? 1 : 0)).join('')).join('|'), s.bars, s.lead2, s.mel2.map((n) => (n ? n.p.toString(36) + n.l.toString(36) : '..')).join('')];
+  const pack = (s) => [s.name, s.bpm, s.swing, s.key, s.scale, s.rev, s.lead, s.chordInst, s.bassInst, s.kit, s.mel.map((n) => (n ? n.p.toString(36) + n.l.toString(36) : '..')).join(''), s.chords.join(','), s.bass.map((r) => (r < 0 ? '.' : r)).join(''), s.drums.map((row) => row.map((b) => (b ? 1 : 0)).join('')).join('|'), s.bars, s.lead2, s.mel2.map((n) => (n ? n.p.toString(36) + n.l.toString(36) : '..')).join(''), s.form | 0, s.fills ? 1 : 0];
   const encode = (s) => 'WMM2-' + btoa(JSON.stringify(pack(s))).replace(/=+$/, '');
   function decode(code) {
     try {
       const m = String(code).replace(/\s+/g, '').match(/^WMM([12])-([A-Za-z0-9+/]+)=*$/); if (!m) return null; const v2 = m[1] === '2'; m[1] = m[2];
-      const a = JSON.parse(atob(m[1] + '==='.slice((m[1].length + 3) % 4))); if (!Array.isArray(a) || a.length !== (v2 ? 17 : 14)) return null;
-      const s = demo(); s.bars = v2 ? ([2, 4, 8].includes(a[14]) ? a[14] : 0) : 2; if (!s.bars) return null; const L = LEN(s); s.lead2 = v2 ? clamp(a[15] | 0, 0, LEADS.length - 1) : 2; [s.name, s.bpm, s.swing, s.key, s.scale, s.rev, s.lead, s.chordInst, s.bassInst, s.kit] = a;
+      const a = JSON.parse(atob(m[1] + '==='.slice((m[1].length + 3) % 4))); if (!Array.isArray(a) || !(v2 ? [17, 19] : [14]).includes(a.length)) return null;
+      const s = demo(); s.bars = v2 ? ([2, 4, 8].includes(a[14]) ? a[14] : 0) : 2; if (!s.bars) return null; const L = LEN(s); s.lead2 = v2 ? clamp(a[15] | 0, 0, LEADS.length - 1) : 2; s.form = a.length === 19 && a[17] === 1 ? 1 : 0; s.fills = a.length === 19 && a[18] === 1; [s.name, s.bpm, s.swing, s.key, s.scale, s.rev, s.lead, s.chordInst, s.bassInst, s.kit] = a;
       s.name = String(s.name).toUpperCase().slice(0, 16); s.bpm = clamp(+s.bpm || 112, 60, 200); s.swing = clamp(s.swing | 0, 0, 3); s.key = clamp(s.key | 0, 0, 11); s.scale = clamp(s.scale | 0, 0, SCALES.length - 1); s.rev = clamp(s.rev | 0, 0, 3);
       s.lead = clamp(s.lead | 0, 0, LEADS.length - 1); s.chordInst = clamp(s.chordInst | 0, 0, CHORDS_I.length - 1); s.bassInst = clamp(s.bassInst | 0, 0, BASSES.length - 1); s.kit = clamp(s.kit | 0, 0, KITS.length - 1);
       const melOf = (str) => { str = String(str); if (str.length !== L * 2) return null; return Array.from({ length: L }, (_, i) => (str[i * 2] === '.' ? null : { p: clamp(parseInt(str[i * 2], 36), 0, MROWS - 1), l: clamp(parseInt(str[i * 2 + 1], 36), 1, 16) })); };
@@ -82,7 +86,7 @@ const Studio = (() => {
   // ---------------- the studio ----------------
   const TABS = ['MELODY', 'MEL 2', 'CHORDS', 'BASS', 'DRUMS', 'SONG'], T_MEL2 = 1, T_CH = 2, T_BASS = 3, T_DR = 4, T_SONG = 5;
   const TAB_COL = ['#ff6fb4', '#ff9a4a', '#ffd24a', '#5fd2ff', '#7cf08a', '#c8b8ff'];
-  const SONGROWS = ['NAME', 'SLOT', 'TEMPO', 'KEY', 'SCALE', 'SWING', 'REVERB', 'MELODY SOUND', 'CHORD SOUND', 'BASS SOUND', 'DRUM KIT', 'PLAY / STOP', 'SAVE', 'USE IN MAKER', 'SHARE CODE', 'LOAD CODE', 'NEW (DEMO)', 'CLEAR ALL', 'LENGTH', 'MELODY 2 SOUND', 'LIVE RECORD', 'MAP MUSIC', 'TITLE MUSIC', 'BACK'];
+  const SONGROWS = ['NAME', 'SLOT', 'TEMPO', 'KEY', 'SCALE', 'SWING', 'REVERB', 'MELODY SOUND', 'CHORD SOUND', 'BASS SOUND', 'DRUM KIT', 'PLAY / STOP', 'SAVE', 'USE IN MAKER', 'SHARE CODE', 'LOAD CODE', 'NEW (DEMO)', 'CLEAR ALL', 'LENGTH', 'MELODY 2 SOUND', 'LIVE RECORD', 'MAP MUSIC', 'TITLE MUSIC', 'FORM', 'DRUM FILLS', 'BACK'];
   const USEKEY = 'wallyman-studio-use', useGet = () => Object.assign({ map: -1, title: -1 }, lsJ(USEKEY, {}));
   function StudioScene() {
     let slot = 0, s = songs[0] ? JSON.parse(JSON.stringify(songs[0])) : demo(), rec = false, recFlash = 0, ccx = 0, tab = 0, cx = 0, cy = 7, sr = 0, t = 0, playing = false, dom = false, msg = '', msgT = 0, dirty = false;
@@ -101,6 +105,8 @@ const Studio = (() => {
       else if (r === 'BASS SOUND') cyc('bassInst', BASSES.length); else if (r === 'DRUM KIT') cyc('kit', KITS.length);
       else if (r === 'LENGTH') { const B = [2, 4, 8], nb = B[(B.indexOf(s.bars) + d + 3) % 3]; resize(s, nb); cx = Math.min(cx, L() - 1); ccx = Math.min(ccx, s.bars * 2 - 1); say(`${nb} BARS${nb > 2 ? ' - THE SONG SO FAR REPEATS' : ''}`); }
       else if (r === 'MELODY 2 SOUND') cyc('lead2', LEADS.length);
+      else if (r === 'FORM') { if (s.bars < 4) { say('VERSE + CHORUS NEEDS 4 OR 8 BARS'); return true; } s.form = s.form ? 0 : 1; say(s.form ? `VERSE (BARS 1-${s.bars / 2}) TWICE, THEN CHORUS TWICE` : 'THE WHOLE SONG LOOPS'); }
+      else if (r === 'DRUM FILLS') { s.fills = !s.fills; say(s.fills ? 'A DRUM FILL ENDS EACH SECTION' : 'NO DRUM FILLS'); }
       else if (r === 'LIVE RECORD') { rec = !rec; say(rec ? 'START PLAYS. A ON A MELODY TAB RECORDS' : 'LIVE RECORD OFF'); return true; }
       else if (r === 'MAP MUSIC' || r === 'TITLE MUSIC') { const k = r === 'MAP MUSIC' ? 'map' : 'title', u = useGet(), opts = [-1].concat([0, 1, 2].filter((i) => songs[i])); u[k] = opts[(Math.max(0, opts.indexOf(u[k])) + d + opts.length) % opts.length]; lsS(USEKEY, u); say(u[k] < 0 ? (k === 'map' ? 'THE ISLAND MAP PLAYS ITS OWN MUSIC' : 'THE TITLE PLAYS ITS OWN MUSIC') : `${k === 'map' ? 'ISLAND MAPS' : 'THE TITLE SCREEN'} PLAY ${songs[u[k]].name}`); return true; }
       else return false;
@@ -166,7 +172,7 @@ const Studio = (() => {
         if (tab === T_SONG) {
           drawWindow(20, 30, 216, 150); const top = clamp(sr - 5, 0, SONGROWS.length - 12);
           const u = useGet(), useName = (k) => (u[k] >= 0 && songs[u[k]] ? `SLOT ${u[k] + 1}` : 'OFF');
-          const v = { LENGTH: `${s.bars} BARS`, 'MELODY 2 SOUND': LEADS[s.lead2], 'LIVE RECORD': rec ? 'ON' : 'OFF', 'MAP MUSIC': useName('map'), 'TITLE MUSIC': useName('title'), NAME: s.name, SLOT: `${slot + 1}${songs[slot] ? '' : ' (EMPTY)'}`, TEMPO: `${s.bpm} BPM`, KEY: NOTE[s.key], SCALE: SCALES[s.scale][0], SWING: ['NONE', 'LIGHT', 'MEDIUM', 'HEAVY'][s.swing], REVERB: ['DRY', 'ROOM', 'HALL', 'CATHEDRAL'][s.rev], 'MELODY SOUND': LEADS[s.lead], 'CHORD SOUND': CHORDS_I[s.chordInst], 'BASS SOUND': BASSES[s.bassInst], 'DRUM KIT': KITS[s.kit], 'PLAY / STOP': playing ? 'PLAYING' : '' };
+          const v = { LENGTH: `${s.bars} BARS`, 'MELODY 2 SOUND': LEADS[s.lead2], 'LIVE RECORD': rec ? 'ON' : 'OFF', 'MAP MUSIC': useName('map'), 'TITLE MUSIC': useName('title'), FORM: s.form ? 'VERSE+CHORUS' : 'LOOP', 'DRUM FILLS': s.fills ? 'ON' : 'OFF', NAME: s.name, SLOT: `${slot + 1}${songs[slot] ? '' : ' (EMPTY)'}`, TEMPO: `${s.bpm} BPM`, KEY: NOTE[s.key], SCALE: SCALES[s.scale][0], SWING: ['NONE', 'LIGHT', 'MEDIUM', 'HEAVY'][s.swing], REVERB: ['DRY', 'ROOM', 'HALL', 'CATHEDRAL'][s.rev], 'MELODY SOUND': LEADS[s.lead], 'CHORD SOUND': CHORDS_I[s.chordInst], 'BASS SOUND': BASSES[s.bassInst], 'DRUM KIT': KITS[s.kit], 'PLAY / STOP': playing ? 'PLAYING' : '' };
           for (let i = 0; i < 12; i++) { const k = top + i, r = SONGROWS[k], y = 36 + i * 11, on = k === sr; if (!r) break; txt(r, 38, y, on ? '#ffe040' : '#fff'); if (v[r]) txt(v[r], 228, y, on ? '#ffe040' : '#a8f0ff', { align: 'right' }); if (on) txt('>', 28 + ((t >> 3) & 1), y, '#ffe040'); }
           ctx.fillStyle = '#a8b0d8'; if (top > 0) { ctx.beginPath(); ctx.moveTo(228, 40); ctx.lineTo(232, 34); ctx.lineTo(236, 40); ctx.fill(); } if (top + 12 < SONGROWS.length) { ctx.beginPath(); ctx.moveTo(228, 166); ctx.lineTo(232, 172); ctx.lineTo(236, 166); ctx.fill(); }
         } else if (tab === T_CH) {

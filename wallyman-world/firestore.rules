@@ -53,12 +53,12 @@ service cloud.firestore {
         && request.resource.data.top is string && request.resource.data.top.size() < 600;
       allow delete: if false;
     }
-    // Online co-op rooms: document <5-letter code>-A (host) or -B (guest), each
+    // Online co-op rooms: document <5-letter code>-A (host) or -B, -C, -D (guests), each
     // player's live position as a small JSON string. Read or write by id only.
     match /coop/{id} {
-      allow get: if id.matches('^[A-Z2-9]{5}-[AB]$');
+      allow get: if id.matches('^[A-Z2-9]{5}-[ABCD]$');
       allow list: if false;
-      allow create, update: if id.matches('^[A-Z2-9]{5}-[AB]$') && request.resource.data.keys().hasOnly(['li', 's', 'ts'])
+      allow create, update: if id.matches('^[A-Z2-9]{5}-[ABCD]$') && request.resource.data.keys().hasOnly(['li', 's', 'ts'])
         && request.resource.data.li is int && request.resource.data.li >= 0 && request.resource.data.li < 400
         && request.resource.data.s is string && request.resource.data.s.size() < 400
         && request.resource.data.ts is int;

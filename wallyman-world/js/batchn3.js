@@ -181,7 +181,7 @@ function PhotoPuzzleScene() {
 
 // ---------------- menus ----------------
 function HouseScene(start = 0) { // eslint-disable-line no-func-assign
-  const items = () => ["DINO'S SHOP", 'UPGRADE TREE', 'MINI-GAMES', 'GARDEN', 'PETS', 'PET SHOP', 'COSTUME SHOP', 'FILE STATS', 'SAVE CODE', 'CLOUD SAVE', "WALLYMAN'S DIARY", 'STATUE GARDEN', 'KITCHEN', 'CRAFTING BENCH', 'MAILBOX' + (unreadMail() ? ' (NEW!)' : ''), 'PHOTO SAFARI', 'FOSSIL MUSEUM', 'PET SHOW', 'WEATHER MACHINE', 'PHOTO PUZZLES'].concat(game.cleared[7] && !game.iron ? ['NEW GAME+'] : []).concat(['LEAVE']);
+  const items = () => ["DINO'S SHOP", 'UPGRADE TREE', 'MINI-GAMES', 'GARDEN', 'PETS', 'PET SHOP', 'COSTUME SHOP', 'FILE STATS', 'SAVE CODE', 'CLOUD SAVE', "WALLYMAN'S DIARY", 'STATUE GARDEN', 'KITCHEN', 'CRAFTING BENCH', 'MAILBOX' + (unreadMail() ? ' (NEW!)' : ''), 'PHOTO SAFARI', 'FOSSIL MUSEUM', 'PET SHOW', 'WEATHER MACHINE', 'PHOTO PUZZLES', 'GIFT CODES', 'MINI-GAME RECORDS'].concat(game.cleared[7] && !game.iron ? ['NEW GAME+'] : []).concat(['LEAVE']);
   let sel = start, t = 0, dom = false; const SHOW = 15;
   return {
     enter() { Audio8.play('menu'); },
@@ -191,7 +191,7 @@ function HouseScene(start = 0) { // eslint-disable-line no-func-assign
       if (Input.pressed('up')) { sel = (sel + it.length - 1) % it.length; Audio8.sfx('select'); }
       if (Input.pressed('back') || (Input.confirm() && it[sel] === 'LEAVE')) { go(() => MapScene()); return; }
       if (Input.confirm() && it[sel] === 'SAVE CODE') { Save.persist(); dom = true; codeBox('YOUR SAVE CODE - KEEP IT SAFE!', SaveCode.encode(game), null, () => { dom = false; }); return; }
-      if (Input.confirm()) { Audio8.sfx('confirm'); const k = it[sel].startsWith('MAILBOX') ? 'MAILBOX' : it[sel]; go({ "DINO'S SHOP": () => ShopScene(), 'UPGRADE TREE': () => UpgradeScene(), 'MINI-GAMES': () => MiniGamesScene(), GARDEN: () => GardenScene(), PETS: () => PetScene(), 'PET SHOP': () => PetShopScene(), 'COSTUME SHOP': () => CostumeShopScene(), 'FILE STATS': () => StatsScene(), 'CLOUD SAVE': () => CloudScene(), "WALLYMAN'S DIARY": () => DiaryScene(), 'STATUE GARDEN': () => StatueGardenScene(), KITCHEN: () => KitchenScene(), 'CRAFTING BENCH': () => BenchScene(), MAILBOX: () => MailScene(), 'PHOTO SAFARI': () => SafariScene(), 'FOSSIL MUSEUM': () => MuseumScene(), 'PET SHOW': () => PetShowScene(), 'WEATHER MACHINE': () => WeatherMachineScene(), 'PHOTO PUZZLES': () => PhotoPuzzleScene(), 'NEW GAME+': () => PlusScene() }[k]); }
+      if (Input.confirm()) { Audio8.sfx('confirm'); const k = it[sel].startsWith('MAILBOX') ? 'MAILBOX' : it[sel]; go({ "DINO'S SHOP": () => ShopScene(), 'UPGRADE TREE': () => UpgradeScene(), 'MINI-GAMES': () => MiniGamesScene(), GARDEN: () => GardenScene(), PETS: () => PetScene(), 'PET SHOP': () => PetShopScene(), 'COSTUME SHOP': () => CostumeShopScene(), 'FILE STATS': () => StatsScene(), 'CLOUD SAVE': () => CloudScene(), "WALLYMAN'S DIARY": () => DiaryScene(), 'STATUE GARDEN': () => StatueGardenScene(), KITCHEN: () => KitchenScene(), 'GIFT CODES': () => GiftScene(), 'MINI-GAME RECORDS': () => RecordsScene(), 'CRAFTING BENCH': () => BenchScene(), MAILBOX: () => MailScene(), 'PHOTO SAFARI': () => SafariScene(), 'FOSSIL MUSEUM': () => MuseumScene(), 'PET SHOW': () => PetShowScene(), 'WEATHER MACHINE': () => WeatherMachineScene(), 'PHOTO PUZZLES': () => PhotoPuzzleScene(), 'NEW GAME+': () => PlusScene() }[k]); }
     },
     draw() {
       ctx.fillStyle = '#f0c890'; ctx.fillRect(0, 0, VW, VH);

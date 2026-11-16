@@ -90,53 +90,65 @@ const U25b = (() => {
     async get(id) { const r = await fetch(Net.url(id)); if (r.status === 404) return null; if (!r.ok) throw new Error('HTTP ' + r.status); const f = (await r.json()).fields || {}; return { li: Number(f.li && f.li.integerValue), s: (f.s && f.s.stringValue) || '{}', ts: Number(f.ts && f.ts.integerValue) || 0 }; },
   };
   const newCode = () => { const A = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let s = ''; const r = crypto.getRandomValues(new Uint32Array(5)); for (const n of r) s += A[n % A.length]; return s; };
-  const other = () => (COOP.me === 'A' ? 'B' : 'A');
-  const mineState = (pl) => { const p = pl.p; return JSON.stringify({ x: Math.round(p.x), y: Math.round(p.y), p: pl.playerPose ? pl.playerPose() : 'idle0', f: p.face, cp: pl.cpHit ? 1 : 0, g: pl.state === 'clear' || COOP.gotGoal ? 1 : 0, h: game.hero, c: game.costume }); };
+  // Update 2.8: rooms hold up to 4 players (slots A-D), and boss damage is shared
+  const SLOTS = ['A', 'B', 'C', 'D'];
+  const others = () => SLOTS.filter((l) => l !== COOP.me);
+  const mineState = (pl) => { const p = pl.p; return JSON.stringify({ x: Math.round(p.x), y: Math.round(p.y), p: pl.playerPose ? pl.playerPose() : 'idle0', f: p.face, cp: pl.cpHit ? 1 : 0, g: pl.state === 'clear' || COOP.gotGoal ? 1 : 0, h: game.hero, c: game.costume, bh: COOP.myHits || 0 }); };
   const send = (pl) => Net.put(`${COOP.code}-${COOP.me}`, COOP.li, mineState(pl)).catch(() => { COOP.err = 'CONNECTION TROUBLE'; });
+  const fresh = (P) => P && Date.now() - P.ts < 15000;
+  const freshList = () => Object.keys(COOP.partners || {}).sort().map((l) => [l, COOP.partners[l]]).filter(([, P]) => fresh(P));
   function coopTick(pl) {
-    const P = COOP.partner;
-    if (P && P.dx !== undefined) { P.dx += (P.x - P.dx) * 0.25; P.dy += (P.y - P.dy) * 0.25; }
+    for (const [, P] of freshList()) if (P.dx !== undefined) { P.dx += (P.x - P.dx) * 0.25; P.dy += (P.y - P.dy) * 0.25; }
     if (COOP.busy || frame - COOP.lastSend < 24) return;
-    COOP.busy = true; COOP.lastSend = frame;
-    Promise.all([send(pl), Net.get(`${COOP.code}-${other()}`)]).then(([, d]) => {
-      COOP.busy = false; if (!d) return;
-      let s = {}; try { s = JSON.parse(d.s); } catch (e) { /* ignore */ }
-      if (d.li !== COOP.li || typeof s.x !== 'number') return;
-      COOP.err = ''; COOP.seen = d.ts;
-      const old = COOP.partner; COOP.partner = Object.assign({}, s, { dx: old && old.dx !== undefined ? old.dx : s.x, dy: old && old.dy !== undefined ? old.dy : s.y, ts: d.ts });
+    COOP.busy = true; COOP.lastSend = frame; const ls = others();
+    Promise.all([send(pl), ...ls.map((l) => Net.get(`${COOP.code}-${l}`).catch(() => null))]).then(([, ...ds]) => {
+      COOP.busy = false; COOP.partners = COOP.partners || {};
+      ds.forEach((d, i) => {
+        if (!d) return; let s = {}; try { s = JSON.parse(d.s); } catch (e) { /* ignore */ }
+        if (d.li !== COOP.li || typeof s.x !== 'number') return;
+        COOP.err = ''; COOP.seen = Math.max(COOP.seen || 0, d.ts);
+        const old = COOP.partners[ls[i]]; COOP.partners[ls[i]] = Object.assign({}, s, { dx: old && old.dx !== undefined ? old.dx : s.x, dy: old && old.dy !== undefined ? old.dy : s.y, ts: d.ts });
+      });
+      const f = freshList(); COOP.partner = f.length ? f[0][1] : COOP.partner;
     }, () => { COOP.busy = false; COOP.err = 'CONNECTION TROUBLE'; });
   }
-  const partnerFresh = () => COOP.partner && Date.now() - COOP.partner.ts < 15000;
+  const partnerFresh = () => freshList().length > 0;
   const inCoop = (pl) => COOP.on && pl.li === COOP.li && !pl._p2ctx && pl.def === LEVELS[pl.li];
   { const _u = PP.update;
     PP.update = function () {
       const r = _u.apply(this, arguments);
       if (!inCoop(this)) return r;
       coopTick(this);
-      const P = COOP.partner;
-      if (P && partnerFresh()) {
+      for (const [, P] of freshList()) {
         if (P.cp && !this.cpHit && this.state === 'play') { const e = this.ents.find((k) => k.type === 'checkpoint'); if (e) e.on = true; this.cpHit = true; Audio8.sfx('check'); COOP.banner = ['PARTNER GOT THE CHECKPOINT!', 150]; }
         if (P.g && this.state === 'play' && !COOP.gotGoal) { COOP.gotGoal = true; COOP.banner = ['PARTNER REACHED THE GOAL!', 150]; this.clear(); }
+      }
+      // shared boss health: every hit a partner lands comes off this boss too
+      const boss = this.ents.find((e) => e.boss && e.alive && !e.dying);
+      if (boss && this.state === 'play') {
+        const theirs = freshList().reduce((n, [, P]) => n + (P.bh | 0), 0), seen = COOP.theirHits || 0;
+        if (theirs > seen) { COOP.theirHits = theirs; let k = theirs - seen; COOP.banner = ['YOUR PARTNER HIT THE BOSS!', 80]; while (k-- > 0 && boss.alive) { if (boss.hp > 1) { boss.hp--; this.shake = 6; Audio8.sfx('bosshit'); } else { boss.inv = 0; COOP.relay = true; try { this.damageBoss(boss); } finally { COOP.relay = false; } } } }
       }
       return r;
     };
   }
+  { const _db = PP.damageBoss; PP.damageBoss = function (e) { const h = e.hp, r = _db.call(this, e); if (inCoop(this) && !COOP.relay && e.hp < h) COOP.myHits = (COOP.myHits || 0) + 1; return r; }; }
   { const _c = PP.clear; PP.clear = function (s) { const was = this.state; _c.call(this, s); if (was === 'play' && this.state === 'clear' && inCoop(this)) { COOP.gotGoal = true; send(this); try { Ach.unlock('coop'); } catch (e) { /* ignore */ } } }; }
   { const _d = PP.drawPlayer;
     PP.drawPlayer = function (cx) {
-      if (inCoop(this) && COOP.partner && partnerFresh()) {
-        const P = COOP.partner, x = P.dx + this.p.w / 2 - cx;
+      if (inCoop(this)) for (const [l, P] of freshList()) {
+        const x = P.dx + this.p.w / 2 - cx;
         ctx.save(); ctx.globalAlpha = 0.85; Wally.draw(ctx, x, P.dy + this.p.h, P.p || 'idle0', P.f || 1, { t: frame, hero: P.h || 'wally', costume: P.c || 'classic', hat: 'none' }); ctx.restore();
-        txt('PARTNER', Math.round(x), Math.round(P.dy) - 12, '#5ff0ff', { align: 'center', outline: '#101848' });
+        txt(freshList().length > 1 ? 'PLAYER ' + l : 'PARTNER', Math.round(x), Math.round(P.dy) - 12, ['#5ff0ff', '#5ff0ff', '#ffb040', '#a0ff80'][SLOTS.indexOf(l)], { align: 'center', outline: '#101848' });
       }
       const r = _d.apply(this, arguments);
       if (inCoop(this) && COOP.banner && COOP.banner[1] > 0) { COOP.banner[1]--; txt(COOP.banner[0], 128, 44, '#5ff0ff', { align: 'center', outline: '#101848' }); }
-      if (inCoop(this)) txt(!COOP.partner ? 'WAITING FOR PARTNER...' : !partnerFresh() ? 'PARTNER OFFLINE' : COOP.err || 'CO-OP ' + COOP.code, 250, 32, COOP.err || !partnerFresh() ? '#ff8080' : '#a8f0ff', { align: 'right', outline: '#101848' });
+      if (inCoop(this)) { const n = freshList().length; txt(!COOP.partner ? 'WAITING FOR PARTNER...' : !n ? 'PARTNER OFFLINE' : COOP.err || `CO-OP ${COOP.code} (${n + 1}P)`, 250, 32, COOP.err || !n ? '#ff8080' : '#a8f0ff', { align: 'right', outline: '#101848' }); }
       return r;
     };
   }
   const coopLevels = () => [0].concat(LEVELS.map((d, li) => [d, li]).filter(([d, li]) => li > 0 && d && !d.reserved && game && game.cleared[li]).map(([, li]) => li));
-  const startCoop = (code, me, li) => { Object.assign(COOP, { banner: null, on: true, code, me, li, partner: null, seen: 0, busy: false, gotCp: false, gotGoal: false, lastSend: 0, err: '' }); go(() => IntroScene(li, false)); };
+  const startCoop = (code, me, li) => { Object.assign(COOP, { banner: null, on: true, code, me, li, partner: null, partners: {}, myHits: 0, theirHits: 0, relay: false, seen: 0, busy: false, gotCp: false, gotGoal: false, lastSend: 0, err: '' }); go(() => IntroScene(li, false)); };
   function CoopScene(note) {
     let sel = 0, t = 0, step = 'menu', msg = note || (Net.on() ? '' : 'ONLINE CO-OP NEEDS THE FIREBASE SETTINGS'), busy = false, dom = false, lsel = 0, code = '', since = 0, poll = 0;
     const L = coopLevels();
@@ -152,7 +164,7 @@ const U25b = (() => {
           if (!Net.on()) { Audio8.sfx('bump'); return; }
           if (sel === 0) { step = 'level'; Audio8.sfx('confirm'); }
           else { dom = true; textBox('TYPE THE ROOM CODE', 'e.g. ABC23', (v) => { dom = false; const c = String(v || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 5); if (c.length !== 5) { if (v) msg = 'A ROOM CODE HAS 5 LETTERS'; return; } busy = true; msg = 'JOINING...';
-            Net.get(`${c}-A`).then((d) => { if (!d || Date.now() - d.ts > 10 * 60 * 1000) { busy = false; msg = 'NO GAME WITH THAT CODE'; Audio8.sfx('bump'); return; } return Net.put(`${c}-B`, d.li, '{}').then(() => { busy = false; Audio8.sfx('oneup'); startCoop(c, 'B', d.li); }); }).catch(() => { busy = false; msg = 'COULD NOT REACH THE SERVER'; }); }); }
+            Net.get(`${c}-A`).then((d) => { if (!d || Date.now() - d.ts > 10 * 60 * 1000) { busy = false; msg = 'NO GAME WITH THAT CODE'; Audio8.sfx('bump'); return; } const li = d.li; return Promise.all(['B', 'C', 'D'].map((l) => Net.get(`${c}-${l}`).catch(() => null))).then((ds) => { const k = ds.findIndex((x) => !x || Date.now() - x.ts > 60000); if (k < 0) { busy = false; msg = 'THAT ROOM IS FULL (4 PLAYERS)'; Audio8.sfx('bump'); return; } const me = 'BCD'[k]; return Net.put(`${c}-${me}`, li, '{}').then(() => { busy = false; Audio8.sfx('oneup'); startCoop(c, me, li); }); }); }).catch(() => { busy = false; msg = 'COULD NOT REACH THE SERVER'; }); }); }
           return;
         }
         if (step === 'level') {
@@ -171,7 +183,7 @@ const U25b = (() => {
         drawParallax('sky', t * 0.3); drawWindow(20, 20, 216, 184); txt('ONLINE CO-OP', 128, 28, '#ffe040', { align: 'center', scale: 2 });
         if (step === 'menu') {
           ['HOST A GAME', 'JOIN WITH A CODE', 'BACK'].forEach((s, i) => { const y = 62 + i * 16; txt(s, 70, y, i === sel ? '#ffe040' : '#fff'); if (i === sel) txt('>', 58 + ((t >> 3) & 1), y, '#ffe040'); });
-          ['PLAY A LEVEL WITH A FRIEND ON', 'ANOTHER DEVICE. YOU SEE EACH', 'OTHER RUN, SHARE CHECKPOINTS,', 'AND WHEN ONE OF YOU REACHES THE', 'GOAL, YOU BOTH CLEAR IT!'].forEach((l, i) => txt(l, 128, 124 + i * 10, '#a8b0d8', { align: 'center' }));
+          ['PLAY A LEVEL WITH UP TO 3 FRIENDS', 'ON OTHER DEVICES. YOU SEE EACH', 'OTHER RUN, SHARE CHECKPOINTS,', 'AND WHEN ONE OF YOU REACHES THE', 'GOAL, YOU ALL CLEAR IT! BOSSES', 'SHARE ONE HEALTH BAR.'].forEach((l, i) => txt(l, 128, 124 + i * 10, '#a8b0d8', { align: 'center' }));
         } else if (step === 'level') {
           txt('PICK A LEVEL TO PLAY', 128, 50, '#fff', { align: 'center' });
           const SHOW = 11, top = clamp(lsel - 5, 0, Math.max(0, L.length - SHOW)); for (let i = 0; i < Math.min(SHOW, L.length); i++) { const k = top + i, y = 66 + i * 11; txt(`${levelTag(L[k])} ${LEVELS[L[k]].name}`.slice(0, 30), 40, y, k === lsel ? '#ffe040' : '#fff'); if (k === lsel) txt('>', 30 + ((t >> 3) & 1), y, '#ffe040'); }
