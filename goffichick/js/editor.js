@@ -85,8 +85,8 @@ function makeEditor(api) {
   const PALETTE = {
     WALL: ['#', '%', 'W', 'O', 'G', 'C', 'M', 'Y', 'H', 'P', 'S', 'I', '|', ':', ';', '_'],
     DOOR: ['>', 'X', 'D', '$', 'E', 'B', 'Q', '~', '1', '2', '@'],
-    MON: ['z', 'm', 'w', 'b', 'i', 'h', 'g', 'l', 'x', 'f', 'd', '?', '€', 'K', 'J', '§', 'y'],
-    ITEM: ['+', '*', 'o', 'a', 'A', 'c', 's', 'r', 'u', 'n', 'e', 't', 'V', 'N', 'Z', 'U', '3', '4', '5', '6', '7', '8', '9', '0', 'F', '!', '='],
+    MON: ['z', 'm', 'w', 'b', 'i', 'h', 'g', 'l', 'x', 'f', 'd', '?', '€', '&', '(', ')', '[', ']', 'K', 'J', '§', 'y'],
+    ITEM: ['+', '*', 'o', 'a', 'A', 'c', 's', 'r', 'u', 'n', 'e', 't', 'V', 'N', 'Z', 'U', '3', '4', '5', '6', '7', '8', '9', '0', 'F', '!', '=', ',', '{', '}', '-'],
     DECO: ['T', 'R', 'L', 'p', 'q', 'k', 'j'],
   };
   const NAMES = {
@@ -98,6 +98,8 @@ function makeEditor(api) {
     '?': 'Bridezilla', '€': 'Redcoat entertainer', K: 'BOSS: Wally Prime', J: 'BOSS: Mega Smiley', '§': 'BOSS: Wally Live!', y: 'Exploding barrel',
     '+': 'Vial of blood', '*': 'Black heart', o: 'Soul orb', a: 'Leather jacket', A: 'Spiked corset', c: 'Bullets', s: 'Shells', r: 'Flaming skulls', u: 'Rockets', n: 'Fuel', e: 'Jar of souls', t: 'Bat bolts',
     V: 'Shadow veil', N: 'Night shroud', Z: 'Gas mask', U: 'Rage heart', 3: 'Coffin shotgun', 4: 'Bone gatling', 5: 'Skull launcher', 6: 'Hexcaster', 7: 'BFG', 8: 'Machine gun', 9: 'Shotgun', 0: 'Rocket launcher',
+    '&': 'Hype Man (speeds up others)', '(': 'Selfie Ghost (teleports)', ')': 'Party Popper (explodes)', '[': 'Wellness Guru (heals others)', ']': 'Riot Shield Manager',
+    ',': 'Black rose (collectible)', '{': 'Double Gloom', '}': 'Bat Wings', '-': 'Bat grenades',
     F: 'Flamethrower', '!': 'Bat-bow', '=': 'Doom Scroll', T: 'Candelabra', R: 'Tombstone', L: 'Torch', p: 'Plant', q: 'Water cooler', k: 'Skulls', j: 'Pool of blood',
   };
   const TABS = Object.keys(PALETTE);

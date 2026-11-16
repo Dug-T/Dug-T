@@ -118,6 +118,35 @@ flinches when hit, and her eyes glow pink when she picks up a new weapon.
   - the gun sways as you turn and dips when you land
   - below 30% health the colour drains away, the screen edges pulse red and you hear a heartbeat
 
+- **More to do:**
+  - **Jumping** (Space / JUMP button / A). You can hop onto ledges and over sludge.
+  - **Bat grenades** (G / NADE button / B). They're lobbed, bounce, and go off after a short fuse.
+  - **Horde mode:** endless waves in the Mosh Pit with a boss every 5th wave. Your best wave is remembered.
+  - **Nightmare Goth difficulty:** monsters hit harder, and the dead get back up when you're not looking.
+  - **Three hidden black roses** on every campaign level, 27 in all.
+  - **New power-ups:** Double Gloom (double damage) and Bat Wings (faster, higher jumps).
+- **New monsters** (they also replace some of the old ones around the campaign):
+  - **Hype Man** speeds up the monsters around him.
+  - **Selfie Ghost** teleports next to you.
+  - **Party Popper** rushes in and explodes in confetti.
+  - **Wellness Guru** heals other monsters.
+  - **Riot Shield Manager** stops bullets from the front, so get round the side.
+- **Champions:** some monsters are gold-glowing champions with far more health. They always drop loot, and
+  ordinary monsters sometimes drop health, ammo or grenades.
+- **The world reacts:**
+  - plants, water coolers, tombstones and candelabras smash
+  - explosions and close shotgun blasts knock monsters back and send bodies sliding
+  - walking through blood leaves red footprints
+- **Atmosphere:**
+  - disco lights in the wedding and the TV studio
+  - falling ash in the cemetery, leaves in the park and petals at the wedding
+  - an automatic phone torch in dark places (L switches it between auto, on and off)
+- **Interface:**
+  - a radar (N), a pause menu (Esc / II button), photo mode (H) and screenshots (K)
+  - a "monsters left" counter, combo bonus points that float up from kills, and end-of-level accuracy,
+    damage, best streak and roses
+  - 7 new achievements
+
 ## Setting up the world leaderboard (Supabase, free)
 
 1. Create a free account at [supabase.com](https://supabase.com) and a **New project** (any name and region).

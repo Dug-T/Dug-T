@@ -28,6 +28,9 @@
 //  Weapons: 3 coffin shotgun  4 bone gatling  5 skull launcher  6 hexcaster  7 BFG
 //           8 machine gun   9 shotgun   0 rocket launcher   F flamethrower
 //           ! bat-bow   = doom scroll   t bolts (bat-bow ammo)
+//  More monsters: & HYPE MAN (speeds up others)  ( SELFIE GHOST (teleports)  ) PARTY POPPER (explodes)
+//                 [ WELLNESS GURU (heals others)  ] RIOT SHIELD MANAGER (shoot him from the side)
+//  More items: , black rose   { double gloom   } bat wings   - bat grenades
 //  Decor:  T candelabra  R tombstone  L torch pillar  p office plant  q water cooler
 //          y pumpkin-spice barrel (explodes!)  k skull pile  j blood pool
 'use strict';
@@ -37,7 +40,8 @@ const WALL_CHARS = { '#': 1, '%': 2, 'W': 3, 'O': 4, 'G': 7, 'C': 8, 'M': 9, 'Y'
 
 const ENEMY_CHARS = { z: 'zombie', m: 'manager', w: 'wally', b: 'brute', i: 'skull', h: 'orb', K: 'boss',
   g: 'yoga', l: 'coach', x: 'bubbly', f: 'wallyfit', d: 'wallydeluxe', J: 'megaorb',
-  '?': 'bridezilla', '€': 'redcoat', '§': 'wallylive' };
+  '?': 'bridezilla', '€': 'redcoat', '§': 'wallylive',
+  '&': 'hypeman', '(': 'ghost', ')': 'popper', '[': 'guru', ']': 'riot' };
 
 const ITEM_TYPES = {
   '+': { sprite: 'vial', health: 10, msg: 'Picked up a vial of blood.' },
@@ -70,6 +74,10 @@ const ITEM_TYPES = {
   'N': { sprite: 'shroud', power: 'shroud', time: 30, msg: 'NIGHT SHROUD! Nothing can hurt you.' },
   'Z': { sprite: 'mask', power: 'mask', time: 60, msg: 'GAS MASK! Toxic sludge is harmless.' },
   'U': { sprite: 'rage', berserk: true, msg: 'RAGE HEART! Your fists hit ten times harder.' },
+  ',': { sprite: 'rose', rose: true },
+  '{': { sprite: 'gloomOrb', power: 'gloom', time: 20, msg: 'DOUBLE GLOOM! Your weapons hit twice as hard.' },
+  '}': { sprite: 'wings', power: 'wings', time: 25, msg: 'BAT WINGS! Faster, and you jump much higher.' },
+  '-': { sprite: 'nades', nades: 3, msg: 'Picked up 3 bat grenades.' },
 };
 
 const DECOR_TYPES = {
