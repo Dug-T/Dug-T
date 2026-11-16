@@ -95,6 +95,29 @@ flinches when hit, and her eyes glow pink when she picks up a new weapon.
   - **Players and limits:** up to 4 players. Online play uses the same Supabase project as the leaderboard,
     through **Realtime broadcast**, so no extra tables are needed. Realtime is switched on in new projects.
 
+- **Enhanced graphics** (title menu → **EFFECTS: HIGH / LOW**):
+  - **3D:** textures with raised, embossed relief; soft shadows where walls meet floors and ceilings;
+    mirror reflections on polished floors; round shadows under monsters, items and decorations.
+  - **Post-processing:** bloom around bright lights; colour grading, horizon haze and film grain.
+  - **Sky:** a sun with lens flare in the park, and lightning bolts across the sky in the storm.
+  - **Automatic scaling:** if a device can't keep up, the game quietly switches off the heaviest effects.
+- **Particles and decals:**
+  - **Shooting:** muzzle smoke and bouncing shell casings that clink; bullet holes and stone chips on walls;
+    blood that splatters onto walls and floors and stays.
+  - **Kills:** gibs that leave splats, death pools, and soul wisps rising from the dead.
+  - **Explosions:** shockwave ring, smoke plume, embers, debris and a scorch mark.
+  - **The world:** torch embers, candle smoke, bubbling toxic sludge with steam, rain splashes and ripples,
+    fireflies in the park, dust motes indoors, sparkles on power-ups and keys, a burst when you pick
+    things up, smoke and sparkle trails behind projectiles, and burning monsters giving off embers.
+  - **Big moments:** confetti at the exit and when a boss dies, and slow motion for a boss kill.
+- **Combat feedback:**
+  - hit markers (white for a hit, red for a kill) and a crosshair that spreads as you move and fire
+  - health bars over monsters you've hurt
+  - DOUBLE KILL / TRIPLE KILL / MULTI KILL / MASSACRE call-outs
+  - red arcs showing which way a hit came from
+  - the gun sways as you turn and dips when you land
+  - below 30% health the colour drains away, the screen edges pulse red and you hear a heartbeat
+
 ## Setting up the world leaderboard (Supabase, free)
 
 1. Create a free account at [supabase.com](https://supabase.com) and a **New project** (any name and region).
@@ -239,6 +262,7 @@ js/audio.js         synthesized sound effects and music (WebAudio)
 js/voice.js         Goffichick's voice lines (browser speech, or your own recordings)
 js/leaderboard.js   the shared world leaderboard and weekly board (Supabase)
 js/editor.js        the level editor, level themes and share-link codes
+js/game.js also holds the effects: soft particles (vfx), decals, bloom, grading, reflections
 js/net.js           online play over Supabase Realtime (rooms, broadcast messages)
 js/photo-data.js    the two photos, processed and embedded so the game works from file://
 assets/             the processed photo assets (Wally Man cut-out, HUD faces, title image)
