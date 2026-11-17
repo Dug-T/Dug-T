@@ -2920,7 +2920,11 @@
   function menuMove(dir) { const n = menuItems().length; menuSel = (menuSel + dir + n) % n; Sfx.init(); Sfx.play.switch(); }
   function titleTap(gx, gy) {
     const items = menuItems();
-    if (gx !== undefined && kofiName()) { const k = TIP_RECT(); if (gx >= k.x - 4 && gx <= k.x + k.w + 4 && gy >= k.y - 4 && gy <= k.y + k.h + 4) { openTipJar(); return; } }
+    if (gx !== undefined && kofiName()) {
+      const k = TIP_RECT(), on = gx >= k.x - 4 && gx <= k.x + k.w + 4 && gy >= k.y - 4 && gy <= k.y + k.h + 4;
+      if (on) { if (jarDodge(gx, gy)) return; openTipJar(); return; }
+      if (isTouch && Math.hypot(gx - jar.x, gy - jar.y) < 70 && jarDodge(gx, gy)) return; // a finger coming close
+    }
     if (gx !== undefined) { // the arrow pad
       const pb = titlePad().find(b => gx >= b.x - 4 && gx <= b.x + b.w + 4 && gy >= b.y - 4 && gy <= b.y + b.h + 4);
       if (pb) {
@@ -2934,6 +2938,7 @@
     }
     const row = Math.floor((gy - (MENU_Y - 8)) / MENU_DY);
     if (gx !== undefined && gx > 8 && gx < 215 && row >= 0 && row < items.length) { menuSel = row; menuActivate(items[row], 1); }
+    else if (gx !== undefined && kofiName() && (() => { const a = jarArea(); return gx >= a.x0 - 50 && gx <= a.x1 + 50 && gy >= a.y0 - 14 && gy <= a.y1 + 14; })()) return; // chasing the tip jar shouldn't start a game
     else menuActivate(items[Math.min(menuSel, items.length - 1)], 1);
   }
   // ---------------------------------------------------------------- weekly challenge, shared and test levels
@@ -3110,6 +3115,7 @@
   Sfx.onSongChange(name => { if (state === 'playing') { msg = `Now playing: ${name}`; msgT = 3.5; } });
   function update(dt) {
     musicTick();
+    if (state === 'title') jarTick(dt);
     time += dt; stateT += dt;
     Voice.update(dt);
     if (msgT > 0) msgT -= dt;
@@ -3152,9 +3158,51 @@
   // ------------------------------------------------------------------ screens
   // ---- Ko-fi tip jar on the title screen (like Wallyman World's): pulses, glows, shines and sparkles
   const kofiName = () => String((typeof GOFFICHICK_KOFI !== 'undefined' && GOFFICHICK_KOFI) || '').trim().replace(/^https?:\/\/(www\.)?ko-fi\.com\//i, '').replace(/[^A-Za-z0-9_-]/g, '');
-  const TIP_RECT = () => paused && state === 'playing' ? { x: W / 2 - 43, y: 216, w: 86, h: 22 } : { x: W / 2 - 43, y: 6, w: 86, h: 22 };
+  // On the title screen the tip jar wanders about and dodges the mouse (or a tapping finger), cracking jokes.
+  // After 3 dodges it gets tired and lets itself be caught for a few seconds, so players can still tip.
+  const jar = { x: 0, y: 0, vx: 0, vy: 0, tx: 0, ty: 0, retarget: 0, dodges: 0, tired: 0, say: '', sayT: 0, cool: 0, init: false };
+  const JAR_SAYS = ['Nope!', 'Not today!', 'Too slow!', 'Catch me first!', 'Hehe!', 'Nice try!', 'Missed me!', 'Wheee!'];
+  let hoverG = null;
+  const jarArea = () => ({ x0: W / 2 - 70, x1: Math.max(W / 2 + 40, W - 140), y0: 18, y1: 84 }); // keeps off her face in the photo
+  function jarPick(awayX, awayY) {
+    const a = jarArea(); let best = null, bd = -1;
+    for (let k = 0; k < 10; k++) { const x = a.x0 + Math.random() * (a.x1 - a.x0), y = a.y0 + Math.random() * (a.y1 - a.y0), d = awayX === undefined ? Math.random() : Math.hypot(x - awayX, y - awayY); if (d > bd) { bd = d; best = [x, y]; } }
+    jar.tx = best[0]; jar.ty = best[1];
+  }
+  function jarDodge(fromX, fromY) {
+    if (jar.tired > 0) return false;
+    if (jar.cool > 0) return true; // still mid-dodge: it's already running away
+    jar.cool = 0.45; jarPick(fromX, fromY);
+    const dx = jar.x - fromX, dy = jar.y - fromY, l = Math.hypot(dx, dy) || 1; jar.vx += dx / l * 420; jar.vy += dy / l * 260;
+    jar.dodges++; jar.say = JAR_SAYS[irand(0, JAR_SAYS.length - 1)]; jar.sayT = 1.1; Sfx.init(); Sfx.play.jump();
+    if (jar.dodges >= 3) { jar.tired = 6; jar.dodges = 0; jar.say = 'Okay, okay... tip me!'; jar.sayT = 6; jar.vx *= 0.3; jar.vy *= 0.3; }
+    return true;
+  }
+  function jarTick(dt) {
+    const a = jarArea();
+    if (!jar.init) { jar.init = true; jar.x = W / 2; jar.y = 17; jarPick(); }
+    if (jar.sayT > 0) jar.sayT -= dt;
+    if (jar.cool > 0) jar.cool -= dt;
+    if (jar.tired > 0) { jar.tired -= dt; jar.tx = jar.x; jar.ty = jar.y; }
+    else {
+      jar.retarget -= dt; if (jar.retarget <= 0) { jar.retarget = 1.8 + Math.random() * 2; jarPick(); }
+      if (hoverG && Math.hypot(hoverG.x - jar.x, hoverG.y - jar.y) < 72) jarDodge(hoverG.x, hoverG.y); // the mouse is getting close: run!
+    }
+    jar.vx += (jar.tx - jar.x) * 9 * dt; jar.vy += (jar.ty - jar.y) * 9 * dt;
+    const damp = Math.max(0, 1 - 4.5 * dt); jar.vx *= damp; jar.vy *= damp;
+    jar.x = clamp(jar.x + jar.vx * dt, a.x0, a.x1); jar.y = clamp(jar.y + jar.vy * dt, a.y0, a.y1);
+  }
+  const TIP_RECT = () => paused && state === 'playing' ? { x: W / 2 - 43, y: 216, w: 86, h: 22 } : { x: jar.x - 43, y: jar.y - 11, w: 86, h: 22 };
   function drawTipJar() {
     if (!kofiName()) return;
+    const onTitle = !(paused && state === 'playing');
+    if (onTitle && jar.sayT > 0) { // what it's saying
+      const k = TIP_RECT(), t = jar.say; ctx.font = 'bold 7px monospace'; const tw = ctx.measureText(t).width + 8, bx = clamp(k.x + k.w / 2 - tw / 2, 2, W - tw - 2), by = k.y + k.h + 6;
+      ctx.globalAlpha = Math.min(1, jar.sayT * 3); ctx.fillStyle = 'rgba(255,255,255,0.95)'; ctx.beginPath(); ctx.roundRect(bx, by, tw, 11, 3); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(k.x + k.w / 2 - 3, by); ctx.lineTo(k.x + k.w / 2, by - 4); ctx.lineTo(k.x + k.w / 2 + 3, by); ctx.fill();
+      ctx.fillStyle = '#1a0010'; ctx.textAlign = 'left'; ctx.fillText(t, bx + 4, by + 8); ctx.globalAlpha = 1;
+    }
+    if (onTitle && jar.tired > 0) { const k = TIP_RECT(); ctx.fillStyle = '#7ad0ff'; for (const [sx, ph] of [[k.x - 3, 0], [k.x + k.w + 2, 1.5]]) { const yy = k.y + ((time * 14 + ph * 6) % 12); ctx.beginPath(); ctx.ellipse(sx, yy, 1.4, 2.2, 0, 0, TAU); ctx.fill(); } } // sweat drops
     const { x, y, w, h } = TIP_RECT(), cx = x + w / 2, cy = y + h / 2, t = time * 60;
     const ph = t % 120, sc = ph < 40 ? 1 + 0.1 * Math.sin(Math.PI * ph / 40) : 1, glowA = 0.35 + 0.25 * Math.sin(t * 0.1);
     ctx.save(); ctx.translate(cx, cy); ctx.scale(sc, sc); ctx.translate(-cx, -cy);
@@ -3583,6 +3631,8 @@
   canvas.addEventListener('wheel', e => { if (state === 'editor') { editor.wheel(e.deltaY); e.preventDefault(); return; } if (state === 'playing') { cycleWeapon(e.deltaY > 0 ? 1 : -1); e.preventDefault(); } }, { passive: false });
   document.addEventListener('pointerlockchange', () => { if (!locked() && state === 'playing' && !isTouch) { /* stay running; click relocks */ } });
 
+  canvas.addEventListener('mousemove', e => { hoverG = state === 'title' ? gamePoint(e.clientX, e.clientY) : null; });
+  canvas.addEventListener('mouseleave', () => { hoverG = null; });
   // ---- the level editor's own pointer input (mouse and touch)
   let edPtr = null;
   canvas.addEventListener('pointerdown', e => {
@@ -4061,6 +4111,6 @@
     titleImg = photos.title;
     state = 'title';
     // expose a tiny debug hook for testing
-    window.GOFFI = { get state() { return state; }, get player() { return player; }, get level() { return L; }, start: startGame, completeLevel, ach, ACHIEVEMENTS, get quality() { return QUALITY; }, get score() { return runScore; }, highScores, get diff() { return diff; }, set diff(v) { diff = v; }, continueGame, savedGame, setLevel: i => { levelIndex = i; loadLevel(i, null); state = 'playing'; }, get mode() { return mode; }, get tipRect() { return kofiName() ? TIP_RECT() : null; }, get menuSel() { return menuSel; }, get song() { return Sfx.song; }, get musicMode() { return musicMode; }, get look() { return LOOK_SENS; }, get touchState() { return touch; }, get menuItems() { return menuItems().map(i => i.id); }, get lamps() { return L && L.lamps; }, get shafts() { return L && L.shafts; }, get pitch() { return pitch; }, set pitch(v) { pitch = v; HOR = VIEW_H / 2 + v; }, get horde() { return horde; }, throwNade, jump: () => { jumpReq = true; }, get paused() { return paused; }, spawn: (t, x, y) => spawnEnemy(t, x, y), startHorde: () => startSolo('horde', DM_LEVELS[0]), get fxHigh() { return FX_HIGH; }, set fxHigh(v) { FX_HIGH = v; }, get fxDrop() { return fxDrop; }, set fxDrop(v) { fxDrop = v; if (v < 4 && renderScale !== 1) { renderScale = 1; fitScreen(); } }, get renderScale() { return renderScale; }, get res() { return RES; }, get online() { return online; }, Net, get menuPage() { return menuPage; }, weeklyInfo, editor, LevelCode, get sharedLvl() { return sharedLvl; }, get levelTime() { return levelTime; }, set levelTime(v) { levelTime = v; } };
+    window.GOFFI = { get state() { return state; }, get player() { return player; }, get level() { return L; }, start: startGame, completeLevel, ach, ACHIEVEMENTS, get quality() { return QUALITY; }, get score() { return runScore; }, highScores, get diff() { return diff; }, set diff(v) { diff = v; }, continueGame, savedGame, setLevel: i => { levelIndex = i; loadLevel(i, null); state = 'playing'; }, get mode() { return mode; }, get jar() { return jar; }, get tipRect() { return kofiName() ? TIP_RECT() : null; }, get menuSel() { return menuSel; }, get song() { return Sfx.song; }, get musicMode() { return musicMode; }, get look() { return LOOK_SENS; }, get touchState() { return touch; }, get menuItems() { return menuItems().map(i => i.id); }, get lamps() { return L && L.lamps; }, get shafts() { return L && L.shafts; }, get pitch() { return pitch; }, set pitch(v) { pitch = v; HOR = VIEW_H / 2 + v; }, get horde() { return horde; }, throwNade, jump: () => { jumpReq = true; }, get paused() { return paused; }, spawn: (t, x, y) => spawnEnemy(t, x, y), startHorde: () => startSolo('horde', DM_LEVELS[0]), get fxHigh() { return FX_HIGH; }, set fxHigh(v) { FX_HIGH = v; }, get fxDrop() { return fxDrop; }, set fxDrop(v) { fxDrop = v; if (v < 4 && renderScale !== 1) { renderScale = 1; fitScreen(); } }, get renderScale() { return renderScale; }, get res() { return RES; }, get online() { return online; }, Net, get menuPage() { return menuPage; }, weeklyInfo, editor, LevelCode, get sharedLvl() { return sharedLvl; }, get levelTime() { return levelTime; }, set levelTime(v) { levelTime = v; } };
   });
 })();
