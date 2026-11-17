@@ -54,7 +54,7 @@ const Voice = (() => {
     if (files && files.length) { try { const a = new Audio(files[i % files.length]); a.volume = 0.9; a.play().catch(() => {}); } catch (e) {} return; }
     if (!window.speechSynthesis) return;
     try {
-      speechSynthesis.cancel(); pickVoice();
+      speechSynthesis.cancel(); if (speechSynthesis.paused) speechSynthesis.resume(); pickVoice();
       const u = new SpeechSynthesisUtterance(lines[i]);
       if (voice) u.voice = voice;
       u.pitch = 0.85; u.rate = 1.02; u.volume = 0.9;
@@ -100,9 +100,17 @@ const Voice = (() => {
       speechSynthesis.speak(u);
     } catch (e) {}
   }
+  // Some browsers (phones especially) only allow speech after it has been started from a tap. The game
+  // calls this on the first tap or key press with a silent line, which unlocks speech for the rest of the game.
+  let unlocked = false;
+  function unlock() {
+    if (unlocked || !window.speechSynthesis) return; unlocked = true;
+    try { const u = new SpeechSynthesisUtterance(' '); u.volume = 0; speechSynthesis.speak(u); speechSynthesis.getVoices(); } catch (e) {}
+  }
+  const available = () => !!(window.speechSynthesis && typeof SpeechSynthesisUtterance === 'function');
   function toggle() { on = !on; try { localStorage.setItem('goffichick-voice', on ? 'on' : 'off'); } catch (e) {} if (!on && window.speechSynthesis) speechSynthesis.cancel(); return on; }
   return {
-    say, toggle, monster, heed, get on() { return on; },
+    say, toggle, monster, heed, unlock, available, get on() { return on; },
     update(dt) { subT = Math.max(0, subT - dt); },
     get subtitle() { return subT > 0 ? subtitle : ''; },
   };

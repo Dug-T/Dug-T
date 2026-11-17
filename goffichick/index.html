@@ -23,12 +23,15 @@
   #knob { position: absolute; left: 35px; top: 35px; width: 50px; height: 50px; border-radius: 50%; background: rgba(255,79,184,0.5); pointer-events: none; }
   .btn { width: 64px; height: 64px; border-radius: 50%; border: 2px solid rgba(255,79,184,0.6); background: rgba(20,0,20,0.45); color: #ffd0ec; font: bold 12px monospace; display: flex; align-items: center; justify-content: center; }
   #bFire { right: 22px; bottom: 30px; width: 84px; height: 84px; background: rgba(255,45,149,0.35); font-size: 14px; }
-  #bUse { right: 120px; bottom: 22px; }
-  #bWpn { right: 26px; bottom: 128px; }
+  #bJump { right: 28px; bottom: 128px; width: 56px; height: 56px; }
+  #bWpn { right: 92px; bottom: 152px; width: 54px; height: 54px; }
+  #bUse { right: 166px; bottom: 156px; width: 56px; height: 56px; }
+  #bNade { right: 232px; bottom: 156px; width: 56px; height: 56px; font-size: 11px; }
   #bMap { right: 16px; top: 16px; width: 48px; height: 48px; font-size: 10px; }
-  #bJump { right: 116px; bottom: 100px; width: 56px; height: 56px; }
-  #bNade { right: 196px; bottom: 26px; width: 56px; height: 56px; font-size: 11px; }
   #bPause { right: 72px; top: 16px; width: 48px; height: 48px; font-size: 13px; }
+  /* the right-hand stick aims: left/right turns, up/down looks up and down */
+  #rstick { right: 146px; bottom: 22px; width: 120px; height: 120px; border-radius: 50%; background: rgba(60,220,255,0.10); border: 2px solid rgba(60,220,255,0.5); }
+  #rknob { position: absolute; left: 35px; top: 35px; width: 50px; height: 50px; border-radius: 50%; background: rgba(60,220,255,0.45); pointer-events: none; }
 </style>
 </head>
 <body>
@@ -37,6 +40,7 @@
 <div id="touch">
   <div id="look"></div>
   <div id="stick"><div id="knob"></div></div>
+  <div id="rstick"><div id="rknob"></div></div>
   <div class="btn" id="bFire">FIRE</div>
   <div class="btn" id="bUse">USE</div>
   <div class="btn" id="bWpn">WPN</div>
