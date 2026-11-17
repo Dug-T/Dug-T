@@ -214,6 +214,15 @@ flinches when hit, and her eyes glow pink when she picks up a new weapon.
     Velvet Coffin Waltz, Doom Scroll Disco, Thunder In The Crypt, Gloom Raider, Midnight Mascara and Unsubscribe Me
   - OPTIONS → MUSIC (or TUNES in the pause menu) switches back to level themes only
 
+- **Online play** is switched off for now. The title menu says *coming soon in an update*. Add `#online` to the
+  game's address to try it anyway once the Supabase project is back.
+- **Performance:**
+  - **CLASSIC graphics** (the default on phones) draw the screen at 2× resolution instead of 3×.
+  - **EFFECTS LOW** skips the colour-grading pass completely.
+  - **Automatic scaling:** the game aims for about 45 frames a second. If a device can't keep up, it switches
+    things off one at a time: bloom, then reflections and corner shadows, then grading, round shadows and extra
+    particles, and finally it renders the 3D view at 75% resolution.
+
 ## Setting up the world leaderboard (Supabase, free)
 
 1. Create a free account at [supabase.com](https://supabase.com) and a **New project** (any name and region).
