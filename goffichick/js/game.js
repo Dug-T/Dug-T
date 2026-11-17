@@ -22,7 +22,8 @@
   let ctx = canvas.getContext('2d');
   // The canvas is 3x the game's logical resolution: the 3D world is upscaled with chunky
   // pixels (classic look) while weapons, HUD and text are drawn smooth and detailed.
-  const RES = 3;
+  let RES = 3; // the canvas is drawn at RES x the game's resolution: 2 for CLASSIC, 3 for HD
+  let renderScale = 1; // dropped to 0.75 automatically on slow devices (dynamic resolution)
   const viewC = document.createElement('canvas');
   const viewCtx = viewC.getContext('2d');
   let img, buf, zbuf, occD, occY, occN, wallBot, wallTop;
@@ -48,10 +49,12 @@
     else stage.removeAttribute('style');
     const vw = sideways ? ih : iw, vh = sideways ? iw : ih;
     const nw = clamp(Math.round(H * vw / vh / 2) * 2, BASE_W, MAX_W);
-    if (nw !== W || !img || RW !== Math.round(nw * QUALITY)) {
+    const wantRes = QUALITY > 1 ? 3 : 2;
+    if (nw !== W || !img || RW !== Math.round(nw * QUALITY * renderScale) || RES !== wantRes) {
+      RES = wantRes; window.__RES = RES;
       W = nw; PLANE = (W / 2) / PROJ;
       canvas.width = W * RES; canvas.height = H * RES;
-      RW = Math.round(W * QUALITY); RH = Math.round(VIEW_H * QUALITY);
+      RW = Math.round(W * QUALITY * renderScale); RH = Math.round(VIEW_H * QUALITY * renderScale);
       viewC.width = RW; viewC.height = RH;
       img = viewCtx.createImageData(RW, RH); buf = new Uint32Array(img.data.buffer); zbuf = new Float32Array(RW); wallBot = new Int16Array(RW); wallTop = new Int16Array(RW);
       occD = new Float32Array(RW * OCC); occY = new Int16Array(RW * OCC); occN = new Uint8Array(RW);
@@ -466,7 +469,7 @@
     for (const sh of L.shafts || []) { // a soft beam of light from the ceiling to the floor
       const dx = sh.x - p.x, dy = sh.y - p.y, depth = dx * dirX + dy * dirY; if (depth < 0.5 || depth > 22) continue;
       const sx = (W / 2) * (1 + ((dirX * dy - dirY * dx) / PLANE) / depth);
-      if (sx < -60 || sx > W + 60 || zbuf[Math.max(0, Math.min(RW - 1, Math.round(sx * QUALITY)))] < depth - 0.3) continue;
+      if (sx < -60 || sx > W + 60 || zbuf[Math.max(0, Math.min(RW - 1, Math.round(sx * (RW / W))))] < depth - 0.3) continue;
       const top = HOR + (p.eyeZ - L.ceilH) * PROJ / depth, bot = HOR + (p.eyeZ - floorAt(sh.x, sh.y)) * PROJ / depth, wT = 0.35 * PROJ / depth, wB = 0.6 * PROJ / depth;
       const gr = ctx.createLinearGradient(0, top, 0, bot); gr.addColorStop(0, `rgba(${sh.c},0.2)`); gr.addColorStop(0.7, `rgba(${sh.c},0.07)`); gr.addColorStop(1, `rgba(${sh.c},0)`);
       ctx.fillStyle = gr; ctx.beginPath(); ctx.moveTo(sx - wT, top); ctx.lineTo(sx + wT, top); ctx.lineTo(sx + wB, bot); ctx.lineTo(sx - wB, bot); ctx.closePath(); ctx.fill();
@@ -474,7 +477,7 @@
     for (const lp of L.lamps || []) { // the glowing lamp itself
       const dx = lp.x - p.x, dy = lp.y - p.y, depth = dx * dirX + dy * dirY; if (depth < 0.3 || depth > 24) continue;
       const sx = (W / 2) * (1 + ((dirX * dy - dirY * dx) / PLANE) / depth);
-      if (sx < -30 || sx > W + 30 || zbuf[Math.max(0, Math.min(RW - 1, Math.round(sx * QUALITY)))] < depth - 0.5) continue;
+      if (sx < -30 || sx > W + 30 || zbuf[Math.max(0, Math.min(RW - 1, Math.round(sx * (RW / W))))] < depth - 0.5) continue;
       const sy = HOR + (p.eyeZ - lp.z) * PROJ / depth, k = lp.pulse ? 0.7 + 0.3 * Math.sin(time * 2.4 + lp.ph) : 1, r = Math.min(70, 0.7 * PROJ / depth);
       ctx.globalAlpha = 0.3 * k; ctx.drawImage(softDot(lp.c), sx - r * 1.8, sy - r * 1.2, r * 3.6, r * 2.4); // light spilling onto the wall
       ctx.globalAlpha = 0.55 * k; ctx.drawImage(softDot(lp.c), sx - r, sy - r, r * 2, r * 2);
@@ -508,7 +511,7 @@
   // the sky above the walls: a clip path that follows the tops of the walls on screen
   function skyClip() {
     ctx.beginPath(); ctx.moveTo(0, 0);
-    for (let x = 0; x <= W; x += 3) { const d = zbuf[Math.min(RW - 1, Math.round(x * QUALITY))] || 64; ctx.lineTo(x, HOR - (L.ceilH - player.eyeZ) * PROJ / d); }
+    for (let x = 0; x <= W; x += 3) { const d = zbuf[Math.min(RW - 1, Math.round(x * (RW / W)))] || 64; ctx.lineTo(x, HOR - (L.ceilH - player.eyeZ) * PROJ / d); }
     ctx.lineTo(W, 0); ctx.closePath(); ctx.clip();
   }
   function makeSkyBolt() {
@@ -551,7 +554,7 @@
       ctx.fillStyle = g; ctx.fillRect(sx - 70, sy - 70, 140, 140);
       ctx.restore();
       // lens flare when the sun itself is in view (not behind a wall)
-      const d = zbuf[Math.max(0, Math.min(RW - 1, Math.round(sx * QUALITY)))] || 64, top = HOR - (L.ceilH - player.eyeZ) * PROJ / d;
+      const d = zbuf[Math.max(0, Math.min(RW - 1, Math.round(sx * (RW / W))))] || 64, top = HOR - (L.ceilH - player.eyeZ) * PROJ / d;
       if (sx > 0 && sx < W && sy < top) {
         const k = 1 - Math.abs(sx - W / 2) / W;
         ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.beginPath(); ctx.rect(0, 0, W, VIEW_H); ctx.clip();
@@ -575,7 +578,7 @@
       gradeKey = key; const n = RH, mr = new Float32Array(n), mg = new Float32Array(n), mb = new Float32Array(n), ar = new Float32Array(n), ag = new Float32Array(n), ab = new Float32Array(n);
       const [fr, fg, fb] = L.fog, top = L.def.sky ? [1.05, 1.01, 0.94] : [0.96, 0.95, 1.07], bot = [1.06, 0.96, 1.01];
       for (let y = 0; y < n; y++) {
-        const t = y / n, h = FX_HIGH ? Math.max(0, 1 - Math.abs(y - (n / 2 + pitch * QUALITY)) / (n * 0.11)) * 0.13 : 0, k = FX_HIGH ? 1 : 0;
+        const t = y / n, h = FX_HIGH ? Math.max(0, 1 - Math.abs(y - (n / 2 + pitch * (RW / W))) / (n * 0.11)) * 0.13 : 0, k = FX_HIGH ? 1 : 0;
         const r = 1 + (top[0] + (bot[0] - top[0]) * t - 1) * k, g = 1 + (top[1] + (bot[1] - top[1]) * t - 1) * k, b = 1 + (top[2] + (bot[2] - top[2]) * t - 1) * k;
         mr[y] = r * (1 - h); mg[y] = g * (1 - h); mb[y] = b * (1 - h); ar[y] = fr * h; ag[y] = fg * h; ab[y] = fb * h;
       }
@@ -698,7 +701,7 @@
 
   // ------------------------------------------------------------------ rendering
   function render3D() {
-    const RHOR = RH / 2 + pitch * QUALITY, RPROJ = PROJ * QUALITY, SKYH = Math.min(RH, Math.ceil(RHOR));
+    const RQ = RW / W, RHOR = RH / 2 + pitch * RQ, RPROJ = PROJ * RQ, SKYH = Math.min(RH, Math.ceil(RHOR));
     const p = player, dirX = Math.cos(p.a), dirY = Math.sin(p.a);
     const dR = L.dynR, dG = L.dynG, dB = L.dynB; // coloured light added by fire, explosions, torches...
     glows.length = 0;
@@ -853,7 +856,7 @@
       }
     }
     // --- soft round shadows under monsters, items and decorations
-    if (FX_HIGH) {
+    if (FX_HIGH && fxDrop < 3) {
       const blob = (wx, wy, r, fz, k) => {
         const dx = wx - p.x, dy = wy - p.y, depth = dx * dirX + dy * dirY; if (depth < 0.3) return;
         const e = eyeZ - fz; if (e <= 0.02) return;
@@ -925,8 +928,8 @@
         // decorations glow from their flame at the top; everything else from its middle. Halos are capped
         // so standing right next to a torch doesn't wash the whole screen.
         const tall = sp.h > 0.5, cy = tall ? top + hPx * 0.1 : top + hPx / 2;
-        const r = Math.min(tall ? 34 : 60, (tall ? hPx * 0.35 : hPx * 1.2) / QUALITY);
-        glows.push({ x: sx / QUALITY, y: cy / QUALITY, r: Math.max(5, r), c: sp.glow, a: Math.min(tall ? 0.3 : 0.42, 1.6 / depth) });
+        const r = Math.min(tall ? 34 : 60, (tall ? hPx * 0.35 : hPx * 1.2) / (RW / W));
+        glows.push({ x: sx / (RW / W), y: cy / (RW / W), r: Math.max(5, r), c: sp.glow, a: Math.min(tall ? 0.3 : 0.42, 1.6 / depth) });
       }
       const data = spr.data, sw = spr.w, sh = spr.h;
       const uStep = sw / wPx, vStep = sh / hPx;
@@ -1626,7 +1629,7 @@
   const wallFace = (side, c, s) => side === 0 ? (c > 0 ? 0 : 1) : (s > 0 ? 2 : 3);
   // soft particles: drawn with real transparency and glow on top of the 3D view
   function vfx(kind, x, y, z, o) {
-    if (L.vfx.length >= (FX_HIGH ? 700 : 260)) return;
+    if (L.vfx.length >= (FX_HIGH && fxDrop < 3 ? 700 : 220)) return;
     L.vfx.push({ kind, x, y, z, vx: o.vx || 0, vy: o.vy || 0, vz: o.vz || 0, t: 0, life: o.life || 1, size: o.size || 0.05, grow: o.grow || 0, col: o.col || '255,255,255',
       add: !!o.add, grav: o.grav || 0, drag: o.drag || 0, bounce: o.bounce || 0, rot: Math.random() * TAU, spin: o.spin || 0, shape: o.shape || 'dot', a: o.a ?? 1, wob: o.wob || 0, phase: Math.random() * TAU, tink: !!o.tink });
   }
@@ -1672,7 +1675,7 @@
       if (depth < (q.shape === 'rect' ? 0.28 : 0.15) || depth > 26) continue;
       const sx = (W / 2) * (1 + ((dirX * dy - dirY * dx) / PLANE) / depth);
       if (sx < -30 || sx > W + 30) continue;
-      if (!(L.def.sky && q.z > L.ceilH) && zbuf[Math.max(0, Math.min(RW - 1, Math.round(sx * QUALITY)))] < depth - 0.05) continue;
+      if (!(L.def.sky && q.z > L.ceilH) && zbuf[Math.max(0, Math.min(RW - 1, Math.round(sx * (RW / W))))] < depth - 0.05) continue;
       list.push([depth, sx, q]);
     }
     list.sort((a, b) => b[0] - a[0]);
@@ -1705,7 +1708,7 @@
       if (!e.bubble) continue;
       const dx = e.x - p.x, dy = e.y - p.y, depth = dx * dirX + dy * dirY; if (depth < 0.6 || depth > 14) continue;
       const sx = (W / 2) * (1 + ((dirX * dy - dirY * dx) / PLANE) / depth);
-      if (sx < -40 || sx > W + 40 || zbuf[Math.max(0, Math.min(RW - 1, Math.round(sx * QUALITY)))] < depth - 0.2) continue;
+      if (sx < -40 || sx > W + 40 || zbuf[Math.max(0, Math.min(RW - 1, Math.round(sx * (RW / W))))] < depth - 0.2) continue;
       const top = HOR + (p.eyeZ - (e.fz || 0) - e.z - (e.dead ? 0.3 : e.def.h) - 0.2) * PROJ / depth;
       const t = e.bubble.text, tw = ctx.measureText(t).width + 8, bx = clamp(sx - tw / 2, 2, W - tw - 2), by = Math.max(4, top - 12);
       ctx.globalAlpha = Math.min(1, e.bubble.t * 3);
@@ -1719,7 +1722,7 @@
       if (e.dead || !(e.barT > 0) || e.def.boss || e.type === 'barrel') continue;
       const dx = e.x - p.x, dy = e.y - p.y, depth = dx * dirX + dy * dirY; if (depth < 0.5 || depth > 18) continue;
       const sx = (W / 2) * (1 + ((dirX * dy - dirY * dx) / PLANE) / depth);
-      if (sx < 0 || sx >= W || zbuf[Math.max(0, Math.min(RW - 1, Math.round(sx * QUALITY)))] < depth - 0.2) continue;
+      if (sx < 0 || sx >= W || zbuf[Math.max(0, Math.min(RW - 1, Math.round(sx * (RW / W))))] < depth - 0.2) continue;
       const top = HOR + (p.eyeZ - (e.fz || 0) - e.z - e.def.h - 0.08) * PROJ / depth, bw = Math.max(10, Math.min(30, 9 * PROJ / depth / 10)), fr = Math.max(0, e.hp / (e.maxHp || e.def.hp));
       ctx.globalAlpha = Math.min(1, e.barT); ctx.fillStyle = 'rgba(0,0,0,0.65)'; ctx.fillRect(sx - bw / 2 - 1, top - 1, bw + 2, 4);
       ctx.fillStyle = fr > 0.5 ? '#5cff6a' : fr > 0.25 ? '#ffcf3a' : '#ff3a4a'; ctx.fillRect(sx - bw / 2, top, bw * fr, 2);
@@ -2823,6 +2826,8 @@
   // title menu
   let menuSel = 0;
   let menuPage = 'main', onKind = 'dm', onLvl = 0;
+  // online play is switched off until the online server is set up again (add #online to the address to try it anyway)
+  const ONLINE_READY = /online/.test(location.hash) || (() => { try { return localStorage.getItem('goffichick-online') === 'on'; } catch (e) { return false; } })();
   function menuItems() {
     if (menuPage === 'options') return [
       { id: 'gfx', lr: true, text: `GRAPHICS   ${QUALITY > 1 ? 'HD' : 'CLASSIC'}` },
@@ -2845,7 +2850,7 @@
     items.push({ id: 'weekly', text: `WEEKLY CHALLENGE  -  WEEK ${weeklyInfo().week}` });
     items.push({ id: 'horde', text: `HORDE MODE  -  BEST WAVE ${store.get(HORDE_KEY) || 0}` });
     items.push({ id: 'editor', text: 'LEVEL EDITOR' });
-    items.push({ id: 'online', text: 'PLAY ONLINE  -  DEATHMATCH / CO-OP' });
+    items.push({ id: 'online', text: ONLINE_READY ? 'PLAY ONLINE  -  DEATHMATCH / CO-OP' : 'PLAY ONLINE  -  COMING SOON IN AN UPDATE' });
     items.push({ id: 'diff', lr: true, text: `DIFFICULTY   <  ${DIFFS[diff].name}  >` });
     items.push({ id: 'options', text: 'OPTIONS  -  GRAPHICS, LOOK SPEED, VOICE' });
     items.push({ id: 'scores', text: 'HIGH SCORES' });
@@ -2863,6 +2868,7 @@
     else if (item.id === 'musicMode') { musicMode = musicMode === 'shuffle' ? 'level' : 'shuffle'; try { localStorage.setItem('goffichick-music', musicMode); } catch (e) {} Sfx.init(); Sfx.play.switch(); }
     else if (item.id === 'optBack') { menuPage = 'main'; menuSel = 0; Sfx.play.switch(); }
     else if (item.id === 'look') { setLook(nextLook(dir)); Sfx.init(); Sfx.play.switch(); }
+    else if (item.id === 'online' && !ONLINE_READY) { msg = 'Online play is not available right now - it will be in an update!'; msgT = 4; Sfx.play.switch(); }
     else if (item.id === 'online') { menuPage = 'online'; menuSel = 0; Sfx.play.switch(); if (!Net.enabled) { msg = 'Online play needs the Supabase settings in js/leaderboard.js.'; msgT = 4; } }
     else if (item.id === 'onBack') { menuPage = 'main'; menuSel = 0; Sfx.play.switch(); }
     else if (item.id === 'onKind') { onKind = onKind === 'dm' ? 'coop' : 'dm'; Sfx.play.switch(); }
@@ -2872,8 +2878,8 @@
     else if (item.id === 'onJoin') { nameFor = 'room'; savedInitials = initials; initials = [0, 0, 0]; state = 'enterName'; initCur = 0; stateT = 0; }
     else if (item.id === 'scores') { openScores(); lastEntry = -1; posted = null; postStatus = ''; }
     else if (item.id === 'ach') { state = 'achievements'; stateT = 0; }
-    else if (item.id === 'gfx') { QUALITY = QUALITY > 1 ? 1 : 1.5; try { localStorage.setItem('goffichick-quality', String(QUALITY)); } catch (e) {} fitScreen(); Sfx.init(); Sfx.play.switch(); }
-    else if (item.id === 'fx') { FX_HIGH = !FX_HIGH; fxDrop = 0; slowFor = 0; try { localStorage.setItem('goffichick-fx', FX_HIGH ? 'high' : 'low'); } catch (e) {} Sfx.init(); Sfx.play.switch(); }
+    else if (item.id === 'gfx') { QUALITY = QUALITY > 1 ? 1 : 1.5; renderScale = 1; fxDrop = 0; try { localStorage.setItem('goffichick-quality', String(QUALITY)); } catch (e) {} fitScreen(); Sfx.init(); Sfx.play.switch(); }
+    else if (item.id === 'fx') { FX_HIGH = !FX_HIGH; fxDrop = 0; slowFor = 0; if (renderScale !== 1) { renderScale = 1; fitScreen(); } try { localStorage.setItem('goffichick-fx', FX_HIGH ? 'high' : 'low'); } catch (e) {} Sfx.init(); Sfx.play.switch(); }
     else if (item.id === 'voice') { Voice.toggle(); Sfx.init(); Sfx.play.switch(); if (Voice.on) Voice.say('levelStart', 1, true); }
     else { diff = (diff + dir + DIFFS.length) % DIFFS.length; store.set(DIFF_KEY, diff); Sfx.init(); Sfx.play.switch(); }
     if (state === 'playing') lockPointer();
@@ -3172,7 +3178,7 @@
     if (state !== 'title' || menuItems().length <= 12) lines.forEach((l, i) => label(l, 18, 222 + i * 7.5, '#b78ab7', 'left', 6));
     label('Keys open coloured doors. Stairs and lifts take you up. V toggles her voice. Gamepads work too.', 18, 246, '#8a6a8a', 'left', 6.5);
     if (state === 'title') label(TIPS[Math.floor(time / 7) % TIPS.length], 18, 264, '#ff9be0', 'left', 6);
-    label('ON A PHONE? Left stick moves, drag the right side to look around and up/down.', 18, 254, '#7a5a7a', 'left', 6.5);
+    label('ON A PHONE? Pink stick moves, cyan pad aims, FIRE on either side.', 18, 254, '#7a5a7a', 'left', 6.5);
   }
 
   function drawOverlayText(title, sub, lines, dy = 16) {
@@ -3297,7 +3303,7 @@
       }
       return;
     }
-    render3D(); gradePass();
+    render3D(); if (FX_HIGH && fxDrop < 3) gradePass(); // on LOW (or a struggling device) the grading pass is skipped entirely
     const sx = shake ? (Math.random() - 0.5) * shake * 2 : 0, sy = shake ? (Math.random() - 0.5) * shake * 2 : 0;
     const pw = player.pw;
     if (pw.shroud > 0 && (pw.shroud > 3 || Math.sin(time * 18) > 0)) { // Night Shroud: inverted greyscale, like the classic invulnerability
@@ -3939,7 +3945,7 @@
       if (depth < 0.4 || depth > 16) continue;
       const tX = (dirX * dy - dirY * dx) / PLANE, sx = (W / 2) * (1 + tX / depth);
       if (sx < 0 || sx >= W) continue;
-      const zc = zbuf[Math.min(RW - 1, Math.max(0, Math.round(sx * QUALITY)))];
+      const zc = zbuf[Math.min(RW - 1, Math.max(0, Math.round(sx * (RW / W))))];
       if (zc < depth - 0.3) continue;
       const top = HOR + (p.eyeZ - (av.fz || 0) - av.def.h - 0.12) * PROJ / depth;
       label(pe.name, sx, top, ['#ff4fb8', '#28dcff', '#78ff3c', '#ffc81e'][pe.color], 'center', Math.max(6, Math.min(9, 12 / depth + 5)));
@@ -3997,7 +4003,12 @@
     if (slowMoT > 0) slowMoT -= dt;
     // keep it smooth: if frames stay slow while playing, quietly turn off the heaviest effects
     frameAvg += (dt - frameAvg) * 0.05;
-    if (state === 'playing' && !paused && FX_HIGH && fxDrop < 2) { slowFor = frameAvg > 1 / 38 ? slowFor + dt : Math.max(0, slowFor - dt); if (slowFor > 3) { fxDrop++; slowFor = 0; } }
+    // steps: 1 no bloom, 2 no reflections / corner shadows, 3 no grading, round shadows or extra particles,
+    // 4 render the 3D view at 75% resolution. On EFFECTS LOW it goes straight to step 4 if it needs to.
+    if (state === 'playing' && !paused && fxDrop < 4) {
+      slowFor = frameAvg > 1 / 45 ? slowFor + dt : Math.max(0, slowFor - dt);
+      if (slowFor > 2.5) { fxDrop = FX_HIGH ? fxDrop + 1 : 4; slowFor = 0; if (fxDrop >= 4 && renderScale === 1) { renderScale = 0.75; fitScreen(); } }
+    }
     if (!paused) update(slowMoT > 0 ? dt * 0.35 : dt); else time += dt;
     draw();
     requestAnimationFrame(frame);
@@ -4015,6 +4026,6 @@
     titleImg = photos.title;
     state = 'title';
     // expose a tiny debug hook for testing
-    window.GOFFI = { get state() { return state; }, get player() { return player; }, get level() { return L; }, start: startGame, completeLevel, ach, ACHIEVEMENTS, get quality() { return QUALITY; }, get score() { return runScore; }, highScores, get diff() { return diff; }, set diff(v) { diff = v; }, continueGame, savedGame, setLevel: i => { levelIndex = i; loadLevel(i, null); state = 'playing'; }, get mode() { return mode; }, get menuSel() { return menuSel; }, get song() { return Sfx.song; }, get musicMode() { return musicMode; }, get look() { return LOOK_SENS; }, get touchState() { return touch; }, get menuItems() { return menuItems().map(i => i.id); }, get lamps() { return L && L.lamps; }, get shafts() { return L && L.shafts; }, get pitch() { return pitch; }, set pitch(v) { pitch = v; HOR = VIEW_H / 2 + v; }, get horde() { return horde; }, throwNade, jump: () => { jumpReq = true; }, get paused() { return paused; }, spawn: (t, x, y) => spawnEnemy(t, x, y), startHorde: () => startSolo('horde', DM_LEVELS[0]), get fxHigh() { return FX_HIGH; }, set fxHigh(v) { FX_HIGH = v; }, get fxDrop() { return fxDrop; }, set fxDrop(v) { fxDrop = v; }, get online() { return online; }, Net, get menuPage() { return menuPage; }, weeklyInfo, editor, LevelCode, get sharedLvl() { return sharedLvl; }, get levelTime() { return levelTime; }, set levelTime(v) { levelTime = v; } };
+    window.GOFFI = { get state() { return state; }, get player() { return player; }, get level() { return L; }, start: startGame, completeLevel, ach, ACHIEVEMENTS, get quality() { return QUALITY; }, get score() { return runScore; }, highScores, get diff() { return diff; }, set diff(v) { diff = v; }, continueGame, savedGame, setLevel: i => { levelIndex = i; loadLevel(i, null); state = 'playing'; }, get mode() { return mode; }, get menuSel() { return menuSel; }, get song() { return Sfx.song; }, get musicMode() { return musicMode; }, get look() { return LOOK_SENS; }, get touchState() { return touch; }, get menuItems() { return menuItems().map(i => i.id); }, get lamps() { return L && L.lamps; }, get shafts() { return L && L.shafts; }, get pitch() { return pitch; }, set pitch(v) { pitch = v; HOR = VIEW_H / 2 + v; }, get horde() { return horde; }, throwNade, jump: () => { jumpReq = true; }, get paused() { return paused; }, spawn: (t, x, y) => spawnEnemy(t, x, y), startHorde: () => startSolo('horde', DM_LEVELS[0]), get fxHigh() { return FX_HIGH; }, set fxHigh(v) { FX_HIGH = v; }, get fxDrop() { return fxDrop; }, set fxDrop(v) { fxDrop = v; if (v < 4 && renderScale !== 1) { renderScale = 1; fitScreen(); } }, get renderScale() { return renderScale; }, get res() { return RES; }, get online() { return online; }, Net, get menuPage() { return menuPage; }, weeklyInfo, editor, LevelCode, get sharedLvl() { return sharedLvl; }, get levelTime() { return levelTime; }, set levelTime(v) { levelTime = v; } };
   });
 })();
