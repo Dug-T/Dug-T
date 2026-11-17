@@ -164,6 +164,14 @@ flinches when hit, and her eyes glow pink when she picks up a new weapon.
   - tips on the title screen, funny pickup messages and pause-screen excuses
   - more lines for Goffichick, including grenades, roses, champions and combos
 
+- **Weapon names on screen:** switching weapons shows its name, slot and ammo for a moment.
+- **Four more weapons:**
+  - **Spiked Cricket Bat** (slot 1): a big swing that knocks monsters flying
+  - **Nail Gun** (slot 4): rapid-fire nails, uses bullets
+  - **Vinyl Launcher** (slot 6): fires 80s goth records that ricochet off up to three walls, uses skulls
+  - **Lipstick Laser** (slot 6): a continuous pink beam, uses souls
+  - their map letters are `/`, `"`, `'` and `\`, and all four are in the level editor
+
 ## Setting up the world leaderboard (Supabase, free)
 
 1. Create a free account at [supabase.com](https://supabase.com) and a **New project** (any name and region).

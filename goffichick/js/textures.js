@@ -266,8 +266,7 @@ const Textures = (() => {
     speckle(g, 400, ['#2156c4', '#1846a8']);
     g.fillStyle = '#ff5a1f'; g.beginPath(); g.ellipse(32, 30, 24, 15, 0, 0, Math.PI * 2); g.fill();
     g.strokeStyle = '#1f7a3a'; g.lineWidth = 2; g.stroke();
-    g.fillStyle = '#1f7a3a'; g.font = 'bold 10px sans-serif'; g.textAlign = 'center'; g.fillText('WALLY', 32, 29);
-    g.beginPath(); g.arc(32, 22, 16, 0.55 * Math.PI, 0.45 * Math.PI, true); g.stroke();
+    g.fillStyle = '#1f7a3a'; g.font = 'bold 9px sans-serif'; g.textAlign = 'center'; g.fillText('WALLY', 32, 28); g.fillText('MAN', 32, 38);
     g.fillStyle = '#ff5a1f'; g.fillRect(0, 56, 64, 8);
   });
 

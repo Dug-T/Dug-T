@@ -31,6 +31,7 @@
 //  More monsters: & HYPE MAN (speeds up others)  ( SELFIE GHOST (teleports)  ) PARTY POPPER (explodes)
 //                 [ WELLNESS GURU (heals others)  ] RIOT SHIELD MANAGER (shoot him from the side)
 //  More items: , black rose   { double gloom   } bat wings   - bat grenades
+//  More weapons: / spiked cricket bat   " nail gun   ' vinyl launcher   \\ lipstick laser
 //  Decor:  T candelabra  R tombstone  L torch pillar  p office plant  q water cooler
 //          y pumpkin-spice barrel (explodes!)  k skull pile  j blood pool
 'use strict';
@@ -75,6 +76,10 @@ const ITEM_TYPES = {
   'Z': { sprite: 'mask', power: 'mask', time: 60, msg: 'GAS MASK! Toxic sludge is harmless.' },
   'U': { sprite: 'rage', berserk: true, msg: 'RAGE HEART! Your fists hit ten times harder.' },
   ',': { sprite: 'rose', rose: true },
+  '/': { sprite: 'wBat', weapon: 'cricketbat' },
+  '"': { sprite: 'wNail', weapon: 'nailgun', ammo: { bullets: 40 } },
+  "'": { sprite: 'wVinyl', weapon: 'vinyl', ammo: { skulls: 5 } },
+  '\\': { sprite: 'wLaser', weapon: 'laser', ammo: { souls: 80 } },
   '{': { sprite: 'gloomOrb', power: 'gloom', time: 20, msg: 'DOUBLE GLOOM! Your weapons hit twice as hard.' },
   '}': { sprite: 'wings', power: 'wings', time: 25, msg: 'BAT WINGS! Faster, and you jump much higher.' },
   '-': { sprite: 'nades', nades: 3, msg: 'Picked up 3 bat grenades.' },
