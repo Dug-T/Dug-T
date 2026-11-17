@@ -106,6 +106,10 @@
   ENEMY_DEFS.popper = { name: 'Party Popper', hp: 30, speed: 3.4, radius: 0.28, h: 0.42, z: 0.15, fly: true, attack: 'melee', melee: [0, 0], range: 1.6, cooldown: [0.1, 0.2], pain: 0.2, sight: 'giggle', atkSound: 'pop', kamikaze: true };
   ENEMY_DEFS.guru = { name: 'Wellness Guru', hp: 90, speed: 1.6, radius: 0.27, h: 0.86, attack: 'proj', proj: 'chakra', range: 15, cooldown: [1.4, 2.4], pain: 0.5, sight: 'om', atkSound: 'om', healer: true, dodge: 0.3 };
   ENEMY_DEFS.riot = { name: 'Riot Shield Manager', hp: 120, speed: 1.2, radius: 0.32, h: 0.84, attack: 'proj', proj: 'memo', melee: [8, 18], range: 14, cooldown: [1.5, 2.6], pain: 0.25, sight: 'groan', atkSound: 'memo', shield: true };
+  // --- newest monsters
+  ENEMY_DEFS.cryptobro = { name: 'Crypto Bro', hp: 90, speed: 1.8, radius: 0.28, h: 0.88, attack: 'proj', proj: 'coin', count: 3, spread: 0.14, range: 16, cooldown: [1.1, 2.0], pain: 0.5, sight: 'phoneRing', atkSound: 'tink', dodge: 0.35 };
+  ENEMY_DEFS.revealdad = { name: 'Gender Reveal Dad', hp: 150, speed: 1.15, radius: 0.32, h: 0.92, attack: 'proj', proj: 'reveal', melee: [8, 16], range: 13, cooldown: [1.9, 3.0], pain: 0.35, sight: 'brute', atkSound: 'swing' };
+  ENEMY_DEFS.spin = { name: 'Spin Class Instructor', hp: 140, speed: 2.3, radius: 0.36, h: 0.88, attack: 'melee', melee: [10, 22], range: 1.25, cooldown: [0.7, 1.1], pain: 0.4, sight: 'coach', atkSound: 'brute', charge: 4.8 };
   // ---- humour: what the monsters shout, how you died, and assorted nonsense
   const QUIPS = {
     zombie: { sight: ['Have you tried oat milk?', 'Is this decaf?!', 'Morning, sunshine!', 'Pumpkin spice season!'], death: ['My latte... art...', "Should've ordered a flat white...", 'Spilled it.'] },
@@ -127,6 +131,9 @@
     drone: { sight: ['Recording!', 'Going live in 3, 2, 1!', 'Smile, you are on camera!', 'Content detected!'], death: ['Signal lost...', 'Battery... low...'] },
     karen: { sight: ['I want to speak to the MANAGER!', 'Excuse me?!', "I'm leaving a one-star review!", 'Do you know who I AM?!'], death: ['This is... unacceptable...', 'Manager... help...'] },
     wallyexe: { sight: ['UPLOADING POSITIVITY.EXE', 'YOU HAVE BEEN SUBSCRIBED.', 'ERROR: GLOOM NOT FOUND.', 'PLEASE RATE YOUR EXPERIENCE.'], death: ['FATAL ERROR...', 'BLUE SCREEN OF... DEATH...'] },
+    cryptobro: { sight: ['HODL!', 'Have you heard of my coin?', 'To the MOON!', 'Not financial advice, but...', 'Buy the dip!'], death: ['Rug... pulled...', 'My portfolio...', 'Should have... diversified...'] },
+    revealdad: { sight: ["IT'S A... GOTH!", 'Stand back, I saw this on YouTube!', 'Hold my beer!', 'Who wants a burger?!'], death: ['The forest... is on fire...', 'Tell your mother... it was a boy...'] },
+    spin: { sight: ['CLIP IN, PEOPLE!', 'Turn up that resistance!', 'FIVE MORE MINUTES!', 'Feel the BURN!', 'Climb that hill!'], death: ['Out of... cadence...', 'Cool... down...'] },
     hypeman: { sight: ["LET'S GOOOO!", 'MAKE SOME NOISE!', 'Is everybody HAPPY?!'], death: ['Hype... gone...'] },
   };
   const LIMB_QUIPS = {
@@ -135,6 +142,7 @@
     yoga: ['I can still do tree pose!', 'Flexibility... has limits!'], coach: ['Losing a leg is a growth opportunity!', "I'm still half full!"],
     bridezilla: ['Not before the photos!', 'My something BLUE is now my FACE!'], redcoat: ['Hop along, campers!', 'Everybody do the hokey cokey!'],
     mummy: ['My towel is unravelling!', 'This is NOT relaxing!'], mascot: ['Kids, look away!', 'That is NOT in the costume contract!'], karen: ['I am calling CORPORATE!', 'My HAIR!'],
+    cryptobro: ['I was going to put that arm on the blockchain!', 'HODL... with what?!'], revealdad: ['That was my BARBECUE arm!', 'It was a... LIMB!'], spin: ['I can still pedal with one!', 'NO PAIN NO GAIN!'],
     guru: ['My chakras!', "I'm releasing... a limb!"], hypeman: ['STILL HYPED!', 'One leg, ONE LOVE!'], riot: ["That's an HR violation!", 'Workplace injury!'],
   };
   const GENERIC_LIMB = ["'Tis but a scratch!", "It's only a flesh wound!", "I'll hop it off!", 'Anyone seen my arm?', 'Hop to it!', 'I needed that!'];
@@ -145,7 +153,7 @@
     skull: 'Fatally hashtagged.', orb: 'Smiled at too hard.', boss: 'Unsubscribed by Wally Prime.', yoga: 'Stretched beyond her limits.', coach: 'Motivated to death.',
     bubbly: 'Bubbled.', mini: 'Nibbled by a tiny optimist.', wallyfit: "Out-cardio'd.", wallydeluxe: 'Killed by premium content.', megaorb: 'Smiled at by something the size of a bus.',
     bridezilla: 'Caught the bouquet. Next to be married... to the grave.', redcoat: 'Dragged into the conga line. Forever.', wallylive: 'Cancelled live on air.',
-    hypeman: 'Hyped to death.', mummy: 'Relaxed to death.', mascot: 'Hugged to death by a theme-park mascot.', drone: 'Filmed for content. Posthumously.', karen: 'Spoken to by the manager.', wallyexe: 'Deleted by the algorithm.', ghost: 'Photobombed into the afterlife.', popper: 'Surprise party. Big surprise.', guru: 'Died of inner peace.', riot: 'Escalated to HR. Permanently.',
+    hypeman: 'Hyped to death.', mummy: 'Relaxed to death.', mascot: 'Hugged to death by a theme-park mascot.', drone: 'Filmed for content. Posthumously.', karen: 'Spoken to by the manager.', wallyexe: 'Deleted by the algorithm.', ghost: 'Photobombed into the afterlife.', cryptobro: 'Pumped and dumped.', revealdad: "Found out it's a coffin.", spin: 'Ran over by a spin class. Sixty RPM.', popper: 'Surprise party. Big surprise.', guru: 'Died of inner peace.', riot: 'Escalated to HR. Permanently.',
     slime: 'Went paddling in toxic sludge. Bold choice.', barrel: 'Pumpkin spice explosion. Very seasonal.', self: 'Blew herself up. Very goth.', player: 'Fragged by a friend. How rude.',
   };
   const TIPS = [
@@ -205,6 +213,12 @@
     nail: { speed: 26, dmg: [7, 11], size: 0.07, fx: 'puff', fxSize: 0.15, sound: null },
     // a ricocheting record: bounces off up to three walls before it shatters
     vinyl: { speed: 13, dmg: [28, 48], size: 0.22, fx: 'hexHit', fxSize: 0.45, sound: 'hexHit', ricochet: 3 },
+    coin: { speed: 10, dmg: [4, 9], size: 0.14, fx: 'hexHit', fxSize: 0.25, sound: 'tink' },
+    // the gender-reveal smoke bomb: lobbed in an arc, goes off in pink and blue
+    reveal: { speed: 6.5, dmg: [8, 14], splash: 1.6, splashDmg: 48, size: 0.2, fx: 'boom', fxSize: 0.8, sound: 'explode', grav: 8, life: 3, boomFx: { smoke: ['255,120,190', '110,170,255', '255,160,210', '140,190,255'] } },
+    // Cauldron Mortar: a bubbling pot lobbed high that bursts into five bouncing bomblets
+    mortar: { speed: 7.5, dmg: [30, 50], splash: 2.2, splashDmg: 120, size: 0.22, fx: 'boom', fxSize: 1.2, sound: 'explode', grav: 8, life: 2.2, lob: 3.8, cluster: 5 },
+    bomblet: { speed: 3.5, dmg: [15, 25], splash: 1.3, splashDmg: 60, size: 0.12, fx: 'boom', fxSize: 0.6, sound: 'explode', grav: 9, life: 0.9 },
     // bat grenade: lobbed, bounces, goes off after its fuse (or on hitting a monster)
     grenade: { speed: 7.5, dmg: [30, 50], splash: 2.1, splashDmg: 130, size: 0.13, fx: 'boom', fxSize: 1.1, sound: 'explode', grav: 9, life: 1.7 },
   };
@@ -295,7 +309,7 @@
     const lockAt = new Map();
     for (const z of def.lights || []) for (let y = z.y; y < z.y + z.h; y++) for (let x = z.x; x < z.x + z.w; x++) if (x >= 0 && y >= 0 && x < mw && y < mh) light[y * mw + x] = z.level;
     L = { def, mw, mh, grid, block, seen, slime, light, fh, lifts, liftTile, ceilH: def.ceilH || 1, stepTex: def.stepTex || 1, lightNow: new Float32Array(light), zones: (def.lights || []).map(z => ({ ...z, on: true })), totalSecrets: 0,
-      slimeTex: Textures.flats.slime.data, doors: new Map(), enemies: [], items: [], decor: [], projs: [], fx: [], parts: [], bolts: [], vfx: [], vfxN: {}, fdec: new Map(), wdec: new Map(),
+      slimeTex: Textures.flats.slime.data, doors: new Map(), enemies: [], items: [], decor: [], projs: [], fx: [], parts: [], bolts: [], vfx: [], vfxN: {}, blasts: [], fdec: new Map(), wdec: new Map(),
       totalKills: 0, totalItems: 0, starts: [], avatars: [], exitT: -1, flow: null, flowFrom: -1, fog: def.fog,
       floor: Textures.flats[def.floor].data, ceil: Textures.flats[def.ceil].data };
     player = newPlayer(keep);
@@ -635,6 +649,7 @@
     skull: [1, 0.55, 0.15], rocket: [1, 0.6, 0.2], flame: [1, 0.5, 0.1], memo: [1, 0.5, 0.15], phone: [1, 0.6, 0.2], sun: [1, 0.85, 0.3],
     stone: [1, 0.55, 0.2], pixel: [0.3, 1, 0.8], complaint: [1, 0.3, 0.3], spot: [1, 1, 0.75], bouquet: [1, 0.5, 0.7], ball: [1, 0.4, 0.3], petals: [1, 0.5, 0.75],
     hex: [0.8, 0.3, 1], gloom: [1, 0.25, 0.85], notif: [0.3, 0.6, 1], chakra: [0.3, 1, 0.95], shout: [1, 1, 0.8],
+    coin: [1, 0.85, 0.3], reveal: [1, 0.55, 0.85], mortar: [0.4, 1, 0.4], bomblet: [0.4, 1, 0.4],
     boom: [1, 0.55, 0.15], hexHit: [0.8, 0.3, 1], gloomHit: [1, 0.3, 0.9], flameHit: [1, 0.5, 0.1], spark: [1, 0.75, 0.3],
   };
   const GLOW_OF = { gloomOrb: '200,90,255', wings: '255,120,200', rose: '220,30,90', veil: '190,90,255', shroud: '255,255,255', mask: '90,255,140', rage: '255,60,60', keyRed: '255,60,80', keyBlue: '80,140,255', keyGold: '255,210,80', soul: '255,140,230' };
@@ -673,6 +688,7 @@
     for (const b of L.bolts) for (const q of b.pts.slice(1)) addLight(q[0], q[1], 0.75, 0.45, 1, 0.8, 3);
     for (const pr of L.projs) { const c = LIGHT_OF[pr.kind]; if (c) addLight(pr.x, pr.y, c[0], c[1], c[2], pr.kind === 'gloom' ? 1 : pr.kind === 'flame' ? 0.12 : 0.55, pr.kind === 'gloom' ? 4 : pr.kind === 'flame' ? 2 : 2.6); }
     for (const f of L.fx) { const c = LIGHT_OF[f.kind]; if (!c) continue; const k = 1 - f.t / f.life; addLight(f.x, f.y, c[0], c[1], c[2], (f.kind === 'boom' || f.kind === 'gloomHit' ? 1.3 : f.kind === 'flameHit' ? 0.12 : 0.45) * k, f.kind === 'boom' || f.kind === 'gloomHit' ? 4 : 2); }
+    for (const b of L.blasts) { const q = b.t / b.life, fl2 = 0.85 + 0.15 * Math.sin(b.t * 40); addLight(b.x, b.y, 1, 0.62 - q * 0.3, 0.25 - q * 0.15, (q < 0.1 ? 1.8 : 1.6 * (1 - q) * (1 - q)) * fl2, 3 + b.r * 1.4); }
     for (const e of L.enemies) if (!e.dead && e.burnT > 0) addLight(e.x, e.y, 1, 0.5, 0.1, 0.6 * flick, 2.5);
     if (player.flashT > 0) { const w = weaponByKey(player.cur), c = w && w.ammo === 'souls' ? [0.8, 0.35, 1] : w && w.key === 'flamethrower' ? [1, 0.5, 0.1] : [1, 0.8, 0.45]; addLight(player.x + Math.cos(player.a) * 0.6, player.y + Math.sin(player.a) * 0.6, c[0], c[1], c[2], w && w.key === 'flamethrower' ? 0.35 : 0.7, 3.2); }
     for (const it of L.items) if (!it.taken && (it.def.power || it.def.key)) { const g = (GLOW_OF[it.def.sprite] || '255,255,255').split(',').map(v => v / 255); addLight(it.x, it.y, g[0], g[1], g[2], 0.18, 1.6); }
@@ -1373,7 +1389,7 @@
   function popup(x, y, z, text, col = '255,207,58') { if (L.popups.length < 30) L.popups.push({ x, y, z, text, col, t: 0 }); }
   // the Party Popper goes off in a shower of confetti
   function popBlast(e) {
-    explosionFx(e.x, e.y, 0.35, 1.6); confettiFx(e.x, e.y, 0.5, 40);
+    explosionFx(e.x, e.y, 0.35, 1.2); confettiFx(e.x, e.y, 0.5, 40);
     Sfx.play.explode(Math.hypot(e.x - player.x, e.y - player.y)); Sfx.play.pop(0);
     splash(e.x, e.y, 1.7, 55, e);
   }
@@ -1483,7 +1499,7 @@
   // ---- Horde mode: endless waves in the Mosh Pit
   let horde = null;
   const HORDE_KEY = 'goffichick-horde';
-  const HORDE_POOL = [[6, 'drone'], [9, 'karen'], [10, 'mummy'], [10, 'mascot'], [1, 'zombie'], [1, 'manager'], [2, 'popper'], [3, 'wally'], [3, 'yoga'], [4, 'skull'], [5, 'brute'], [5, 'coach'], [6, 'ghost'], [7, 'redcoat'], [7, 'bridezilla'], [7, 'wallyfit'], [8, 'guru'], [8, 'riot'], [9, 'hypeman'], [11, 'wallydeluxe'], [12, 'bubbly']];
+  const HORDE_POOL = [[5, 'cryptobro'], [7, 'spin'], [8, 'revealdad'], [6, 'drone'], [9, 'karen'], [10, 'mummy'], [10, 'mascot'], [1, 'zombie'], [1, 'manager'], [2, 'popper'], [3, 'wally'], [3, 'yoga'], [4, 'skull'], [5, 'brute'], [5, 'coach'], [6, 'ghost'], [7, 'redcoat'], [7, 'bridezilla'], [7, 'wallyfit'], [8, 'guru'], [8, 'riot'], [9, 'hypeman'], [11, 'wallydeluxe'], [12, 'bubbly']];
   function hordeInit() { horde = { wave: 0, t: 3, spawnLeft: 0, spawnT: 0 }; L.enemies.length = 0; L.totalKills = 0; msg = 'HORDE MODE: survive as many waves as you can!'; msgT = 4; }
   function hordeSpawn(wave, big) {
     const p = player, opts = L.starts.slice().sort((a, b) => Math.hypot(b.x - p.x, b.y - p.y) - Math.hypot(a.x - p.x, a.y - p.y)).slice(0, 4);
@@ -1634,12 +1650,16 @@
   function vfx(kind, x, y, z, o) {
     if (L.vfx.length >= (FX_HIGH && fxDrop < 3 ? 700 : 220)) return;
     L.vfx.push({ kind, x, y, z, vx: o.vx || 0, vy: o.vy || 0, vz: o.vz || 0, t: 0, life: o.life || 1, size: o.size || 0.05, grow: o.grow || 0, col: o.col || '255,255,255',
-      add: !!o.add, grav: o.grav || 0, drag: o.drag || 0, bounce: o.bounce || 0, rot: Math.random() * TAU, spin: o.spin || 0, shape: o.shape || 'dot', a: o.a ?? 1, wob: o.wob || 0, phase: Math.random() * TAU, tink: !!o.tink });
+      add: !!o.add, grav: o.grav || 0, drag: o.drag || 0, bounce: o.bounce || 0, rot: Math.random() * TAU, spin: o.spin || 0, shape: o.shape || 'dot', a: o.a ?? 1, wob: o.wob || 0, phase: Math.random() * TAU, tink: !!o.tink,
+      delay: o.delay || 0, trail: o.trail || 0, fin: o.fin || 0, v: o.v ?? (Math.random() * 4) | 0 });
   }
   function updateVfx(dt) {
     const cnt = {};
     for (const q of L.vfx) {
+      if (q.delay > 0) { q.delay -= dt; continue; } // not started yet
       q.t += dt;
+      if (q.trail && q.t < q.life * 0.75 && Math.random() < dt * q.trail) // burning debris leaves a thread of smoke
+        vfx('smoke', q.x, q.y, q.z, { shape: 'billow', vz: 0.25, life: rand(0.8, 1.4), size: 0.035, grow: 1.6, col: '52,46,44', a: 0.45, wob: 0.15, spin: rand(-1, 1) });
       if (q.drag) { const f = Math.max(0, 1 - q.drag * dt); q.vx *= f; q.vy *= f; if (!q.grav) q.vz *= f; }
       q.vz -= q.grav * dt;
       let nx = q.x + q.vx * dt, ny = q.y + q.vy * dt;
@@ -1654,12 +1674,48 @@
           else { q.vz = 0; q.vx *= 0.7; q.vy *= 0.7; q.spin = 0; }
         }
       }
-      if (!L.def.sky && q.z > L.ceilH) q.t = q.life;
+      if (!L.def.sky && q.z > L.ceilH - 0.12 && q.shape === 'billow') { q.z = L.ceilH - 0.12; if (q.vz > 0) { const sp = q.vz * 0.6, a = Math.random() * TAU; q.vx += Math.cos(a) * sp; q.vy += Math.sin(a) * sp; q.vz = 0; } } // smoke pools and spreads under the ceiling
+      else if (!L.def.sky && q.z > L.ceilH) q.t = q.life;
       if (q.vz < 0 && !q.grav) { const fl = floorAt(q.x, q.y) + 0.01; if (q.z < fl) { q.z = fl; q.vz = 0; q.wob = 0; q.spin = 0; } }
       cnt[q.kind] = (cnt[q.kind] || 0) + 1;
     }
     L.vfx = L.vfx.filter(q => q.t < q.life); L.vfxN = cnt;
   }
+  // fire and smoke puffs: lumpy, turbulent billows (made once), tinted through the stages of a burn
+  const Blast = (() => {
+    const N = 4, SZ = 48, masks = [];
+    for (let v = 0; v < N; v++) {
+      const c = document.createElement('canvas'); c.width = c.height = SZ; const g = c.getContext('2d');
+      for (let i = 0; i < 18; i++) { // overlapping soft lobes make a cauliflower-shaped billow
+        const a = Math.random() * TAU, d = Math.random() * SZ * 0.22, r = SZ * (0.12 + Math.random() * 0.16), x = SZ / 2 + Math.cos(a) * d, y = SZ / 2 + Math.sin(a) * d;
+        const gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, 'rgba(255,255,255,0.9)'); gr.addColorStop(0.6, 'rgba(255,255,255,0.45)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+        g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, TAU); g.fill();
+      }
+      const id = g.getImageData(0, 0, SZ, SZ), dd = id.data, nz = [];
+      for (let i = 0; i < 9 * 9; i++) nz.push(Math.random());
+      const vn = (x, y) => { const fx = x / SZ * 8, fy = y / SZ * 8, ix = fx | 0, iy = fy | 0, tx = fx - ix, ty = fy - iy, q = (a, b) => nz[(b % 9) * 9 + (a % 9)];
+        return (q(ix, iy) * (1 - tx) + q(ix + 1, iy) * tx) * (1 - ty) + (q(ix, iy + 1) * (1 - tx) + q(ix + 1, iy + 1) * tx) * ty; };
+      const al = new Float32Array(SZ * SZ), sh = new Float32Array(SZ * SZ);
+      for (let y = 0; y < SZ; y++) for (let x = 0; x < SZ; x++) {
+        const i = y * SZ + x, n2 = vn(x, y) * 0.65 + vn(x * 2.3 + 7, y * 2.3 + 3) * 0.35;
+        al[i] = Math.min(1, dd[i * 4 + 3] / 255 * (0.55 + n2 * 0.9));
+        sh[i] = 0.55 + 0.45 * n2; // turbulence: brighter and darker swirls inside
+      }
+      masks.push({ al, sh });
+    }
+    const make = (m, fn) => { const c = document.createElement('canvas'); c.width = c.height = SZ; const g = c.getContext('2d'), id = g.createImageData(SZ, SZ), d = id.data;
+      for (let y = 0; y < SZ; y++) for (let x = 0; x < SZ; x++) { const i = y * SZ + x, a = m.al[i]; if (a <= 0.004) continue; const [r, gg, b, aa] = fn(a, m.sh[i], y / SZ); d[i * 4] = r; d[i * 4 + 1] = gg; d[i * 4 + 2] = b; d[i * 4 + 3] = aa; }
+      g.putImageData(id, 0, 0); return c; };
+    // white-hot -> yellow -> orange -> red -> dull soot red
+    const RAMP = [[255, 236, 190], [255, 200, 105], [255, 150, 45], [228, 84, 22], [150, 42, 14], [70, 24, 12]];
+    const fireC = masks.map(m => RAMP.map((col, st) => make(m, (a, sh) => { const hot = Math.min(1, a * 1.3) * sh; return [Math.min(255, col[0] * (0.5 + hot * 0.6)), Math.min(255, col[1] * (0.35 + hot * 0.75)), Math.min(255, col[2] * (0.3 + hot * 0.8)), Math.min(255, a * (st < 4 ? 255 : 200 - st * 18))]; })));
+    const smokeC = new Map();
+    return {
+      fire: (v, st) => fireC[v % N][st],
+      smoke(v, col) { const key = col + v; let c = smokeC.get(key); if (!c) { const rgb = col.split(',').map(Number); c = make(masks[v % N], (a, sh, yy) => { const li = (0.7 + sh * 0.45) * (1.15 - yy * 0.4); return [Math.min(255, rgb[0] * li), Math.min(255, rgb[1] * li), Math.min(255, rgb[2] * li), Math.min(255, a * 235)]; }); smokeC.set(key, c); } return c; },
+    };
+  })();
+  let fxLayer = null, fxCtx = null;
   const dotCache = new Map();
   function softDot(col) {
     let c = dotCache.get(col);
@@ -1674,6 +1730,7 @@
   function drawVfx() {
     const p = player, dirX = Math.cos(p.a), dirY = Math.sin(p.a), list = [];
     for (const q of L.vfx) {
+      if (q.delay > 0) continue;
       const dx = q.x - p.x, dy = q.y - p.y, depth = dx * dirX + dy * dirY;
       if (depth < (q.shape === 'rect' ? 0.28 : 0.15) || depth > 26) continue;
       const sx = (W / 2) * (1 + ((dirX * dy - dirY * dx) / PLANE) / depth);
@@ -1683,14 +1740,30 @@
     }
     list.sort((a, b) => b[0] - a[0]);
     ctx.save(); ctx.beginPath(); ctx.rect(0, 0, W, VIEW_H); ctx.clip();
+    // big soft fire and smoke go onto a low-resolution layer that is blended in once: they look the
+    // same (they're soft anyway) but cost a fraction of the drawing, which keeps phones smooth
+    const fxS = 0.5 * (RES >= 3 ? 1 : 1.4), fw = Math.ceil(W * fxS), fh = Math.ceil(VIEW_H * fxS);
+    if (!fxLayer || fxLayer.width !== fw || fxLayer.height !== fh) { fxLayer = document.createElement('canvas'); fxLayer.width = fw; fxLayer.height = fh; fxCtx = fxLayer.getContext('2d'); }
+    fxCtx.setTransform(1, 0, 0, 1, 0, 0); fxCtx.clearRect(0, 0, fw, fh); fxCtx.setTransform(fxS, 0, 0, fxS, 0, 0); let fxUsed = false;
     for (const [depth, sx, q] of list) {
-      const sy = HOR + (p.eyeZ - q.z) * PROJ / depth, k = q.t / q.life, s = Math.max(0.35, q.size * (1 + q.grow * q.t) * PROJ / depth);
+      const sy = HOR + (p.eyeZ - q.z) * PROJ / depth, k = q.t / q.life;
+      let s = Math.max(0.35, q.size * (1 + q.grow * q.t) * PROJ / depth);
       let a = q.a * Math.min(1, q.t * 10 + (q.shape === 'rect' ? 1 : 0)) * (1 - k * k);
       if (q.kind === 'firefly') a *= 0.35 + 0.65 * Math.max(0, Math.sin(q.t * 4 + q.phase));
+      if (q.fin) a *= Math.min(1, q.t / q.fin);
+      if (s > VIEW_H * 0.4 && (q.shape === 'billow' || q.shape === 'fire')) { a *= VIEW_H * 0.4 / s; s = Math.min(s, VIEW_H * 0.6); } // right in her face: thin it out (and spare the phone)
       if (a <= 0.01) continue;
       ctx.globalAlpha = Math.min(1, a); ctx.globalCompositeOperation = q.add ? 'lighter' : 'source-over';
       if (q.shape === 'rect') { ctx.save(); ctx.translate(sx, sy); ctx.rotate(q.rot); ctx.fillStyle = `rgb(${q.col})`; if (q.kind === 'butterfly') { const f = Math.abs(Math.sin(q.t * 18 + q.phase)); ctx.fillRect(-s * f, -s * 0.5, s * f * 0.9, s); ctx.fillRect(s * 0.1, -s * 0.5, s * f * 0.9, s); } else ctx.fillRect(-s, -s * 0.45, s * 2, s * 0.9); ctx.restore(); }
-      else if (q.shape === 'ring' || q.shape === 'ripple') {
+      else if (q.shape === 'fire' || q.shape === 'billow') { // turbulent fire / smoke puffs
+        const img = q.shape === 'fire' ? Blast.fire(q.v, Math.min(5, (k * 6) | 0)) : Blast.smoke(q.v, q.col);
+        fxCtx.globalAlpha = ctx.globalAlpha; fxCtx.globalCompositeOperation = q.add ? 'lighter' : 'source-over'; fxUsed = true;
+        const cr = Math.cos(q.rot) * fxS, sr = Math.sin(q.rot) * fxS; fxCtx.setTransform(cr, sr, -sr, cr, sx * fxS, sy * fxS); fxCtx.drawImage(img, -s, -s, s * 2, s * 2);
+      } else if (q.shape === 'streak') { // a spark: a short bright line along its motion
+        const tx = q.x - q.vx * 0.035, ty = q.y - q.vy * 0.035, tz = q.z - q.vz * 0.035, ddx = tx - p.x, ddy = ty - p.y, td = Math.max(0.15, ddx * dirX + ddy * dirY);
+        const ex = (W / 2) * (1 + ((dirX * ddy - dirY * ddx) / PLANE) / td), ey = HOR + (p.eyeZ - tz) * PROJ / td;
+        ctx.strokeStyle = `rgb(${q.col})`; ctx.lineWidth = Math.max(0.5, Math.min(2, s * 0.9)); ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex, ey); ctx.stroke();
+      } else if (q.shape === 'ring' || q.shape === 'ripple') {
         const ry = q.shape === 'ring' ? s * 0.35 : s * Math.min(0.6, Math.max(0.05, (p.eyeZ - q.z) / depth));
         ctx.strokeStyle = `rgb(${q.col})`; ctx.lineWidth = q.shape === 'ring' ? Math.max(0.8, s * 0.18) : 0.6; ctx.beginPath(); ctx.ellipse(sx, sy, s, ry, 0, 0, TAU); ctx.stroke();
       } else if (q.shape === 'star') {
@@ -1699,6 +1772,7 @@
       } else ctx.drawImage(softDot(q.col), sx - s, sy - s, s * 2, s * 2);
     }
     ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+    if (fxUsed) ctx.drawImage(fxLayer, 0, 0, W, VIEW_H);
     for (const q of L.popups || []) { // floating score
       const dx = q.x - p.x, dy = q.y - p.y, depth = dx * dirX + dy * dirY; if (depth < 0.4) continue;
       const sx = (W / 2) * (1 + ((dirX * dy - dirY * dx) / PLANE) / depth), sy = HOR + (p.eyeZ - q.z) * PROJ / depth;
@@ -1733,7 +1807,7 @@
     ctx.restore();
   }
   // ---- body zones and dismemberment
-  const HUMANOID = new Set(['zombie', 'manager', 'wally', 'wallyfit', 'wallydeluxe', 'brute', 'yoga', 'coach', 'bridezilla', 'redcoat', 'hypeman', 'guru', 'riot', 'boss', 'wallylive', 'mummy', 'mascot', 'karen']);
+  const HUMANOID = new Set(['zombie', 'manager', 'wally', 'wallyfit', 'wallydeluxe', 'brute', 'yoga', 'coach', 'bridezilla', 'redcoat', 'hypeman', 'guru', 'riot', 'boss', 'wallylive', 'mummy', 'mascot', 'karen', 'cryptobro', 'revealdad', 'spin']);
   const ZONE_BIT = { head: 1, armL: 2, armR: 4, legL: 8, legR: 16 };
   const ZONE_BOX = { head: [0, 0, 1, 0.24], armL: [0, 0.24, 0.3, 0.6], armR: [0.7, 0.24, 1, 0.6], legL: [0, 0.6, 0.5, 1], legR: [0.5, 0.6, 1, 1] };
   function hitZone(e, lateral, zr) {
@@ -1810,13 +1884,48 @@
     vfx('dust', wx, wy, wz, { vx: -c * 0.5, vy: -s * 0.5, vz: 0.15, drag: 2.5, life: 0.7, size: 0.03, grow: 2.2, col: '170,165,155', a: 0.4 });
     for (let i = 0; i < 2; i++) vfx('chip', wx, wy, wz, { shape: 'rect', vx: -c * rand(0.8, 1.8) + rand(-0.6, 0.6), vy: -s * rand(0.8, 1.8) + rand(-0.6, 0.6), vz: rand(0.5, 1.6), grav: 9, bounce: 0.3, spin: rand(-15, 15), life: 1.2, size: 0.008, col: '120,112,105' });
   }
-  function explosionFx(x, y, z, r) {
-    const fl = floorAt(x, y);
-    vfx('ring', x, y, fl + 0.05, { shape: 'ring', life: 0.4, size: 0.15, grow: r * 10, col: '255,190,110', add: true, a: 0.8 });
-    for (let i = 0; i < (FX_HIGH ? 10 : 5); i++) vfx('smoke', x + rand(-0.3, 0.3), y + rand(-0.3, 0.3), z + rand(0, 0.3), { vz: rand(0.35, 0.9), vx: rand(-0.5, 0.5), vy: rand(-0.5, 0.5), drag: 1.2, life: rand(1.6, 3), size: rand(0.12, 0.2), grow: 1.3, col: '58,52,52', a: 0.5, wob: 0.2 });
-    for (let i = 0; i < (FX_HIGH ? 16 : 8); i++) { const a = rand(0, TAU), v = rand(1, 3.5); vfx('ember', x, y, z, { vx: Math.cos(a) * v, vy: Math.sin(a) * v, vz: rand(1, 3), grav: 4, drag: 0.6, bounce: 0.3, life: rand(0.6, 1.5), size: 0.018, col: '255,170,60', add: true }); }
-    for (let i = 0; i < 6; i++) { const a = rand(0, TAU), v = rand(1, 3); vfx('chip', x, y, z, { shape: 'rect', vx: Math.cos(a) * v, vy: Math.sin(a) * v, vz: rand(1.5, 3.5), grav: 9, bounce: 0.35, spin: rand(-14, 14), life: rand(1.5, 2.5), size: 0.022, col: '70,62,58' }); }
-    floorDecal(x, y, Math.min(0.55, r * 0.25), [20, 15, 14], 0.55, 0.4);
+  // A realistic explosion, built in layers like the real thing: a white-hot flash, a fireball of
+  // turbulent puffs that cool from white to orange to sooty red, thick smoke that takes over and rises
+  // in a column, a shockwave ring with a skirt of dust along the floor, streaking sparks, tumbling
+  // (sometimes burning) debris, embers that settle and glow, a lingering light and scorch marks.
+  // tint: optional [fireRGB...] override, e.g. the gender-reveal blast's pink and blue smoke.
+  function explosionFx(x, y, z, r, opt = {}) {
+    const fl = floorAt(x, y), k = clamp(r / 1.9, 0.35, 1.6), hi = FX_HIGH && fxDrop < 2, busy = L.blasts.length, bud = (hi ? 1 : 0.5) * (busy >= 3 ? 0.35 : busy >= 1 ? 0.6 : 1), n = m => Math.max(1, Math.round(m * bud * Math.min(1.3, k)));
+    // several at once (a cluster bomb, a barrel chain): fewer, bigger puffs each, so phones keep up
+    const zc = Math.max(z, fl + 0.12), pd = Math.hypot(x - player.x, y - player.y);
+    vfx('flash', x, y, zc, { life: 0.13, size: 0.35 * k, grow: 9, col: '255,246,225', add: true });
+    for (let i = 0; i < n(16); i++) { // the fireball
+      const a = rand(0, TAU), up = rand(-0.15, 1), v = rand(1.1, 3.3) * k, h = Math.sqrt(1 - Math.min(1, up * up));
+      vfx('fire', x + rand(-0.08, 0.08), y + rand(-0.08, 0.08), zc + rand(0, 0.1), { shape: 'fire', vx: Math.cos(a) * v * h, vy: Math.sin(a) * v * h, vz: (up * 1.6 + 0.4) * k, drag: 4.2, life: rand(0.6, 1.15), size: rand(0.11, 0.21) * k, grow: rand(1.6, 2.5), add: true, a: 0.82, spin: rand(-1.6, 1.6), wob: 0.2 });
+    }
+    const smokeCols = opt.smoke || ['44,39,37', '58,52,49', '33,30,30', '70,64,60'];
+    for (let i = 0; i < n(10); i++) { // smoke billows that take over as the fire burns out, then climb
+      const a = rand(0, TAU), v = rand(0.3, 1.2) * k;
+      vfx('smoke', x + Math.cos(a) * 0.15 * k, y + Math.sin(a) * 0.15 * k, zc + rand(0, 0.25) * k, { shape: 'billow', delay: rand(0.14, 0.45), fin: 0.5, vx: Math.cos(a) * v, vy: Math.sin(a) * v, vz: rand(0.35, 1.0) * (0.7 + k * 0.3), drag: 1.3, life: rand(3, 5.5), size: rand(0.19, 0.32) * k / Math.sqrt(Math.max(0.35, bud)), grow: rand(0.6, 0.95), col: smokeCols[i % smokeCols.length], a: opt.smoke ? 0.85 : 0.72, spin: rand(-0.5, 0.5), wob: 0.3 });
+    }
+    vfx('ring', x, y, fl + 0.03, { shape: 'ring', life: 0.32, size: 0.2, grow: r * 13, col: '255,214,160', add: true, a: 0.75 }); // shockwave
+    for (let i = 0; i < n(14); i++) { // dust skirt racing out along the floor
+      const a = i / n(14) * TAU + rand(-0.2, 0.2), v = rand(2.8, 5) * k;
+      vfx('dust', x + Math.cos(a) * 0.25, y + Math.sin(a) * 0.25, fl + 0.06, { shape: 'billow', vx: Math.cos(a) * v, vy: Math.sin(a) * v, vz: 0.12, drag: 3.6, life: rand(0.9, 1.7), size: 0.08 * k, grow: 2.6, col: '112,100,88', a: 0.42, spin: rand(-1, 1) });
+    }
+    for (let i = 0; i < n(24); i++) { // sparks
+      const a = rand(0, TAU), v = rand(3, 9.5) * k;
+      vfx('spark', x, y, zc, { shape: 'streak', vx: Math.cos(a) * v, vy: Math.sin(a) * v, vz: rand(0.5, 5.5), grav: 7, drag: 0.9, bounce: 0.3, life: rand(0.25, 0.75), size: 0.012, col: i % 3 ? '255,214,130' : '255,250,220', add: true });
+    }
+    for (let i = 0; i < n(10); i++) { // debris; a few chunks burn and trail smoke
+      const a = rand(0, TAU), v = rand(1.2, 4) * k, burn = i < n(10) / 3;
+      vfx('chip', x, y, zc, { shape: 'rect', vx: Math.cos(a) * v, vy: Math.sin(a) * v, vz: rand(1.8, 4.5), grav: 9, bounce: 0.35, spin: rand(-16, 16), life: rand(1.6, 3), size: rand(0.014, 0.03), col: burn ? '255,120,40' : ['62,55,50', '38,34,32', '88,78,70'][i % 3], add: burn, trail: burn ? 22 : 0 });
+    }
+    for (let i = 0; i < n(10); i++) { const a = rand(0, TAU), v = rand(0.6, 2.4) * k; vfx('ember', x, y, zc, { vx: Math.cos(a) * v, vy: Math.sin(a) * v, vz: rand(0.8, 2.6), grav: 4.5, drag: 0.8, bounce: 0.2, life: rand(1.6, 3.4), size: 0.014, col: '255,128,36', add: true }); }
+    // scorch: a dark burn on the floor with a sooty halo, and soot on any wall close by
+    floorDecal(x, y, Math.min(0.85, r * 0.42), [26, 21, 18], 0.4, 0.5);
+    floorDecal(x, y, Math.min(0.6, r * 0.27), [10, 8, 8], 0.75, 0.45);
+    for (let i = 0; i < 8; i++) {
+      const a = i / 8 * TAU, c = Math.cos(a), s2 = Math.sin(a), wh = cast(x, y, c, s2);
+      if (wh.dist < r * 0.85 && L.grid[wh.my * L.mw + wh.mx] !== DOOR) wallDecal(wh.mx, wh.my, wallFace(wh.side, c, s2), wh.u, clamp(zc + rand(0, 0.25), 0.06, L.ceilH - 0.06), 0.3 * k * (1 - wh.dist / r), [14, 11, 10], 0.6, 0.5);
+    }
+    L.blasts.push({ x, y, t: 0, life: 0.9, r });
+    if (pd < 9) lightBoost = Math.max(lightBoost, 0.55 * (1 - pd / 9) * k); // the whole room lights up
   }
   function muzzleFx(w) {
     if (w.type === 'melee') return;
@@ -1966,6 +2075,7 @@
     return false;
   }
 
+  let shotIgnite = 0; // set while the Dragon's Breath shotgun fires: the pellets are on fire
   function hitscan(ox, oy, ang, dmg, range, fromEnemy) {
     const c = Math.cos(ang), s = Math.sin(ang);
     const wh = cast(ox, oy, c, s);
@@ -2004,6 +2114,7 @@
       const hz = (best.fz || 0) + best.z + best.def.h * clamp(bestZr, 0.05, 0.95);
       if (zone === 'torso' || fromEnemy) damageEnemy(best, dmg, fromEnemy || 'player');
       else zoneHit(best, zone, dmg, c, s);
+      if (shotIgnite && !fromEnemy && !best.dead && best.type !== 'barrel' && !best.remote) { best.burnT = Math.max(best.burnT || 0, shotIgnite); best.burnBy = 'player'; }
       const hx = ox + c * (bestA - 0.3), hy = oy + s * (bestA - 0.3);
       if (!best.remote) goreFx(best, hx, hy, hz, c, s);
       spawnFx(best.type === 'barrel' ? 'puff' : 'blood', hx, hy, hz, 0.12, 0.3);
@@ -2033,14 +2144,18 @@
 
   function explode(pr) {
     const d = pr.def;
-    spawnFx(d.fx, pr.x, pr.y, pr.z, d.fxSize, d.bfg ? 0.6 : 0.4);
+    if (!(d.splash && d.fx === 'boom')) spawnFx(d.fx, pr.x, pr.y, pr.z, d.fxSize, d.bfg ? 0.6 : 0.4);
     const pd = Math.hypot(pr.x - player.x, pr.y - player.y);
     if (d.sound) Sfx.play[d.sound] && Sfx.play[d.sound](pd);
     if (d.splash) {
-      explosionFx(pr.x, pr.y, pr.z, d.splash);
+      if (d.fx === 'boom' || d.boomFx) explosionFx(pr.x, pr.y, pr.z, d.splash, d.boomFx || {});
       spawnParts('spark', pr.x, pr.y, pr.z, 10, 3);
       splash(pr.x, pr.y, d.splash, d.splashDmg, pr.owner);
       if (pd < 4) shake = Math.max(shake, (4 - pd) * 2);
+    }
+    if (d.cluster) for (let i = 0; i < d.cluster; i++) { // the mortar bursts into bouncing bomblets
+      const a = i / d.cluster * TAU + rand(-0.3, 0.3), bd = PROJECTILES.bomblet, v = bd.speed * rand(0.5, 1.1);
+      L.projs.push({ kind: 'bomblet', def: bd, x: pr.x - pr.vx * 0.02, y: pr.y - pr.vy * 0.02, z: Math.max(pr.z, floorAt(pr.x, pr.y) + 0.15), vx: Math.cos(a) * v, vy: Math.sin(a) * v, vz: rand(2.5, 4.2), owner: pr.owner, frames: S.proj.bomblet, life: rand(0.55, 1.05), age: 0.2, fireA: pr.fireA });
     }
     if (d.bfg) { killTag = 'bfg'; tagKills = 0; bfgSpray(pr.fireA); if (pr.owner === 'player' && tagKills >= 5) unlock('bfg'); killTag = null; }
   }
@@ -2091,7 +2206,7 @@
       if (e.hp <= 0) {
         e.dead = true;
         setTimeout(() => { // a beat later, like the real thing
-          spawnFx('boom', e.x, e.y, 0.3, 1.1, 0.45); explosionFx(e.x, e.y, 0.3, 1.8);
+          explosionFx(e.x, e.y, 0.3, 1.8);
           Sfx.play.explode(Math.hypot(e.x - player.x, e.y - player.y));
           const prevTag = killTag, prevKills = tagKills; killTag = 'barrel'; tagKills = 0;
           splash(e.x, e.y, 1.8, 120, src);
@@ -2255,7 +2370,14 @@
       if (d.melee && pd < d.radius + 0.95) { hurt(irand(d.melee[0], d.melee[1])); Sfx.play.punch(); return; }
       if (d.attack === 'melee') return;
       const n = d.count || 1;
-      for (let i = 0; i < n; i++) fireProjectile(d.proj, e.x, e.y, z, ang + (i - (n - 1) / 2) * (d.spread || 0), e);
+      for (let i = 0; i < n; i++) {
+        fireProjectile(d.proj, e.x, e.y, z, ang + (i - (n - 1) / 2) * (d.spread || 0), e);
+        const pdef = PROJECTILES[d.proj];
+        if (pdef.grav) { // lobbed: aim the arc so it comes down on her (more or less)
+          const pr = L.projs[L.projs.length - 1], T = clamp(pd / pdef.speed, 0.35, 2.2) * rand(0.9, 1.15);
+          pr.vz = ((p.fz || 0) + 0.2 - z) / T + 0.5 * pdef.grav * T; pr.life = T + rand(0.3, 0.7);
+        }
+      }
     } else if (d.attack === 'live') {
       const enraged = e.hp < d.hp / 2, bz = (e.fz || 0) + 1.1, roll = Math.random();
       if (roll < 0.45) { // spotlight blasts straight at you
@@ -2404,6 +2526,7 @@
         pr.x = nx; pr.y = ny; pr.z += pr.vz * dt;
         const fl = floorAt(pr.x, pr.y) + 0.07;
         if (pr.z < fl) { pr.z = fl; if (pr.vz < -1.2) { pr.vz *= -0.45; Sfx.play.tink(); } else pr.vz = 0; pr.vx *= 0.7; pr.vy *= 0.7; }
+        if (pr.owner !== 'player' && pr.owner !== 'ghost' && Math.hypot(p.x - pr.x, p.y - pr.y) < 0.4 && Math.abs(pr.z - p.eyeZ + 0.3) < 0.7) pr.life = 0;
         if (pr.owner !== 'ghost' && pr.age > 0.15) for (const e of bodies()) if (!e.dead && e !== pr.owner && !(e.remote && pr.owner !== 'player') && Math.hypot(e.x - pr.x, e.y - pr.y) < e.def.radius + 0.1) { pr.life = 0; break; }
         if (Math.random() < dt * 30) vfx('ember', pr.x, pr.y, pr.z + 0.06, { vz: 0.3, life: 0.3, size: 0.012, col: '255,120,200', add: true });
         if (pr.life <= 0) { const prev = killTag; killTag = 'nade'; tagKills = 0; explode(pr); if (pr.owner === 'player' && tagKills >= 3) unlock('grenadier'); killTag = prev; pr.done = true; }
@@ -2453,6 +2576,7 @@
     }
     L.projs = L.projs.filter(pr => !pr.done);
     for (const f of L.fx) f.t += dt;
+    for (const b of L.blasts) b.t += dt; L.blasts = L.blasts.filter(b => b.t < b.life);
     L.fx = L.fx.filter(f => f.t < f.life);
   }
 
@@ -2524,7 +2648,7 @@
   }
   function bestWeapon() {
     const p = player;
-    const order = ['gatling', 'machinegun', 'coffin', 'shotgun', 'hexcaster', 'batbow', 'doomscroll', 'flamethrower', 'pistol', 'rocketlauncher', 'launcher', 'bfg', 'chainsaw', 'knuckles'];
+    const order = ['gatling', 'machinegun', 'dragonbreath', 'coffin', 'shotgun', 'handcannon', 'hexcaster', 'batbow', 'doomscroll', 'flamethrower', 'pistol', 'rocketlauncher', 'launcher', 'bfg', 'chainsaw', 'knuckles'];
     for (const k of order) { const w = weaponByKey(k); if (w && p.weapons[k] && (!w.ammo || p.ammo[w.ammo] >= w.cost)) return k; }
     return 'knuckles';
   }
@@ -2562,7 +2686,11 @@
       else Sfx.play.swing();
     } else if (w.type === 'hitscan') {
       const accurate = w.pellets === 1 && p.refireT <= 0;
+      shotIgnite = w.ignite || 0;
       for (let i = 0; i < w.pellets; i++) hitscan(p.x, p.y, p.a + (accurate ? 0 : rand(-w.spread, w.spread)), irand(w.damage[0], w.damage[1]), 40);
+      shotIgnite = 0;
+      if (w.ignite) { const c = Math.cos(p.a), s2 = Math.sin(p.a); for (let i = 0; i < 14; i++) { const a = p.a + rand(-w.spread, w.spread), v = rand(5, 11); vfx('fire', p.x + c * 0.5, p.y + s2 * 0.5, p.eyeZ - 0.12, { shape: i % 2 ? 'fire' : 'streak', vx: Math.cos(a) * v, vy: Math.sin(a) * v, vz: pitch / PROJ * v + rand(-0.4, 0.6), drag: 2.4, life: rand(0.25, 0.55), size: i % 2 ? 0.05 : 0.014, grow: 3, col: '255,170,60', add: true }); } }
+      if (w.knock) { const c = Math.cos(p.a), s2 = Math.sin(p.a); for (const e of shootables()) { const vx = e.x - p.x, vy = e.y - p.y, along = vx * c + vy * s2; if (along > 0 && along < 6 && Math.abs(vy * c - vx * s2) < e.def.radius + 0.1) shove(e, c, s2, w.knock * (1 - along / 6)); } }
     } else if (w.type === 'zap') {
       // lightning to the first monster you aim at, then hops to the nearest others
       const c = Math.cos(p.a), s = Math.sin(p.a), wall = Math.min(cast(p.x, p.y, c, s).dist, w.range);
@@ -2586,6 +2714,7 @@
       L.bolts.push({ pts, t: 0, life: 0.18 });
     } else if (w.type === 'projectile') {
       fireProjectile(w.projectile, p.x, p.y, p.eyeZ - 0.12, p.a + (w.projSpread ? rand(-w.projSpread, w.projSpread) : 0), 'player');
+      const pd2 = PROJECTILES[w.projectile]; if (pd2.lob) L.projs[L.projs.length - 1].vz = pd2.lob + pitch / PROJ * 7; // lobbed high
     }
     p.refireT = 0.5;
   }
@@ -3928,7 +4057,7 @@
       if (st === 'dead') {
         if (!e.dead) {
           e.dead = true; e.state = 'dead'; e.frame = 0; e.t = 0; player.kills++;
-          if (e.type === 'barrel') { spawnFx('boom', e.x, e.y, 0.3, 1.1, 0.45); Sfx.play.explode(pd); }
+          if (e.type === 'barrel') { explosionFx(e.x, e.y, 0.3, 1.8); Sfx.play.explode(pd); }
           else { Sfx.play[e.def.boss ? 'bossRoar' : 'enemyDie'](pd); spawnParts('drop', e.x, e.y, (e.fz || 0) + e.z + e.def.h * 0.55, 8, 1.6); }
           if (e.def.boss) { L.bossDeadT = 3; msg = e.def.deathMsg || 'THE BOSS IS DOWN!'; msgT = 4; }
         }
@@ -4146,6 +4275,6 @@
     titleImg = photos.title;
     state = 'title';
     // expose a tiny debug hook for testing
-    window.GOFFI = { get state() { return state; }, get player() { return player; }, get level() { return L; }, start: startGame, completeLevel, ach, ACHIEVEMENTS, get quality() { return QUALITY; }, get score() { return runScore; }, highScores, get diff() { return diff; }, set diff(v) { diff = v; }, continueGame, savedGame, setLevel: i => { levelIndex = i; loadLevel(i, null); state = 'playing'; }, get mode() { return mode; }, get jar() { return jar; }, get tipRect() { return kofiName() ? TIP_RECT() : null; }, get menuSel() { return menuSel; }, get song() { return Sfx.song; }, get musicMode() { return musicMode; }, get look() { return LOOK_SENS; }, get touchState() { return touch; }, get menuItems() { return menuItems().map(i => i.id); }, get lamps() { return L && L.lamps; }, get shafts() { return L && L.shafts; }, get pitch() { return pitch; }, set pitch(v) { pitch = v; HOR = VIEW_H / 2 + v; }, get horde() { return horde; }, throwNade, jump: () => { jumpReq = true; }, get paused() { return paused; }, spawn: (t, x, y) => spawnEnemy(t, x, y), startHorde: () => startSolo('horde', DM_LEVELS[0]), get fxHigh() { return FX_HIGH; }, set fxHigh(v) { FX_HIGH = v; }, get fxDrop() { return fxDrop; }, set fxDrop(v) { fxDrop = v; if (v < 4 && renderScale !== 1) { renderScale = 1; fitScreen(); } }, get renderScale() { return renderScale; }, get res() { return RES; }, get online() { return online; }, Net, get menuPage() { return menuPage; }, weeklyInfo, editor, LevelCode, get sharedLvl() { return sharedLvl; }, get levelTime() { return levelTime; }, set levelTime(v) { levelTime = v; } };
+    window.GOFFI = { get state() { return state; }, get player() { return player; }, get level() { return L; }, start: startGame, completeLevel, ach, ACHIEVEMENTS, get quality() { return QUALITY; }, get score() { return runScore; }, highScores, get diff() { return diff; }, set diff(v) { diff = v; }, continueGame, savedGame, setLevel: i => { levelIndex = i; loadLevel(i, null); state = 'playing'; }, get mode() { return mode; }, boom: (x, y, r = 1.9) => { explosionFx(x, y, floorAt(x, y) + 0.3, r); Sfx.play.explode(Math.hypot(x - player.x, y - player.y)); }, get jar() { return jar; }, get tipRect() { return kofiName() ? TIP_RECT() : null; }, get menuSel() { return menuSel; }, get song() { return Sfx.song; }, get musicMode() { return musicMode; }, get look() { return LOOK_SENS; }, get touchState() { return touch; }, get menuItems() { return menuItems().map(i => i.id); }, get lamps() { return L && L.lamps; }, get shafts() { return L && L.shafts; }, get pitch() { return pitch; }, set pitch(v) { pitch = v; HOR = VIEW_H / 2 + v; }, get horde() { return horde; }, throwNade, jump: () => { jumpReq = true; }, get paused() { return paused; }, spawn: (t, x, y) => spawnEnemy(t, x, y), startHorde: () => startSolo('horde', DM_LEVELS[0]), get fxHigh() { return FX_HIGH; }, set fxHigh(v) { FX_HIGH = v; }, get fxDrop() { return fxDrop; }, set fxDrop(v) { fxDrop = v; if (v < 4 && renderScale !== 1) { renderScale = 1; fitScreen(); } }, get renderScale() { return renderScale; }, get res() { return RES; }, get online() { return online; }, Net, get menuPage() { return menuPage; }, weeklyInfo, editor, LevelCode, get sharedLvl() { return sharedLvl; }, get levelTime() { return levelTime; }, set levelTime(v) { levelTime = v; } };
   });
 })();

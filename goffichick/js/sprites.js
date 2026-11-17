@@ -468,6 +468,69 @@ const Sprites = (() => {
       R(g, '#b03050', 28, 23, 8, atk ? 4 : 1.5);
     });
   }
+  // --- CRYPTO BRO: puffer gilet, wraparound shades, slicked hair, a phone showing nothing but green candles.
+  // Flings gold coins (they're worth nothing).
+  function cryptobro(pose) {
+    return mk(64, 88, g => {
+      const step = pose === 1, atk = pose === 2;
+      R(g, '#c8b48a', 24 + (step ? -3 : 2), 56, 8, 26); R(g, '#c8b48a', 34 + (step ? 3 : -2), 56, 8, 26); // chinos
+      R(g, '#f4f4f4', 22 + (step ? -3 : 2), 81, 12, 6); R(g, '#f4f4f4', 33 + (step ? 3 : -2), 81, 12, 6); // white trainers
+      P(g, '#8a8e96', [16, 28, 48, 28, 47, 58, 17, 58]); // grey hoodie
+      P(g, '#1c2a4a', [15, 28, 27, 28, 27, 57, 16, 57]); P(g, '#1c2a4a', [37, 28, 49, 28, 48, 57, 37, 57]); // the gilet
+      for (let y = 33; y < 56; y += 5) { R(g, '#2c3c64', 15, y, 12, 1); R(g, '#2c3c64', 37, y, 12, 1); }
+      R(g, '#ff9a2a', 40, 33, 5, 5); g.fillStyle = '#fff'; g.font = 'bold 5px sans-serif'; g.fillText('B', 41, 37.5); // a little coin badge
+      P(g, '#8a8e96', [10, 30, 16, 30, 15, 52, 9, 51]); E(g, '#e8c0a0', 12, 53, 3, 3);
+      if (atk) { P(g, '#8a8e96', [48, 30, 54, 28, 62, 16, 57, 13]); E(g, '#e8c0a0', 59, 13, 3, 3); E(g, '#ffd23a', 60, 7, 4, 4); E(g, '#fff4b0', 59, 6, 1.5, 1.5); } // flicks a coin
+      else { P(g, '#8a8e96', [48, 30, 54, 30, 54, 48, 48, 48]); R(g, '#141418', 47, 42, 8, 13); R(g, '#0a2a10', 48, 43, 6, 11); for (let i = 0; i < 4; i++) R(g, '#3cff6a', 48.5 + i * 1.5, 52 - i * 2.5, 1, 2 + i); } // phone of green candles
+      E(g, '#e8c0a0', 32, 17, 9, 11);
+      P(g, '#3a2a1a', [22, 14, 24, 5, 34, 2, 42, 6, 43, 12, 38, 9, 30, 9, 24, 13]); E(g, 'rgba(255,255,255,0.35)', 33, 5, 5, 1.2); // slicked-back hair, very shiny
+      P(g, '#0a0a10', [21, 15, 43, 15, 42, 20, 33, 19, 31, 19, 22, 20]); R(g, 'rgba(120,200,255,0.6)', 24, 16, 6, 1); R(g, 'rgba(120,200,255,0.6)', 35, 16, 6, 1); // wraparound shades
+      R(g, '#9a5a50', 28, 24, 8, atk ? 3 : 1.4); E(g, '#c89a80', 32, 27, 6, 2); // smug grin + stubble
+    });
+  }
+  // --- GENDER REVEAL DAD: cap, sunglasses on the cap, polo shirt, cargo shorts, socks with sandals.
+  // Lobs smoke bombs that go off in a cloud of pink and blue.
+  function revealdad(pose) {
+    return mk(68, 90, g => {
+      const step = pose === 1, atk = pose === 2;
+      R(g, '#e8c0a0', 25 + (step ? -3 : 2), 66, 7, 14); R(g, '#e8c0a0', 36 + (step ? 3 : -2), 66, 7, 14); // shins
+      R(g, '#ffffff', 25 + (step ? -3 : 2), 76, 7, 8); R(g, '#ffffff', 36 + (step ? 3 : -2), 76, 7, 8); // socks...
+      R(g, '#6a4a2a', 23 + (step ? -3 : 2), 84, 11, 4); R(g, '#6a4a2a', 34 + (step ? 3 : -2), 84, 11, 4); // ...with sandals
+      P(g, '#9a8a5a', [18, 52, 50, 52, 49, 68, 36, 68, 34, 60, 32, 68, 19, 68]); R(g, '#8a7a4a', 19, 58, 6, 6); R(g, '#8a7a4a', 43, 58, 6, 6); // cargo shorts
+      E(g, '#5aa0e0', 34, 44, 18, 14); P(g, '#5aa0e0', [16, 30, 52, 30, 52, 54, 16, 54]); R(g, '#3a80c0', 28, 30, 12, 4); R(g, '#ffffff', 32, 31, 2, 5); // polo + belly
+      P(g, '#5aa0e0', [10, 32, 17, 31, 16, 50, 10, 50]); E(g, '#e8c0a0', 13, 52, 3.5, 3.5);
+      if (atk) { P(g, '#5aa0e0', [51, 32, 57, 31, 62, 12, 56, 12]); E(g, '#e8c0a0', 59, 11, 3.5, 3.5); E(g, '#ff7ac0', 59, 5, 5, 5); P(g, '#7ab8ff', [59, 0, 64, 5, 59, 10]); R(g, '#ffd23a', 58, -1, 2, 2); } // winding up the throw
+      else { P(g, '#5aa0e0', [51, 32, 57, 31, 58, 50, 52, 50]); E(g, '#e8c0a0', 55, 52, 3.5, 3.5); E(g, '#ff7ac0', 56, 57, 5, 5); P(g, '#7ab8ff', [56, 52, 61, 57, 56, 62]); }
+      E(g, '#e8c0a0', 34, 19, 10, 11); E(g, '#d8a888', 34, 27, 9, 4); // face + jowls
+      P(g, '#2a4a8a', [22, 14, 24, 6, 34, 3, 44, 6, 46, 14]); R(g, '#2a4a8a', 32, 13, 18, 3); // cap with peak
+      R(g, '#141418', 26, 8, 16, 2.5); // sunglasses resting on the cap
+      R(g, '#1a1a1a', 28, 17, 3, 2); R(g, '#1a1a1a', 37, 17, 3, 2); P(g, '#6a4a3a', [27, 24, 41, 24, 40, 26, 28, 26]); // eyes, moustache
+      R(g, '#8a3a3a', 31, 27, 6, atk ? 3 : 1.2);
+    });
+  }
+  // --- SPIN CLASS INSTRUCTOR: headset mic, sweatband, neon lycra, riding her bike straight at you.
+  function spin(pose) {
+    return mk(76, 84, g => {
+      const ph = pose === 1 ? 1 : 0, atk = pose === 2;
+      // the bike: two wheels, a frame, pedals
+      for (const wx of [14, 60]) { E(g, '#141418', wx, 70, 12, 12); E(g, '#3a3a44', wx, 70, 9.5, 9.5); E(g, '#141418', wx, 70, 8, 8); for (let k = 0; k < 4; k++) { const a = k * Math.PI / 4 + ph * 0.4; g.strokeStyle = '#8a8e96'; g.lineWidth = 0.8; g.beginPath(); g.moveTo(wx - Math.cos(a) * 8, 70 - Math.sin(a) * 8); g.lineTo(wx + Math.cos(a) * 8, 70 + Math.sin(a) * 8); g.stroke(); } }
+      g.strokeStyle = '#ff2d95'; g.lineWidth = 3; g.beginPath(); g.moveTo(14, 70); g.lineTo(34, 70); g.lineTo(28, 46); g.lineTo(14, 70); g.moveTo(34, 70); g.lineTo(54, 46); g.lineTo(60, 70); g.moveTo(28, 46); g.lineTo(54, 46); g.stroke();
+      R(g, '#141418', 24, 42, 10, 3); R(g, '#141418', 52, 38, 3, 9); R(g, '#141418', 50, 36, 10, 3); // saddle, stem, bars
+      const pa = ph ? 0.9 : -0.9; // pedalling legs
+      g.strokeStyle = '#1ad8c8'; g.lineWidth = 6; g.lineCap = 'round';
+      g.beginPath(); g.moveTo(30, 44); g.lineTo(38, 56 + pa * 4); g.lineTo(34 + Math.cos(pa) * 5, 70 + Math.sin(pa) * 5); g.stroke();
+      g.strokeStyle = '#14a898'; g.beginPath(); g.moveTo(30, 44); g.lineTo(28, 58 - pa * 4); g.lineTo(34 - Math.cos(pa) * 5, 70 - Math.sin(pa) * 5); g.stroke();
+      P(g, '#ff2d95', [22, 22, 40, 20, 46, 40, 26, 44]); P(g, '#1ad8c8', [27, 24, 37, 23, 40, 34, 30, 36]); // crop top
+      g.strokeStyle = '#e8b898'; g.lineWidth = 4; g.beginPath(); g.moveTo(38, 24); g.lineTo(atk ? 60 : 50, atk ? 18 : 30); g.lineTo(atk ? 66 : 54, atk ? 14 : 37); g.stroke(); // arm to the bars (or a fist pump)
+      if (atk) E(g, '#e8b898', 66, 13, 3.5, 3.5);
+      E(g, '#e8b898', 40, 12, 8, 9);
+      P(g, '#f2c040', [32, 10, 36, 3, 46, 3, 49, 10, 44, 7, 35, 8]); P(g, '#f2c040', [32, 8, 22, 4, 18, 12, 26, 12]); // ponytail flying back
+      R(g, '#ff2d95', 32, 6, 17, 3); // sweatband
+      g.strokeStyle = '#141418'; g.lineWidth = 1; g.beginPath(); g.moveTo(34, 12); g.quadraticCurveTo(36, 20, 44, 18); g.stroke(); E(g, '#141418', 44, 18, 1.4, 1.4); // headset mic
+      R(g, '#1a1a1a', 40, 11, 2.5, 2); R(g, '#1a1a1a', 45, 11, 2.5, 2);
+      R(g, '#b03050', 41, 16, 6, atk ? 3.5 : 1.5);
+    });
+  }
   // Recolour every frame of an enemy set: fn(r, g, b) -> [r, g, b]
   function recolorSet(set, fn) {
     const one = spr => {
@@ -540,6 +603,9 @@ const Sprites = (() => {
     E_.mascot = enemySet(mascot(0), mascot(1), mascot(2));
     E_.drone = enemySet(drone(0), drone(1), drone(2)); E_.drone.walkFps = 14;
     E_.karen = enemySet(karen(0), karen(1), karen(2));
+    E_.cryptobro = enemySet(cryptobro(0), cryptobro(1), cryptobro(2));
+    E_.revealdad = enemySet(revealdad(0), revealdad(1), revealdad(2));
+    E_.spin = enemySet(spin(0), spin(1), spin(2)); E_.spin.walkFps = 10;
     // WALLY.EXE: the boss photo as a glitching green-and-cyan hologram
     E_.wallyexe = recolorSet(E_.boss, (r, g, b) => { const v = lum(r, g, b); return [v * 0.25, Math.min(255, v * 1.15 + 30), Math.min(255, v * 0.9 + 70)]; });
     E_.wallyexe.walkFps = E_.boss.walkFps;
@@ -557,6 +623,10 @@ const Sprites = (() => {
       stone: [mk(14, 14, g => { glow(g, 7, 7, 7, 'rgba(255,140,40,0.9)', 'rgba(255,60,0,0)'); E(g, '#2a2420', 7, 7, 4.5, 4); E(g, '#4a403a', 6, 6, 2, 1.5); })],
       complaint: [0, 1].map(k => mk(18, 14, g => { R(g, '#fff4f0', 1, 2, 16, 11); P(g, '#e0d0c8', [1, 2, 9, 8, 17, 2]); g.fillStyle = k ? '#ff1a2a' : '#c00010'; g.font = 'bold 9px sans-serif'; g.textAlign = 'center'; g.fillText('!', 9, 12); })),
       pixel: [0, 1].map(k => mk(12, 12, g => { glow(g, 6, 6, 6, k ? 'rgba(60,255,170,0.9)' : 'rgba(60,200,255,0.9)', 'rgba(0,80,80,0)'); R(g, k ? '#7affc0' : '#7ae0ff', 3, 3, 6, 6); R(g, '#ffffff', 4, 4, 2, 2); })),
+      coin: [0, 1, 2].map(k => mk(12, 12, g => { const w = [5, 2.2, 4][k]; glow(g, 6, 6, 6, 'rgba(255,220,90,0.7)', 'rgba(255,160,0,0)'); E(g, '#b8860b', 6, 6, w, 5); E(g, '#ffd23a', 6, 6, w * 0.8, 4.2); if (k !== 1) { g.fillStyle = '#b8860b'; g.font = 'bold 6px sans-serif'; g.textAlign = 'center'; g.fillText('B', 6, 8); } })),
+      reveal: [0, 1].map(k => mk(14, 16, g => { E(g, '#ff7ac0', 7, 9, 6, 6); P(g, '#7ab8ff', [7, 3, 13, 9, 7, 15]); R(g, '#3a3a40', 6, 1, 2, 3); E(g, k ? '#ffe070' : '#ff8a20', 7, 1, 1.6, 1.6); E(g, '#ffffff', 5, 7, 1, 1); })),
+      mortar: [0, 1].map(k => mk(16, 16, g => { glow(g, 8, 8, 8, k ? 'rgba(120,255,120,0.5)' : 'rgba(90,220,90,0.4)', 'rgba(0,80,0,0)'); E(g, '#1a1a1e', 8, 9, 5.5, 5); R(g, '#2a2a30', 3, 5, 10, 2); E(g, '#6aff6a', 8, 5.5, 4, 1.2); E(g, '#ffffff', 6, 8, 1, 1); })),
+      bomblet: [0, 1].map(k => mk(10, 10, g => { glow(g, 5, 5, 5, 'rgba(120,255,120,0.6)', 'rgba(0,80,0,0)'); E(g, '#2a2a30', 5, 6, 2.6, 2.6); E(g, k ? '#c0ff9a' : '#6aff6a', 5, 3.5, 1.4, 1.4); })),
       nail: [mk(14, 6, g => { R(g, '#d8dbe2', 1, 2, 11, 2); R(g, '#8a8e96', 11, 1, 2, 4); R(g, '#ffffff', 2, 2, 8, 1); })],
       vinyl: [0, 1, 2].map(k => mk(20, 20, g => { E(g, '#08080a', 10, 10, 9, 9); g.strokeStyle = 'rgba(255,255,255,0.18)'; g.lineWidth = 0.6; for (let r = 4; r < 9; r += 1.6) { g.beginPath(); g.arc(10, 10, r, k * 2, k * 2 + 2.4); g.stroke(); } E(g, '#ff4fb8', 10, 10, 3, 3); E(g, '#000', 10, 10, 0.8, 0.8); })),
       grenade: [0, 1].map(k => mk(12, 12, g => { E(g, '#141018', 6, 7, 4.5, 4.5); R(g, '#3a3440', 4.5, 1, 3, 3); E(g, k ? '#ffe070' : '#ff4fb8', 6, 1, 1.4, 1.4); E(g, '#ffffff', 4, 5, 0.9, 0.9); })),
@@ -690,6 +760,9 @@ const Sprites = (() => {
       wBat: mk(44, 14, g => { P(g, '#c8955a', [2, 6, 30, 2, 42, 4, 42, 10, 30, 12, 2, 8]); for (let i = 0; i < 5; i++) R(g, '#d8dbe2', 16 + i * 5, i % 2 ? 1 : 11, 1, 3); R(g, '#ff4fb8', 2, 5, 8, 4); }),
       wNail: mk(36, 24, g => { P(g, '#f2c200', [2, 20, 4, 6, 28, 6, 30, 12, 12, 14, 10, 20]); R(g, '#141416', 2, 16, 10, 6); R(g, '#8a8e96', 28, 7, 7, 4); R(g, '#c9ccd2', 14, 2, 10, 4); }),
       wVinyl: mk(32, 24, g => { R(g, '#1a1a20', 2, 10, 28, 12); E(g, '#08080a', 16, 9, 12, 6); E(g, '#ff4fb8', 16, 9, 3, 1.5); }),
+      wCannon: mk(34, 22, g => { R(g, '#c9ccd2', 10, 4, 22, 5); R(g, '#8a8e96', 10, 8, 22, 1); E(g, '#9a9ea6', 12, 10, 6, 5); R(g, '#3a2418', 4, 10, 8, 11); R(g, '#5a3a24', 5, 11, 3, 9); R(g, '#e8eaf0', 12, 5, 18, 1); }),
+      wDragon: mk(38, 18, g => { R(g, '#4a2a18', 2, 8, 10, 7); R(g, '#2a2a30', 12, 6, 24, 3); R(g, '#2a2a30', 12, 9, 22, 3); R(g, '#ff6a1a', 33, 6, 3, 6); E(g, 'rgba(255,170,60,0.9)', 36, 9, 2, 3); R(g, '#6a3a20', 16, 12, 10, 3); }),
+      wMortar: mk(30, 26, g => { E(g, '#1a1a1e', 15, 17, 12, 8); R(g, '#2a2a30', 4, 9, 22, 4); E(g, '#6aff6a', 15, 10, 9, 2); E(g, 'rgba(160,255,140,0.8)', 12, 6, 2, 2); E(g, 'rgba(160,255,140,0.6)', 18, 3, 1.5, 1.5); R(g, '#3a3a40', 7, 22, 3, 4); R(g, '#3a3a40', 20, 22, 3, 4); }),
       wLaser: mk(14, 30, g => { R(g, '#d8b02a', 2, 14, 10, 15); R(g, '#141014', 2, 12, 10, 3); P(g, '#ff1a5a', [3, 12, 3, 4, 8, 1, 11, 3, 11, 12]); }),
       wScroll: mk(18, 28, g => { R(g, '#1a1a20', 1, 1, 16, 26); R(g, '#8a2be2', 3, 3, 12, 22); for (let y = 5; y < 23; y += 4) R(g, 'rgba(255,255,255,0.7)', 5, y, 8, 1); }),
       boltsAmmo: mk(22, 16, g => { for (const x of [4, 9, 14]) { R(g, '#c8c8d0', x, 3, 2, 12); P(g, '#e8e8f0', [x + 1, 0, x - 2, 4, x + 4, 4]); } R(g, '#6b3a1e', 1, 12, 20, 4); }),

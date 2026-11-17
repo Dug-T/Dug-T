@@ -590,6 +590,77 @@ const WEAPONS = [
     },
   },
   {
+    // a huge silver-plated revolver: slow, deafening, and it knocks monsters off their feet
+    slot: 2, key: 'handcannon', name: 'SILVER HAND CANNON', ammo: 'bullets', cost: 3, cooldown: 0.8,
+    type: 'hitscan', damage: [48, 78], pellets: 1, spread: 0.008, sound: 'handcannon', kick: 5, knock: 2.2,
+    draw(g, cx, by, phase, flash) {
+      const { lin, poly, ell, rr, tube, metal, flash: fl, gripHand } = WDraw;
+      const rec = phase > 0 ? Math.sin(Math.min(1, phase * 1.2) * Math.PI) * 18 : 0, tilt = rec * 0.5;
+      const x = cx + 12, yb = by - 64 + rec, yf = by - 118 + rec + tilt;
+      // walnut grip with silver butt cap
+      poly(g, lin(g, x - 16, 0, x + 16, 0, [[0, '#2a1408'], [0.4, '#7a4220'], [0.6, '#a85c2c'], [1, '#2a1408']]), [x - 13, yb + 22, x + 13, yb + 22, x + 18, by + 22, x - 18, by + 22]);
+      g.strokeStyle = 'rgba(0,0,0,0.35)'; g.lineWidth = 0.6; for (let i = 0; i < 6; i++) { g.beginPath(); g.moveTo(x - 10 + i * 4, yb + 26); g.lineTo(x - 13 + i * 5, by + 18); g.stroke(); }
+      // the cylinder, seen from behind, with chambers
+      ell(g, metal(g, x - 20, x + 20, 'steel'), x, yb + 10, 20, 14);
+      for (let k = 0; k < 6; k++) { const a = k / 6 * Math.PI * 2 + (phase > 0 ? Math.min(1, phase * 2) * Math.PI / 3 : 0); ell(g, '#1a1a1e', x + Math.cos(a) * 11, yb + 10 + Math.sin(a) * 7.5, 4, 3); ell(g, WDraw.metal(g, x - 3, x + 3, 'brass'), x + Math.cos(a) * 11, yb + 10 + Math.sin(a) * 7.5, 2.4, 1.8); }
+      ell(g, '#8a8e96', x, yb + 10, 4, 3);
+      // the long ribbed barrel
+      tube(g, x, yb - 2, 26, yf, 16, 'steel');
+      poly(g, metal(g, x - 4, x + 4, 'steel'), [x - 4, yb - 6, x - 2.5, yf - 6, x + 2.5, yf - 6, x + 4, yb - 6]); // the rib on top
+      ell(g, '#050506', x, yf + 1, 5, 2.6);
+      g.strokeStyle = 'rgba(80,40,120,0.55)'; g.lineWidth = 0.8; g.beginPath(); g.moveTo(x - 8, yb - 12); g.bezierCurveTo(x - 4, yb - 20, x + 4, yb - 26, x + 6, yb - 34); g.stroke(); // engraved vine
+      rr(g, '#c9ccd2', x - 2, yb - 12, 4, 6, 1); // hammer
+      if (flash) { fl(g, x, yf - 8, 30); g.save(); g.globalCompositeOperation = 'lighter'; ell(g, 'rgba(255,200,120,0.35)', x, yf - 4, 50, 22); g.restore(); }
+      gripHand(g, x + 2, yb + 40, 1.12, 1);
+    },
+  },
+  {
+    // incendiary shells: a cone of burning pellets that sets everything it hits on fire
+    slot: 3, key: 'dragonbreath', name: "DRAGON'S BREATH SHOTGUN", ammo: 'shells', cost: 1, cooldown: 1.05,
+    type: 'hitscan', damage: [4, 10], pellets: 8, spread: 0.12, sound: 'shotgun', after: 'shotgunPump', kick: 3.5, ignite: 3,
+    draw(g, cx, by, phase, flash, t) {
+      const { lin, rad, poly, ell, rr, tube, bore, metal, flash: fl, gripHand, supportHand, supportFingers } = WDraw;
+      const rec = phase > 0 ? Math.sin(Math.min(1, phase * 2.2) * Math.PI) * 14 : 0;
+      const pump = phase > 0.3 && phase < 0.9 ? Math.sin((phase - 0.3) / 0.6 * Math.PI) * 20 : 0;
+      const x = cx + 4, yb = by - 52 + rec, yf = by - 126 + rec;
+      supportHand(g, x, by - 76 + rec + pump, 38, 1.05);
+      poly(g, metal(g, x - 24, x + 24, 'gun'), [x - 19, yb, x + 19, yb, x + 25, by + 20, x - 25, by + 20]);
+      for (let i = 0; i < 3; i++) poly(g, `rgba(255,${90 + i * 40},20,0.85)`, [x - 14 + i * 9, by + 4, x - 10 + i * 9, yb + 12, x - 6 + i * 9, by + 4]); // painted flames on the receiver
+      tube(g, x, yb, 22, yf + 6, 12, 'gun'); tube(g, x, yb + 2, 15, yf, 8, 'gun');
+      bore(g, x, yf, 8, 'gun');
+      // the muzzle glows from the last shot, cooling down
+      const heat = Math.max(0, 1 - phase * 1.2) * (phase > 0 ? 1 : 0.25 + 0.1 * Math.sin((t || 0) * 3));
+      g.save(); g.globalCompositeOperation = 'lighter'; ell(g, rad(g, x, yf, 14, [[0, `rgba(255,170,60,${0.9 * heat})`], [1, 'rgba(255,60,0,0)']]), x, yf, 14, 8); g.restore();
+      const py0 = by - 74 + rec + pump, py1 = by - 100 + rec + pump;
+      poly(g, lin(g, x - 22, 0, x + 22, 0, [[0, '#2a1408'], [0.5, '#7a4220'], [1, '#2a1408']]), [x - 22, py0, x - 16, py1, x + 16, py1, x + 22, py0]);
+      supportFingers(g, x, py0 - 4, 40, 1.05);
+      if (flash) { fl(g, x, yf - 8, 30); g.save(); g.globalCompositeOperation = 'lighter'; ell(g, rad(g, x, yf - 30, 60, [[0, 'rgba(255,220,120,0.9)'], [0.4, 'rgba(255,110,20,0.6)'], [1, 'rgba(255,40,0,0)']]), x, yf - 30, 60, 40); g.restore(); }
+      gripHand(g, x + 22, by - 6, 1.1, 1);
+    },
+  },
+  {
+    // a witch's cauldron on a stand: lobs a bubbling pot that bursts into five bouncing bomblets
+    slot: 5, key: 'mortar', name: 'CAULDRON MORTAR', ammo: 'rockets', cost: 2, cooldown: 1.2,
+    type: 'projectile', projectile: 'mortar', sound: 'launcher', kick: 4,
+    draw(g, cx, by, phase, flash, t) {
+      const { lin, rad, poly, ell, rr, metal, gripHand, supportHand } = WDraw;
+      const rec = phase > 0 ? Math.sin(Math.min(1, phase * 1.5) * Math.PI) * 16 : 0, tt = t || 0;
+      const x = cx + 4, y = by - 40 + rec;
+      // iron cauldron body
+      ell(g, lin(g, x - 60, 0, x + 60, 0, [[0, '#08080a'], [0.3, '#2a2a30'], [0.45, '#55565e'], [0.6, '#2a2a30'], [1, '#08080a']]), x, y, 58, 44);
+      for (const sx of [-1, 1]) { g.strokeStyle = '#3a3a40'; g.lineWidth = 5; g.beginPath(); g.arc(x + sx * 58, y - 18, 10, sx > 0 ? -1.4 : 1.7, sx > 0 ? 1.4 : 4.5); g.stroke(); } // handles
+      // the rim and the bubbling green brew
+      ell(g, metal(g, x - 56, x + 56, 'gun'), x, y - 38, 56, 14);
+      ell(g, rad(g, x, y - 38, 50, [[0, '#d0ffb0'], [0.4, '#6aff6a'], [1, '#147a20']]), x, y - 38, 48, 10);
+      for (let i = 0; i < 6; i++) { const bx = x - 36 + ((i * 17 + tt * 22) % 72), bp = (tt * 2 + i * 0.7) % 1; ell(g, `rgba(220,255,200,${0.8 - bp * 0.6})`, bx, y - 38 - bp * 4, 2 + bp * 4, 1.4 + bp * 2); }
+      g.save(); g.globalCompositeOperation = 'lighter'; ell(g, rad(g, x, y - 46, 70, [[0, `rgba(120,255,120,${flash ? 0.7 : 0.25})`], [1, 'rgba(0,120,0,0)']]), x, y - 46, 70, 34); g.restore();
+      // steam curling off
+      for (let i = 0; i < 3; i++) { const k = (tt * 0.6 + i / 3) % 1; ell(g, `rgba(200,255,200,${0.25 * (1 - k)})`, x - 20 + i * 20 + Math.sin(tt * 2 + i) * 6, y - 52 - k * 50, 8 + k * 12, 5 + k * 8); }
+      supportHand(g, x - 40, y - 4, 30, 1.05);
+      gripHand(g, x + 52, by - 4, 1.1, 1);
+    },
+  },
+  {
     slot: 7, key: 'bfg', name: "B.F.G. - BIG FREAKIN' GLOOM", ammo: 'souls', cost: 40, cooldown: 1.6,
     type: 'projectile', projectile: 'gloom', sound: 'bfgBoom', windup: 0.7, windupSound: 'bfgCharge', kick: 7,
     draw(g, cx, by, phase, flash, t) {

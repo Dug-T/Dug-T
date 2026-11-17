@@ -304,6 +304,17 @@ Tapping or clicking it opens your Ko-fi page in a new tab. The page name is `GOF
 | `€` | **Redcoat Entertainer** | Juggles three balls at you at once, and sidesteps your shots |
 | `§` | **WALLY LIVE!** | Final boss: a giant sequinned TV-presenter Wally. Spotlight blasts, rings of applause, and he calls in Wally Man FIT backing dancers |
 
+### Newest enemies
+
+| Map letter | Enemy | Attack |
+|---|---|---|
+| `¢` | **Crypto Bro** | Puffer gilet and wraparound shades. Flicks three gold coins at once ("To the MOON!") and sidesteps your shots |
+| `Ð` | **Gender Reveal Dad** | Socks and sandals. Lobs smoke bombs in an arc that land on you and go off in a cloud of pink and blue |
+| `®` | **Spin Class Instructor** | Rides her bike straight at you, faster when close, and punches ("FIVE MORE MINUTES!") |
+
+They appear from Episode 1's penthouse onwards and in Horde mode (Crypto Bro from wave 5, Spin Instructor from wave 7,
+Reveal Dad from wave 8).
+
 ## Weapons
 
 Goffichick starts with **every weapon**: press 1-8 (press a number twice to swap between two weapons in the
@@ -326,6 +337,24 @@ same slot), Q, or scroll. Weapon pickups on the maps give ammo for that weapon.
 | 9 | **Bat-Bow** | bolts | Crossbow firing silver bat bolts that pierce every monster in a line |
 | 9 | **Doom Scroll** | 2 souls | A phone that zaps a monster with lightning, which jumps to 2 more nearby |
 | 7 | **B.F.G. (Big Freakin' Gloom)** | 40 souls | Charges, then fires a gloom orb. On impact it also hits everything in front of you |
+| 2 | **Silver Hand Cannon** | 3 bullets | A huge engraved revolver: slow, deafening, massive damage, and it knocks monsters back. Map pickup `Ħ` |
+| 3 | **Dragon's Breath Shotgun** | shells | Incendiary shells: a cone of burning pellets that sets everything it hits on fire. Map pickup `Ď` |
+| 5 | **Cauldron Mortar** | 2 rockets | Lobs a bubbling cauldron pot high over cover; it bursts into five bouncing bomblets. Map pickup `Ç` |
+
+### Explosions
+
+Explosions are built in layers, like the real thing:
+- a white-hot flash that lights up the whole room;
+- a fireball of turbulent puffs that cools from white to orange to sooty red;
+- thick smoke that takes over and climbs, then pools and spreads under the ceiling;
+- a shockwave ring with dust racing out along the floor;
+- streaking sparks, and tumbling debris, some of it burning and trailing smoke;
+- embers that settle and glow;
+- a scorch mark on the floor, and soot on any nearby walls.
+
+The sound has a sharp crack, a deep thump, a long rumble and debris pattering down. It's muffled when the explosion
+is far away. Several explosions at once share a particle budget, and the soft fire and smoke are drawn at a lower
+resolution, so phones stay smooth.
 
 ## Music
 

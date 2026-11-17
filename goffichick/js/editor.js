@@ -85,8 +85,8 @@ function makeEditor(api) {
   const PALETTE = {
     WALL: ['#', '%', 'W', 'O', 'G', 'C', 'M', 'Y', 'H', 'P', 'S', 'I', '|', ':', ';', '_', 'ç', 'ñ', 'æ', 'å', 'ü'],
     DOOR: ['>', 'X', 'D', '$', 'E', 'B', 'Q', '~', '1', '2', '@'],
-    MON: ['z', 'm', 'w', 'b', 'i', 'h', 'g', 'l', 'x', 'f', 'd', '?', '€', '&', '(', ')', '[', ']', 'µ', 'ß', 'Ø', '¶', 'K', 'J', '§', 'Ω', 'y'],
-    ITEM: ['+', '*', 'o', 'a', 'A', 'c', 's', 'r', 'u', 'n', 'e', 't', 'V', 'N', 'Z', 'U', '3', '4', '5', '6', '7', '8', '9', '0', 'F', '!', '=', '/', '"', "'", '\\', ',', '{', '}', '-'],
+    MON: ['z', 'm', 'w', 'b', 'i', 'h', 'g', 'l', 'x', 'f', 'd', '?', '€', '&', '(', ')', '[', ']', 'µ', 'ß', 'Ø', '¶', '¢', 'Ð', '®', 'K', 'J', '§', 'Ω', 'y'],
+    ITEM: ['+', '*', 'o', 'a', 'A', 'c', 's', 'r', 'u', 'n', 'e', 't', 'V', 'N', 'Z', 'U', '3', '4', '5', '6', '7', '8', '9', '0', 'F', '!', '=', '/', '"', "'", '\\', 'Ħ', 'Ď', 'Ç', ',', '{', '}', '-'],
     DECO: ['T', 'R', 'L', 'p', 'q', 'k', 'j'],
   };
   const NAMES = {
@@ -102,6 +102,7 @@ function makeEditor(api) {
     'µ': 'Spa Mummy', 'ß': 'Happyland Mascot', 'Ø': 'Selfie Drone', '¶': 'Karen (calls managers)', 'Ω': 'BOSS: WALLY.EXE',
     '&': 'Hype Man (speeds up others)', '(': 'Selfie Ghost (teleports)', ')': 'Party Popper (explodes)', '[': 'Wellness Guru (heals others)', ']': 'Riot Shield Manager',
     ',': 'Black rose (collectible)', '{': 'Double Gloom', '}': 'Bat Wings', '-': 'Bat grenades',
+    '¢': 'Crypto Bro', 'Ð': 'Gender Reveal Dad (lobs bombs)', '®': 'Spin Class Instructor (charges)', 'Ħ': 'Silver hand cannon', 'Ď': "Dragon's Breath shotgun", 'Ç': 'Cauldron mortar',
     '/': 'Spiked cricket bat', '"': 'Nail gun', "'": 'Vinyl launcher', '\\': 'Lipstick laser',
     F: 'Flamethrower', '!': 'Bat-bow', '=': 'Doom Scroll', T: 'Candelabra', R: 'Tombstone', L: 'Torch', p: 'Plant', q: 'Water cooler', k: 'Skulls', j: 'Pool of blood',
   };
