@@ -195,6 +195,9 @@ const Sfx = (() => {
       sections: [
         { bars: 8, chords: [M(0), MAJ(8), MAJ(3), MAJ(10), M(5), M(0), MAJ(7), MAJ(7)], drums: 0, bass: 'hold', pad: 'organ', arp: 'slow', lead: 0, seed: 3 },
         { bars: 8, chords: [M(0), M(5), MAJ(10), MAJ(3), MAJ(8), M(5), MAJ(7), MAJ(7)], drums: 1, bass: 'hold', pad: 'organ', arp: 'slow', lead: 1, seed: 8 },
+        { bars: 8, chords: [M(0), MAJ(8), MAJ(3), MAJ(10), M(0), MAJ(8), MAJ(1), MAJ(7)], drums: 2, bass: 'walk', pad: 'pad', arp: 'up8', lead: 1, seed: 11 },
+        { bars: 8, chords: [M(5), M(0), MAJ(8), MAJ(7), M(5), MAJ(3), MAJ(1), MAJ(7)], drums: 3, bass: 'pulse', pad: 'organ', arp: 'broken16', lead: 2, seed: 14 },
+        { bars: 4, chords: [M(0), MAJ(8), MAJ(7), MAJ(7)], drums: 0, bass: 'hold', pad: 'organ', arp: 'slow', lead: 1, seed: 17 },
       ],
     },
     { // 1: E1M1 - "Cemetery Gates" (gothic rock)
@@ -329,7 +332,118 @@ const Sfx = (() => {
         { bars: 8, chords: [M(0), MAJ(1), M(0), MAJ(1), M(5), MAJ(8), MAJ(7), MAJ(7)], drums: 3, bass: 'sync', pad: 'organ', arp: 'up16', lead: 2, seed: 201 },
       ],
     },
+    { // 13: shuffle - "Black Lipstick Boogie"
+      name: 'Black Lipstick Boogie', key: 43, bpm: 140,
+      sections: [
+        { bars: 8, chords: [M(0), MAJ(8), MAJ(3), MAJ(10), M(0), MAJ(8), MAJ(3), MAJ(10)], drums: 1, bass: 'walk', pad: 'pad', arp: 'up8', lead: 1, seed: 430 },
+        { bars: 8, chords: [M(0), M(5), MAJ(8), MAJ(7), M(0), M(5), MAJ(8), MAJ(7)], drums: 2, bass: 'pulse', pad: 'organ', arp: 'up16', lead: 2, seed: 431 },
+        { bars: 8, chords: [M(5), MAJ(10), MAJ(3), MAJ(8), M(5), MAJ(10), MAJ(3), MAJ(8)], drums: 3, bass: 'sync', pad: 'pad', arp: 'broken16', lead: 2, seed: 432 },
+        { bars: 8, chords: [M(0), M(5), MAJ(8), MAJ(7), M(0), M(5), MAJ(8), MAJ(7)], drums: 2, bass: 'pulse', pad: 'organ', arp: 'up16', lead: 2, seed: 433 },
+        { bars: 4, chords: [M(0), MAJ(8), MAJ(7), MAJ(7)], drums: 0, bass: 'hold', pad: 'organ', arp: 'slow', lead: 1, seed: 434 },
+        { bars: 8, chords: [M(5), MAJ(10), MAJ(3), MAJ(8), M(5), MAJ(10), MAJ(3), MAJ(8)], drums: 3, bass: 'sync', pad: 'pad', arp: 'broken16', lead: 2, seed: 435 },
+      ],
+    },
+    { // 14: shuffle - "Eyeliner Overdrive"
+      name: 'Eyeliner Overdrive', key: 40, bpm: 176,
+      sections: [
+        { bars: 8, chords: [M(0), M(0), MAJ(8), MAJ(10), M(0), M(0), MAJ(8), MAJ(10)], drums: 2, bass: 'pulse', pad: 'pad', arp: 'up16', lead: 2, seed: 440 },
+        { bars: 8, chords: [M(0), MAJ(1), M(0), MAJ(1), M(0), MAJ(1), M(0), MAJ(1)], drums: 3, bass: 'sync', pad: 'organ', arp: 'updown16', lead: 2, seed: 441 },
+        { bars: 8, chords: [M(5), MAJ(8), MAJ(7), MAJ(7), M(5), MAJ(8), MAJ(7), MAJ(7)], drums: 3, bass: 'pulse', pad: 'pad', arp: 'up16', lead: 2, seed: 442 },
+        { bars: 8, chords: [M(0), MAJ(1), M(0), MAJ(1), M(0), MAJ(1), M(0), MAJ(1)], drums: 3, bass: 'sync', pad: 'organ', arp: 'updown16', lead: 2, seed: 443 },
+        { bars: 4, chords: [MAJ(8), MAJ(10), MAJ(3), MAJ(7)], drums: 3, bass: 'walk', pad: 'organ', arp: 'broken16', lead: 2, seed: 444 },
+        { bars: 8, chords: [M(5), MAJ(8), MAJ(7), MAJ(7), M(5), MAJ(8), MAJ(7), MAJ(7)], drums: 3, bass: 'pulse', pad: 'pad', arp: 'up16', lead: 2, seed: 445 },
+      ],
+    },
+    { // 15: shuffle - "Funeral For A Smiley"
+      name: 'Funeral For A Smiley', key: 38, bpm: 72,
+      sections: [
+        { bars: 8, chords: [M(0), MAJ(8), MAJ(3), MAJ(7), M(0), MAJ(8), MAJ(3), MAJ(7)], drums: 0, bass: 'hold', pad: 'organ', arp: 'slow', lead: 1, seed: 450 },
+        { bars: 8, chords: [M(0), M(5), MAJ(10), MAJ(3), M(0), M(5), MAJ(10), MAJ(3)], drums: 1, bass: 'hold', pad: 'organ', arp: 'slow', lead: 1, seed: 451 },
+        { bars: 8, chords: [MAJ(8), MAJ(3), MAJ(1), MAJ(7), MAJ(8), MAJ(3), MAJ(1), MAJ(7)], drums: 1, bass: 'walk', pad: 'pad', arp: 'up8', lead: 1, seed: 452 },
+        { bars: 8, chords: [M(0), M(5), MAJ(10), MAJ(3), M(0), M(5), MAJ(10), MAJ(3)], drums: 1, bass: 'hold', pad: 'organ', arp: 'slow', lead: 1, seed: 453 },
+        { bars: 4, chords: [M(0), M(5), MAJ(7), MAJ(7)], drums: 0, bass: 'hold', pad: 'organ', arp: 'slow', lead: 0, seed: 454 },
+        { bars: 8, chords: [MAJ(8), MAJ(3), MAJ(1), MAJ(7), MAJ(8), MAJ(3), MAJ(1), MAJ(7)], drums: 1, bass: 'walk', pad: 'pad', arp: 'up8', lead: 1, seed: 455 },
+      ],
+    },
+    { // 16: shuffle - "Bat Signal"
+      name: 'Bat Signal', key: 45, bpm: 158,
+      sections: [
+        { bars: 8, chords: [M(0), MAJ(10), MAJ(8), MAJ(10), M(0), MAJ(10), MAJ(8), MAJ(10)], drums: 2, bass: 'sync', pad: 'pad', arp: 'up16', lead: 1, seed: 460 },
+        { bars: 8, chords: [M(0), MAJ(10), MAJ(8), MAJ(7), M(0), MAJ(10), MAJ(8), MAJ(7)], drums: 3, bass: 'pulse', pad: 'pad', arp: 'broken16', lead: 2, seed: 461 },
+        { bars: 8, chords: [M(5), M(0), MAJ(1), MAJ(7), M(5), M(0), MAJ(1), MAJ(7)], drums: 3, bass: 'sync', pad: 'organ', arp: 'updown16', lead: 2, seed: 462 },
+        { bars: 8, chords: [M(0), MAJ(10), MAJ(8), MAJ(7), M(0), MAJ(10), MAJ(8), MAJ(7)], drums: 3, bass: 'pulse', pad: 'pad', arp: 'broken16', lead: 2, seed: 463 },
+        { bars: 4, chords: [M(0), MAJ(10), MAJ(8), MAJ(7)], drums: 1, bass: 'walk', pad: 'pad', arp: 'up8', lead: 1, seed: 464 },
+        { bars: 8, chords: [M(5), M(0), MAJ(1), MAJ(7), M(5), M(0), MAJ(1), MAJ(7)], drums: 3, bass: 'sync', pad: 'organ', arp: 'updown16', lead: 2, seed: 465 },
+      ],
+    },
+    { // 17: shuffle - "Velvet Coffin Waltz"
+      name: 'Velvet Coffin Waltz', key: 41, bpm: 112,
+      sections: [
+        { bars: 8, chords: [M(0), M(5), MAJ(7), M(0), M(0), M(5), MAJ(7), M(0)], drums: 1, bass: 'walk', pad: 'organ', arp: 'up8', lead: 1, seed: 470 },
+        { bars: 8, chords: [MAJ(8), MAJ(3), MAJ(10), MAJ(7), MAJ(8), MAJ(3), MAJ(10), MAJ(7)], drums: 1, bass: 'walk', pad: 'organ', arp: 'slow', lead: 1, seed: 471 },
+        { bars: 8, chords: [M(0), MAJ(1), M(5), MAJ(7), M(0), MAJ(1), M(5), MAJ(7)], drums: 2, bass: 'pulse', pad: 'pad', arp: 'broken16', lead: 2, seed: 472 },
+        { bars: 8, chords: [MAJ(8), MAJ(3), MAJ(10), MAJ(7), MAJ(8), MAJ(3), MAJ(10), MAJ(7)], drums: 1, bass: 'walk', pad: 'organ', arp: 'slow', lead: 1, seed: 473 },
+        { bars: 4, chords: [M(0), M(5), MAJ(7), MAJ(7)], drums: 0, bass: 'hold', pad: 'organ', arp: 'slow', lead: 1, seed: 474 },
+        { bars: 8, chords: [M(0), MAJ(1), M(5), MAJ(7), M(0), MAJ(1), M(5), MAJ(7)], drums: 2, bass: 'pulse', pad: 'pad', arp: 'broken16', lead: 2, seed: 475 },
+      ],
+    },
+    { // 18: shuffle - "Doom Scroll Disco"
+      name: 'Doom Scroll Disco', key: 47, bpm: 124,
+      sections: [
+        { bars: 8, chords: [M(0), MAJ(3), MAJ(10), MAJ(8), M(0), MAJ(3), MAJ(10), MAJ(8)], drums: 2, bass: 'sync', pad: 'pad', arp: 'up16', lead: 1, seed: 480 },
+        { bars: 8, chords: [M(0), MAJ(3), MAJ(10), MAJ(8), M(0), MAJ(3), MAJ(10), MAJ(8)], drums: 3, bass: 'sync', pad: 'pad', arp: 'updown16', lead: 2, seed: 481 },
+        { bars: 8, chords: [M(5), MAJ(8), MAJ(3), MAJ(7), M(5), MAJ(8), MAJ(3), MAJ(7)], drums: 3, bass: 'pulse', pad: 'organ', arp: 'up16', lead: 2, seed: 482 },
+        { bars: 8, chords: [M(0), MAJ(3), MAJ(10), MAJ(8), M(0), MAJ(3), MAJ(10), MAJ(8)], drums: 3, bass: 'sync', pad: 'pad', arp: 'updown16', lead: 2, seed: 483 },
+        { bars: 4, chords: [M(0), MAJ(3), MAJ(7), MAJ(7)], drums: 1, bass: 'walk', pad: 'pad', arp: 'up8', lead: 1, seed: 484 },
+        { bars: 8, chords: [M(5), MAJ(8), MAJ(3), MAJ(7), M(5), MAJ(8), MAJ(3), MAJ(7)], drums: 3, bass: 'pulse', pad: 'organ', arp: 'up16', lead: 2, seed: 485 },
+      ],
+    },
+    { // 19: shuffle - "Thunder In The Crypt"
+      name: 'Thunder In The Crypt', key: 36, bpm: 150,
+      sections: [
+        { bars: 8, chords: [M(0), M(0), MAJ(1), MAJ(1), M(0), M(0), MAJ(1), MAJ(1)], drums: 3, bass: 'pulse', pad: 'organ', arp: 'up16', lead: 2, seed: 490 },
+        { bars: 8, chords: [M(0), MAJ(8), MAJ(10), MAJ(7), M(0), MAJ(8), MAJ(10), MAJ(7)], drums: 3, bass: 'sync', pad: 'pad', arp: 'broken16', lead: 2, seed: 491 },
+        { bars: 8, chords: [M(5), M(5), MAJ(1), MAJ(7), M(5), M(5), MAJ(1), MAJ(7)], drums: 2, bass: 'pulse', pad: 'organ', arp: 'up16', lead: 2, seed: 492 },
+        { bars: 8, chords: [M(0), MAJ(8), MAJ(10), MAJ(7), M(0), MAJ(8), MAJ(10), MAJ(7)], drums: 3, bass: 'sync', pad: 'pad', arp: 'broken16', lead: 2, seed: 493 },
+        { bars: 4, chords: [M(0), M(0), MAJ(8), MAJ(7)], drums: 0, bass: 'hold', pad: 'organ', arp: 'slow', lead: 1, seed: 494 },
+        { bars: 8, chords: [M(5), M(5), MAJ(1), MAJ(7), M(5), M(5), MAJ(1), MAJ(7)], drums: 2, bass: 'pulse', pad: 'organ', arp: 'up16', lead: 2, seed: 495 },
+      ],
+    },
+    { // 20: shuffle - "Gloom Raider"
+      name: 'Gloom Raider', key: 42, bpm: 166,
+      sections: [
+        { bars: 8, chords: [M(0), MAJ(10), M(5), MAJ(8), M(0), MAJ(10), M(5), MAJ(8)], drums: 2, bass: 'walk', pad: 'pad', arp: 'up8', lead: 1, seed: 500 },
+        { bars: 8, chords: [M(0), MAJ(10), MAJ(3), MAJ(7), M(0), MAJ(10), MAJ(3), MAJ(7)], drums: 3, bass: 'sync', pad: 'pad', arp: 'up16', lead: 2, seed: 501 },
+        { bars: 8, chords: [MAJ(8), MAJ(10), M(0), M(0), MAJ(8), MAJ(10), M(0), M(0)], drums: 3, bass: 'pulse', pad: 'organ', arp: 'updown16', lead: 2, seed: 502 },
+        { bars: 8, chords: [M(0), MAJ(10), MAJ(3), MAJ(7), M(0), MAJ(10), MAJ(3), MAJ(7)], drums: 3, bass: 'sync', pad: 'pad', arp: 'up16', lead: 2, seed: 503 },
+        { bars: 4, chords: [M(5), MAJ(8), MAJ(7), MAJ(7)], drums: 2, bass: 'walk', pad: 'pad', arp: 'broken16', lead: 1, seed: 504 },
+        { bars: 8, chords: [MAJ(8), MAJ(10), M(0), M(0), MAJ(8), MAJ(10), M(0), M(0)], drums: 3, bass: 'pulse', pad: 'organ', arp: 'updown16', lead: 2, seed: 505 },
+      ],
+    },
+    { // 21: shuffle - "Midnight Mascara"
+      name: 'Midnight Mascara', key: 44, bpm: 96,
+      sections: [
+        { bars: 8, chords: [M(0), MAJ(8), MAJ(3), MAJ(10), M(0), MAJ(8), MAJ(3), MAJ(10)], drums: 1, bass: 'hold', pad: 'pad', arp: 'slow', lead: 1, seed: 510 },
+        { bars: 8, chords: [M(5), M(0), MAJ(8), MAJ(7), M(5), M(0), MAJ(8), MAJ(7)], drums: 1, bass: 'walk', pad: 'pad', arp: 'up8', lead: 1, seed: 511 },
+        { bars: 8, chords: [M(0), MAJ(1), MAJ(8), MAJ(7), M(0), MAJ(1), MAJ(8), MAJ(7)], drums: 2, bass: 'pulse', pad: 'pad', arp: 'broken16', lead: 2, seed: 512 },
+        { bars: 8, chords: [M(5), M(0), MAJ(8), MAJ(7), M(5), M(0), MAJ(8), MAJ(7)], drums: 1, bass: 'walk', pad: 'pad', arp: 'up8', lead: 1, seed: 513 },
+        { bars: 4, chords: [M(0), MAJ(8), MAJ(7), MAJ(7)], drums: 0, bass: 'hold', pad: 'pad', arp: 'slow', lead: 0, seed: 514 },
+        { bars: 8, chords: [M(0), MAJ(1), MAJ(8), MAJ(7), M(0), MAJ(1), MAJ(8), MAJ(7)], drums: 2, bass: 'pulse', pad: 'pad', arp: 'broken16', lead: 2, seed: 515 },
+      ],
+    },
+    { // 22: shuffle - "Unsubscribe Me"
+      name: 'Unsubscribe Me', key: 39, bpm: 182,
+      sections: [
+        { bars: 8, chords: [M(0), MAJ(8), MAJ(10), M(0), M(0), MAJ(8), MAJ(10), M(0)], drums: 3, bass: 'pulse', pad: 'organ', arp: 'up16', lead: 2, seed: 520 },
+        { bars: 8, chords: [M(5), MAJ(10), MAJ(3), MAJ(7), M(5), MAJ(10), MAJ(3), MAJ(7)], drums: 3, bass: 'sync', pad: 'pad', arp: 'updown16', lead: 2, seed: 521 },
+        { bars: 8, chords: [M(0), MAJ(1), M(0), MAJ(1), M(0), MAJ(1), M(0), MAJ(1)], drums: 3, bass: 'pulse', pad: 'organ', arp: 'up16', lead: 2, seed: 522 },
+        { bars: 8, chords: [M(5), MAJ(10), MAJ(3), MAJ(7), M(5), MAJ(10), MAJ(3), MAJ(7)], drums: 3, bass: 'sync', pad: 'pad', arp: 'updown16', lead: 2, seed: 523 },
+        { bars: 4, chords: [MAJ(8), MAJ(10), MAJ(7), MAJ(7)], drums: 2, bass: 'walk', pad: 'pad', arp: 'broken16', lead: 1, seed: 524 },
+        { bars: 8, chords: [M(0), MAJ(1), M(0), MAJ(1), M(0), MAJ(1), M(0), MAJ(1)], drums: 3, bass: 'pulse', pad: 'organ', arp: 'up16', lead: 2, seed: 525 },
+      ],
+    },
   ];
+  const SHUFFLE_FROM = 1; // every song after the title theme can come up in shuffle
 
   // seeded RNG so each section's melody is fixed but different from the others
   function rng(seed) { let s = seed * 9973 + 1; return () => { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; }; }
@@ -433,6 +547,11 @@ const Sfx = (() => {
     const totalBars = song.sections.reduce((a, s) => a + s.bars, 0);
     if (nextTime < ctx.currentTime) nextTime = ctx.currentTime + 0.05;
     while (nextTime < ctx.currentTime + 0.2) {
+      if (shuffle && songStep >= totalBars * 16) { // song finished: on to a random different one
+        let n = songIdx; while (n === songIdx) n = SHUFFLE_FROM + Math.floor(Math.random() * (SONGS.length - SHUFFLE_FROM));
+        songIdx = n; songStep = 0; if (onChange) try { onChange(SONGS[n].name); } catch (e) {}
+        return;
+      }
       let bar = Math.floor(songStep / 16) % totalBars;
       const step = songStep % 16;
       let sec = null, barInSec = bar;
@@ -492,8 +611,11 @@ const Sfx = (() => {
     songIdx = i; songStep = 0; if (ctx) nextTime = ctx.currentTime + 0.15;
   }
   function stopMusic() { clearInterval(musicTimer); musicTimer = null; }
+  let shuffle = false, onChange = null;
+  function setShuffle(on) { shuffle = !!on; }
+  function onSongChange(cb) { onChange = cb; }
   function toggleMusic() { musicOn = !musicOn; if (!musicOn) stopMusic(); else startMusic(); return musicOn; }
   function songName() { return SONGS[songIdx].name; }
 
-  return { init, play, startMusic, stopMusic, toggleMusic, setSong, songName, setAmbience };
+  return { init, play, startMusic, stopMusic, toggleMusic, setSong, songName, setAmbience, setShuffle, onSongChange, get song() { return songIdx; }, get songCount() { return SONGS.length; }, get playing() { return !!musicTimer; } };
 })();

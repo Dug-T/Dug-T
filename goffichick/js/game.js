@@ -242,10 +242,12 @@
   // fxDrop: 0 = everything; 1 = no bloom; 2 = also no reflections or corner shadows (set automatically on slow devices)
   let fxDrop = 0, frameAvg = 1 / 60, slowFor = 0;
   // LOOK SPEED: how fast dragging, the right-hand stick and the gamepad turn and aim (the mouse scales from 1.5)
-  const LOOK_STEPS = [0.75, 1, 1.5, 2, 2.5, 3, 4];
+  const LOOK_STEPS = [0.75, 1, 1.5, 2, 2.5, 3, 4, 5, 6];
   let LOOK_SENS = 2; try { const v = parseFloat(localStorage.getItem('goffichick-look')); if (LOOK_STEPS.includes(v)) LOOK_SENS = v; } catch (e) {}
   const setLook = v => { LOOK_SENS = v; try { localStorage.setItem('goffichick-look', String(v)); } catch (e) {} };
   const nextLook = (dir = 1) => LOOK_STEPS[(LOOK_STEPS.indexOf(LOOK_SENS) + dir + LOOK_STEPS.length) % LOOK_STEPS.length];
+  // MUSIC: 'shuffle' plays the level's theme, then random tunes; 'level' keeps repeating the level's theme
+  let musicMode = 'shuffle'; try { if (localStorage.getItem('goffichick-music') === 'level') musicMode = 'level'; } catch (e) {}
   let FX_HIGH = true; try { FX_HIGH = localStorage.getItem('goffichick-fx') !== 'low'; } catch (e) {}
   let time = 0, levelTime = 0, stateT = 0;
   let god = false;
@@ -1551,7 +1553,7 @@
   function pauseItems() {
     const it = [{ id: 'resume', text: 'RESUME' }];
     if (mode !== 'dm' && mode !== 'coop') it.push({ id: 'restart', text: mode === 'horde' ? 'START AGAIN' : 'RESTART LEVEL' });
-    it.push({ id: 'fx', text: `EFFECTS   ${FX_HIGH ? 'HIGH' : 'LOW'}` }, { id: 'music', text: `MUSIC   ${musicOn ? 'ON' : 'OFF'}` }, { id: 'torch', text: `TORCH   ${torchMode.toUpperCase()}` }, { id: 'look', text: `LOOK SPEED   ${LOOK_SENS}  (tap to change)` }, { id: 'quit', text: online ? 'LEAVE THE GAME' : 'QUIT TO TITLE' });
+    it.push({ id: 'fx', text: `EFFECTS   ${FX_HIGH ? 'HIGH' : 'LOW'}` }, { id: 'music', text: `MUSIC   ${musicOn ? 'ON' : 'OFF'}` }, { id: 'musicMode', text: `TUNES   ${musicMode === 'shuffle' ? 'SHUFFLE' : 'LEVEL THEMES'}` }, { id: 'torch', text: `TORCH   ${torchMode.toUpperCase()}` }, { id: 'look', text: `LOOK SPEED   ${LOOK_SENS}  (tap to change)` }, { id: 'quit', text: online ? 'LEAVE THE GAME' : 'QUIT TO TITLE' });
     return it;
   }
   function pauseAct(id) {
@@ -1560,11 +1562,12 @@
     else if (id === 'restart') { paused = false; if (mode === 'horde') { loadSolo(); state = 'playing'; } else if (mode === 'campaign') restartLevel(); else { loadSolo(); state = 'playing'; } lockPointer(); }
     else if (id === 'fx') { FX_HIGH = !FX_HIGH; fxDrop = 0; try { localStorage.setItem('goffichick-fx', FX_HIGH ? 'high' : 'low'); } catch (e) {} }
     else if (id === 'music') musicOn = Sfx.toggleMusic();
+    else if (id === 'musicMode') { musicMode = musicMode === 'shuffle' ? 'level' : 'shuffle'; try { localStorage.setItem('goffichick-music', musicMode); } catch (e) {} }
     else if (id === 'look') setLook(nextLook(1));
     else if (id === 'torch') torchMode = { auto: 'on', on: 'off', off: 'auto' }[torchMode];
     else if (id === 'quit') { paused = false; if (online) leaveOnline(); else if (mode !== 'campaign') quitSolo(); else { state = 'title'; stateT = 0; Sfx.setAmbience(null); if (document.exitPointerLock && locked()) document.exitPointerLock(); ignoreTapUntil = performance.now() + 300; } }
   }
-  const PAUSE_Y = 104, PAUSE_DY = 16;
+  const PAUSE_Y = 100, PAUSE_DY = 14.5;
   function drawPause() {
     drawOverlayText('PAUSED', `Goffichick is ${PAUSE_QUIPS[Math.floor(levelTime) % PAUSE_QUIPS.length].replace(/^./, c => c.toLowerCase())}`, []);
     const items = pauseItems(); pauseSel = Math.min(pauseSel, items.length - 1);
@@ -2588,9 +2591,9 @@
     const turnSpeed = 2.8, prevA = p.a;
     if (keys.ArrowLeft) p.a -= turnSpeed * dt;
     if (keys.ArrowRight) p.a += turnSpeed * dt;
-    const curve = v => Math.sign(v) * Math.pow(Math.abs(v), 1.6); // fine aim near the middle of the right stick
-    p.a += mouseDX * 0.0028 * (LOOK_SENS / 1.5) + touch.turn + pad.turn + curve(touch.rx) * 2.2 * LOOK_SENS * dt; mouseDX = 0; touch.turn = 0;
-    pitch -= curve(touch.ry) * 95 * LOOK_SENS * dt;
+    const curve = v => Math.sign(v) * Math.pow(Math.abs(v), 1.25); // fine aim near the middle of the right stick
+    p.a += mouseDX * 0.0028 * (LOOK_SENS / 1.5) + touch.turn + pad.turn + curve(touch.rx) * 3.6 * LOOK_SENS * dt; mouseDX = 0; touch.turn = 0;
+    pitch -= curve(touch.ry) * 150 * LOOK_SENS * dt;
     // look up and down: mouse, a vertical drag on the right of the screen, the right stick, or R / F (C centres)
     pitch -= mouseDY * 0.25 * (LOOK_SENS / 1.5) + touch.pitch + (pad.pitch || 0) - ((keys.KeyR || keys.PageUp ? 90 : 0) - (keys.KeyF || keys.PageDown ? 90 : 0)) * dt;
     mouseDY = 0; touch.pitch = 0; pitch = clamp(pitch, -PITCH_MAX, PITCH_MAX); HOR = VIEW_H / 2 + pitch;
@@ -2824,6 +2827,7 @@
       { id: 'gfx', text: `GRAPHICS   ${QUALITY > 1 ? 'HD' : 'CLASSIC'}` },
       { id: 'fx', text: `EFFECTS   ${FX_HIGH ? 'HIGH' : 'LOW (faster)'}` },
       { id: 'look', lr: true, text: `LOOK SPEED   <  ${LOOK_SENS}  >` },
+      { id: 'musicMode', text: `MUSIC   ${musicMode === 'shuffle' ? 'SHUFFLE (level theme, then random)' : 'LEVEL THEMES ONLY'}` },
       { id: 'voice', text: Voice.available() ? `VOICES   ${Voice.on ? 'ON' : 'OFF'}` : 'VOICES   (not available in this browser)' },
       { id: 'optBack', text: 'BACK' },
     ];
@@ -2855,6 +2859,7 @@
     else if (item.id === 'horde') startSolo('horde', DM_LEVELS[0]);
     else if (item.id === 'editor') { state = 'editor'; stateT = 0; editor.open(); }
     else if (item.id === 'options') { menuPage = 'options'; menuSel = 0; Sfx.play.switch(); }
+    else if (item.id === 'musicMode') { musicMode = musicMode === 'shuffle' ? 'level' : 'shuffle'; try { localStorage.setItem('goffichick-music', musicMode); } catch (e) {} Sfx.init(); Sfx.play.switch(); }
     else if (item.id === 'optBack') { menuPage = 'main'; menuSel = 0; Sfx.play.switch(); }
     else if (item.id === 'look') { setLook(nextLook(dir)); Sfx.init(); Sfx.play.switch(); }
     else if (item.id === 'online') { menuPage = 'online'; menuSel = 0; Sfx.play.switch(); if (!Net.enabled) { msg = 'Online play needs the Supabase settings in js/leaderboard.js.'; msgT = 4; } }
@@ -3086,7 +3091,14 @@
     loadLevel(levelIndex, carry ? { ...carry, health: 100 } : null); state = 'playing';
   }
 
+  const IN_GAME = new Set(['playing', 'dead', 'intermission', 'victory', 'dmOver', 'hordeOver', 'weeklyDone', 'customDone']);
+  function musicTick() {
+    if (!IN_GAME.has(state)) { Sfx.setShuffle(false); if (Sfx.song !== 0) Sfx.setSong(0); } // menus get the title theme
+    else Sfx.setShuffle(musicMode === 'shuffle');
+  }
+  Sfx.onSongChange(name => { if (state === 'playing') { msg = `Now playing: ${name}`; msgT = 3.5; } });
   function update(dt) {
+    musicTick();
     time += dt; stateT += dt;
     Voice.update(dt);
     if (msgT > 0) msgT -= dt;
@@ -3599,7 +3611,7 @@
     btn('bPause', () => { if (state === 'playing') { paused = true; pauseSel = 0; } });
   }
   window.addEventListener('touchstart', () => setupTouch(), { once: true, passive: true });
-  for (const ev of ['pointerdown', 'keydown', 'touchend']) window.addEventListener(ev, () => Voice.unlock(), { capture: true, passive: true });
+  for (const ev of ['pointerdown', 'keydown', 'touchend']) window.addEventListener(ev, () => { Voice.unlock(); if (state !== 'loading') { Sfx.init(); Sfx.startMusic(); } }, { capture: true, passive: true });
   // the very first tap lands on the canvas (before the touch overlay exists): let it start the game
   canvas.addEventListener('pointerdown', e => { if (e.pointerType === 'touch') { setupTouch(); tryFullscreen(); primaryAction(e); } });
   // Claim every touch gesture for the game. Without this, in-app browsers such as Facebook's
@@ -3992,6 +4004,6 @@
     titleImg = photos.title;
     state = 'title';
     // expose a tiny debug hook for testing
-    window.GOFFI = { get state() { return state; }, get player() { return player; }, get level() { return L; }, start: startGame, completeLevel, ach, ACHIEVEMENTS, get quality() { return QUALITY; }, get score() { return runScore; }, highScores, get diff() { return diff; }, set diff(v) { diff = v; }, continueGame, savedGame, setLevel: i => { levelIndex = i; loadLevel(i, null); state = 'playing'; }, get mode() { return mode; }, get look() { return LOOK_SENS; }, get touchState() { return touch; }, get menuItems() { return menuItems().map(i => i.id); }, get lamps() { return L && L.lamps; }, get shafts() { return L && L.shafts; }, get pitch() { return pitch; }, set pitch(v) { pitch = v; HOR = VIEW_H / 2 + v; }, get horde() { return horde; }, throwNade, jump: () => { jumpReq = true; }, get paused() { return paused; }, spawn: (t, x, y) => spawnEnemy(t, x, y), startHorde: () => startSolo('horde', DM_LEVELS[0]), get fxHigh() { return FX_HIGH; }, set fxHigh(v) { FX_HIGH = v; }, get fxDrop() { return fxDrop; }, set fxDrop(v) { fxDrop = v; }, get online() { return online; }, Net, get menuPage() { return menuPage; }, weeklyInfo, editor, LevelCode, get sharedLvl() { return sharedLvl; }, get levelTime() { return levelTime; }, set levelTime(v) { levelTime = v; } };
+    window.GOFFI = { get state() { return state; }, get player() { return player; }, get level() { return L; }, start: startGame, completeLevel, ach, ACHIEVEMENTS, get quality() { return QUALITY; }, get score() { return runScore; }, highScores, get diff() { return diff; }, set diff(v) { diff = v; }, continueGame, savedGame, setLevel: i => { levelIndex = i; loadLevel(i, null); state = 'playing'; }, get mode() { return mode; }, get song() { return Sfx.song; }, get musicMode() { return musicMode; }, get look() { return LOOK_SENS; }, get touchState() { return touch; }, get menuItems() { return menuItems().map(i => i.id); }, get lamps() { return L && L.lamps; }, get shafts() { return L && L.shafts; }, get pitch() { return pitch; }, set pitch(v) { pitch = v; HOR = VIEW_H / 2 + v; }, get horde() { return horde; }, throwNade, jump: () => { jumpReq = true; }, get paused() { return paused; }, spawn: (t, x, y) => spawnEnemy(t, x, y), startHorde: () => startSolo('horde', DM_LEVELS[0]), get fxHigh() { return FX_HIGH; }, set fxHigh(v) { FX_HIGH = v; }, get fxDrop() { return fxDrop; }, set fxDrop(v) { fxDrop = v; }, get online() { return online; }, Net, get menuPage() { return menuPage; }, weeklyInfo, editor, LevelCode, get sharedLvl() { return sharedLvl; }, get levelTime() { return levelTime; }, set levelTime(v) { levelTime = v; } };
   });
 })();

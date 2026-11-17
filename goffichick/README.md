@@ -202,6 +202,14 @@ flinches when hit, and her eyes glow pink when she picks up a new weapon.
   and aim. The new default is more sensitive than before.
 - **OPTIONS menu:** graphics, effects, look speed and voices now live here.
 
+- **Music:**
+  - the title theme plays on the menus
+  - each level starts with its own theme and then **shuffles** through the soundtrack at random, showing
+    "Now playing" as each tune starts
+  - there are 10 extra tunes: Black Lipstick Boogie, Eyeliner Overdrive, Funeral For A Smiley, Bat Signal,
+    Velvet Coffin Waltz, Doom Scroll Disco, Thunder In The Crypt, Gloom Raider, Midnight Mascara and Unsubscribe Me
+  - OPTIONS → MUSIC (or TUNES in the pause menu) switches back to level themes only
+
 ## Setting up the world leaderboard (Supabase, free)
 
 1. Create a free account at [supabase.com](https://supabase.com) and a **New project** (any name and region).
