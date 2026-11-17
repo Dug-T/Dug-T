@@ -200,6 +200,8 @@ flinches when hit, and her eyes glow pink when she picks up a new weapon.
     - hold your thumb out near the edge to keep turning (big spins)
     - wherever your thumb lands becomes the centre, so the view never jumps
   - only the cyan pad turns you; dragging elsewhere on the screen doesn't
+  - a second FIRE button sits up and to the right of the move stick, so you can shoot with your left thumb
+    while aiming with your right (the FIRE button on the right still works too)
 - **LOOK SPEED** (title menu → OPTIONS, or the pause menu): sets how fast the sticks, dragging and gamepads turn
   and aim. The new default is more sensitive than before.
 - **OPTIONS menu:** graphics, effects, look speed and voices now live here.

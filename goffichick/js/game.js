@@ -2665,7 +2665,7 @@
       p.windupT -= dt;
       if (p.windupT <= 0) doFire(w);
     }
-    const trigger = fireHeld || keys.ControlLeft || keys.ControlRight || touch.fire || touch.fireTap || pad.fire;
+    const trigger = fireHeld || keys.ControlLeft || keys.ControlRight || touch.fire || touch.fire2 || touch.fireTap || pad.fire;
     if (trigger && p.cooldown <= 0 && p.switchT <= 0 && p.windupT <= 0) {
       touch.fireTap = false;
       if (w.ammo && p.ammo[w.ammo] < w.cost) {
@@ -3612,6 +3612,8 @@
     look.addEventListener('pointerup', endLook); look.addEventListener('pointercancel', endLook);
     const btn = (id, down, up) => { const b = document.getElementById(id); if (!b) return; b.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); if (!primaryAction(e)) down(); }); if (up) { b.addEventListener('pointerup', up); b.addEventListener('pointercancel', up); b.addEventListener('pointerleave', up); } };
     btn('bFire', () => { touch.fire = true; touch.fireTap = true; }, () => { touch.fire = false; });
+    // the left-thumb FIRE button: each button keeps its own hold, so letting go of one doesn't stop the other
+    btn('bFire2', () => { touch.fire2 = true; touch.fireTap = true; }, () => { touch.fire2 = false; });
     btn('bUse', () => state === 'playing' && useAction());
     btn('bWpn', () => state === 'playing' && cycleWeapon(1));
     btn('bMap', () => { automap = !automap; });
