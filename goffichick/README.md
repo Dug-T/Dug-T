@@ -172,6 +172,27 @@ flinches when hit, and her eyes glow pink when she picks up a new weapon.
   - **Lipstick Laser** (slot 6): a continuous pink beam, uses souls
   - their map letters are `/`, `"`, `'` and `\`, and all four are in the level editor
 
+- **Aim up and down:**
+  - **Controls:** move the mouse up and down, drag up and down on the right half of a phone screen, use the
+    right stick, or hold R / F. C centres the view.
+  - **The gun tilts** with your aim, and shots and projectiles go where you point.
+  - **Height matters:** you can shoot over a monster's head or under its feet, and you'll need to look up at
+    monsters on balconies.
+- **Body zones and dismemberment:**
+  - **Head:** 2.5× damage. Ordinary monsters lose their head, and "HEED SHOT!" is announced in a Scottish
+    accent where the device has one (or put your own recording in `VOICE_FILES.heedshot`).
+  - **Arms and legs:** shots can sever them, sending the limb flying with a gush of blood.
+  - **One leg left:** the monster hops after you.
+  - **No legs:** it drags itself along the floor.
+  - **No arms:** it can only headbutt ("How do I hold this?!").
+  - **Explosions:** they blow monsters to bits.
+- **More gore:**
+  - bigger blood sprays, more floor splats, bleeding stumps and neck fountains
+  - blood on the screen up close
+  - sloshy splat and squelch sounds
+- **Monster voices:** every monster type speaks its lines in its own voice (pitch, speed and, where the
+  device has several, a different voice). They have new lines for losing limbs too.
+
 ## Setting up the world leaderboard (Supabase, free)
 
 1. Create a free account at [supabase.com](https://supabase.com) and a **New project** (any name and region).

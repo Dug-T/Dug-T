@@ -9,7 +9,10 @@
   // view) rather than stretching anything.
   const BASE_W = 480, MAX_W = 640, VIEW_H = 222, HUD_H = 48, H = VIEW_H + HUD_H;
   let W = BASE_W;
-  const HOR = VIEW_H / 2;
+  let HOR = VIEW_H / 2;          // the horizon on screen: moves when Goffichick looks up or down
+  const CY = VIEW_H / 2;         // the crosshair always sits in the middle
+  const PITCH_MAX = 70;
+  let pitch = 0;                 // how far she's looking up (+) or down (-), in screen pixels
   const FOV = 70 * Math.PI / 180, PROJ = (BASE_W / 2) / Math.tan(FOV / 2);
   let PLANE = (W / 2) / PROJ;
   const DOOR = 100;
@@ -112,6 +115,15 @@
     guru: { sight: ['Your aura is very dark.', 'Have you tried gratitude?', 'Hydrate!'], death: ['Out of... alignment...'] },
     hypeman: { sight: ["LET'S GOOOO!", 'MAKE SOME NOISE!', 'Is everybody HAPPY?!'], death: ['Hype... gone...'] },
   };
+  const LIMB_QUIPS = {
+    zombie: ['My arm fell in my latte!', 'Extra shot? NO!'], manager: ["I'll need to file an injury report!", 'This is NOT in my job description!'],
+    wally: ['This is NOT going in the vlog!', 'Pin this comment: OW!'], brute: ['NOT MY GAINS ARM!', 'Never skip leg day... I have one!'],
+    yoga: ['I can still do tree pose!', 'Flexibility... has limits!'], coach: ['Losing a leg is a growth opportunity!', "I'm still half full!"],
+    bridezilla: ['Not before the photos!', 'My something BLUE is now my FACE!'], redcoat: ['Hop along, campers!', 'Everybody do the hokey cokey!'],
+    guru: ['My chakras!', "I'm releasing... a limb!"], hypeman: ['STILL HYPED!', 'One leg, ONE LOVE!'], riot: ["That's an HR violation!", 'Workplace injury!'],
+  };
+  const GENERIC_LIMB = ["'Tis but a scratch!", "It's only a flesh wound!", "I'll hop it off!", 'Anyone seen my arm?', 'Hop to it!', 'I needed that!'];
+  const NO_ARMS = ['How do I hold this?!', 'Come here and I will BITE you!', 'Armless but not harmless!'];
   for (const [k, v] of [['wallyfit', 'wally'], ['wallydeluxe', 'wally'], ['boss', 'wally'], ['wallylive', 'wally'], ['bubbly', 'orb'], ['mini', 'orb'], ['megaorb', 'orb']]) QUIPS[k] = QUIPS[v];
   const CAUSE = {
     zombie: 'Death by a thousand oat-milk lattes.', manager: 'Buried under a pile of memos.', wally: 'Notified to death.', brute: 'Crushed by unsolicited gym advice.',
@@ -139,11 +151,18 @@
   let bubbleCd = 0, lastAttacker = null;
   const typeOf = x => x && typeof x === 'object' ? x.type : x;
   // a speech bubble over a monster
-  function shout(e, kind, chance = 1) {
-    const q = QUIPS[e.type]; if (!q || !q[kind] || Math.random() > chance) return;
-    if (kind !== 'death' && bubbleCd > 0) return;
-    if (L.enemies.filter(o => o.bubble && o.bubble.t > 0).length >= 2 && kind !== 'death') return;
-    e.bubble = { text: q[kind][irand(0, q[kind].length - 1)], t: kind === 'death' ? 2 : 2.6 }; bubbleCd = 2.2;
+  function shout(e, kind, chance = 1, force = false) {
+    if (Math.random() > chance) return;
+    let lines = QUIPS[e.type] && QUIPS[e.type][kind];
+    if (kind === 'limb') lines = (LIMB_QUIPS[e.type] || []).concat(GENERIC_LIMB);
+    if (kind === 'noarms') lines = NO_ARMS;
+    if (!lines || !lines.length) return;
+    if (!force && kind !== 'death' && bubbleCd > 0) return;
+    if (!force && L.enemies.filter(o => o.bubble && o.bubble.t > 0).length >= 2 && kind !== 'death') return;
+    const text = lines[irand(0, lines.length - 1)];
+    e.bubble = { text, t: kind === 'death' ? 2 : 2.6 }; bubbleCd = 2.2;
+    const pd = Math.hypot(e.x - player.x, e.y - player.y);
+    if (pd < 12) Voice.monster(e.type, text, pd); // each monster type has its own voice
   }
   const SLOGANS = ['YOU\'VE GOT THIS!', 'LIVE, LAUGH, LOVE!', 'GOOD VIBES ONLY!', 'RISE AND GRIND!', 'SMILE MORE!', 'MANIFEST IT!', 'BE YOUR BEST SELF!', 'NO BAD DAYS!'];
 
@@ -298,7 +317,7 @@
     setupExtras(def, i);
     player.fz = fh[Math.floor(player.y) * mw + Math.floor(player.x)];
     for (const e of L.enemies) e.fz = fh[Math.floor(e.y) * mw + Math.floor(e.x)];
-    levelTime = 0; L.flowFrom = -1; L.baseEnemies = L.enemies.length;
+    levelTime = 0; L.flowFrom = -1; L.baseEnemies = L.enemies.length; pitch = 0; HOR = VIEW_H / 2;
     updateDynLights();
     Sfx.setSong(typeof i === 'number' ? i + 1 : def.song || 1);
     Sfx.setAmbience(def.ambience || (def.weather === 'rain' ? 'rain' : null));
@@ -463,12 +482,12 @@
   let gradeRows = null, gradeKey = '';
   const grainTab = Int8Array.from({ length: 8192 }, () => (Math.random() * 12 - 6) | 0);
   function gradePass() {
-    const key = RW + '|' + RH + '|' + L.def.name + '|' + FX_HIGH;
+    const key = RW + '|' + RH + '|' + L.def.name + '|' + FX_HIGH + '|' + Math.round(pitch);
     if (key !== gradeKey) {
       gradeKey = key; const n = RH, mr = new Float32Array(n), mg = new Float32Array(n), mb = new Float32Array(n), ar = new Float32Array(n), ag = new Float32Array(n), ab = new Float32Array(n);
       const [fr, fg, fb] = L.fog, top = L.def.sky ? [1.05, 1.01, 0.94] : [0.96, 0.95, 1.07], bot = [1.06, 0.96, 1.01];
       for (let y = 0; y < n; y++) {
-        const t = y / n, h = FX_HIGH ? Math.max(0, 1 - Math.abs(y - n / 2) / (n * 0.11)) * 0.13 : 0, k = FX_HIGH ? 1 : 0;
+        const t = y / n, h = FX_HIGH ? Math.max(0, 1 - Math.abs(y - (n / 2 + pitch * QUALITY)) / (n * 0.11)) * 0.13 : 0, k = FX_HIGH ? 1 : 0;
         const r = 1 + (top[0] + (bot[0] - top[0]) * t - 1) * k, g = 1 + (top[1] + (bot[1] - top[1]) * t - 1) * k, b = 1 + (top[2] + (bot[2] - top[2]) * t - 1) * k;
         mr[y] = r * (1 - h); mg[y] = g * (1 - h); mb[y] = b * (1 - h); ar[y] = fr * h; ag[y] = fg * h; ab[y] = fb * h;
       }
@@ -495,11 +514,18 @@
   }
   function drawCombatOverlays() {
     const p = player;
+    for (const b of screenBlood) { // blood on the lens, slowly running down
+      b.t += 1 / 60; const k = 1 - b.t / b.life; if (k <= 0) continue;
+      ctx.fillStyle = `rgba(120,0,12,${0.75 * k})`; ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, TAU); ctx.fill();
+      ctx.fillRect(b.x - b.r * 0.2, b.y, b.r * 0.4, b.drip * (1 - k) * 3 + b.r * 0.5);
+      ctx.fillStyle = `rgba(255,120,120,${0.25 * k})`; ctx.beginPath(); ctx.arc(b.x - b.r * 0.35, b.y - b.r * 0.35, b.r * 0.25, 0, TAU); ctx.fill();
+    }
+    screenBlood = screenBlood.filter(b => b.t < b.life);
     for (const d of dmgDirs) { // red arcs showing where the hit came from
       let a = Math.atan2(d.y - p.y, d.x - p.x) - p.a - Math.PI / 2;
       const al = (1 - d.t) * 0.85;
-      ctx.strokeStyle = `rgba(255,30,40,${al})`; ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(W / 2, HOR, 52, a - 0.35, a + 0.35); ctx.stroke();
-      ctx.strokeStyle = `rgba(255,160,160,${al * 0.8})`; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(W / 2, HOR, 52, a - 0.3, a + 0.3); ctx.stroke();
+      ctx.strokeStyle = `rgba(255,30,40,${al})`; ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(W / 2, CY, 52, a - 0.35, a + 0.35); ctx.stroke();
+      ctx.strokeStyle = `rgba(255,160,160,${al * 0.8})`; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(W / 2, CY, 52, a - 0.3, a + 0.3); ctx.stroke();
     }
     if (announce) { // DOUBLE KILL! and friends
       const t = announce.t, sc = t < 0.15 ? 1.8 - t / 0.15 * 0.8 : 1, al = t > 1.3 ? 1 - (t - 1.3) / 0.5 : 1;
@@ -582,7 +608,7 @@
 
   // ------------------------------------------------------------------ rendering
   function render3D() {
-    const RHOR = RH / 2, RPROJ = PROJ * QUALITY;
+    const RHOR = RH / 2 + pitch * QUALITY, RPROJ = PROJ * QUALITY, SKYH = Math.min(RH, Math.ceil(RHOR));
     const p = player, dirX = Math.cos(p.a), dirY = Math.sin(p.a);
     const dR = L.dynR, dG = L.dynG, dB = L.dynB; // coloured light added by fire, explosions, torches...
     glows.length = 0;
@@ -605,10 +631,10 @@
       for (let x = 0; x < RW; x++) {
         const ang = p.a + Math.atan((2 * x / RW - 1) * PLANE);
         const u = ((((ang / TAU) * SW * 2) % SW) + SW) % SW | 0;
-        for (let y = 0, o = x; y < RHOR; y++, o += RW) buf[o] = sky.data[Math.min(SH - 1, (y / RHOR * SH) | 0) * SW + u];
+        for (let y = 0, o = x; y < SKYH; y++, o += RW) buf[o] = sky.data[Math.max(0, Math.min(SH - 1, (((y - RHOR) / (RH / 2) + 1) * SH) | 0)) * SW + u];
       }
     }
-    else for (let y = 0; y < RHOR; y++) {
+    else for (let y = 0; y < SKYH; y++) {
       const rowDist = (ceilH - eyeZ) * RPROJ / (RHOR - y - 0.5);
       const s = clamp(1.3 - rowDist * 0.05 + boost, 0.25, 1) * 0.92;
       const stepX = rowDist * (r1x - r0x) / RW, stepY = rowDist * (r1y - r0y) / RW;
@@ -760,12 +786,12 @@
 
     // --- sprites
     const list = [];
-    const add = (x, y, spr, z, h, bright, wscale, minDepth = 0.15, glow = null, flash = 0) => {
+    const add = (x, y, spr, z, h, bright, wscale, minDepth = 0.15, glow = null, flash = 0, cut = 0) => {
       const dx = x - p.x, dy = y - p.y;
       const depth = dx * dirX + dy * dirY;
       if (depth < minDepth) return;
       const li = (y | 0) * mw + (x | 0);
-      list.push({ dx, dy, depth, spr, z, h, bright, wscale: wscale || 1, light: L.lightNow[li] ?? 1, li, glow, flash });
+      list.push({ dx, dy, depth, spr, z, h, bright, wscale: wscale || 1, light: L.lightNow[li] ?? 1, li, glow, flash, cut });
     };
     for (const d of L.decor) add(d.x, d.y, S.decor[d.def.sprite], floorAt(d.x, d.y), d.def.h, d.def.bright, 1, 0.15, d.def.sprite === 'torch' ? '200,90,255' : d.def.sprite === 'candelabra' ? '255,190,90' : null);
     for (const it of L.items) if (!it.taken) {
@@ -778,7 +804,7 @@
       const spr = enemySprite(e);
       const h = e.dead && e.def.ai !== false ? e.def.h * (spr.h / (enemyBase(e).h)) : e.def.h;
       const a = animOf(e, dirX, dirY);
-      add(e.x + a.ox, e.y + a.oy, spr, (e.fz || 0) + (e.dead ? 0 : e.z) + a.z, h * a.hs, false, a.ws, 0.15, e.champ && !e.dead ? '255,190,60' : e.buffT > 0 && !e.dead ? '255,220,120' : null, a.flash);
+      add(e.x + a.ox, e.y + a.oy, spr, (e.fz || 0) + (e.dead ? 0 : e.z) + a.z, h * a.hs, false, a.ws, 0.15, e.champ && !e.dead ? '255,190,60' : e.buffT > 0 && !e.dead ? '255,220,120' : null, a.flash, e.dead ? 0 : e.cut || 0);
     }
     for (const pr of L.projs) {
       const fr = pr.frames, size = pr.def.grow ? pr.def.size * (1 + pr.age * pr.def.grow) : pr.def.size;
@@ -823,9 +849,16 @@
         for (let k = 0, n = occN[x]; k < n; k++) if (occD[x * OCC + k] < depth && occY[x * OCC + k] < yEnd) yEnd = occY[x * OCC + k];
         let v = (y0 - top) * vStep;
         let o = y0 * RW + x;
+        const cut = sp.cut, uf = u / sw;
         for (let y = y0; y < yEnd; y++, o += RW, v += vStep) {
-          const c = data[(v | 0) * sw + u];
+          let c = data[(v | 0) * sw + u];
           if (c === 0) continue;
+          if (cut) { // missing head / arms / legs, with a bloody stump at the edge
+            const vf = v / sh;
+            const zb = vf < 0.24 ? 1 : vf > 0.6 ? (uf < 0.5 ? 8 : 16) : uf < 0.3 ? 2 : uf > 0.7 ? 4 : 0;
+            if (cut & zb) continue;
+            if ((cut & 1 && vf < 0.28) || (cut & (uf < 0.5 ? 8 : 16) && vf > 0.56) || (cut & 2 && uf < 0.34 && vf > 0.24 && vf < 0.6) || (cut & 4 && uf > 0.66 && vf > 0.24 && vf < 0.6)) c = (v | 0) % 3 ? 0xff1010a0 : 0xff0a0a70;
+          }
           let r = (c & 255) * s + ar, g = (c >> 8 & 255) * s + ag, bl = (c >> 16 & 255) * s + ab;
           if (r > 255) r = 255; if (g > 255) g = 255; if (bl > 255) bl = 255;
           buf[o] = 0xff000000 | (bl << 16) | (g << 8) | r;
@@ -858,6 +891,8 @@
     }
     e.deadAt = undefined;
     const ph = time * (4 + (d.speed || 1.5) * 2.2) + seed, mv = e.mv;
+    if ((e.cut & 24) === 24) o.z -= d.h * 0.4;                                   // no legs: dragging itself along
+    else if (e.cut & 24) { o.z += Math.abs(Math.sin(ph * 0.6)) * 0.17 * Math.max(mv, 0.35); return o; } // one leg: hop, hop, hop
     if (d.fly) { o.z += Math.sin(time * 2.6 + seed) * 0.05; const p2 = Math.sin(time * 5 + seed); o.hs = 1 + p2 * 0.03; o.ws = 1 - p2 * 0.03; }
     if (mv > 0.05 && !d.fly) { // walking: bounce on each step, sway side to side, squash on landing
       const st = Math.sin(ph);
@@ -917,7 +952,7 @@
     ctx.beginPath(); ctx.rect(0, 0, W, VIEW_H); ctx.clip();
     // weapons are authored at 1x and drawn scaled up around the bottom-centre of the view
     const sway = (p.swayX || 0) + Math.sin(time * 1.3) * 1.2, dip = (p.landT > 0 ? Math.sin(p.landT / 0.3 * Math.PI) * 9 : 0) + Math.sin(time * 1.7) * 1.1;
-    ctx.translate(W / 2 + bobX + sway, VIEW_H + 10 + bobY + lower + dip); ctx.rotate(sway * 0.004); ctx.scale(0.8, 0.8);
+    ctx.translate(W / 2 + bobX + sway, VIEW_H + 10 + bobY + lower + dip - pitch * 0.12); ctx.rotate(sway * 0.004); ctx.scale(0.8, 0.8 * (1 + pitch * 0.0012));
     w.draw(ctx, 0, 0, p.firePhase, p.flashT > 0, time);
     ctx.restore();
   }
@@ -1024,11 +1059,11 @@
     // crosshair
     const gap = 1 + player.move * 2.5 + (player.flashT > 0 ? 2.5 : 0);
     ctx.fillStyle = 'rgba(255,80,180,0.75)';
-    ctx.fillRect(W / 2 - 1, HOR - 3 - gap, 2, 3); ctx.fillRect(W / 2 - 1, HOR + 1 + gap, 2, 3);
-    ctx.fillRect(W / 2 - 4 - gap, HOR - 0.5, 3, 2); ctx.fillRect(W / 2 + 2 + gap, HOR - 0.5, 3, 2);
+    ctx.fillRect(W / 2 - 1, CY - 3 - gap, 2, 3); ctx.fillRect(W / 2 - 1, CY + 1 + gap, 2, 3);
+    ctx.fillRect(W / 2 - 4 - gap, CY - 0.5, 3, 2); ctx.fillRect(W / 2 + 2 + gap, CY - 0.5, 3, 2);
     if (hitMarkT > 0 || killMarkT > 0) { // hit marker: white for a hit, red for a kill
       ctx.strokeStyle = killMarkT > 0 ? `rgba(255,50,70,${Math.min(1, killMarkT * 4)})` : `rgba(255,255,255,${Math.min(1, hitMarkT * 7)})`; ctx.lineWidth = 1.2; ctx.beginPath();
-      for (const [sx, sy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) { ctx.moveTo(W / 2 + sx * 4, HOR + sy * 4); ctx.lineTo(W / 2 + sx * 8, HOR + sy * 8); }
+      for (const [sx, sy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) { ctx.moveTo(W / 2 + sx * 4, CY + sy * 4); ctx.lineTo(W / 2 + sx * 8, CY + sy * 8); }
       ctx.stroke();
     }
   }
@@ -1280,6 +1315,7 @@
   function eliteUpdate(dt) {
     const p = player, sk = DIFFS[diff];
     for (const e of L.enemies) {
+      if (e.dead && e.bleedT > 0) { e.bleedT -= dt; if (Math.random() < dt * 30) spawnParts('drop', e.x, e.y, (e.fz || 0) + 0.25, 3, 1.4); } // a neck fountain
       if (e.kx || e.ky) { // knockback slide
         tryMove(e, e.kx * dt, e.ky * dt, e.def.radius * 0.8); e.fz = floorAt(e.x, e.y);
         const f = Math.max(0, 1 - dt * (e.dead ? 4 : 7)); e.kx *= f; e.ky *= f; if (Math.abs(e.kx) + Math.abs(e.ky) < 0.05) e.kx = e.ky = 0;
@@ -1295,6 +1331,7 @@
         continue;
       }
       if (e.buffT > 0) e.buffT -= dt;
+      if (e.bleedT > 0) { e.bleedT -= dt; if (Math.random() < dt * 25) { spawnParts('drop', e.x, e.y, (e.fz || 0) + e.z + (e.bleedZ || 0.5), 2, 1); if (Math.random() < 0.15) floorDecal(e.x + rand(-0.15, 0.15), e.y + rand(-0.15, 0.15), rand(0.03, 0.06), BLOOD, 0.7); } }
       if (e.state === 'idle' || e.state === 'static') continue;
       const d = e.def;
       if (e.champ && Math.random() < dt * 5) vfx('sparkle', e.x + rand(-0.25, 0.25), e.y + rand(-0.25, 0.25), (e.fz || 0) + e.z + rand(0.1, d.h), { shape: 'star', vz: 0.3, life: 0.6, size: 0.02, col: '255,200,80', add: true });
@@ -1381,7 +1418,7 @@
     if (p.nadeCd > 0) return;
     p.nades--; p.nadeCd = 0.6; p.shotsF++; Voice.say('nade', 0.35);
     fireProjectile('grenade', p.x, p.y, p.eyeZ - 0.12, p.a, 'player');
-    const g = L.projs[L.projs.length - 1]; g.vz = 3.2;
+    const g = L.projs[L.projs.length - 1]; g.vz = 3.2 + pitch / PROJ * 7;
     Sfx.play.switch();
   }
   function drawRadar() {
@@ -1582,11 +1619,72 @@
     }
     ctx.restore();
   }
+  // ---- body zones and dismemberment
+  const HUMANOID = new Set(['zombie', 'manager', 'wally', 'wallyfit', 'wallydeluxe', 'brute', 'yoga', 'coach', 'bridezilla', 'redcoat', 'hypeman', 'guru', 'riot', 'boss', 'wallylive']);
+  const ZONE_BIT = { head: 1, armL: 2, armR: 4, legL: 8, legR: 16 };
+  const ZONE_BOX = { head: [0, 0, 1, 0.24], armL: [0, 0.24, 0.3, 0.6], armR: [0.7, 0.24, 1, 0.6], legL: [0, 0.6, 0.5, 1], legR: [0.5, 0.6, 1, 1] };
+  function hitZone(e, lateral, zr) {
+    const spr = enemySprite(e); if (!spr) return 'torso';
+    const u = 0.5 - lateral / (e.def.h * spr.w / spr.h), v = 1 - zr;
+    if (v < 0.24) return 'head';
+    if (v > 0.6) return u < 0.5 ? 'legL' : 'legR';
+    if (u < 0.3) return 'armL'; if (u > 0.7) return 'armR';
+    return 'torso';
+  }
+  let heedT = 0;
+  function zoneHit(e, zone, dmg, c, s) {
+    const human = HUMANOID.has(e.type) && !e.dead;
+    const mul = zone === 'head' ? (e.def.boss ? 1.6 : 2.5) : !HUMANOID.has(e.type) || e.def.boss ? 1 : zone.startsWith('arm') ? 0.7 : 0.8, dd = dmg * mul;
+    if (zone === 'head' && human && !e.def.boss && (dd >= e.hp || dmg >= 9 || Math.random() < 0.35)) { // off with its head
+      cutPart(e, 'head', c, s); damageEnemy(e, 1e6, 'player'); heedShot(e); return;
+    }
+    const wasAlive = !e.dead;
+    damageEnemy(e, dd, 'player');
+    if (zone === 'head' && wasAlive && e.dead) { heedShot(e); return; }
+    if (human && zone !== 'head' && !e.dead && !e.def.boss && !(e.cut & ZONE_BIT[zone]) && Math.random() < (dd >= 12 ? 0.75 : dd >= 7 ? 0.42 : 0.15)) cutPart(e, zone, c, s);
+  }
+  function heedShot(e) {
+    if (time - heedT < 1.2) return; heedT = time;
+    announce = { text: 'HEED SHOT!', t: 0 }; Voice.heed(); bump('heads');
+    popup(e.x, e.y, (e.fz || 0) + e.def.h + 0.2, '+100 HEED SHOT', '255,80,80'); runScore += 100;
+  }
+  // cut a piece out of the monster's current picture and send it flying
+  function cropSprite(spr, b) {
+    const x0 = Math.floor(b[0] * spr.w), y0 = Math.floor(b[1] * spr.h), w = Math.max(1, Math.ceil(b[2] * spr.w) - x0), h = Math.max(1, Math.ceil(b[3] * spr.h) - y0);
+    const data = new Uint32Array(w * h); let any = false;
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { let c = spr.data[(y0 + y) * spr.w + x0 + x]; if (c) { any = true; if (y < 2 || y >= h - 2 || x < 2 || x >= w - 2) c = 0xff1010a0; } data[y * w + x] = c; }
+    return any ? { w, h, data } : null;
+  }
+  function cutPart(e, zone, c, s) {
+    const bit = ZONE_BIT[zone]; if (e.cut & bit) return;
+    e.cut = (e.cut || 0) | bit;
+    const spr = enemySprite(e), b = ZONE_BOX[zone], base = (e.fz || 0) + e.z, h = e.def.h, pd = Math.hypot(e.x - player.x, e.y - player.y);
+    const z = base + h * (1 - (b[1] + b[3]) / 2);
+    const piece = spr && cropSprite(spr, b);
+    if (piece && L.parts.length < 320) L.parts.push({ kind: 'limb', x: e.x, y: e.y, z, vx: c * rand(1, 2.6) + rand(-1, 1), vy: s * rand(1, 2.6) + rand(-1, 1), vz: rand(2, 4), t: 0, life: 14, spr: piece, size: h * (b[3] - b[1]), bright: false });
+    spawnParts('drop', e.x, e.y, z, 16, 2.4);
+    for (let i = 0; i < 4; i++) vfx('mist', e.x, e.y, z, { vx: rand(-0.6, 0.6), vy: rand(-0.6, 0.6), vz: rand(0, 0.5), drag: 3, life: 0.7, size: 0.05, grow: 2.5, col: '150,0,20', a: 0.6 });
+    floorDecal(e.x + rand(-0.2, 0.2), e.y + rand(-0.2, 0.2), rand(0.15, 0.25), BLOOD, 0.85, 0.45);
+    e.bleedT = zone === 'head' ? 2.5 : 3; e.bleedZ = h * (zone === 'head' ? 0.76 : zone.startsWith('arm') ? 0.6 : 0.4);
+    Sfx.play.squelch(pd); screenGore(pd);
+    if (zone !== 'head') { shout(e, 'limb', 1, true); if ((e.cut & 24) === 24) e.speedK = 0.35; else if (e.cut & 24) e.speedK = 0.6; }
+  }
+  // blood on the camera when things get messy right in front of her
+  let screenBlood = [];
+  function screenGore(pd) {
+    if (pd > 1.8 || !FX_HIGH && Math.random() < 0.5) return;
+    for (let i = 0; i < irand(2, 5); i++) screenBlood.push({ x: rand(20, W - 20), y: rand(10, VIEW_H - 40), r: rand(5, 16), t: 0, life: rand(1.6, 2.8), drip: rand(4, 14) });
+    if (screenBlood.length > 24) screenBlood.splice(0, screenBlood.length - 24);
+  }
   // ---- effect recipes
+  let splatT = 0;
   function goreFx(e, hx, hy, hz, c, s) {
     if (BLOODLESS.test(e.type)) { spawnParts('spark', hx, hy, hz, 3, 1.2); return; }
-    for (let i = 0; i < 3; i++) vfx('mist', hx, hy, hz, { vx: c * rand(0.2, 0.8) + rand(-0.3, 0.3), vy: s * rand(0.2, 0.8) + rand(-0.3, 0.3), vz: rand(-0.1, 0.3), drag: 3, life: rand(0.35, 0.6), size: 0.035, grow: 2.5, col: '150,0,20', a: 0.55 });
-    floorDecal(e.x + c * rand(0.15, 0.6) + rand(-0.1, 0.1), e.y + s * rand(0.15, 0.6) + rand(-0.1, 0.1), rand(0.05, 0.12), BLOOD, 0.85);
+    const pd = Math.hypot(hx - player.x, hy - player.y);
+    if (time - splatT > 0.09) { splatT = time; Sfx.play.splat(pd); }
+    if (pd < 1.4 && Math.random() < 0.35) screenGore(pd);
+    for (let i = 0; i < 5; i++) vfx('mist', hx, hy, hz, { vx: c * rand(0.2, 0.8) + rand(-0.3, 0.3), vy: s * rand(0.2, 0.8) + rand(-0.3, 0.3), vz: rand(-0.1, 0.3), drag: 3, life: rand(0.35, 0.6), size: 0.035, grow: 2.5, col: '150,0,20', a: 0.55 });
+    for (let i = 0; i < 2; i++) floorDecal(e.x + c * rand(0.15, 0.9) + rand(-0.15, 0.15), e.y + s * rand(0.15, 0.9) + rand(-0.15, 0.15), rand(0.05, 0.14), BLOOD, 0.85);
     const wh = cast(e.x, e.y, c, s);
     if (wh.dist < 1.3 && L.grid[wh.my * L.mw + wh.mx] !== DOOR) wallDecal(wh.mx, wh.my, wallFace(wh.side, c, s), wh.u, clamp(hz + rand(-0.1, 0.05), 0.05, L.ceilH - 0.05), rand(0.08, 0.16), BLOOD, 0.85, 0.45);
   }
@@ -1632,7 +1730,11 @@
   function killFx(e, src) {
     if (e.type === 'barrel') return;
     const fz = e.fz || 0;
-    if (!BLOODLESS.test(e.type)) floorDecal(e.x + rand(-0.1, 0.1), e.y + rand(-0.1, 0.1), rand(0.28, 0.42) * (e.def.boss ? 2.2 : 1), [92, 0, 12], 0.85, 0.35);
+    if (!BLOODLESS.test(e.type)) {
+      floorDecal(e.x + rand(-0.1, 0.1), e.y + rand(-0.1, 0.1), rand(0.28, 0.42) * (e.def.boss ? 2.2 : 1), [92, 0, 12], 0.85, 0.35);
+      spawnParts('drop', e.x, e.y, fz + e.z + e.def.h * 0.6, 18, 2.6); // a burst of blood
+      Sfx.play.splat(Math.hypot(e.x - player.x, e.y - player.y)); screenGore(Math.hypot(e.x - player.x, e.y - player.y));
+    }
     for (let i = 0; i < (e.def.boss ? 30 : 5); i++) vfx('wisp', e.x + rand(-0.2, 0.2), e.y + rand(-0.2, 0.2), fz + e.z + e.def.h * rand(0.3, 0.8), { vz: rand(0.3, 0.8), wob: 0.8, life: rand(1.2, 2.2), size: rand(0.02, 0.035), col: e.def.boss ? '255,210,90' : '210,120,255', add: true, a: 0.8 });
     if (e.def.boss) { confettiFx(e.x, e.y, fz + 1.4, 120); if (!online) slowMoT = 1.6; shake = Math.max(shake, 6); }
     if (src === 'player') {
@@ -1713,8 +1815,8 @@
       const fl = floorAt(q.x, q.y) + q.size / 2;
       if (q.z < fl) {
         q.z = fl;
-        if (q.kind === 'gib' && q.vz < -1) { q.vz *= -0.35; q.vx *= 0.6; q.vy *= 0.6; floorDecal(q.x, q.y, rand(0.04, 0.09), BLOOD, 0.8, 0.4); }
-        else { q.vz = 0; q.vx *= 0.5; q.vy *= 0.5; if (q.kind !== 'gib') q.t = Math.max(q.t, q.life - 0.12); }
+        if ((q.kind === 'gib' || q.kind === 'limb') && q.vz < -1) { q.vz *= -0.35; q.vx *= 0.6; q.vy *= 0.6; floorDecal(q.x, q.y, rand(0.05, q.kind === 'limb' ? 0.16 : 0.09), BLOOD, 0.85, 0.4); if (q.vz > 0.8) Sfx.play.splat(Math.hypot(q.x - player.x, q.y - player.y) + 3); }
+        else { q.vz = 0; q.vx *= 0.5; q.vy *= 0.5; if (q.kind !== 'gib' && q.kind !== 'limb') q.t = Math.max(q.t, q.life - 0.12); }
       }
     }
     L.parts = L.parts.filter(q => q.t < q.life);
@@ -1741,14 +1843,23 @@
     const c = Math.cos(ang), s = Math.sin(ang);
     const wh = cast(ox, oy, c, s);
     const wallDist = Math.min(wh.dist, range);
-    let best = null, bestA = wallDist;
+    // the player's shots travel up or down with her aim; spread shots scatter vertically too
+    let dev = ang - player.a; while (dev > Math.PI) dev -= TAU; while (dev < -Math.PI) dev += TAU;
+    const slope = fromEnemy ? 0 : pitch / PROJ + (Math.random() * 2 - 1) * Math.abs(dev);
+    let best = null, bestA = wallDist, bestLat = 0, bestZr = 0.5;
     for (const e of shootables()) {
       if (e === fromEnemy) continue;
       const vx = e.x - ox, vy = e.y - oy;
       const along = vx * c + vy * s;
       if (along <= 0 || along >= bestA) continue;
       const lateral = vy * c - vx * s; // + means the enemy is to the right of the shot
-      if (Math.abs(lateral) < e.def.h * 1.2 && spriteHit(e, lateral)) { best = e; bestA = along; }
+      let zr = 0.5;
+      if (!fromEnemy && e.type !== 'barrel' && !e.remote) { // does the shot pass over its head or under its feet?
+        const base = (e.fz || 0) + e.z - ((e.cut & 24) === 24 ? e.def.h * 0.4 : 0);
+        zr = (player.eyeZ + slope * along - base) / e.def.h;
+        if (zr < -0.1 || zr > 1.1) continue;
+      }
+      if (Math.abs(lateral) < e.def.h * 1.2 && spriteHit(e, lateral)) { best = e; bestA = along; bestLat = lateral; bestZr = zr; }
     }
     if (!fromEnemy) { // shooting a plant, cooler, tombstone or candelabra breaks it
       player.shotsF++;
@@ -1762,11 +1873,14 @@
     }
     if (best) {
       if (!fromEnemy) { player.shotsH++; if (dmg >= 10 && bestA < 4) shove(best, c, s, 0.9); }
-      damageEnemy(best, dmg, fromEnemy || 'player');
-      const hx = ox + c * (bestA - 0.3), hy = oy + s * (bestA - 0.3), hz = (best.fz || 0) + best.z + best.def.h * 0.6;
+      const zone = !fromEnemy && best.type !== 'barrel' && !best.remote ? hitZone(best, bestLat, bestZr) : 'torso';
+      const hz = (best.fz || 0) + best.z + best.def.h * clamp(bestZr, 0.05, 0.95);
+      if (zone === 'torso' || fromEnemy) damageEnemy(best, dmg, fromEnemy || 'player');
+      else zoneHit(best, zone, dmg, c, s);
+      const hx = ox + c * (bestA - 0.3), hy = oy + s * (bestA - 0.3);
       if (!best.remote) goreFx(best, hx, hy, hz, c, s);
       spawnFx(best.type === 'barrel' ? 'puff' : 'blood', hx, hy, hz, 0.12, 0.3);
-      spawnParts(best.type === 'barrel' ? 'spark' : 'drop', hx, hy, hz, best.type === 'barrel' ? 4 : 5, 1.4);
+      spawnParts(best.type === 'barrel' ? 'spark' : 'drop', hx, hy, hz, best.type === 'barrel' ? 4 : 9, 1.8);
       return true;
     }
     if (wallDist < range) {
@@ -1787,7 +1901,7 @@
     }
     const def = PROJECTILES[kind];
     L.projs.push({ kind, def, x: x + Math.cos(ang) * 0.4, y: y + Math.sin(ang) * 0.4, z, vx: Math.cos(ang) * def.speed, vy: Math.sin(ang) * def.speed,
-      owner, frames: S.proj[kind], life: def.life || 6, age: 0, fireA: player.a, vz: 0 });
+      owner, frames: S.proj[kind], life: def.life || 6, age: 0, fireA: player.a, vz: owner === 'player' && !def.grav ? pitch / PROJ * def.speed : 0 });
   }
 
   function explode(pr) {
@@ -1809,7 +1923,10 @@
     for (const e of shootables()) {
       if (e === owner || (e.remote && owner !== 'player')) continue;
       const dd = Math.hypot(e.x - x, e.y - y) - e.def.radius;
-      if (dd < radius && losClear(x, y, e.x, e.y)) { const k = 1 - Math.max(0, dd) / radius; damageEnemy(e, maxDmg * k, owner); shove(e, e.x - x, e.y - y, 5 * k); }
+      if (dd < radius && losClear(x, y, e.x, e.y)) {
+        const k = 1 - Math.max(0, dd) / radius, alive = !e.dead; damageEnemy(e, maxDmg * k, owner); shove(e, e.x - x, e.y - y, 5 * k);
+        if (alive && e.dead && k > 0.45 && HUMANOID.has(e.type) && !e.def.boss) { const dx = e.x - x, dy = e.y - y, l = Math.hypot(dx, dy) || 1; for (const z of ['armL', 'armR', 'legL', 'legR', 'head']) if (Math.random() < 0.45) cutPart(e, z, dx / l, dy / l); } // blown to bits
+      }
     }
     for (const d of L.decor.slice()) if (BREAK[d.def.sprite] && Math.hypot(d.x - x, d.y - y) < radius * 0.8 && losClear(x, y, d.x, d.y)) breakDecor(d);
     for (const e of L.enemies) if (e.dead && e.type !== 'barrel' && Math.hypot(e.x - x, e.y - y) < radius) shove(e, e.x - x, e.y - y, 4);
@@ -1868,7 +1985,7 @@
       const mz = (e.fz || 0) + e.z + e.def.h * 0.55;
       spawnParts('drop', e.x, e.y, mz, 8, 1.6);
       if (dmg >= 40 && !e.def.boss) spawnParts('gib', e.x, e.y, mz, 9, 2.2); // blown apart
-      player.kills++; killFx(e, src); dropLoot(e); shout(e, 'death', 0.6);
+      player.kills++; killFx(e, src); dropLoot(e); if (!(e.cut & 1)) shout(e, 'death', 0.6);
       if (e.def.kamikaze) setTimeout(() => popBlast(e), 80);
       if (e.champ) { Voice.say('champion', 0.5); bump('champs'); popup(e.x, e.y, (e.fz || 0) + e.def.h, '+250 CHAMPION', '255,200,80'); runScore += 250; }
       if (src === 'player') unlock('firstblood');
@@ -1987,6 +2104,9 @@
     const ang = Math.atan2(ty - e.y, tx - e.x) + (veiled ? rand(-0.5, 0.5) : 0);
     const z = (e.fz || 0) + e.z + d.h * 0.6;
     const hurt = dmg => tg ? damageEnemy(tg, dmg, e) : damagePlayer(dmg, e.x, e.y);
+    if ((e.cut & 6) === 6 && d.attack !== 'melee' && d.attack !== 'charge') { // no arms: all it can do is headbutt
+      if (pd < d.radius + 0.95) { hurt(irand(3, 8)); Sfx.play.punch(); } else shout(e, 'noarms', 0.4); return;
+    }
     if (d.kamikaze) { if (pd < 1.7) { e.dead = true; e.state = 'dead'; e.frame = 0; e.t = 0; popBlast(e); } return; }
     Sfx.play[d.atkSound] && Sfx.play[d.atkSound](playerDist);
     if (d.slogans && playerDist < 14) { msg = `"${SLOGANS[irand(0, SLOGANS.length - 1)]}"`; msgT = 1.6; }
@@ -2107,7 +2227,7 @@
       const keepDist = d.attack === 'melee' || d.attack === 'charge' || d.charge ? d.radius + 0.55 : 1.4;
       if (pd > keepDist) {
         const [mx, my] = tg ? [pdx / pd, pdy / pd] : enemyMoveDir(e);
-        const sp = d.speed * sk.speed * mods.speed * dt * rush * (e.buffT > 0 ? 1.35 : 1);
+        const sp = d.speed * sk.speed * mods.speed * dt * rush * (e.buffT > 0 ? 1.35 : 1) * (e.speedK || 1);
         const nx = e.x + mx * sp, ny = e.y + my * sp;
         // open doors in the way
         const ti = Math.floor(ny) * L.mw + Math.floor(nx);
@@ -2154,7 +2274,7 @@
           pr.bounces = (pr.bounces || 0) + 1; pr.hit = null; spawnParts('spark', pr.x, pr.y, pr.z, 4, 1.5); Sfx.play.tink(); break;
         }
         if (opaqueAt(nx, ny) || pr.z < floorAt(nx, ny) - 0.02) { explode(pr); pr.done = true; break; }
-        pr.x = nx; pr.y = ny;
+        pr.x = nx; pr.y = ny; if (pr.vz) { pr.z += pr.vz * dt / steps; if (!L.def.sky && pr.z > L.ceilH) { explode(pr); pr.done = true; break; } }
         if (pr.owner !== 'player' && pr.owner !== 'ghost') {
           if (Math.hypot(p.x - pr.x, p.y - pr.y) < 0.3 + pr.def.size / 2) {
             lastAttacker = typeOf(pr.owner) === '_ep' ? lastAttacker : typeOf(pr.owner);
@@ -2195,10 +2315,10 @@
 
   // ------------------------------------------------------------------ player
   const keys = {};
-  let mouseDX = 0, fireHeld = false;
-  const touch = { mx: 0, my: 0, turn: 0, fire: false };
+  let mouseDX = 0, mouseDY = 0, fireHeld = false;
+  const touch = { mx: 0, my: 0, turn: 0, pitch: 0, fire: false };
   // ---- gamepad (Xbox / PlayStation / Switch / phone controllers, standard mapping)
-  const pad = { mx: 0, my: 0, turn: 0, fire: false, run: false };
+  const pad = { mx: 0, my: 0, turn: 0, pitch: 0, fire: false, run: false };
   let padPrev = [], padConnected = false, padNavT = 0;
   const synthKey = code => { const key = { Enter: 'Enter', Escape: 'Escape' }[code] || code; window.dispatchEvent(new KeyboardEvent('keydown', { code, key })); window.dispatchEvent(new KeyboardEvent('keyup', { code, key })); };
   function pollGamepad(dt) {
@@ -2210,6 +2330,7 @@
     const ax = i => { const v = gp.axes[i] || 0; return Math.abs(v) < 0.18 ? 0 : (v - Math.sign(v) * 0.18) / 0.82; };
     if (state === 'playing' && !paused) {
       pad.mx = ax(0); pad.my = -ax(1); pad.turn = ax(2) * Math.abs(ax(2)) * 4.2 * dt; // curve: fine aim near the centre
+      pad.pitch = ax(3) * Math.abs(ax(3)) * 150 * dt;
       pad.fire = b(7) || b(6); // either trigger fires
       pad.run = b(10);
       if (hit(2)) useAction();
@@ -2328,12 +2449,15 @@
 
   function updatePlayer(dt) {
     const p = player;
-    if (p.dead) { p.eyeZ = Math.max(p.fz + 0.12, p.eyeZ - dt * 0.6); return; }
+    if (p.dead) { p.eyeZ = Math.max(p.fz + 0.12, p.eyeZ - dt * 0.6); pitch *= 0.92; HOR = VIEW_H / 2 + pitch; return; }
     // turning
     const turnSpeed = 2.8, prevA = p.a;
     if (keys.ArrowLeft) p.a -= turnSpeed * dt;
     if (keys.ArrowRight) p.a += turnSpeed * dt;
     p.a += mouseDX * 0.0028 + touch.turn + pad.turn; mouseDX = 0; touch.turn = 0;
+    // look up and down: mouse, a vertical drag on the right of the screen, the right stick, or R / F (C centres)
+    pitch -= mouseDY * 0.25 + touch.pitch + (pad.pitch || 0) - ((keys.KeyR || keys.PageUp ? 90 : 0) - (keys.KeyF || keys.PageDown ? 90 : 0)) * dt;
+    mouseDY = 0; touch.pitch = 0; pitch = clamp(pitch, -PITCH_MAX, PITCH_MAX); HOR = VIEW_H / 2 + pitch;
     p.a = normAng(p.a);
     { let da = p.a - prevA; if (da > Math.PI) da -= TAU; if (da < -Math.PI) da += TAU; // the gun lags behind when turning
       p.swayX = (p.swayX || 0) + (clamp(-da / Math.max(dt, 0.001) * 4, -16, 16) - (p.swayX || 0)) * Math.min(1, dt * 8); }
@@ -2501,6 +2625,7 @@
     { id: 'champion', name: 'CHAMPION SLAYER', desc: 'Defeat 10 champion monsters', count: 'champs', need: 10 },
     { id: 'smash', name: 'BULL IN A GOTH SHOP', desc: 'Smash 25 plants, coolers and tombstones', count: 'smash', need: 25 },
     { id: 'nightmare', name: 'LIVING NIGHTMARE', desc: 'Finish the game on Nightmare Goth' },
+    { id: 'heed', name: 'HEED HUNTER', desc: 'Land 25 heed shots', count: 'heads', need: 25 },
     { id: 'theend', name: 'THE END OF CHEER', desc: 'Finish the whole game' },
   ];
   const ACH_KEY = 'goffichick-achievements';
@@ -2836,7 +2961,7 @@
       bubbleCd -= dt;
       for (const e of L.enemies) {
         if (e.barT > 0) e.barT -= dt; if (e.hitT > 0) e.hitT -= dt; if (e.bubble) { e.bubble.t -= dt; if (e.bubble.t <= 0) e.bubble = null; }
-        if (!e.dead && e.state === 'chase' && Math.random() < dt * 0.06 && Math.hypot(e.x - player.x, e.y - player.y) < 9) shout(e, 'sight', 0.5); // the odd taunt
+        if (!e.dead && e.state === 'chase' && Math.random() < dt * 0.09 && Math.hypot(e.x - player.x, e.y - player.y) < 9) shout(e, (e.cut & 24) && Math.random() < 0.5 ? 'limb' : 'sight', 0.6); // the odd taunt
       }
       for (const d of dmgDirs) d.t += dt; dmgDirs = dmgDirs.filter(d => d.t < 1);
       if (announce) { announce.t += dt; if (announce.t > 1.8) announce = null; }
@@ -2885,11 +3010,11 @@
       if (state === 'title') drawTitlePad();
     }
     const lines = ['WASD / ARROWS  move    MOUSE  look    CLICK / CTRL  fire    E  use', 'SPACE  jump    G  grenade    1-9 / Q / WHEEL  weapons    SHIFT run',
-      'TAB map   N radar   L torch   H photo mode   K screenshot   M music   ESC pause'];
+      'MOUSE UP/DOWN or R / F  aim up and down (C centres)   TAB map   N radar   L torch   H photo   K screenshot'];
     if (state !== 'title' || menuItems().length <= 12) lines.forEach((l, i) => label(l, 18, 222 + i * 7.5, '#b78ab7', 'left', 6));
     label('Keys open coloured doors. Stairs and lifts take you up. V toggles her voice. Gamepads work too.', 18, 246, '#8a6a8a', 'left', 6.5);
     if (state === 'title') label(TIPS[Math.floor(time / 7) % TIPS.length], 18, 264, '#ff9be0', 'left', 6);
-    label('ON A PHONE? Left stick moves, drag right side to look.', 18, 254, '#7a5a7a', 'left', 6.5);
+    label('ON A PHONE? Left stick moves, drag the right side to look around and up/down.', 18, 254, '#7a5a7a', 'left', 6.5);
   }
 
   function drawOverlayText(title, sub, lines, dy = 16) {
@@ -3077,7 +3202,7 @@
     if (player.cur === 'laser' && player.flashT > 0 && state === 'playing' && !photoMode) { // the lipstick laser beam
       ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
       const mx = W / 2 + 36 * 0.8, my = VIEW_H + 10 - 112 * 0.8; // the lipstick's tip
-      for (const [w, c] of [[7, 'rgba(255,30,100,0.35)'], [3, 'rgba(255,80,150,0.8)'], [1.2, 'rgba(255,235,245,1)']]) { ctx.strokeStyle = c; ctx.lineWidth = w; ctx.beginPath(); ctx.moveTo(mx, my); ctx.lineTo(W / 2 + (Math.random() - 0.5), HOR + (Math.random() - 0.5)); ctx.stroke(); }
+      for (const [w, c] of [[7, 'rgba(255,30,100,0.35)'], [3, 'rgba(255,80,150,0.8)'], [1.2, 'rgba(255,235,245,1)']]) { ctx.strokeStyle = c; ctx.lineWidth = w; ctx.beginPath(); ctx.moveTo(mx, my); ctx.lineTo(W / 2 + (Math.random() - 0.5), CY + (Math.random() - 0.5)); ctx.stroke(); }
       ctx.restore();
     }
     if (!photoMode) drawWeapon();
@@ -3232,6 +3357,7 @@
     if (e.code === 'KeyL') { torchMode = { auto: 'on', on: 'off', off: 'auto' }[torchMode]; msg = `Torch: ${torchMode}`; msgT = 1.5; }
     if (e.code === 'KeyH') { photoMode = !photoMode; msg = photoMode ? 'Photo mode' : ''; msgT = photoMode ? 1.5 : 0; }
     if (e.code === 'KeyK') screenshot();
+    if (e.code === 'KeyC') { pitch = 0; HOR = VIEW_H / 2; }
     }
     if (e.code === 'Tab') automap = !automap;
     if (e.code === 'KeyM') { musicOn = Sfx.toggleMusic(); msg = musicOn ? 'Music on' : 'Music off'; msgT = 1.5; }
@@ -3249,10 +3375,11 @@
     if (e.button === 0) fireHeld = true;
   });
   window.addEventListener('mouseup', () => { fireHeld = false; });
-  document.addEventListener('mousemove', e => { if (locked() && state === 'playing' && !paused) mouseDX += e.movementX; });
+  document.addEventListener('mousemove', e => { if (locked() && state === 'playing' && !paused) { mouseDX += e.movementX; mouseDY += e.movementY; } });
   // without pointer lock (e.g. inside an embedded frame) drag with the mouse to look
   let dragX = null;
-  canvas.addEventListener('mousemove', e => { if (!locked() && (e.buttons & 1) && dragX !== null && state === 'playing') mouseDX += (e.clientX - dragX) * 1.5; dragX = e.clientX; });
+  let dragY = null;
+  canvas.addEventListener('mousemove', e => { if (!locked() && (e.buttons & 1) && dragX !== null && state === 'playing') { mouseDX += (e.clientX - dragX) * 1.5; mouseDY += (e.clientY - (dragY ?? e.clientY)) * 1.5; } dragX = e.clientX; dragY = e.clientY; });
   canvas.addEventListener('wheel', e => { if (state === 'editor') { editor.wheel(e.deltaY); e.preventDefault(); return; } if (state === 'playing') { cycleWeapon(e.deltaY > 0 ? 1 : -1); e.preventDefault(); } }, { passive: false });
   document.addEventListener('pointerlockchange', () => { if (!locked() && state === 'playing' && !isTouch) { /* stay running; click relocks */ } });
 
@@ -3298,9 +3425,9 @@
     stick.addEventListener('pointermove', moveStick);
     const endStick = e => { if (e.pointerId !== stickId) return; stickId = null; touch.mx = touch.my = 0; knob.style.transform = ''; };
     stick.addEventListener('pointerup', endStick); stick.addEventListener('pointercancel', endStick);
-    const look = document.getElementById('look'); let lookId = null, lx = 0;
-    look.addEventListener('pointerdown', e => { if (primaryAction(e)) return; lookId = e.pointerId; lx = toLocal(e.clientX, e.clientY).x; look.setPointerCapture(e.pointerId); });
-    look.addEventListener('pointermove', e => { if (e.pointerId === lookId) { const x = toLocal(e.clientX, e.clientY).x; touch.turn += (x - lx) * 0.009; lx = x; } });
+    const look = document.getElementById('look'); let lookId = null, lx = 0, ly = 0;
+    look.addEventListener('pointerdown', e => { if (primaryAction(e)) return; lookId = e.pointerId; const l0 = toLocal(e.clientX, e.clientY); lx = l0.x; ly = l0.y; look.setPointerCapture(e.pointerId); });
+    look.addEventListener('pointermove', e => { if (e.pointerId === lookId) { const l1 = toLocal(e.clientX, e.clientY); touch.turn += (l1.x - lx) * 0.009; touch.pitch += (l1.y - ly) * 0.45; lx = l1.x; ly = l1.y; } });
     const endLook = e => { if (e.pointerId === lookId) lookId = null; };
     look.addEventListener('pointerup', endLook); look.addEventListener('pointercancel', endLook);
     const btn = (id, down, up) => { const b = document.getElementById(id); b.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); if (!primaryAction(e)) down(); }); if (up) { b.addEventListener('pointerup', up); b.addEventListener('pointercancel', up); b.addEventListener('pointerleave', up); } };
@@ -3705,6 +3832,6 @@
     titleImg = photos.title;
     state = 'title';
     // expose a tiny debug hook for testing
-    window.GOFFI = { get state() { return state; }, get player() { return player; }, get level() { return L; }, start: startGame, completeLevel, ach, ACHIEVEMENTS, get quality() { return QUALITY; }, get score() { return runScore; }, highScores, get diff() { return diff; }, set diff(v) { diff = v; }, continueGame, savedGame, setLevel: i => { levelIndex = i; loadLevel(i, null); state = 'playing'; }, get mode() { return mode; }, get horde() { return horde; }, throwNade, jump: () => { jumpReq = true; }, get paused() { return paused; }, spawn: (t, x, y) => spawnEnemy(t, x, y), startHorde: () => startSolo('horde', DM_LEVELS[0]), get fxHigh() { return FX_HIGH; }, set fxHigh(v) { FX_HIGH = v; }, get fxDrop() { return fxDrop; }, set fxDrop(v) { fxDrop = v; }, get online() { return online; }, Net, get menuPage() { return menuPage; }, weeklyInfo, editor, LevelCode, get sharedLvl() { return sharedLvl; }, get levelTime() { return levelTime; }, set levelTime(v) { levelTime = v; } };
+    window.GOFFI = { get state() { return state; }, get player() { return player; }, get level() { return L; }, start: startGame, completeLevel, ach, ACHIEVEMENTS, get quality() { return QUALITY; }, get score() { return runScore; }, highScores, get diff() { return diff; }, set diff(v) { diff = v; }, continueGame, savedGame, setLevel: i => { levelIndex = i; loadLevel(i, null); state = 'playing'; }, get mode() { return mode; }, get pitch() { return pitch; }, set pitch(v) { pitch = v; HOR = VIEW_H / 2 + v; }, get horde() { return horde; }, throwNade, jump: () => { jumpReq = true; }, get paused() { return paused; }, spawn: (t, x, y) => spawnEnemy(t, x, y), startHorde: () => startSolo('horde', DM_LEVELS[0]), get fxHigh() { return FX_HIGH; }, set fxHigh(v) { FX_HIGH = v; }, get fxDrop() { return fxDrop; }, set fxDrop(v) { fxDrop = v; }, get online() { return online; }, Net, get menuPage() { return menuPage; }, weeklyInfo, editor, LevelCode, get sharedLvl() { return sharedLvl; }, get levelTime() { return levelTime; }, set levelTime(v) { levelTime = v; } };
   });
 })();

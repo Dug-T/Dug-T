@@ -49,6 +49,9 @@ const Sfx = (() => {
 
   const play = {
     punch: () => { noise(0.12, 900, 0.6); tone(120, 0.1, 'sine', 0.4, 50); },
+    // sloshy, wet gore sounds
+    splat: dist => { const v = vol(dist); noise(0.22, 650, 0.38 * v, 'lowpass', 1, 160); tone(150, 0.16, 'sine', 0.22 * v, 55); setTimeout(() => noise(0.14, 420, 0.22 * v, 'bandpass', 1, 180), 60); },
+    squelch: dist => { const v = vol(dist); noise(0.3, 1100, 0.45 * v, 'bandpass', 1, 220); tone(320, 0.22, 'triangle', 0.2 * v, 70); setTimeout(() => { noise(0.18, 500, 0.3 * v, 'lowpass', 1, 120); tone(90, 0.15, 'sine', 0.25 * v, 50); }, 90); },
     swing: () => noise(0.15, 2500, 0.15, 'bandpass', 1, 600),
     pistol: () => { noise(0.18, 3000, 0.7, 'lowpass', 1, 400); tone(220, 0.08, 'square', 0.15, 80); },
     shotgun: () => { noise(0.45, 2200, 0.9, 'lowpass', 1, 150); tone(90, 0.3, 'sine', 0.6, 35); },
