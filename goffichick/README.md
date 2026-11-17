@@ -227,8 +227,8 @@ flinches when hit, and her eyes glow pink when she picks up a new weapon.
 
 A pulsing **TIP JAR** button wanders around the top of the title screen, and sits still, centred under the options in
 the pause menu, just like Wallyman World's. On the title screen it's cheeky: it darts away when the mouse gets
-close, or when you tap at or near it, shouting things like "Nope!" and "Too slow!". After 3 dodges it runs out of
-puff, sweats and says "Okay, okay... tip me!", then stays put for 6 seconds so it can be caught. Taps while
+close, or when you click or tap at or near it, shouting things like "Nope!" and "Too slow!". After your 3rd click it
+runs out of puff, sweats, says "Okay, okay... tip me!" and stays put, and the 4th click always opens Ko-fi. Taps while
 chasing it never start a game by accident. It has a
 gold rim, a pink glow, a shine sweeping across it, a steaming coffee cup with a heart, and twinkling sparkles.
 Tapping or clicking it opens your Ko-fi page in a new tab. The page name is `GOFFICHICK_KOFI` at the top of
