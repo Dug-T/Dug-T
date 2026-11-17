@@ -195,9 +195,11 @@ flinches when hit, and her eyes glow pink when she picks up a new weapon.
 
 - **Twin-stick phone controls:**
   - the pink stick on the left moves
-  - the cyan stick on the right aims: left and right turn, up and down look up and down; small pushes give fine
-    aim and full pushes swing fast
-  - dragging anywhere else on the right half still works too
+  - the cyan pad on the right aims, Call of Duty Mobile style:
+    - swipe and the view follows your thumb exactly (precise aim)
+    - hold your thumb out near the edge to keep turning (big spins)
+    - wherever your thumb lands becomes the centre, so the view never jumps
+  - only the cyan pad turns you; dragging elsewhere on the screen doesn't
 - **LOOK SPEED** (title menu → OPTIONS, or the pause menu): sets how fast the sticks, dragging and gamepads turn
   and aim. The new default is more sensitive than before.
 - **OPTIONS menu:** graphics, effects, look speed and voices now live here.
