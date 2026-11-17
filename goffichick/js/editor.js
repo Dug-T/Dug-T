@@ -83,9 +83,9 @@ function checkLevel(lvl) {
 function makeEditor(api) {
   const STORE = 'goffichick-levels';
   const PALETTE = {
-    WALL: ['#', '%', 'W', 'O', 'G', 'C', 'M', 'Y', 'H', 'P', 'S', 'I', '|', ':', ';', '_'],
+    WALL: ['#', '%', 'W', 'O', 'G', 'C', 'M', 'Y', 'H', 'P', 'S', 'I', '|', ':', ';', '_', 'ç', 'ñ', 'æ', 'å', 'ü'],
     DOOR: ['>', 'X', 'D', '$', 'E', 'B', 'Q', '~', '1', '2', '@'],
-    MON: ['z', 'm', 'w', 'b', 'i', 'h', 'g', 'l', 'x', 'f', 'd', '?', '€', '&', '(', ')', '[', ']', 'K', 'J', '§', 'y'],
+    MON: ['z', 'm', 'w', 'b', 'i', 'h', 'g', 'l', 'x', 'f', 'd', '?', '€', '&', '(', ')', '[', ']', 'µ', 'ß', 'Ø', '¶', 'K', 'J', '§', 'Ω', 'y'],
     ITEM: ['+', '*', 'o', 'a', 'A', 'c', 's', 'r', 'u', 'n', 'e', 't', 'V', 'N', 'Z', 'U', '3', '4', '5', '6', '7', '8', '9', '0', 'F', '!', '=', '/', '"', "'", '\\', ',', '{', '}', '-'],
     DECO: ['T', 'R', 'L', 'p', 'q', 'k', 'j'],
   };
@@ -98,6 +98,8 @@ function makeEditor(api) {
     '?': 'Bridezilla', '€': 'Redcoat entertainer', K: 'BOSS: Wally Prime', J: 'BOSS: Mega Smiley', '§': 'BOSS: Wally Live!', y: 'Exploding barrel',
     '+': 'Vial of blood', '*': 'Black heart', o: 'Soul orb', a: 'Leather jacket', A: 'Spiked corset', c: 'Bullets', s: 'Shells', r: 'Flaming skulls', u: 'Rockets', n: 'Fuel', e: 'Jar of souls', t: 'Bat bolts',
     V: 'Shadow veil', N: 'Night shroud', Z: 'Gas mask', U: 'Rage heart', 3: 'Coffin shotgun', 4: 'Bone gatling', 5: 'Skull launcher', 6: 'Hexcaster', 7: 'BFG', 8: 'Machine gun', 9: 'Shotgun', 0: 'Rocket launcher',
+    'ç': 'Spa tiles', 'ñ': 'Bamboo', 'æ': 'Neon (animated)', 'å': 'Server racks (animated)', 'ü': 'Code screen (animated)',
+    'µ': 'Spa Mummy', 'ß': 'Happyland Mascot', 'Ø': 'Selfie Drone', '¶': 'Karen (calls managers)', 'Ω': 'BOSS: WALLY.EXE',
     '&': 'Hype Man (speeds up others)', '(': 'Selfie Ghost (teleports)', ')': 'Party Popper (explodes)', '[': 'Wellness Guru (heals others)', ']': 'Riot Shield Manager',
     ',': 'Black rose (collectible)', '{': 'Double Gloom', '}': 'Bat Wings', '-': 'Bat grenades',
     '/': 'Spiked cricket bat', '"': 'Nail gun', "'": 'Vinyl launcher', '\\': 'Lipstick laser',

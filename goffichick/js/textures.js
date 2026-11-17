@@ -147,14 +147,15 @@ const Textures = (() => {
     for (let i = 0; i < 160; i++) { g.fillStyle = ['#3d8a26', '#24561a', '#4fa032', '#1d4a14'][(rnd() * 4) | 0]; g.beginPath(); g.ellipse(rnd() * 64, rnd() * 64, 2 + rnd() * 3, 1.5 + rnd() * 2, rnd() * 3, 0, 7); g.fill(); }
     for (let i = 0; i < 5; i++) { g.fillStyle = ['#ffd21f', '#ff7eb3', '#ffffff'][i % 3]; g.beginPath(); g.arc(rnd() * 64, rnd() * 64, 1.5, 0, 7); g.fill(); }
   }, 14);
-  // 17: shop window (Shopping Maul) - glass, a SALE banner and a mannequin
-  T[17] = make(g => {
+  // 17: shop window (Shopping Maul) - glass, a flashing SALE banner and a mannequin
+  const shopWin = f => make(g => {
     g.fillStyle = '#d8d0c4'; g.fillRect(0, 0, 64, 64);
     const gl = g.createLinearGradient(0, 8, 64, 56); gl.addColorStop(0, '#9fd8f0'); gl.addColorStop(0.5, '#d8f2ff'); gl.addColorStop(1, '#7ab8d8');
     g.fillStyle = gl; g.fillRect(4, 10, 56, 46);
     g.fillStyle = '#e8e0d4'; E2(g, 32, 34, 5, 6); g.fillRect(28, 38, 8, 16); g.fillStyle = '#ff7eb3'; g.fillRect(27, 40, 10, 9); // mannequin
     g.fillStyle = 'rgba(255,255,255,0.45)'; g.beginPath(); g.moveTo(8, 54); g.lineTo(22, 12); g.lineTo(27, 12); g.lineTo(13, 54); g.fill();
-    g.fillStyle = '#ff2d95'; g.fillRect(0, 0, 64, 9); g.fillStyle = '#fff'; g.font = 'bold 8px sans-serif'; g.textAlign = 'center'; g.fillText('SALE! 50%', 32, 7.5);
+    g.fillStyle = ['#ff2d95', '#ffd21f', '#3cdcff'][f]; g.fillRect(0, 0, 64, 9); g.fillStyle = f === 1 ? '#2a0a1a' : '#fff'; g.font = 'bold 8px sans-serif'; g.textAlign = 'center'; g.fillText(['SALE! 50%', 'SALE! 70%', 'EVERYTHING MUST GO'][f], 32, 7.5);
+    for (let k = 0; k < 8; k++) { g.fillStyle = (k + f) % 2 ? '#fff6a0' : '#ff7eb3'; g.fillRect(4 + k * 7.5, 10, 2, 2); } // marquee bulbs
     g.fillStyle = '#8a8274'; g.fillRect(0, 56, 64, 8); g.fillRect(0, 9, 4, 47); g.fillRect(60, 9, 4, 47);
   }, 6);
   function E2(g, x, y, rx, ry) { g.beginPath(); g.ellipse(x, y, rx, ry, 0, 0, 7); g.fill(); }
@@ -202,6 +203,57 @@ const Textures = (() => {
     g.fillStyle = '#fff4f4'; g.font = 'bold 11px sans-serif'; g.textAlign = 'center'; g.fillText('ON AIR', 32, 34);
     g.fillStyle = '#3d8bff'; g.fillRect(0, 44, 64, 2);
   }, 4);
+
+  // ---- Episode 4 walls ----
+  // 24: spa - pale teal tiles with white grout and a soft sheen
+  T[24] = make(g => {
+    g.fillStyle = '#e8f6f4'; g.fillRect(0, 0, 64, 64);
+    for (let y = 0; y < 64; y += 16) for (let x = 0; x < 64; x += 16) {
+      const gr = g.createLinearGradient(x, y, x + 16, y + 16); gr.addColorStop(0, '#9fe0d8'); gr.addColorStop(0.5, '#7fcfc6'); gr.addColorStop(1, '#5fb5ad');
+      g.fillStyle = gr; g.fillRect(x + 1, y + 1, 14, 14); g.fillStyle = 'rgba(255,255,255,0.45)'; g.fillRect(x + 2, y + 2, 5, 1.5);
+    }
+    g.fillStyle = '#ffffff'; g.fillRect(0, 30, 64, 4); g.fillStyle = '#d8b06a'; g.fillRect(0, 31, 64, 1.5);
+  }, 4);
+  // 25: bamboo screen
+  T[25] = make(g => {
+    g.fillStyle = '#3a2a14'; g.fillRect(0, 0, 64, 64);
+    for (let x = 0; x < 64; x += 8) {
+      const gr = g.createLinearGradient(x, 0, x + 8, 0); gr.addColorStop(0, '#6a8a2a'); gr.addColorStop(0.4, '#c8d870'); gr.addColorStop(1, '#5a7a22');
+      g.fillStyle = gr; g.fillRect(x + 0.5, 0, 7, 64);
+      for (let y = (x * 7) % 18; y < 64; y += 18) { g.fillStyle = '#4a6018'; g.fillRect(x + 0.5, y, 7, 2); g.fillStyle = 'rgba(255,255,220,0.4)'; g.fillRect(x + 1, y + 2, 6, 1); }
+    }
+  }, 6);
+  // 26: neon - dark purple wall with neon tubes; animated: lights chase along the tubes
+  const neon = f => make(g => {
+    g.fillStyle = '#160a24'; g.fillRect(0, 0, 64, 64);
+    for (let y = 0; y < 64; y += 8) { g.fillStyle = '#1e0e30'; g.fillRect(0, y, 64, 7); }
+    const tube = (y, c) => { g.fillStyle = c; g.globalAlpha = 0.3; g.fillRect(0, y - 3, 64, 7); g.globalAlpha = 1; g.fillRect(0, y - 1, 64, 2); g.fillStyle = '#ffffff'; g.fillRect(0, y - 0.5, 64, 0.8); };
+    tube(14, '#ff3cc8'); tube(50, '#3cdcff');
+    for (let k = 0; k < 4; k++) { const x = (k * 16 + f * 4) % 64; g.fillStyle = '#fff6a0'; g.beginPath(); g.arc(x, 32, 2.6, 0, 7); g.fill(); g.fillStyle = 'rgba(255,240,120,0.35)'; g.beginPath(); g.arc(x, 32, 5, 0, 7); g.fill(); }
+  }, 3);
+  T[26] = neon(0); T[26].frames = [0, 1, 2, 3].map(neon); T[26].fps = 8;
+  // 27: server racks with blinking LEDs (animated)
+  const rack = f => make(g => {
+    g.fillStyle = '#0c0e12'; g.fillRect(0, 0, 64, 64);
+    for (let y = 2; y < 62; y += 6) {
+      const gr = g.createLinearGradient(0, y, 0, y + 5); gr.addColorStop(0, '#2a2e36'); gr.addColorStop(1, '#14161a');
+      g.fillStyle = gr; g.fillRect(3, y, 58, 5);
+      for (let k = 0; k < 6; k++) { const on = ((y * 7 + k * 13 + f * 5) % 11) > 4; g.fillStyle = on ? (k % 3 ? '#39ff9a' : '#3cc8ff') : '#123020'; g.fillRect(44 + k * 2.6, y + 2, 1.6, 1.4); }
+      g.fillStyle = '#05060a'; g.fillRect(6, y + 1.5, 26, 2);
+    }
+    g.fillStyle = '#3a3e48'; g.fillRect(0, 0, 3, 64); g.fillRect(61, 0, 3, 64);
+  }, 3);
+  T[27] = rack(0); T[27].frames = [0, 1, 2, 3, 4, 5].map(rack); T[27].fps = 5;
+  // 28: a wall screen scrolling green code with WALLY.EXE (animated)
+  const code = f => make(g => {
+    g.fillStyle = '#05140c'; g.fillRect(0, 0, 64, 64);
+    g.fillStyle = '#1a1e24'; g.fillRect(0, 0, 64, 4); g.fillRect(0, 60, 64, 4);
+    g.font = '5px monospace';
+    for (let r = 0; r < 12; r++) { let line = ''; for (let k = 0; k < 13; k++) line += '01{}<>=;#$'[(r * 7 + k * 3 + f * 5 + (r * k) % 5) % 10]; g.fillStyle = r % 3 ? '#1fa860' : '#5fffa0'; g.fillText(line, 2, 9 + ((r * 5 + f * 2) % 52)); }
+    g.fillStyle = 'rgba(0,0,0,0.55)'; g.fillRect(6, 24, 52, 14); g.fillStyle = f % 2 ? '#ff3c6e' : '#7affc0'; g.font = 'bold 9px monospace'; g.textAlign = 'center'; g.fillText('WALLY.EXE', 32, 34);
+  });
+  T[17] = shopWin(0); T[17].frames = [0, 1, 2].map(shopWin); T[17].fps = 1.5;;
+  T[28] = code(0); T[28].frames = [0, 1, 2, 3].map(code); T[28].fps = 4;
 
   // 6: exit switch (off) / 11: (on) - steel panel set into grey stone
   const switchTex = on => make(g => {
@@ -335,6 +387,21 @@ const Textures = (() => {
     speckle(g, 700, ['#3a3a40', '#222226', '#ff4fb8', '#3d8bff', '#ffcf3a'], 1);
     g.fillStyle = '#1a1a1e'; g.fillRect(0, 0, 64, 1); g.fillRect(0, 0, 1, 64);
   }, 6);
+  F.spa = make(g => { // big glossy teal floor tiles
+    g.fillStyle = '#d8eeea'; g.fillRect(0, 0, 64, 64);
+    for (let y = 0; y < 64; y += 32) for (let x = 0; x < 64; x += 32) { const gr = g.createLinearGradient(x, y, x + 32, y + 32); gr.addColorStop(0, '#a8e2da'); gr.addColorStop(1, '#78c6bc'); g.fillStyle = gr; g.fillRect(x + 1, y + 1, 30, 30); }
+  }, 4);
+  F.asphalt = make(g => { // theme-park tarmac with dropped confetti and popcorn
+    g.fillStyle = '#2a2830'; g.fillRect(0, 0, 64, 64);
+    speckle(g, 500, ['#33313a', '#22202a', '#3a3842']);
+    speckle(g, 22, ['#ff3cc8', '#3cdcff', '#ffd21f', '#8cff5a', '#fff6e0'], 2);
+  }, 8);
+  F.grate = make(g => { // steel floor grating over cables
+    g.fillStyle = '#0a0c10'; g.fillRect(0, 0, 64, 64);
+    g.strokeStyle = '#1e7a5a'; g.lineWidth = 1; for (let k = 0; k < 4; k++) { g.beginPath(); g.moveTo(0, 8 + k * 16); g.bezierCurveTo(20, 2 + k * 16, 40, 14 + k * 16, 64, 8 + k * 16); g.stroke(); }
+    for (let x = 0; x < 64; x += 8) { g.fillStyle = '#4a505a'; g.fillRect(x, 0, 2, 64); }
+    for (let y = 0; y < 64; y += 8) { g.fillStyle = '#5a606a'; g.fillRect(0, y, 64, 2); }
+  }, 6);
   F.grass = make(g => {
     g.fillStyle = '#4a9a2e'; g.fillRect(0, 0, 64, 64);
     for (let i = 0; i < 500; i++) { g.fillStyle = ['#5ab43a', '#3d8226', '#6cc248', '#357020'][(rnd() * 4) | 0]; g.fillRect(rnd() * 64, rnd() * 64, 1, 2 + rnd() * 2); }
@@ -384,5 +451,23 @@ const Textures = (() => {
     return { w: SW, h: SH, canvas: c, data: new Uint32Array(g.getImageData(0, 0, SW, SH).data.buffer.slice(0)) };
   })();
 
-  return { walls: T, flats: F, sky };
+  // the night sky for Happyland After Dark: stars, a big moon and a glow from the park below
+  const skyNight = (() => {
+    const SW = 512, SH = 128, c = document.createElement('canvas'); c.width = SW; c.height = SH;
+    const g = c.getContext('2d');
+    const gr = g.createLinearGradient(0, 0, 0, SH); gr.addColorStop(0, '#05030f'); gr.addColorStop(0.6, '#1a0a38'); gr.addColorStop(0.9, '#5a1a5a'); gr.addColorStop(1, '#ff4fb8');
+    g.fillStyle = gr; g.fillRect(0, 0, SW, SH);
+    for (let i = 0; i < 260; i++) { const x = rnd() * SW, y = rnd() * SH * 0.75, b = rnd(); g.fillStyle = `rgba(255,255,${200 + b * 55},${0.35 + b * 0.65})`; g.fillRect(x, y, b > 0.92 ? 2 : 1, b > 0.92 ? 2 : 1); }
+    const moon = g.createRadialGradient(380, 34, 0, 380, 34, 40); moon.addColorStop(0, 'rgba(255,250,235,1)'); moon.addColorStop(0.35, 'rgba(255,245,220,0.95)'); moon.addColorStop(0.42, 'rgba(255,220,240,0.25)'); moon.addColorStop(1, 'rgba(255,200,240,0)');
+    g.fillStyle = moon; g.fillRect(340, 0, 80, 80);
+    g.fillStyle = 'rgba(200,190,170,0.35)'; for (const [x, y, r] of [[372, 28, 4], [386, 40, 3], [378, 44, 2]]) { g.beginPath(); g.arc(x, y, r, 0, 7); g.fill(); }
+    g.fillStyle = '#0a0614'; g.beginPath(); g.moveTo(0, SH); // a skyline of rides
+    for (let x = 0; x <= SW; x += 4) g.lineTo(x, SH - 6 - (Math.sin(x / 23) > 0.6 ? 18 : 0) - (x % 96 < 8 ? 26 : 0) - Math.sin(x / SW * Math.PI * 10) * 3);
+    g.lineTo(SW, SH); g.fill();
+    g.strokeStyle = '#1a1028'; g.lineWidth = 2; g.beginPath(); g.arc(200, SH - 4, 34, Math.PI, 0); g.stroke(); // the big wheel
+    for (let k = 0; k < 10; k++) { const a = Math.PI + k * Math.PI / 9; g.fillStyle = ['#ff3cc8', '#3cdcff', '#ffd21f'][k % 3]; g.fillRect(200 + Math.cos(a) * 34 - 1, SH - 4 + Math.sin(a) * 34 - 1, 3, 3); }
+    return { w: SW, h: SH, canvas: c, data: new Uint32Array(g.getImageData(0, 0, SW, SH).data.buffer.slice(0)) };
+  })();
+
+  return { walls: T, flats: F, sky, skyNight };
 })();

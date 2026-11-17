@@ -69,6 +69,7 @@ const Voice = (() => {
     skull: { pitch: 1.9, rate: 1.35 }, orb: { pitch: 2, rate: 1.5 }, bubbly: { pitch: 2, rate: 1.7 }, mini: { pitch: 2, rate: 1.9 }, megaorb: { pitch: 0.6, rate: 1.1 },
     yoga: { pitch: 1.45, rate: 0.72 }, coach: { pitch: 1.1, rate: 1.45 }, bridezilla: { pitch: 1.7, rate: 1.35 }, redcoat: { pitch: 1.3, rate: 1.25 },
     hypeman: { pitch: 1.0, rate: 1.7 }, ghost: { pitch: 1.8, rate: 1.1 }, popper: { pitch: 2, rate: 1.6 }, guru: { pitch: 1.3, rate: 0.68 }, riot: { pitch: 0.8, rate: 1.05 },
+    mummy: { pitch: 0.5, rate: 0.68 }, mascot: { pitch: 1.6, rate: 1.15 }, drone: { pitch: 2, rate: 1.8 }, karen: { pitch: 1.2, rate: 1.4 }, wallyexe: { pitch: 0.1, rate: 0.72 },
   };
   let enVoices = null;
   const hash = str => { let h = 7; for (const ch of str) h = (h * 31 + ch.charCodeAt(0)) | 0; return Math.abs(h); };
