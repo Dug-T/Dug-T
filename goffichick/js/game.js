@@ -2922,8 +2922,13 @@
     const items = menuItems();
     if (gx !== undefined && kofiName()) {
       const k = TIP_RECT(), on = gx >= k.x - 4 && gx <= k.x + k.w + 4 && gy >= k.y - 4 && gy <= k.y + k.h + 4;
-      if (on) { if (jarDodge(gx, gy)) return; openTipJar(); return; }
-      if (isTouch && Math.hypot(gx - jar.x, gy - jar.y) < 70 && jarDodge(gx, gy)) return; // a finger coming close
+      const a = jarArea(), zone = gx >= a.x0 - 50 && gx <= a.x1 + 50 && gy >= a.y0 - 14 && gy <= a.y1 + 14;
+      if (on || zone || Math.hypot(gx - jar.x, gy - jar.y) < 70) { // a click at (or chasing) the jar
+        if (jar.tired > 0 || jar.dodges >= 3) { jar.tired = 0; jar.dodges = 0; jar.say = 'Thank you!'; jar.sayT = 2; openTipJar(); return; } // 4th click: Ko-fi
+        jar.dodges++; jar.cool = 0; jarDodge(gx, gy);
+        if (jar.dodges >= 3) { jar.tired = 1; jar.say = 'Okay, okay... tip me!'; jar.sayT = 1; jar.vx *= 0.3; jar.vy *= 0.3; }
+        return;
+      }
     }
     if (gx !== undefined) { // the arrow pad
       const pb = titlePad().find(b => gx >= b.x - 4 && gx <= b.x + b.w + 4 && gy >= b.y - 4 && gy <= b.y + b.h + 4);
@@ -3174,8 +3179,7 @@
     if (jar.cool > 0) return true; // still mid-dodge: it's already running away
     jar.cool = 0.45; jarPick(fromX, fromY);
     const dx = jar.x - fromX, dy = jar.y - fromY, l = Math.hypot(dx, dy) || 1; jar.vx += dx / l * 420; jar.vy += dy / l * 260;
-    jar.dodges++; jar.say = JAR_SAYS[irand(0, JAR_SAYS.length - 1)]; jar.sayT = 1.1; Sfx.init(); Sfx.play.jump();
-    if (jar.dodges >= 3) { jar.tired = 6; jar.dodges = 0; jar.say = 'Okay, okay... tip me!'; jar.sayT = 6; jar.vx *= 0.3; jar.vy *= 0.3; }
+    jar.say = JAR_SAYS[irand(0, JAR_SAYS.length - 1)]; jar.sayT = 1.1; Sfx.init(); Sfx.play.jump();
     return true;
   }
   function jarTick(dt) {
@@ -3183,7 +3187,7 @@
     if (!jar.init) { jar.init = true; jar.x = W / 2; jar.y = 17; jarPick(); }
     if (jar.sayT > 0) jar.sayT -= dt;
     if (jar.cool > 0) jar.cool -= dt;
-    if (jar.tired > 0) { jar.tired -= dt; jar.tx = jar.x; jar.ty = jar.y; }
+    if (jar.tired > 0) { jar.tx = jar.x; jar.ty = jar.y; jar.sayT = Math.max(jar.sayT, 0.5); } // given up: waits to be clicked
     else {
       jar.retarget -= dt; if (jar.retarget <= 0) { jar.retarget = 1.8 + Math.random() * 2; jarPick(); }
       if (hoverG && Math.hypot(hoverG.x - jar.x, hoverG.y - jar.y) < 72) jarDodge(hoverG.x, hoverG.y); // the mouse is getting close: run!
