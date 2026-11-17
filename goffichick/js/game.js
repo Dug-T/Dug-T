@@ -165,6 +165,9 @@
     // Bat-Bow: a fast silver bat bolt that pierces everything in a line
     bat: { speed: 22, dmg: [30, 55], size: 0.2, fx: 'puff', fxSize: 0.2, sound: null, pierce: true },
     phone: { speed: 9.5, dmg: [15, 30], splash: 1.4, splashDmg: 50, size: 0.26, fx: 'boom', fxSize: 0.9, sound: 'explode' },
+    nail: { speed: 26, dmg: [7, 11], size: 0.07, fx: 'puff', fxSize: 0.15, sound: null },
+    // a ricocheting record: bounces off up to three walls before it shatters
+    vinyl: { speed: 13, dmg: [28, 48], size: 0.22, fx: 'hexHit', fxSize: 0.45, sound: 'hexHit', ricochet: 3 },
     // bat grenade: lobbed, bounces, goes off after its fuse (or on hitting a monster)
     grenade: { speed: 7.5, dmg: [30, 50], splash: 2.1, splashDmg: 130, size: 0.13, fx: 'boom', fxSize: 1.1, sound: 'explode', grav: 9, life: 1.7 },
   };
@@ -199,6 +202,7 @@
   let automap = false;
   let shake = 0, lightBoost = 0, painFlash = 0, pickupFlash = 0;
   // combat feedback and effects state
+  let shownWpn = null, wpnNameT = 0;
   let hitMarkT = 0, killMarkT = 0, slowMoT = 0, announce = null, killChain = [], dmgDirs = [], heartT = 0;
   // EFFECTS setting: HIGH turns on bloom, reflections, ambient occlusion, film grain and extra particles
   // fxDrop: 0 = everything; 1 = no bloom; 2 = also no reflections or corner shadows (set automatically on slow devices)
@@ -652,20 +656,20 @@
       const yTopF = RHOR - (zHi - eyeZ) * RPROJ / d;
       const y0 = Math.max(0, Math.ceil(yTopF)), y1 = Math.min(clip, Math.ceil(RHOR + (eyeZ - zLo) * RPROJ / d));
       if (y0 >= y1) return Math.min(clip, Math.max(0, y0));
-      const tex = (walls[texId] || walls[1]).data, tx = Math.min(63, (u * 64) | 0);
+      const tex = (walls[texId] || walls[1]).data, tx = Math.min(63, (u * 64) | 0), ttx = 63 - tx; // ttx: texture column the right way round
       let q = clamp(1.3 - d * 0.05 + boost, 0.25, 1) * (side ? 0.86 : 1) * (lightIdx >= 0 ? lightNow[lightIdx] : 1);
       if (glow) q = Math.max(q, 0.85);
       const vStep = d / RPROJ * 64; let v = (zHi - eyeZ + (y0 + 0.5 - RHOR) * d / RPROJ) * 64 + (ceilH - zHi) * 64;
       const aR = lightIdx >= 0 ? dR[lightIdx] * 115 : 0, aG = lightIdx >= 0 ? dG[lightIdx] * 115 : 0, aB = lightIdx >= 0 ? dB[lightIdx] * 115 : 0;
       const lit = aR + aG + aB > 3, ao = aoOn && d < 16, zpp = d / RPROJ, full = zHi >= ceilH - 0.001;
       if (!ao && !dec) {
-        if (lit) { for (let y = y0, o = y0 * RW + x; y < y1; y++, o += RW, v += vStep) putA(o, tex[((v | 0) & 63) * 64 + tx], q, aR, aG, aB); }
-        else for (let y = y0, o = y0 * RW + x; y < y1; y++, o += RW, v += vStep) put(o, tex[((v | 0) & 63) * 64 + tx], q);
+        if (lit) { for (let y = y0, o = y0 * RW + x; y < y1; y++, o += RW, v += vStep) putA(o, tex[((v | 0) & 63) * 64 + ttx], q, aR, aG, aB); }
+        else for (let y = y0, o = y0 * RW + x; y < y1; y++, o += RW, v += vStep) put(o, tex[((v | 0) & 63) * 64 + ttx], q);
         return Math.min(clip, y0);
       }
       for (let y = y0, o = y0 * RW + x; y < y1; y++, o += RW, v += vStep) {
         const vi = v | 0;
-        let c = tex[(vi & 63) * 64 + tx], qq = q;
+        let c = tex[(vi & 63) * 64 + ttx], qq = q;
         if (dec && vi >= 0 && vi < 192) { const dd = dec[vi * 64 + tx]; if (dd) c = mixC(c, dd); }
         if (ao) { const z = zHi - (y + 0.5 - yTopF) * zpp, b = z - zLo, t = zHi - z; if (b < 0.28) qq *= 0.6 + b * 1.43; else if (full && t < 0.22) qq *= 0.74 + t * 1.18; }
         if (lit) putA(o, c, qq, aR, aG, aB); else put(o, c, qq);
@@ -2145,6 +2149,10 @@
       const steps = 4;
       for (let i = 0; i < steps && !pr.done; i++) {
         const nx = pr.x + pr.vx * dt / steps, ny = pr.y + pr.vy * dt / steps;
+        if (pr.def.ricochet && opaqueAt(nx, ny) && (pr.bounces || 0) < pr.def.ricochet) { // bounce off the wall
+          if (opaqueAt(nx, pr.y)) pr.vx = -pr.vx; if (opaqueAt(pr.x, ny)) pr.vy = -pr.vy; if (!opaqueAt(nx, pr.y) && !opaqueAt(pr.x, ny)) { pr.vx = -pr.vx; pr.vy = -pr.vy; }
+          pr.bounces = (pr.bounces || 0) + 1; pr.hit = null; spawnParts('spark', pr.x, pr.y, pr.z, 4, 1.5); Sfx.play.tink(); break;
+        }
         if (opaqueAt(nx, ny) || pr.z < floorAt(nx, ny) - 0.02) { explode(pr); pr.done = true; break; }
         pr.x = nx; pr.y = ny;
         if (pr.owner !== 'player' && pr.owner !== 'ghost') {
@@ -2286,7 +2294,7 @@
         if (along <= 0 || along > bestA + e.def.radius) continue;
         if (spriteHit(e, vy * c - vx * s, 0.08)) { best = e; bestA = along; }
       }
-      if (best) { spawnParts('drop', best.x - c * 0.3, best.y - s * 0.3, (best.fz || 0) + best.z + best.def.h * 0.6, 6, 1.5); damageEnemy(best, irand(w.damage[0], w.damage[1]) * (p.berserk ? 10 : 1), 'player'); if (p.berserk) shake = Math.max(shake, 2); Sfx.play.punch(); spawnFx('blood', best.x - c * 0.3, best.y - s * 0.3, best.z + best.def.h * 0.6, 0.12, 0.3); }
+      if (best) { spawnParts('drop', best.x - c * 0.3, best.y - s * 0.3, (best.fz || 0) + best.z + best.def.h * 0.6, 6, 1.5); if (w.knock) shove(best, c, s, w.knock); damageEnemy(best, irand(w.damage[0], w.damage[1]) * (p.berserk ? 10 : 1), 'player'); if (p.berserk || w.knock) shake = Math.max(shake, 2); Sfx.play.punch(); spawnFx('blood', best.x - c * 0.3, best.y - s * 0.3, best.z + best.def.h * 0.6, 0.12, 0.3); }
       else Sfx.play.swing();
     } else if (w.type === 'hitscan') {
       const accurate = w.pellets === 1 && p.refireT <= 0;
@@ -2824,7 +2832,7 @@
       updateVfx(dt); if (state === 'playing') ambientFx(dt);
       if (!(mode === 'coop' && online && !online.host)) eliteUpdate(dt);
       if (mode === 'horde') hordeUpdate(dt);
-      hitMarkT = Math.max(0, hitMarkT - dt); killMarkT = Math.max(0, killMarkT - dt);
+      wpnNameT = Math.max(0, wpnNameT - dt); hitMarkT = Math.max(0, hitMarkT - dt); killMarkT = Math.max(0, killMarkT - dt);
       bubbleCd -= dt;
       for (const e of L.enemies) {
         if (e.barT > 0) e.barT -= dt; if (e.hitT > 0) e.hitT -= dt; if (e.bubble) { e.bubble.t -= dt; if (e.bubble.t <= 0) e.bubble = null; }
@@ -3066,7 +3074,25 @@
       vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.38)');
       ctx.fillStyle = vg; ctx.fillRect(0, 0, W, VIEW_H);
     }
+    if (player.cur === 'laser' && player.flashT > 0 && state === 'playing' && !photoMode) { // the lipstick laser beam
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
+      const mx = W / 2 + 36 * 0.8, my = VIEW_H + 10 - 112 * 0.8; // the lipstick's tip
+      for (const [w, c] of [[7, 'rgba(255,30,100,0.35)'], [3, 'rgba(255,80,150,0.8)'], [1.2, 'rgba(255,235,245,1)']]) { ctx.strokeStyle = c; ctx.lineWidth = w; ctx.beginPath(); ctx.moveTo(mx, my); ctx.lineTo(W / 2 + (Math.random() - 0.5), HOR + (Math.random() - 0.5)); ctx.stroke(); }
+      ctx.restore();
+    }
     if (!photoMode) drawWeapon();
+    if (player.cur !== shownWpn) { shownWpn = player.cur; wpnNameT = 1.8; }
+    if (wpnNameT > 0 && state === 'playing' && !photoMode) { // the weapon's name, shown when you pick it
+      const w = weaponByKey(player.cur), a = Math.min(1, wpnNameT * 2);
+      if (w) {
+        ctx.save(); ctx.globalAlpha = a; ctx.font = 'bold 9px monospace'; const tw = Math.max(ctx.measureText(w.name).width + 14, 120);
+        ctx.fillStyle = 'rgba(10,0,16,0.7)'; ctx.fillRect(W / 2 - tw / 2, VIEW_H - 74, tw, 22); ctx.strokeStyle = 'rgba(255,79,184,0.8)'; ctx.lineWidth = 1; ctx.strokeRect(W / 2 - tw / 2 + 0.5, VIEW_H - 73.5, tw - 1, 21);
+        label(w.name, W / 2, VIEW_H - 64, '#ffffff', 'center', 9);
+        const am = w.ammo ? `${player.ammo[w.ammo]} ${AMMO_TYPES[w.ammo].name}` : 'NO AMMO NEEDED';
+        label(`SLOT ${w.slot}  -  ${am}`, W / 2, VIEW_H - 55, '#ff9be0', 'center', 6.5);
+        ctx.restore();
+      }
+    }
     if (painFlash > 0) { ctx.fillStyle = `rgba(255,0,0,${painFlash * 0.45})`; ctx.fillRect(0, 0, W, VIEW_H); }
     if (pickupFlash > 0) { ctx.fillStyle = `rgba(255,120,220,${pickupFlash * 0.4})`; ctx.fillRect(0, 0, W, VIEW_H); }
     if (pw.mask > 0 && (pw.mask > 3 || Math.sin(time * 18) > 0)) { ctx.fillStyle = 'rgba(40,255,90,0.12)'; ctx.fillRect(0, 0, W, VIEW_H); }

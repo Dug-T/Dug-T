@@ -515,6 +515,81 @@ const WEAPONS = [
     },
   },
   {
+    slot: 1, key: 'cricketbat', name: 'SPIKED CRICKET BAT', ammo: null, cost: 0, cooldown: 0.62,
+    type: 'melee', damage: [22, 44], range: 1.55, sound: 'swing', kick: 1, knock: 2.4,
+    draw(g, cx, by, phase) {
+      const { lin, poly, ell, rr, gripHand } = WDraw;
+      // a swing from the right shoulder across to the left
+      const sw = phase > 0 ? Math.sin(Math.min(1, phase * 1.3) * Math.PI) : 0;
+      const px = cx + 70 - sw * 60, py = by - 10 - sw * 20, ang = -0.35 - sw * 1.5;
+      g.save(); g.translate(px, py); g.rotate(ang);
+      poly(g, lin(g, -9, 0, 9, 0, [[0, '#4a2a12'], [0.4, '#c8955a'], [0.6, '#e2b47a'], [1, '#5a3418']]), [-5, 0, -11, -120, 11, -120, 5, 0]); // the blade
+      ell(g, '#d9a86a', 0, -120, 11, 4);
+      for (let i = 0; i < 6; i++) { const y = -38 - i * 14, x = (i % 2 ? 1 : -1) * 6; poly(g, lin(g, x - 2, 0, x + 2, 0, [[0, '#5c6066'], [0.5, '#e2e5ea'], [1, '#3a3c40']]), [x - 1.5, y, x + (i % 2 ? 9 : -9), y - 2, x + 1.5, y + 2]); }
+      for (let i = 0; i < 5; i++) rr(g, i % 2 ? '#141014' : '#ff4fb8', -6, -4 - i * 6, 12, 5, 1); // pink and black grip tape
+      g.restore();
+      gripHand(g, px + 6, py + 26, 1.1, 1);
+    },
+  },
+  {
+    slot: 4, key: 'nailgun', name: 'NAIL GUN', ammo: 'bullets', cost: 1, cooldown: 0.07,
+    type: 'projectile', projectile: 'nail', sound: 'nail', kick: 0.6, auto: true,
+    draw(g, cx, by, phase, flash) {
+      const { lin, poly, ell, rr, metal, flash: fl, gripHand, supportHand, supportFingers } = WDraw;
+      const rec = phase > 0 ? Math.sin(Math.min(1, phase * 3) * Math.PI) * 4 : 0;
+      const x = cx + 10, yb = by - 64 + rec, yf = by - 120 + rec;
+      supportHand(g, x, yb - 10, 34, 1.05);
+      // yellow-and-black power tool body receding to the nose
+      poly(g, lin(g, x - 26, 0, x + 26, 0, [[0, '#6a5200'], [0.3, '#f2c200'], [0.5, '#ffe36a'], [0.7, '#d9a800'], [1, '#5a4500']]), [x - 26, yb + 30, x - 16, yf + 16, x + 16, yf + 16, x + 26, yb + 30]);
+      poly(g, '#141416', [x - 26, yb + 30, x - 22, yb + 6, x + 22, yb + 6, x + 26, yb + 30]);
+      rr(g, metal(g, x - 8, x + 8, 'steel'), x - 8, yf, 16, 20, 3); // nose
+      ell(g, '#050506', x, yf + 2, 3, 1.6);
+      rr(g, metal(g, x + 18, x + 34, 'gun'), x + 20, yb - 34, 12, 54, 3); // the nail strip on the side
+      for (let i = 0; i < 9; i++) rr(g, '#c9ccd2', x + 22, yb - 32 + i * 6, 8, 1.6, 0.6);
+      g.fillStyle = '#141416'; g.font = 'bold 7px sans-serif'; g.textAlign = 'center'; g.fillText('GOTH-O-MATIC', x, yb + 22);
+      if (flash) fl(g, x, yf - 2, 8);
+      supportFingers(g, x, yb - 12, 36, 1.05);
+      gripHand(g, x + 4, by - 2, 1.1, 1);
+    },
+  },
+  {
+    slot: 6, key: 'vinyl', name: "VINYL LAUNCHER (80s GOTH CLASSICS)", ammo: 'skulls', cost: 1, cooldown: 0.55,
+    type: 'projectile', projectile: 'vinyl', sound: 'launcher', kick: 2,
+    draw(g, cx, by, phase, flash, t) {
+      const { lin, rad, poly, ell, rr, metal, tube, gripHand, supportHand, supportFingers } = WDraw;
+      const rec = phase > 0 ? Math.sin(Math.min(1, phase * 1.6) * Math.PI) * 8 : 0;
+      const x = cx + 6, yb = by - 46 + rec, yf = by - 116 + rec;
+      supportHand(g, x, yb - 20, 44, 1.1);
+      tube(g, x, yb + 10, 64, yf + 20, 38, 'gun');
+      // the turntable deck on top with a spinning record
+      rr(g, lin(g, 0, yb - 48, 0, yb - 8, [[0, '#2a2a30'], [1, '#0e0e12']]), x - 40, yb - 50, 80, 44, 6);
+      const spin = (t || 0) * 9;
+      ell(g, '#08080a', x, yb - 28, 30, 14);
+      g.strokeStyle = 'rgba(255,255,255,0.08)'; g.lineWidth = 0.6; for (let k = 1; k < 6; k++) { g.beginPath(); g.ellipse(x, yb - 28, 6 + k * 4.5, 2.8 + k * 2.1, 0, spin + k, spin + k + 2.2); g.stroke(); }
+      ell(g, '#ff4fb8', x, yb - 28, 7, 3.3); ell(g, '#08080a', x, yb - 28, 1.4, 0.7);
+      rr(g, metal(g, x + 22, x + 36, 'steel'), x + 26, yb - 46, 3, 20, 1); // tone arm
+      ell(g, '#050506', x, yf + 20, 17, 6);
+      if (flash) { g.save(); g.globalCompositeOperation = 'lighter'; ell(g, rad(g, x, yf + 16, 34, [[0, 'rgba(255,170,230,0.9)'], [1, 'rgba(255,60,180,0)']]), x, yf + 16, 34, 18); g.restore(); }
+      supportFingers(g, x, yb - 22, 46, 1.1);
+      gripHand(g, x + 30, by - 2, 1.1, 1);
+    },
+  },
+  {
+    slot: 6, key: 'laser', name: 'LIPSTICK LASER', ammo: 'souls', cost: 1, cooldown: 0.05,
+    type: 'hitscan', damage: [4, 8], pellets: 1, spread: 0.004, sound: 'laser', kick: 0, auto: true, beam: true,
+    draw(g, cx, by, phase, flash, t) {
+      const { lin, rad, poly, ell, rr, metal, gripHand } = WDraw;
+      const x = cx + 36, yb = by - 30, yf = by - 112;
+      // a giant gold lipstick, held like a torch
+      poly(g, metal(g, x - 22, x + 22, 'brass'), [x - 22, yb, x - 16, yf + 40, x + 16, yf + 40, x + 22, yb]);
+      rr(g, '#141014', x - 17, yf + 36, 34, 8, 2);
+      poly(g, lin(g, x - 14, 0, x + 14, 0, [[0, '#7a0024'], [0.4, '#ff1a5a'], [0.6, '#ff6a9a'], [1, '#6a001c']]), [x - 14, yf + 38, x - 12, yf + 6, x + 2, yf - 4, x + 12, yf + 2, x + 14, yf + 38]);
+      for (let k = 0; k < 4; k++) ell(g, 'rgba(255,255,255,0.12)', x - 8 + k * 5, yf + 20, 1, 12);
+      if (flash || phase > 0) { g.save(); g.globalCompositeOperation = 'lighter'; ell(g, rad(g, x, yf, 26, [[0, 'rgba(255,220,235,1)'], [0.4, 'rgba(255,40,110,0.7)'], [1, 'rgba(255,0,80,0)']]), x, yf, 26, 26); g.restore(); }
+      gripHand(g, x + 2, yb + 18, 1.1, 1);
+    },
+  },
+  {
     slot: 7, key: 'bfg', name: "B.F.G. - BIG FREAKIN' GLOOM", ammo: 'souls', cost: 40, cooldown: 1.6,
     type: 'projectile', projectile: 'gloom', sound: 'bfgBoom', windup: 0.7, windupSound: 'bfgCharge', kick: 7,
     draw(g, cx, by, phase, flash, t) {
