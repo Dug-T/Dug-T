@@ -193,6 +193,15 @@ flinches when hit, and her eyes glow pink when she picks up a new weapon.
 - **Monster voices:** every monster type speaks its lines in its own voice (pitch, speed and, where the
   device has several, a different voice). They have new lines for losing limbs too.
 
+- **Twin-stick phone controls:**
+  - the pink stick on the left moves
+  - the cyan stick on the right aims: left and right turn, up and down look up and down; small pushes give fine
+    aim and full pushes swing fast
+  - dragging anywhere else on the right half still works too
+- **LOOK SPEED** (title menu → OPTIONS, or the pause menu): sets how fast the sticks, dragging and gamepads turn
+  and aim. The new default is more sensitive than before.
+- **OPTIONS menu:** graphics, effects, look speed and voices now live here.
+
 ## Setting up the world leaderboard (Supabase, free)
 
 1. Create a free account at [supabase.com](https://supabase.com) and a **New project** (any name and region).
