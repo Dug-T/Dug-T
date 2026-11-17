@@ -407,6 +407,67 @@ const Sprites = (() => {
       P(g, '#ffffff', [25, 21, 39, 21, 36, 27, 28, 27]); R(g, '#c03040', 25, 20, 14, 1);
     });
   }
+  // --- SPA MUMMY: wrapped head to toe in fluffy towels, green face mask, cucumber eyes. Throws hot stones.
+  function mummy(pose) {
+    return mk(64, 88, g => {
+      const step = pose === 1, atk = pose === 2;
+      for (const [x, d] of [[22, step ? -3 : 2], [34, step ? 3 : -2]]) { R(g, '#f2f0ea', x + d, 54, 9, 30); for (let y = 58; y < 84; y += 5) R(g, '#d8d4ca', x + d, y, 9, 1.5); }
+      P(g, '#f6f4ee', [16, 28, 48, 28, 50, 58, 14, 58]); for (let y = 31; y < 58; y += 5) P(g, '#dcd8ce', [15, y, 49, y - 2, 49, y, 15, y + 2]);
+      R(g, '#7fcfc6', 14, 46, 36, 4); // a teal spa belt
+      if (atk) { P(g, '#f6f4ee', [46, 30, 52, 30, 58, 10, 52, 8]); E(g, '#2a2420', 55, 7, 6, 5); E(g, 'rgba(255,140,40,0.8)', 55, 7, 4, 3); }
+      else P(g, '#f6f4ee', [46, 30, 52, 30, 54, 54, 48, 54]);
+      P(g, '#f6f4ee', [12, 30, 18, 30, 16, 54, 10, 54]);
+      E(g, '#f6f4ee', 32, 12, 13, 9); E(g, '#ece8de', 32, 6, 11, 6); // towel turban
+      E(g, '#8ac06a', 32, 19, 9, 8); // green face mask
+      for (const x of [28, 36]) { E(g, '#3d8a26', x, 18, 3.6, 3.6); E(g, '#c8f0a0', x, 18, 2.6, 2.6); E(g, '#3d8a26', x, 18, 0.8, 0.8); }
+      R(g, '#5a7a3a', 29, 23, 6, atk ? 3 : 1.5);
+    });
+  }
+  // --- HAPPYLAND MASCOT: a giant grinning smiley head on a pink fur suit. Charges in for a crushing hug.
+  function mascot(pose) {
+    return mk(84, 104, g => {
+      const step = pose === 1, atk = pose === 2;
+      R(g, '#ff7ec8', 28 + (step ? -3 : 2), 80, 12, 20); R(g, '#ff7ec8', 44 + (step ? 3 : -2), 80, 12, 20);
+      E(g, '#ffffff', 34 + (step ? -3 : 2), 100, 9, 4); E(g, '#ffffff', 50 + (step ? 3 : -2), 100, 9, 4);
+      E(g, '#ff7ec8', 42, 66, 22, 20); E(g, '#ffd0ec', 42, 70, 12, 11);
+      if (atk) { P(g, '#ff7ec8', [22, 56, 28, 62, 4, 50, 2, 42]); P(g, '#ff7ec8', [62, 56, 56, 62, 80, 50, 82, 42]); E(g, '#ffffff', 3, 44, 5, 5); E(g, '#ffffff', 81, 44, 5, 5); }
+      else { P(g, '#ff7ec8', [22, 56, 28, 60, 18, 80, 12, 78]); P(g, '#ff7ec8', [62, 56, 56, 60, 66, 80, 72, 78]); E(g, '#ffffff', 14, 80, 5, 5); E(g, '#ffffff', 70, 80, 5, 5); }
+      E(g, '#d8a800', 42, 27, 27, 27); E(g, '#ffd21f', 42, 26, 26, 26); E(g, 'rgba(255,255,255,0.35)', 32, 14, 9, 5); // the big head
+      E(g, '#1a1a1a', 33, 20, 4, 6); E(g, '#1a1a1a', 51, 20, 4, 6); E(g, '#ffffff', 34, 18, 1.4, 1.8); E(g, '#ffffff', 52, 18, 1.4, 1.8);
+      g.fillStyle = '#1a1a1a'; g.beginPath(); g.arc(42, 30, atk ? 15 : 13, 0.1 * Math.PI, 0.9 * Math.PI); g.fill(); g.fillStyle = '#ffffff'; g.fillRect(31, 30, 22, 3);
+      if (atk) { E(g, '#ff5a8a', 42, 40, 6, 3); }
+    });
+  }
+  // --- SELFIE DRONE: a little quadcopter with a camera and a red recording light. Peppers you from above.
+  function drone(pose) {
+    return mk(60, 36, g => {
+      const sp = pose === 1, atk = pose === 2;
+      for (const [x, y] of [[8, 8], [52, 8], [8, 26], [52, 26]]) { R(g, '#2a2e36', x - 1, y - 1, 3, 3); E(g, `rgba(200,210,230,${sp ? 0.35 : 0.6})`, x, y - 3, 10, 2); }
+      P(g, '#2a2e36', [10, 10, 26, 16, 34, 16, 50, 10, 50, 13, 34, 20, 26, 20, 10, 13]); P(g, '#2a2e36', [10, 24, 26, 18, 34, 18, 50, 24, 50, 27, 34, 22, 26, 22, 10, 27]);
+      E(g, '#3a3e48', 30, 18, 10, 6); E(g, '#e8eaf0', 30, 16, 8, 3);
+      E(g, '#0a0a0c', 30, 24, 5, 4); E(g, '#3c6cff', 30, 24, 3, 2.4); E(g, '#ffffff', 29, 23, 1, 1);
+      E(g, atk || sp ? '#ff1a2a' : '#7a0a10', 38, 16, 1.6, 1.6);
+      if (atk) { E(g, 'rgba(255,230,140,0.9)', 30, 31, 4, 3); }
+    });
+  }
+  // --- KAREN: the asymmetric bob, the sunglasses on the head, the phone. Wants to speak to the manager.
+  function karen(pose) {
+    return mk(64, 88, g => {
+      const step = pose === 1, atk = pose === 2;
+      R(g, '#2a3a5a', 24 + (step ? -3 : 2), 56, 8, 28); R(g, '#2a3a5a', 34 + (step ? 3 : -2), 56, 8, 28);
+      R(g, '#d8c0a0', 23 + (step ? -3 : 2), 83, 10, 5); R(g, '#d8c0a0', 33 + (step ? 3 : -2), 83, 10, 5);
+      P(g, '#8a4a9a', [16, 28, 48, 28, 46, 58, 18, 58]); P(g, '#f4f0f6', [28, 28, 36, 28, 34, 40, 30, 40]);
+      if (atk) { P(g, '#8a4a9a', [46, 30, 52, 30, 60, 18, 56, 15]); E(g, '#f0c8a8', 58, 15, 3, 3); R(g, '#f0c8a8', 58, 8, 2, 7); } // pointing finger
+      else { P(g, '#8a4a9a', [46, 30, 52, 30, 52, 50, 46, 50]); R(g, '#141418', 46, 46, 6, 10); R(g, '#3cdcff', 47, 47, 4, 7); } // phone
+      P(g, '#8a4a9a', [12, 30, 18, 30, 16, 52, 10, 52]); E(g, '#f0c8a8', 13, 53, 3, 3);
+      E(g, '#f0c8a8', 32, 18, 9, 10);
+      P(g, '#f2d27a', [20, 26, 22, 8, 32, 4, 44, 8, 47, 30, 42, 22, 40, 10, 26, 12, 24, 26]); // the bob, longer on one side
+      R(g, '#141418', 24, 7, 16, 3); E(g, '#141418', 27, 8, 4, 2.4); E(g, '#141418', 37, 8, 4, 2.4); // sunglasses on her head
+      P(g, '#141418', [25, 15, 30, 17, 25, 17]); P(g, '#141418', [39, 15, 34, 17, 39, 17]); // furious brows
+      R(g, '#1a1a1a', 26, 17, 3, 2); R(g, '#1a1a1a', 35, 17, 3, 2);
+      R(g, '#b03050', 28, 23, 8, atk ? 4 : 1.5);
+    });
+  }
   // Recolour every frame of an enemy set: fn(r, g, b) -> [r, g, b]
   function recolorSet(set, fn) {
     const one = spr => {
@@ -474,6 +535,14 @@ const Sprites = (() => {
     };
     E_.riot = withShield(recolorSet(E_.manager, (r, g, b) => [r * 0.55, g * 0.65, Math.min(255, b * 1.3 + 40)]));            // navy suit + riot shield
     for (const [k, from] of [['hypeman', 'coach'], ['ghost', 'skull'], ['popper', 'orb'], ['guru', 'yoga'], ['riot', 'manager']]) if (E_[from].walkFps) E_[k].walkFps = E_[from].walkFps;
+    // --- Episode 4
+    E_.mummy = enemySet(mummy(0), mummy(1), mummy(2));
+    E_.mascot = enemySet(mascot(0), mascot(1), mascot(2));
+    E_.drone = enemySet(drone(0), drone(1), drone(2)); E_.drone.walkFps = 14;
+    E_.karen = enemySet(karen(0), karen(1), karen(2));
+    // WALLY.EXE: the boss photo as a glitching green-and-cyan hologram
+    E_.wallyexe = recolorSet(E_.boss, (r, g, b) => { const v = lum(r, g, b); return [v * 0.25, Math.min(255, v * 1.15 + 30), Math.min(255, v * 0.9 + 70)]; });
+    E_.wallyexe.walkFps = E_.boss.walkFps;
     // other players online: Wally Man in goth black with a coloured trim (pink, cyan, lime, gold)
     [[255, 60, 170], [40, 220, 255], [120, 255, 60], [255, 200, 30]].forEach((c, i) => {
       E_['av' + i] = recolorSet(E_.wally, (r, g, b) => {
@@ -485,6 +554,9 @@ const Sprites = (() => {
     });
 
     S.proj = {
+      stone: [mk(14, 14, g => { glow(g, 7, 7, 7, 'rgba(255,140,40,0.9)', 'rgba(255,60,0,0)'); E(g, '#2a2420', 7, 7, 4.5, 4); E(g, '#4a403a', 6, 6, 2, 1.5); })],
+      complaint: [0, 1].map(k => mk(18, 14, g => { R(g, '#fff4f0', 1, 2, 16, 11); P(g, '#e0d0c8', [1, 2, 9, 8, 17, 2]); g.fillStyle = k ? '#ff1a2a' : '#c00010'; g.font = 'bold 9px sans-serif'; g.textAlign = 'center'; g.fillText('!', 9, 12); })),
+      pixel: [0, 1].map(k => mk(12, 12, g => { glow(g, 6, 6, 6, k ? 'rgba(60,255,170,0.9)' : 'rgba(60,200,255,0.9)', 'rgba(0,80,80,0)'); R(g, k ? '#7affc0' : '#7ae0ff', 3, 3, 6, 6); R(g, '#ffffff', 4, 4, 2, 2); })),
       nail: [mk(14, 6, g => { R(g, '#d8dbe2', 1, 2, 11, 2); R(g, '#8a8e96', 11, 1, 2, 4); R(g, '#ffffff', 2, 2, 8, 1); })],
       vinyl: [0, 1, 2].map(k => mk(20, 20, g => { E(g, '#08080a', 10, 10, 9, 9); g.strokeStyle = 'rgba(255,255,255,0.18)'; g.lineWidth = 0.6; for (let r = 4; r < 9; r += 1.6) { g.beginPath(); g.arc(10, 10, r, k * 2, k * 2 + 2.4); g.stroke(); } E(g, '#ff4fb8', 10, 10, 3, 3); E(g, '#000', 10, 10, 0.8, 0.8); })),
       grenade: [0, 1].map(k => mk(12, 12, g => { E(g, '#141018', 6, 7, 4.5, 4.5); R(g, '#3a3440', 4.5, 1, 3, 3); E(g, k ? '#ffe070' : '#ff4fb8', 6, 1, 1.4, 1.4); E(g, '#ffffff', 4, 5, 0.9, 0.9); })),

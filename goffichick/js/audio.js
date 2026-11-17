@@ -298,6 +298,37 @@ const Sfx = (() => {
         { bars: 8, chords: [MAJ(8), MAJ(10), MAJ(3), MAJ(3), MAJ(8), MAJ(10), MAJ(7), MAJ(7)], drums: 3, bass: 'walk', pad: 'organ', arp: 'up16', lead: 2, seed: 161 },
       ],
     },
+    { // 10: E4M1 - "Exfoliate Your Soul" (spa music, slowly curdling)
+      name: 'Exfoliate Your Soul', key: 42, bpm: 96,
+      sections: [
+        { bars: 8, chords: [MAJ(0), MAJ(5), MAJ(9), MAJ(5), MAJ(0), MAJ(5), MAJ(7), MAJ(7)], drums: 0, bass: 'hold', pad: 'pad', arp: 'slow', lead: 1, seed: 171 },
+        { bars: 8, chords: [M(0), MAJ(8), M(5), MAJ(7), M(0), MAJ(8), MAJ(10), MAJ(7)], drums: 1, bass: 'walk', pad: 'pad', arp: 'up8', lead: 1, seed: 172 },
+        { bars: 8, chords: [M(0), MAJ(1), M(5), MAJ(8), M(0), MAJ(1), MAJ(7), MAJ(7)], drums: 3, bass: 'sync', pad: 'organ', arp: 'broken16', lead: 2, seed: 175 },
+        { bars: 4, chords: [MAJ(0), MAJ(5), MAJ(7), MAJ(7)], drums: 0, bass: 'hold', pad: 'pad', arp: 'slow', lead: 0, seed: 177 },
+        { bars: 8, chords: [M(5), M(0), MAJ(8), MAJ(7), M(5), MAJ(3), MAJ(1), MAJ(7)], drums: 3, bass: 'pulse', pad: 'pad', arp: 'updown16', lead: 2, seed: 179 },
+      ],
+    },
+    { // 11: E4M2 - "Happyland After Dark" (a carousel waltz that has seen things)
+      name: 'Happyland After Dark', key: 47, bpm: 150,
+      sections: [
+        { bars: 4, chords: [MAJ(0), MAJ(7), MAJ(5), MAJ(7)], drums: 1, bass: 'walk', pad: 'organ', arp: 'up8', lead: 1, seed: 181 },
+        { bars: 8, chords: [M(0), MAJ(8), MAJ(3), MAJ(10), M(5), MAJ(8), MAJ(7), MAJ(7)], drums: 2, bass: 'pulse', pad: 'organ', arp: 'up16', lead: 1, seed: 182 },
+        { bars: 8, chords: [M(0), M(5), MAJ(1), MAJ(7), M(0), M(5), MAJ(8), MAJ(7)], drums: 3, bass: 'sync', pad: 'pad', arp: 'broken16', lead: 2, seed: 185 },
+        { bars: 4, chords: [MAJ(0), MAJ(7), MAJ(5), MAJ(7)], drums: 0, bass: 'hold', pad: 'organ', arp: 'slow', lead: 1, seed: 187 },
+        { bars: 8, chords: [M(5), MAJ(10), MAJ(3), MAJ(8), M(5), MAJ(1), MAJ(7), MAJ(7)], drums: 3, bass: 'sync', pad: 'pad', arp: 'updown16', lead: 2, seed: 189 },
+      ],
+    },
+    { // 12: E4M3 - "WALLY.EXE" (the final boss: chiptune meets cathedral organ)
+      name: 'WALLY.EXE', key: 38, bpm: 172,
+      sections: [
+        { bars: 4, chords: [M(0), M(0), MAJ(8), MAJ(7)], drums: 2, bass: 'sync', pad: 'organ', arp: 'up16', lead: 1, seed: 191 },
+        { bars: 8, chords: [M(0), MAJ(1), M(0), MAJ(1), M(5), MAJ(8), MAJ(7), MAJ(7)], drums: 3, bass: 'pulse', pad: 'pad', arp: 'up16', lead: 2, seed: 192 },
+        { bars: 8, chords: [M(5), M(0), MAJ(7), M(0), M(5), MAJ(8), MAJ(1), MAJ(7)], drums: 3, bass: 'sync', pad: 'organ', arp: 'broken16', lead: 2, seed: 195 },
+        { bars: 4, chords: [M(0), MAJ(8), MAJ(3), MAJ(7)], drums: 1, bass: 'hold', pad: 'organ', arp: 'up8', lead: 1, seed: 197 },
+        { bars: 8, chords: [MAJ(8), MAJ(10), MAJ(3), MAJ(3), MAJ(8), MAJ(10), MAJ(7), MAJ(7)], drums: 3, bass: 'walk', pad: 'pad', arp: 'updown16', lead: 2, seed: 199 },
+        { bars: 8, chords: [M(0), MAJ(1), M(0), MAJ(1), M(5), MAJ(8), MAJ(7), MAJ(7)], drums: 3, bass: 'sync', pad: 'organ', arp: 'up16', lead: 2, seed: 201 },
+      ],
+    },
   ];
 
   // seeded RNG so each section's melody is fixed but different from the others

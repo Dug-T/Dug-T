@@ -324,6 +324,32 @@ green sludge that burns, and dark rooms with flickering lights.
 
 Each level has its own music track.
 
+### Episode 4: Happily Ever After
+
+10. **E4M1: Serenity Spa**: teal-tiled pool halls with steaming algae hot tubs, bamboo massage rooms, a sauna
+    and a meditation garden. Shafts of light fall from the skylights and lamps glow on the walls.
+11. **E4M2: Happyland After Dark**: a theme park at night. Stars and a big moon, neon walls with chasing lights,
+    searchlights sweeping the sky, fireworks overhead, a shooting gallery, a prize booth and a haunted house.
+12. **E4M3: Wally HQ - The Algorithm**: blinking server racks, walls of scrolling code, green code raining from
+    the ceiling, and **WALLY.EXE** waiting in the core.
+
+New monsters:
+- `µ` **Spa Mummy:** towel-wrapped, with cucumber eyes. It throws hot stones.
+- `ß` **Happyland Mascot:** a giant grinning head that charges in for a crushing hug.
+- `Ø` **Selfie Drone:** fast and flying, it peppers you from above.
+- `¶` **Karen:** fires complaints, and keeps calling over a manager ("I WANT TO SPEAK TO THE MANAGER!").
+- `Ω` **WALLY.EXE** (final boss): a glitching hologram that fires pixel storms, teleports beside you and
+  deploys drone swarms.
+
+New walls: `ç` spa tiles, `ñ` bamboo, `æ` neon, `å` server racks, `ü` code screens (the last three are animated).
+
+### Graphics: Episode 2 now looks a step above Episode 1
+Episodes 2 and 4 use new graphics features:
+- **Lamps:** coloured lamps fixed to the walls light up the room and glow; in the gym they pulse.
+- **Light shafts:** soft shafts of light fall from skylights, with dust drifting in them.
+- **Animated walls:** the mall's SALE banners flash between offers, with marquee bulbs.
+- **The park:** clouds drift across the sky and butterflies flutter about.
+
 ## Project layout
 
 ```
