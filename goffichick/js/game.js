@@ -3581,16 +3581,15 @@
       touch.rx = Math.abs(dx) < 0.08 ? 0 : dx; touch.ry = Math.abs(dy) < 0.1 ? 0 : dy;
       rknob.style.transform = `translate(${dx * rad * 0.6}px, ${dy * rad * 0.6}px)`;
     };
-    rstick.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); if (primaryAction(e)) return; rId = e.pointerId; const r = rstick.getBoundingClientRect(), c = toLocal(r.left + r.width / 2, r.top + r.height / 2); rx0 = c.x; ry0 = c.y; rstick.setPointerCapture(e.pointerId); moveR(e); });
-    rstick.addEventListener('pointermove', moveR);
+    if (rstick) rstick.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); if (primaryAction(e)) return; rId = e.pointerId; const r = rstick.getBoundingClientRect(), c = toLocal(r.left + r.width / 2, r.top + r.height / 2); rx0 = c.x; ry0 = c.y; rstick.setPointerCapture(e.pointerId); moveR(e); });
     const endR = e => { if (e.pointerId !== rId) return; rId = null; touch.rx = touch.ry = 0; rknob.style.transform = ''; };
-    rstick.addEventListener('pointerup', endR); rstick.addEventListener('pointercancel', endR);
+    if (rstick) { rstick.addEventListener('pointermove', moveR); rstick.addEventListener('pointerup', endR); rstick.addEventListener('pointercancel', endR); rstick.addEventListener('lostpointercapture', endR); }
     const look = document.getElementById('look'); let lookId = null, lx = 0, ly = 0;
     look.addEventListener('pointerdown', e => { if (primaryAction(e)) return; lookId = e.pointerId; const l0 = toLocal(e.clientX, e.clientY); lx = l0.x; ly = l0.y; look.setPointerCapture(e.pointerId); });
     look.addEventListener('pointermove', e => { if (e.pointerId === lookId) { const l1 = toLocal(e.clientX, e.clientY); touch.turn += (l1.x - lx) * 0.009 * LOOK_SENS; touch.pitch += (l1.y - ly) * 0.45 * LOOK_SENS; lx = l1.x; ly = l1.y; } });
     const endLook = e => { if (e.pointerId === lookId) lookId = null; };
     look.addEventListener('pointerup', endLook); look.addEventListener('pointercancel', endLook);
-    const btn = (id, down, up) => { const b = document.getElementById(id); b.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); if (!primaryAction(e)) down(); }); if (up) { b.addEventListener('pointerup', up); b.addEventListener('pointercancel', up); b.addEventListener('pointerleave', up); } };
+    const btn = (id, down, up) => { const b = document.getElementById(id); if (!b) return; b.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); if (!primaryAction(e)) down(); }); if (up) { b.addEventListener('pointerup', up); b.addEventListener('pointercancel', up); b.addEventListener('pointerleave', up); } };
     btn('bFire', () => { touch.fire = true; touch.fireTap = true; }, () => { touch.fire = false; });
     btn('bUse', () => state === 'playing' && useAction());
     btn('bWpn', () => state === 'playing' && cycleWeapon(1));
