@@ -222,7 +222,7 @@
     gold: { name: 'COFFIN KEY', color: '#ffcf3a', tex: 15 },
   };
   const LOCK_CHARS = { E: 'red', B: 'blue', Q: 'gold' };
-  let diff = 1;
+  let diff = 0; // MILDLY GLOOMY by default (a saved choice wins)
 
   // ------------------------------------------------------------------ state
   let S = null;            // sprite library
@@ -2742,7 +2742,7 @@
     set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
     del(k) { try { localStorage.removeItem(k); } catch (e) {} },
   };
-  { const d = store.get(DIFF_KEY); if (d === 0 || d === 1 || d === 2) diff = d; }
+  { const d = store.get(DIFF_KEY); if (Number.isInteger(d) && d >= 0 && d < DIFFS.length) diff = d; } // includes NIGHTMARE
   // ---- achievements (kept on this device; cheating switches them off for that run)
   const ACHIEVEMENTS = [
     { id: 'firstblood', name: 'FIRST BLOOD', desc: 'Defeat your first monster' },
