@@ -94,6 +94,57 @@
   ENEMY_DEFS.popper = { name: 'Party Popper', hp: 30, speed: 3.4, radius: 0.28, h: 0.42, z: 0.15, fly: true, attack: 'melee', melee: [0, 0], range: 1.6, cooldown: [0.1, 0.2], pain: 0.2, sight: 'giggle', atkSound: 'pop', kamikaze: true };
   ENEMY_DEFS.guru = { name: 'Wellness Guru', hp: 90, speed: 1.6, radius: 0.27, h: 0.86, attack: 'proj', proj: 'chakra', range: 15, cooldown: [1.4, 2.4], pain: 0.5, sight: 'om', atkSound: 'om', healer: true, dodge: 0.3 };
   ENEMY_DEFS.riot = { name: 'Riot Shield Manager', hp: 120, speed: 1.2, radius: 0.32, h: 0.84, attack: 'proj', proj: 'memo', melee: [8, 18], range: 14, cooldown: [1.5, 2.6], pain: 0.25, sight: 'groan', atkSound: 'memo', shield: true };
+  // ---- humour: what the monsters shout, how you died, and assorted nonsense
+  const QUIPS = {
+    zombie: { sight: ['Have you tried oat milk?', 'Is this decaf?!', 'Morning, sunshine!', 'Pumpkin spice season!'], death: ['My latte... art...', "Should've ordered a flat white...", 'Spilled it.'] },
+    manager: { sight: ["Let's circle back!", 'Per my last email...', 'Quick sync?', "Let's take this offline!"], death: ["I'm taking this offline...", 'Out of office. Forever.', 'Synergy... lost...'] },
+    wally: { sight: ['Hey guys, Wally here!', 'Smash that like button!', "Don't forget to subscribe!", "What's up, Wally Gang?!"], death: ['Unsubscribed?!', 'Like and... subscr...', 'Stream... ended...'] },
+    brute: { sight: ['Do you even lift?', 'LEG DAY!', 'Protein shake time!', 'Spot me, bro!'], death: ['My gains!', 'Skipped... cardio...'] },
+    skull: { sight: ['#blessed', 'Smile for the camera!', 'Going viral!', 'Link in bio!'], death: ["Ratio'd...", 'Deleted.', 'Shadowbanned!'] },
+    orb: { sight: ['Have a NICE DAY!', 'Smile!', 'Turn that frown upside down!'], death: ['Pop!', 'Not so nice now...', 'Deflating...'] },
+    yoga: { sight: ['Namaste!', 'Breathe in the positivity!', 'Find your inner light!'], death: ['Om... ow.', 'Bad... vibes...', 'Not very zen.'] },
+    coach: { sight: ["You've GOT this!", 'Believe in yourself!', 'Manifest it!'], death: ['Failure is... a lesson...', 'I believe... in nothing now.'] },
+    bridezilla: { sight: ["It's MY day!", "You're not on the list!", 'Who wore BLACK to my wedding?!'], death: ['The cake... ruined...', 'Something borrowed... something DEAD.'] },
+    redcoat: { sight: ['Hi-de-hi, campers!', 'Knobbly knees contest!', 'Everybody conga!'], death: ['Lights out, campers...', 'Ho-de-ho... no.'] },
+    riot: { sight: ['HR will hear about this!', 'Please hold!', "That's a policy violation!"], death: ['Filing... a complaint...', 'Escalating... to God...'] },
+    ghost: { sight: ['Say cheese!', 'Selfie time!', 'This angle is SO good!'], death: ['Bad lighting...', 'Filter... failed...'] },
+    popper: { sight: ['SURPRISE!', "It's a PARTY!", 'Wheeee!'], death: ['Party... over...'] },
+    guru: { sight: ['Your aura is very dark.', 'Have you tried gratitude?', 'Hydrate!'], death: ['Out of... alignment...'] },
+    hypeman: { sight: ["LET'S GOOOO!", 'MAKE SOME NOISE!', 'Is everybody HAPPY?!'], death: ['Hype... gone...'] },
+  };
+  for (const [k, v] of [['wallyfit', 'wally'], ['wallydeluxe', 'wally'], ['boss', 'wally'], ['wallylive', 'wally'], ['bubbly', 'orb'], ['mini', 'orb'], ['megaorb', 'orb']]) QUIPS[k] = QUIPS[v];
+  const CAUSE = {
+    zombie: 'Death by a thousand oat-milk lattes.', manager: 'Buried under a pile of memos.', wally: 'Notified to death.', brute: 'Crushed by unsolicited gym advice.',
+    skull: 'Fatally hashtagged.', orb: 'Smiled at too hard.', boss: 'Unsubscribed by Wally Prime.', yoga: 'Stretched beyond her limits.', coach: 'Motivated to death.',
+    bubbly: 'Bubbled.', mini: 'Nibbled by a tiny optimist.', wallyfit: "Out-cardio'd.", wallydeluxe: 'Killed by premium content.', megaorb: 'Smiled at by something the size of a bus.',
+    bridezilla: 'Caught the bouquet. Next to be married... to the grave.', redcoat: 'Dragged into the conga line. Forever.', wallylive: 'Cancelled live on air.',
+    hypeman: 'Hyped to death.', ghost: 'Photobombed into the afterlife.', popper: 'Surprise party. Big surprise.', guru: 'Died of inner peace.', riot: 'Escalated to HR. Permanently.',
+    slime: 'Went paddling in toxic sludge. Bold choice.', barrel: 'Pumpkin spice explosion. Very seasonal.', self: 'Blew herself up. Very goth.', player: 'Fragged by a friend. How rude.',
+  };
+  const TIPS = [
+    'TIP: Wally Man cannot be reasoned with. He has a podcast.', 'TIP: Latte Zombies are mostly foam.', 'TIP: The Riot Shield Manager has never once been flanked in a meeting.',
+    'TIP: Black roses are hidden on every level. Goffichick will not shut up about them.', 'TIP: Never accept a free hug from a Life Coach.',
+    'TIP: Party Poppers are fun at parties. You are not at a party.', 'TIP: Shoot the Wellness Guru first. She heals. Rude.', 'TIP: Bat grenades bounce. So does your ego.',
+    'TIP: The Selfie Ghost needs your best angle. Do not give it.', 'TIP: Eyeliner does not count as armour. We checked.', 'TIP: Gym Brutes skip cardio. Run.',
+    'TIP: Pumpkin Spice Barrels are seasonal and explosive. Like Halloween.', 'TIP: Press K for a screenshot. Press H to hide the gun and look moody.',
+  ];
+  const RATINGS = [[100, 'UTTERLY MISERABLE (perfect)'], [80, 'DELIGHTFULLY DREARY'], [60, 'MODERATELY MOODY'], [40, 'SLIGHTLY SULKY'], [0, 'SUSPICIOUSLY CHEERFUL']];
+  const PICKUP_QUIPS = {
+    vial: ['Picked up a vial of blood. Vintage.', 'Picked up a vial of blood. Type: Goth Negative.'], heart: ['Picked up a black heart. Just like hers.'],
+    jacket: ['Picked up a leather jacket. Instantly 40% cooler.'], corset: ['Picked up the SPIKED CORSET! Breathing is optional.'],
+    bullets: ['Picked up bullets. Blessed by a very tired vampire.', 'Picked up bullets. Each one engraved "no".'], shells: ['Picked up shells. Not the beach kind.'],
+    rockets: ['Picked up rockets. For when words fail.'], soul: ["SOUL ORB! Someone else's soul. Finders keepers."], fuel: ['Picked up fuel. Smells like a bonfire of joy.'],
+  };
+  const PAUSE_QUIPS = ['Taking a moment to brood.', 'Fixing her eyeliner.', 'Staring into the void. The void waved.', 'Writing very sad poetry.', 'Listening to one song on repeat.'];
+  let bubbleCd = 0, lastAttacker = null;
+  const typeOf = x => x && typeof x === 'object' ? x.type : x;
+  // a speech bubble over a monster
+  function shout(e, kind, chance = 1) {
+    const q = QUIPS[e.type]; if (!q || !q[kind] || Math.random() > chance) return;
+    if (kind !== 'death' && bubbleCd > 0) return;
+    if (L.enemies.filter(o => o.bubble && o.bubble.t > 0).length >= 2 && kind !== 'death') return;
+    e.bubble = { text: q[kind][irand(0, q[kind].length - 1)], t: kind === 'death' ? 2 : 2.6 }; bubbleCd = 2.2;
+  }
   const SLOGANS = ['YOU\'VE GOT THIS!', 'LIVE, LAUGH, LOVE!', 'GOOD VIBES ONLY!', 'RISE AND GRIND!', 'SMILE MORE!', 'MANIFEST IT!', 'BE YOUR BEST SELF!', 'NO BAD DAYS!'];
 
   const PROJECTILES = {
@@ -705,12 +756,12 @@
 
     // --- sprites
     const list = [];
-    const add = (x, y, spr, z, h, bright, wscale, minDepth = 0.15, glow = null) => {
+    const add = (x, y, spr, z, h, bright, wscale, minDepth = 0.15, glow = null, flash = 0) => {
       const dx = x - p.x, dy = y - p.y;
       const depth = dx * dirX + dy * dirY;
       if (depth < minDepth) return;
       const li = (y | 0) * mw + (x | 0);
-      list.push({ dx, dy, depth, spr, z, h, bright, wscale: wscale || 1, light: L.lightNow[li] ?? 1, li, glow });
+      list.push({ dx, dy, depth, spr, z, h, bright, wscale: wscale || 1, light: L.lightNow[li] ?? 1, li, glow, flash });
     };
     for (const d of L.decor) add(d.x, d.y, S.decor[d.def.sprite], floorAt(d.x, d.y), d.def.h, d.def.bright, 1, 0.15, d.def.sprite === 'torch' ? '200,90,255' : d.def.sprite === 'candelabra' ? '255,190,90' : null);
     for (const it of L.items) if (!it.taken) {
@@ -722,7 +773,8 @@
     for (const e of bodies()) {
       const spr = enemySprite(e);
       const h = e.dead && e.def.ai !== false ? e.def.h * (spr.h / (enemyBase(e).h)) : e.def.h;
-      add(e.x, e.y, spr, (e.fz || 0) + (e.dead ? 0 : e.z), h, false, 1, 0.15, e.champ && !e.dead ? '255,190,60' : e.buffT > 0 && !e.dead ? '255,220,120' : null);
+      const a = animOf(e, dirX, dirY);
+      add(e.x + a.ox, e.y + a.oy, spr, (e.fz || 0) + (e.dead ? 0 : e.z) + a.z, h * a.hs, false, a.ws, 0.15, e.champ && !e.dead ? '255,190,60' : e.buffT > 0 && !e.dead ? '255,220,120' : null, a.flash);
     }
     for (const pr of L.projs) {
       const fr = pr.frames, size = pr.def.grow ? pr.def.size * (1 + pr.age * pr.def.grow) : pr.def.size;
@@ -747,7 +799,8 @@
       const y0 = Math.max(0, Math.ceil(top)), y1 = Math.min(RH, Math.ceil(bottom));
       if (y0 >= y1) continue;
       let s = sp.bright ? 1 : clamp(1.3 - depth * 0.05 + boost, 0.3, 1) * sp.light;
-      const is = 1 - s, ar = fr * is + (sp.bright ? 0 : (dR[sp.li] || 0) * 90), ag = fg * is + (sp.bright ? 0 : (dG[sp.li] || 0) * 90), ab = fb * is + (sp.bright ? 0 : (dB[sp.li] || 0) * 90);
+      const fl = sp.flash ? sp.flash * 170 : 0; // a white flash when hit
+      const is = 1 - s, ar = fr * is + (sp.bright ? 0 : (dR[sp.li] || 0) * 90) + fl, ag = fg * is + (sp.bright ? 0 : (dG[sp.li] || 0) * 90) + fl, ab = fb * is + (sp.bright ? 0 : (dB[sp.li] || 0) * 90) + fl;
       if (sp.glow && zbuf[Math.max(0, Math.min(RW - 1, sx | 0))] >= depth) {
         // decorations glow from their flame at the top; everything else from its middle. Halos are capped
         // so standing right next to a torch doesn't wash the whole screen.
@@ -777,6 +830,47 @@
     }
   }
 
+  // Procedural animation on top of the drawn frames: every monster bobs and sways as it walks, breathes
+  // when idle, hovers if it flies, winds up and lunges to attack, flinches and flashes when hit, and
+  // drops with a little bounce when it dies.
+  const ANIM0 = { ox: 0, oy: 0, z: 0, hs: 1, ws: 1, flash: 0 };
+  function animOf(e, dirX, dirY) {
+    if (e.type === 'barrel' || e.state === 'static' && !e.remote) {
+      if (e.type === 'barrel' || e.dead) return ANIM0;
+    }
+    const seed = e.seed ?? (e.seed = Math.random() * 10), d = e.def;
+    // how fast it is actually moving (works for monsters, puppets in co-op and other players)
+    const dtR = Math.max(0.001, time - (e.lt ?? time - 0.016));
+    const sp = Math.hypot(e.x - (e.lx ?? e.x), e.y - (e.ly ?? e.y)) / dtR;
+    e.lx = e.x; e.ly = e.y; e.lt = time;
+    e.mv = (e.mv || 0) + (Math.min(1, sp / (d.speed || 1.5)) - (e.mv || 0)) * 0.25;
+    const o = { ox: 0, oy: 0, z: 0, hs: 1, ws: 1, flash: e.hitT > 0 ? Math.min(1, e.hitT / 0.12) : 0 };
+    const rx = -dirY, ry = dirX; // camera's right-hand side
+    if (e.dead) {
+      if (e.deadAt === undefined) e.deadAt = time;
+      const age = time - e.deadAt;
+      if (age < 0.45) { o.z = Math.sin(age / 0.45 * Math.PI) * 0.1; o.ws = 1 + age * 0.3; }
+      return o;
+    }
+    e.deadAt = undefined;
+    const ph = time * (4 + (d.speed || 1.5) * 2.2) + seed, mv = e.mv;
+    if (d.fly) { o.z += Math.sin(time * 2.6 + seed) * 0.05; const p2 = Math.sin(time * 5 + seed); o.hs = 1 + p2 * 0.03; o.ws = 1 - p2 * 0.03; }
+    if (mv > 0.05 && !d.fly) { // walking: bounce on each step, sway side to side, squash on landing
+      const st = Math.sin(ph);
+      o.z += Math.abs(st) * 0.045 * mv * Math.min(1.4, d.h);
+      const sway = Math.sin(ph * 0.5) * 0.035 * mv; o.ox += rx * sway; o.oy += ry * sway;
+      o.hs *= 1 - 0.05 * mv * (1 - Math.abs(st)); o.ws *= 1 + 0.04 * mv * (1 - Math.abs(st));
+    } else if (!d.fly) { const br = Math.sin(time * 2.2 + seed); o.hs *= 1 + br * 0.018; o.ws *= 1 - br * 0.012; } // breathing
+    if (e.state === 'attack') { // wind up (crouch), then spring up and lunge forward
+      const t = e.t ?? 0;
+      if (!e.fired) { o.hs *= 0.93; o.ws *= 1.07; }
+      else { const k = Math.max(0, t / 0.22); o.hs *= 1 + 0.08 * k; o.ws *= 1 - 0.04 * k; const lx = player.x - e.x, ly = player.y - e.y, l = Math.hypot(lx, ly) || 1; o.ox += lx / l * 0.12 * k; o.oy += ly / l * 0.12 * k; }
+    }
+    if (e.state === 'pain') { const j = (Math.random() - 0.5) * 0.06; o.ox += rx * j; o.oy += ry * j; o.hs *= 0.96; }
+    if (e.state === 'attack-charge') { o.ws *= 0.9; o.hs *= 1.1; }
+    if (d.boss && mv > 0.2 && Math.abs(Math.sin(ph)) < 0.08 && Math.hypot(e.x - player.x, e.y - player.y) < 9) shake = Math.max(shake, 0.8); // the ground shakes when a boss stomps
+    return o;
+  }
   function enemyBase(e) { return S.enemy[e.type] ? S.enemy[e.type].walk[0] : S.decor.barrel; }
   function enemySprite(e) {
     if (e.type === 'barrel') return e.dead ? null : S.decor.barrel;
@@ -785,7 +879,8 @@
     if (e.state === 'pain') return set.pain[0];
     if (e.state === 'attack') return set.attack[e.fired ? set.attack.length - 1 : 0];
     if (e.state === 'idle') return set.idle ? set.idle[((e.animT * 2.5) | 0) % set.idle.length] : set.walk[0];
-    return set.walk[((e.animT * (set.walkFps || 4)) | 0) % set.walk.length];
+    const n = set.walk.length, f = (e.animT * (set.walkFps || 4) * (n === 3 ? 1.6 : 1)) | 0;
+    return set.walk[n === 3 ? [0, 1, 2, 1][f % 4] : f % n];
   }
 
   // ------------------------------------------------------------------ weapon + HUD drawing
@@ -1005,7 +1100,7 @@
       const idx = my * L.mw + mx, t = L.grid[idx];
       if (t === DOOR) {
         const d = L.doors.get(idx);
-        if (d.secret) { if (d.state === 'closed') { d.state = 'opening'; Sfx.play.door(); player.secrets++; msg = 'A secret is revealed!'; msgT = 3; Voice.say('secret', 1, true); bump('secrets'); } return; }
+        if (d.secret) { if (d.state === 'closed') { d.state = 'opening'; Sfx.play.doorOpen(Math.hypot(d.x + 0.5 - player.x, d.y + 0.5 - player.y)); player.secrets++; msg = 'A secret is revealed!'; msgT = 3; Voice.say('secret', 1, true); bump('secrets'); } return; }
         if (d.lock && !p.keys[d.lock]) { lockedMsg(d); return; }
         toggleDoor(d); return;
       }
@@ -1020,8 +1115,8 @@
   }
   function toggleDoor(d, byEnemy) {
     if (d.lock && (byEnemy || !player.keys[d.lock])) return;
-    if (d.state === 'closed' || d.state === 'closing') { d.state = 'opening'; Sfx.play.door(); }
-    else if (d.state === 'open' && !byEnemy) { d.state = 'closing'; d.t = 0; Sfx.play.door(); }
+    if (d.state === 'closed' || d.state === 'closing') { d.state = 'opening'; Sfx.play.doorOpen(Math.hypot(d.x + 0.5 - player.x, d.y + 0.5 - player.y)); }
+    else if (d.state === 'open' && !byEnemy) { d.state = 'closing'; d.t = 0; Sfx.play.doorClose(Math.hypot(d.x + 0.5 - player.x, d.y + 0.5 - player.y)); }
   }
   function updateDoors(dt) {
     for (const d of L.doors.values()) {
@@ -1032,7 +1127,7 @@
         if (!near && Math.hypot(player.x - (d.x + 0.5), player.y - (d.y + 0.5)) > 2.6) d.warned = false;
         continue;
       }
-      if (!d.secret && (d.state === 'closed' || d.state === 'closing') && near) { if (d.state === 'closed') Sfx.play.door(); d.state = 'opening'; }
+      if (!d.secret && (d.state === 'closed' || d.state === 'closing') && near) { if (d.state === 'closed') Sfx.play.doorOpen(Math.hypot(d.x + 0.5 - player.x, d.y + 0.5 - player.y)); d.state = 'opening'; }
       if (d.secret && d.state === 'open') continue; // secrets stay open
       if (d.state === 'opening') { d.open += dt * 2.6; if (d.open >= 1) { d.open = 1; d.state = 'open'; d.t = 0; } }
       else if (d.state === 'open') {
@@ -1040,7 +1135,7 @@
         if (d.t > 4) {
           const occupied = (Math.floor(player.x) === d.x && Math.floor(player.y) === d.y) ||
             L.enemies.some(e => !e.dead && Math.floor(e.x) === d.x && Math.floor(e.y) === d.y);
-          if (!occupied) { d.state = 'closing'; Sfx.play.door(); } else d.t = 3;
+          if (!occupied) { d.state = 'closing'; Sfx.play.doorClose(Math.hypot(d.x + 0.5 - player.x, d.y + 0.5 - player.y)); } else d.t = 3;
         }
       } else if (d.state === 'closing') {
         const occupied = (Math.floor(player.x) === d.x && Math.floor(player.y) === d.y) ||
@@ -1126,7 +1221,7 @@
     const p = player; p.roses++;
     msg = `A BLACK ROSE!   ${p.roses} / ${L.totalRoses} on this level`; msgT = 3; Sfx.play.weaponUp(); pickupFlash = 0.4;
     popup(it.x, it.y, floorAt(it.x, it.y) + 0.5, '+500', '255,80,140'); runScore += 500;
-    unlock('rose');
+    unlock('rose'); Voice.say('rose', 1, true);
     if (typeof levelIndex === 'number' && (mode === 'campaign' || mode === 'coop')) {
       const r = store.get(ROSE_KEY) || {}; r[L.def.name] = Math.max(r[L.def.name] || 0, p.roses); store.set(ROSE_KEY, r);
       if (LEVELS.reduce((a, lv) => a + Math.min(3, r[lv.name] || 0), 0) >= LEVELS.length * 3) unlock('roses');
@@ -1280,7 +1375,7 @@
     if (p.dead || state !== 'playing' || paused) return;
     if (!(p.nades > 0)) { msg = 'No grenades left!'; msgT = 1.2; return; }
     if (p.nadeCd > 0) return;
-    p.nades--; p.nadeCd = 0.6; p.shotsF++;
+    p.nades--; p.nadeCd = 0.6; p.shotsF++; Voice.say('nade', 0.35);
     fireProjectile('grenade', p.x, p.y, p.eyeZ - 0.12, p.a, 'player');
     const g = L.projs[L.projs.length - 1]; g.vz = 3.2;
     Sfx.play.switch();
@@ -1326,7 +1421,7 @@
   }
   const PAUSE_Y = 104, PAUSE_DY = 16;
   function drawPause() {
-    drawOverlayText('PAUSED', mode === 'campaign' ? 'Arrow keys / tap to choose' : 'Arrow keys / tap to choose  -  X quits', []);
+    drawOverlayText('PAUSED', `Goffichick is ${PAUSE_QUIPS[Math.floor(levelTime) % PAUSE_QUIPS.length].replace(/^./, c => c.toLowerCase())}`, []);
     const items = pauseItems(); pauseSel = Math.min(pauseSel, items.length - 1);
     items.forEach((it, i) => {
       const y = PAUSE_Y + i * PAUSE_DY, sel = i === pauseSel;
@@ -1456,6 +1551,21 @@
       ctx.globalAlpha = Math.min(1, (1.2 - q.t) * 2); label(q.text, sx, sy, `rgb(${q.col})`, 'center', Math.max(7, Math.min(12, 14 / depth + 5)));
     }
     ctx.globalAlpha = 1;
+    // speech bubbles
+    ctx.font = 'bold 7px monospace';
+    for (const e of L.enemies) {
+      if (!e.bubble) continue;
+      const dx = e.x - p.x, dy = e.y - p.y, depth = dx * dirX + dy * dirY; if (depth < 0.6 || depth > 14) continue;
+      const sx = (W / 2) * (1 + ((dirX * dy - dirY * dx) / PLANE) / depth);
+      if (sx < -40 || sx > W + 40 || zbuf[Math.max(0, Math.min(RW - 1, Math.round(sx * QUALITY)))] < depth - 0.2) continue;
+      const top = HOR + (p.eyeZ - (e.fz || 0) - e.z - (e.dead ? 0.3 : e.def.h) - 0.2) * PROJ / depth;
+      const t = e.bubble.text, tw = ctx.measureText(t).width + 8, bx = clamp(sx - tw / 2, 2, W - tw - 2), by = Math.max(4, top - 12);
+      ctx.globalAlpha = Math.min(1, e.bubble.t * 3);
+      ctx.fillStyle = 'rgba(255,255,255,0.93)'; ctx.beginPath(); ctx.moveTo(bx + 3, by); ctx.arcTo(bx + tw, by, bx + tw, by + 11, 3); ctx.arcTo(bx + tw, by + 11, bx, by + 11, 3); ctx.arcTo(bx, by + 11, bx, by, 3); ctx.arcTo(bx, by, bx + tw, by, 3); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(clamp(sx, bx + 4, bx + tw - 4) - 3, by + 11); ctx.lineTo(clamp(sx, bx + 4, bx + tw - 4), by + 15); ctx.lineTo(clamp(sx, bx + 4, bx + tw - 4) + 3, by + 11); ctx.fill();
+      ctx.fillStyle = '#1a0010'; ctx.textAlign = 'left'; ctx.fillText(t, bx + 4, by + 8);
+    }
+    ctx.globalAlpha = 1;
     // health bars over monsters you've just hurt
     for (const e of L.enemies) {
       if (e.dead || !(e.barT > 0) || e.def.boss || e.type === 'barrel') continue;
@@ -1526,7 +1636,7 @@
       killChain = killChain.filter(t => time - t < 1.6); killChain.push(time);
       const n = killChain.length;
       player.bestStreak = Math.max(player.bestStreak, n);
-      if (n >= 2) { announce = { text: ['', '', 'DOUBLE KILL!', 'TRIPLE KILL!', 'MULTI KILL!'][n] || 'MASSACRE!', t: 0 }; Sfx.play.achievement(); const bonus = 50 * n; runScore += bonus; popup(e.x, e.y, (e.fz || 0) + e.def.h + 0.2, `+${bonus} COMBO`); }
+      if (n >= 2) { announce = { text: ['', '', 'DOUBLE KILL!', 'TRIPLE KILL!', 'MULTI KILL!'][n] || 'MASSACRE!', t: 0 }; Sfx.play.achievement(); Voice.say('combo', 0.5, true); const bonus = 50 * n; runScore += bonus; popup(e.x, e.y, (e.fz || 0) + e.def.h + 0.2, `+${bonus} COMBO`); }
     }
   }
   // little things that keep the world alive: embers, smoke, bubbles, rain splashes, fireflies, dust
@@ -1700,7 +1810,7 @@
     for (const d of L.decor.slice()) if (BREAK[d.def.sprite] && Math.hypot(d.x - x, d.y - y) < radius * 0.8 && losClear(x, y, d.x, d.y)) breakDecor(d);
     for (const e of L.enemies) if (e.dead && e.type !== 'barrel' && Math.hypot(e.x - x, e.y - y) < radius) shove(e, e.x - x, e.y - y, 4);
     const pd = Math.hypot(player.x - x, player.y - y) - 0.25;
-    if (pd < radius && losClear(x, y, player.x, player.y)) damagePlayer(maxDmg * (1 - Math.max(0, pd) / radius) * (owner === 'player' ? 0.5 : 1), x, y);
+    if (pd < radius && losClear(x, y, player.x, player.y)) (lastAttacker = owner === 'player' ? 'self' : typeOf(owner) || lastAttacker, damagePlayer)(maxDmg * (1 - Math.max(0, pd) / radius) * (owner === 'player' ? 0.5 : 1), x, y);
   }
 
   // The B.F.G. tears gloom-tracers through everything you're looking at.
@@ -1726,6 +1836,7 @@
     }
     if (src === 'player') dmg *= mods.hit;
     if (src === 'player' && player.pw.gloom > 0) dmg *= 2;
+    if (e.type !== 'barrel') e.hitT = 0.12;
     if (src === 'player' && e.type !== 'barrel') { hitMarkT = 0.18; e.barT = 2.5; if (!e.maxHp) e.maxHp = Math.max(e.hp, e.def.hp); player.dmgDealt += Math.min(dmg, Math.max(0, e.hp)); }
     e.hp -= dmg;
     if (e.type === 'barrel') {
@@ -1753,9 +1864,9 @@
       const mz = (e.fz || 0) + e.z + e.def.h * 0.55;
       spawnParts('drop', e.x, e.y, mz, 8, 1.6);
       if (dmg >= 40 && !e.def.boss) spawnParts('gib', e.x, e.y, mz, 9, 2.2); // blown apart
-      player.kills++; killFx(e, src); dropLoot(e);
+      player.kills++; killFx(e, src); dropLoot(e); shout(e, 'death', 0.6);
       if (e.def.kamikaze) setTimeout(() => popBlast(e), 80);
-      if (e.champ) { bump('champs'); popup(e.x, e.y, (e.fz || 0) + e.def.h, '+250 CHAMPION', '255,200,80'); runScore += 250; }
+      if (e.champ) { Voice.say('champion', 0.5); bump('champs'); popup(e.x, e.y, (e.fz || 0) + e.def.h, '+250 CHAMPION', '255,200,80'); runScore += 250; }
       if (src === 'player') unlock('firstblood');
       if (/^wally|^boss$/.test(e.type)) bump('wally');
       if (e.type === 'bubbly' || e.type === 'mini') bump('orbs');
@@ -1807,6 +1918,7 @@
 
   function wake(e) {
     if (e.state !== 'idle') return;
+    shout(e, 'sight', 0.55);
     e.state = 'chase'; e.atkT = rand(0.4, 1.2);
     const pd = Math.hypot(e.x - player.x, e.y - player.y);
     Sfx.play[e.def.sight] && Sfx.play[e.def.sight](pd);
@@ -1956,7 +2068,7 @@
       if (e.state === 'pain') { e.t -= dt; if (e.t <= 0) e.state = 'chase'; continue; }
       if (e.state === 'attack') {
         e.t -= dt;
-        if (!e.fired && e.t < 0.22) { e.fired = true; if (!p.dead) enemyAttack(e); }
+        if (!e.fired && e.t < 0.22) { e.fired = true; if (!p.dead) { lastAttacker = e.type; enemyAttack(e); } }
         if (e.t <= 0) { e.state = 'chase'; e.atkT = rand(d.cooldown[0], d.cooldown[1]) * sk.cool * (d.boss && e.hp < d.hp / 2 ? 0.6 : 1) * (e.buffT > 0 ? 0.65 : 1); }
         continue;
       }
@@ -2037,6 +2149,7 @@
         pr.x = nx; pr.y = ny;
         if (pr.owner !== 'player' && pr.owner !== 'ghost') {
           if (Math.hypot(p.x - pr.x, p.y - pr.y) < 0.3 + pr.def.size / 2) {
+            lastAttacker = typeOf(pr.owner) === '_ep' ? lastAttacker : typeOf(pr.owner);
             damagePlayer(irand(pr.def.dmg[0], pr.def.dmg[1]), pr.x - pr.vx, pr.y - pr.vy);
             if (pr.def.slow && !p.pw.shroud) p.slowT = Math.max(p.slowT, pr.def.slow);
             explode(pr); pr.done = true; break;
@@ -2258,7 +2371,7 @@
     // toxic slime burns
     if (L.slime[Math.floor(p.y) * L.mw + Math.floor(p.x)] && p.pw.mask <= 0 && p.fz < 0.05) {
       p.slimeT -= dt;
-      if (p.slimeT <= 0) { p.slimeT = 1; damagePlayer(5); }
+      if (p.slimeT <= 0) { p.slimeT = 1; lastAttacker = 'slime'; damagePlayer(5); }
     } else p.slimeT = 0.4;
 
     // pickups
@@ -2327,7 +2440,7 @@
       }
     }
     if (used) {
-      if (!def.weapon) { (def.power || def.berserk || def.key ? Sfx.play.weaponUp : Sfx.play.pickup)(); msg = def.msg; msgT = 2.5; }
+      if (!def.weapon) { (def.power || def.berserk || def.key ? Sfx.play.weaponUp : Sfx.play.pickup)(); const qs = PICKUP_QUIPS[def.sprite]; msg = qs && Math.random() < 0.6 ? qs[irand(0, qs.length - 1)] : def.msg; msgT = 2.5; }
     }
     return used;
   }
@@ -2712,7 +2825,11 @@
       if (!(mode === 'coop' && online && !online.host)) eliteUpdate(dt);
       if (mode === 'horde') hordeUpdate(dt);
       hitMarkT = Math.max(0, hitMarkT - dt); killMarkT = Math.max(0, killMarkT - dt);
-      for (const e of L.enemies) if (e.barT > 0) e.barT -= dt;
+      bubbleCd -= dt;
+      for (const e of L.enemies) {
+        if (e.barT > 0) e.barT -= dt; if (e.hitT > 0) e.hitT -= dt; if (e.bubble) { e.bubble.t -= dt; if (e.bubble.t <= 0) e.bubble = null; }
+        if (!e.dead && e.state === 'chase' && Math.random() < dt * 0.06 && Math.hypot(e.x - player.x, e.y - player.y) < 9) shout(e, 'sight', 0.5); // the odd taunt
+      }
       for (const d of dmgDirs) d.t += dt; dmgDirs = dmgDirs.filter(d => d.t < 1);
       if (announce) { announce.t += dt; if (announce.t > 1.8) announce = null; }
       if (state === 'playing' && !player.dead && player.health < 30) { heartT -= dt; if (heartT <= 0) { heartT = 0.45 + player.health / 30 * 0.55; Sfx.play.heartbeat(); } }
@@ -2763,6 +2880,7 @@
       'TAB map   N radar   L torch   H photo mode   K screenshot   M music   ESC pause'];
     if (state !== 'title' || menuItems().length <= 12) lines.forEach((l, i) => label(l, 18, 222 + i * 7.5, '#b78ab7', 'left', 6));
     label('Keys open coloured doors. Stairs and lifts take you up. V toggles her voice. Gamepads work too.', 18, 246, '#8a6a8a', 'left', 6.5);
+    if (state === 'title') label(TIPS[Math.floor(time / 7) % TIPS.length], 18, 264, '#ff9be0', 'left', 6);
     label('ON A PHONE? Left stick moves, drag right side to look.', 18, 254, '#7a5a7a', 'left', 6.5);
   }
 
@@ -2884,7 +3002,7 @@
           `ACCURACY  ${st.acc}%     DAMAGE  ${st.dmg.toLocaleString()}     BEST STREAK  ${st.streak}`,
           `TIME  ${fmtTime(st.time)}   (PAR ${fmtTime(st.par)})`,
           st.newBest ? 'NEW BEST TIME!' : `BEST TIME  ${fmtTime(st.best)}`,
-          `LEVEL SCORE  +${st.score.toLocaleString()}`, `TOTAL  ${st.total.toLocaleString()}`, stateT > 1 ? 'CLICK OR PRESS ENTER' : ''], 13);
+          `LEVEL SCORE  +${st.score.toLocaleString()}`, `TOTAL  ${st.total.toLocaleString()}`, `RATING:  ${(RATINGS.find(r => st.kills >= r[0]) || RATINGS[4])[1]}`, stateT > 1 ? 'CLICK OR PRESS ENTER' : ''], 13);
       }
       return;
     }
@@ -2976,7 +3094,10 @@
       ctx.fillStyle = `rgba(80,0,0,${Math.min(0.6, stateT * 0.4)})`; ctx.fillRect(0, 0, W, VIEW_H);
       if (stateT > 1) {
         ctx.font = '34px "Metal Mania", Impact, serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#ff2d4a'; ctx.fillText('YOU DIED', W / 2, 90);
-        label('Too much positivity. Click to rise again.', W / 2, 110, '#ffd0ec', 'center', 9);
+        const k = lastAttacker, nm = k && ENEMY_DEFS[k] ? ENEMY_DEFS[k].name : null;
+        if (nm) label(`KILLED BY: ${nm.toUpperCase()}`, W / 2, 108, '#ff9be0', 'center', 8);
+        label(CAUSE[k] || 'Too much positivity.', W / 2, nm ? 121 : 110, '#ffd0ec', 'center', 9);
+        label('Click to rise again.', W / 2, nm ? 136 : 124, '#c9a6c9', 'center', 8);
       }
     }
     if (online && online.inGame) drawNameTags();
@@ -3248,7 +3369,7 @@
         if (p.ep) for (const r of p.ep) spawnGhost(r, EP_OWNER);
       }
       if (online.inGame && state === 'playing') {
-        for (const h of p.hit || []) if (h[0] === Net.id && mode === 'dm') { online.lastHit = { id: from, t: time }; damagePlayer(Math.max(1, Math.round(h[1])), h[2], h[3]); }
+        for (const h of p.hit || []) if (h[0] === Net.id && mode === 'dm') { lastAttacker = 'player'; online.lastHit = { id: from, t: time }; damagePlayer(Math.max(1, Math.round(h[1])), h[2], h[3]); }
         for (const h of p.hurt || []) if (h[0] === Net.id && mode === 'coop') damagePlayer(Math.round(h[1]), h[2], h[3]);
       }
       if (online.inGame && mode === 'coop' && online.host && p.lv === levelIndex) for (const [i, d] of p.dmg || []) { const e = L.enemies[i]; if (e) damageEnemy(e, d, pe.avatar || 'peer'); }

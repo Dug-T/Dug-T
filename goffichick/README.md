@@ -147,6 +147,23 @@ flinches when hit, and her eyes glow pink when she picks up a new weapon.
     damage, best streak and roses
   - 7 new achievements
 
+- **Doors that sound like doors:**
+  - opening: a latch clunk, a climbing motor whine, a hydraulic rush and chugging gears
+  - closing: the grind runs the other way and ends in a heavy thud
+  - doors sound quieter the further away they are
+- **Livelier monsters:** on top of their drawn frames, every monster now:
+  - bounces and sways as it walks, and breathes when idle
+  - hovers if it flies
+  - crouches to wind up an attack, then springs and lunges
+  - flinches and flashes white when hit, and drops with a little bounce when it dies
+  - (and the ground shakes when a boss stomps nearby)
+- **More jokes:**
+  - monsters shout things in speech bubbles when they spot you, taunt you, and say last words
+  - the death screen tells you who killed you and how ("Notified to death.")
+  - every level gets a rating, from SUSPICIOUSLY CHEERFUL to UTTERLY MISERABLE
+  - tips on the title screen, funny pickup messages and pause-screen excuses
+  - more lines for Goffichick, including grenades, roses, champions and combos
+
 ## Setting up the world leaderboard (Supabase, free)
 
 1. Create a free account at [supabase.com](https://supabase.com) and a **New project** (any name and region).
