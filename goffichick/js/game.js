@@ -1579,11 +1579,14 @@
       if (sel) { ctx.fillStyle = 'rgba(255,79,184,0.25)'; ctx.fillRect(W / 2 - 90, y - 11, 180, 15); }
       label(it.text, W / 2, y, sel ? '#ffffff' : '#ff9be0', 'center', 10);
     });
+    drawTipJar();
   }
   function pauseTap(ev) {
     const items = pauseItems();
     if (ev && ev.clientX !== undefined) {
-      const g = gamePoint(ev.clientX, ev.clientY), row = Math.floor((g.y - (PAUSE_Y - 11)) / PAUSE_DY);
+      const g0 = gamePoint(ev.clientX, ev.clientY);
+      if (kofiName()) { const k = TIP_RECT(); if (g0.x >= k.x - 4 && g0.x <= k.x + k.w + 4 && g0.y >= k.y - 4 && g0.y <= k.y + k.h + 4) { openTipJar(); return; } }
+      const g = g0, row = Math.floor((g.y - (PAUSE_Y - 11)) / PAUSE_DY);
       if (Math.abs(g.x - W / 2) < 100 && row >= 0 && row < items.length) { pauseSel = row; pauseAct(items[row].id); return; }
       pauseAct('resume'); return;
     }
@@ -3149,7 +3152,7 @@
   // ------------------------------------------------------------------ screens
   // ---- Ko-fi tip jar on the title screen (like Wallyman World's): pulses, glows, shines and sparkles
   const kofiName = () => String((typeof GOFFICHICK_KOFI !== 'undefined' && GOFFICHICK_KOFI) || '').trim().replace(/^https?:\/\/(www\.)?ko-fi\.com\//i, '').replace(/[^A-Za-z0-9_-]/g, '');
-  const TIP_RECT = () => ({ x: W - 98, y: 10, w: 86, h: 22 });
+  const TIP_RECT = () => paused && state === 'playing' ? { x: W / 2 - 43, y: 216, w: 86, h: 22 } : { x: W / 2 - 43, y: 6, w: 86, h: 22 };
   function drawTipJar() {
     if (!kofiName()) return;
     const { x, y, w, h } = TIP_RECT(), cx = x + w / 2, cy = y + h / 2, t = time * 60;
