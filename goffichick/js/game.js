@@ -3227,12 +3227,43 @@
     const spark = (sx, sy, on) => { if (!on) return; ctx.fillStyle = '#fff6c0'; ctx.fillRect(sx - 0.5, sy - 3, 1, 7); ctx.fillRect(sx - 3, sy - 0.5, 7, 1); };
     const k = Math.floor(t / 16) % 3; spark(x - 4, y + 4, k === 0); spark(x + w + 4, y + h - 4, k === 1); spark(x + w - 14, y - 4, k === 2); spark(x + 16, y + h + 4, k === 1);
   }
+  // Browsers only let a page open a new tab while handling a finger lift / mouse release / click (not a
+  // touch-down, and not after going fullscreen on that touch), so taps on the jar ask for Ko-fi and the
+  // actual opening happens on the release that follows.
+  let tipPending = 0;
   function openTipJar() {
-    const name = kofiName(); if (!name) return;
-    const a = document.createElement('a'); a.href = 'https://ko-fi.com/' + name; a.target = '_blank'; a.rel = 'noopener noreferrer';
-    document.body.appendChild(a); a.click(); a.remove();
+    if (!kofiName()) return;
+    tipPending = performance.now();
     msg = 'Thank you! Opening the tip jar...'; msgT = 3;
   }
+  function doOpenTipJar() {
+    if (!tipPending || performance.now() - tipPending > 2500) { tipPending = 0; return; }
+    tipPending = 0;
+    const url = 'https://ko-fi.com/' + kofiName();
+    let w = null; try { w = window.open(url, '_blank'); } catch (e) {}
+    if (w) { try { w.opener = null; } catch (e) {} msg = 'Thank you! The tip jar opened in a new tab.'; msgT = 4; }
+    else showTipLink(url); // blocked (e.g. inside an app's built-in viewer): offer a real link to tap instead
+  }
+  function showTipLink(url) {
+    let box = document.getElementById('tipBox');
+    if (!box) {
+      box = document.createElement('div'); box.id = 'tipBox';
+      box.style.cssText = 'position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:50;background:#1a0010;border:3px solid #ffc94a;border-radius:14px;padding:16px 18px;color:#ffd0ec;font:bold 15px monospace;text-align:center;box-shadow:0 0 30px #ff2d95;max-width:86vw;touch-action:auto;user-select:text;-webkit-user-select:text';
+      box.innerHTML = '<div style="margin-bottom:10px">Thank you! Tap below to open the tip jar:</div>' +
+        '<a id="tipLink" target="_blank" rel="noopener noreferrer" style="display:inline-block;background:#ff2d95;color:#fff;padding:10px 16px;border-radius:10px;text-decoration:none;font-size:15px;white-space:nowrap"></a>' +
+        '<div id="tipUrl" style="margin:10px 0 12px;color:#fff;font-size:13px;word-break:break-all"></div>' +
+        '<button id="tipCopy" style="font:bold 13px monospace;padding:6px 12px;margin-right:8px">COPY LINK</button><button id="tipClose" style="font:bold 13px monospace;padding:6px 12px">CLOSE</button>';
+      document.body.appendChild(box);
+      for (const ev of ['pointerdown', 'mousedown', 'touchstart']) box.addEventListener(ev, e => e.stopPropagation());
+      box.querySelector('#tipClose').addEventListener('click', () => { box.style.display = 'none'; });
+      box.querySelector('#tipCopy').addEventListener('click', e => { const u = box.querySelector('#tipLink').href;
+        (navigator.clipboard ? navigator.clipboard.writeText(u) : Promise.reject()).then(() => { e.target.textContent = 'COPIED!'; }, () => { e.target.textContent = 'COPY FAILED'; }); });
+    }
+    const a = box.querySelector('#tipLink'); a.href = url; a.textContent = '\u2615 ko-fi.com/' + kofiName();
+    box.querySelector('#tipUrl').textContent = url; box.querySelector('#tipCopy').textContent = 'COPY LINK'; box.style.display = 'block';
+    msg = 'Tip jar: ko-fi.com/' + kofiName(); msgT = 6;
+  }
+  for (const ev of ['pointerup', 'touchend', 'mouseup', 'click']) window.addEventListener(ev, doOpenTipJar, true);
   function drawTitle() {
     ctx.fillStyle = '#07030a'; ctx.fillRect(0, 0, W, H);
     if (titleImg) {
