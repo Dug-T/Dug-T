@@ -223,6 +223,13 @@ flinches when hit, and her eyes glow pink when she picks up a new weapon.
     things off one at a time: bloom, then reflections and corner shadows, then grading, round shadows and extra
     particles, and finally it renders the 3D view at 75% resolution.
 
+## Tip jar (Ko-fi)
+
+A pulsing **TIP JAR** button sits in the top-right corner of the title screen, just like Wallyman World's. It has a
+gold rim, a pink glow, a shine sweeping across it, a steaming coffee cup with a heart, and twinkling sparkles.
+Tapping or clicking it opens your Ko-fi page in a new tab. The page name is `GOFFICHICK_KOFI` at the top of
+`js/leaderboard.js` (currently `dugt574832`, the same as Wallyman World). Leave it empty to hide the button.
+
 ## Setting up the world leaderboard (Supabase, free)
 
 1. Create a free account at [supabase.com](https://supabase.com) and a **New project** (any name and region).
