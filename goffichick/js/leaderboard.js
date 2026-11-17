@@ -8,6 +8,10 @@
 // While either is empty the game simply keeps high scores on each device, as before.
 'use strict';
 
+// Ko-fi tip jar: your Ko-fi page name (the part after ko-fi.com/). A pulsing TIP JAR button appears on the
+// title screen and opens your Ko-fi page. Leave it empty to hide the button. (Same page as Wallyman World.)
+const GOFFICHICK_KOFI = 'dugt574832';
+
 const SUPABASE_URL = 'https://rlebmmqfmkpyvnxyhqeb.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable__YdLXvcL6uns_n2hu54bXw_0KZqA_ly';
 

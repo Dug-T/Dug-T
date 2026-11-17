@@ -2917,6 +2917,7 @@
   function menuMove(dir) { const n = menuItems().length; menuSel = (menuSel + dir + n) % n; Sfx.init(); Sfx.play.switch(); }
   function titleTap(gx, gy) {
     const items = menuItems();
+    if (gx !== undefined && kofiName()) { const k = TIP_RECT(); if (gx >= k.x - 4 && gx <= k.x + k.w + 4 && gy >= k.y - 4 && gy <= k.y + k.h + 4) { openTipJar(); return; } }
     if (gx !== undefined) { // the arrow pad
       const pb = titlePad().find(b => gx >= b.x - 4 && gx <= b.x + b.w + 4 && gy >= b.y - 4 && gy <= b.y + b.h + 4);
       if (pb) {
@@ -3146,6 +3147,37 @@
   }
 
   // ------------------------------------------------------------------ screens
+  // ---- Ko-fi tip jar on the title screen (like Wallyman World's): pulses, glows, shines and sparkles
+  const kofiName = () => String((typeof GOFFICHICK_KOFI !== 'undefined' && GOFFICHICK_KOFI) || '').trim().replace(/^https?:\/\/(www\.)?ko-fi\.com\//i, '').replace(/[^A-Za-z0-9_-]/g, '');
+  const TIP_RECT = () => ({ x: W - 98, y: 10, w: 86, h: 22 });
+  function drawTipJar() {
+    if (!kofiName()) return;
+    const { x, y, w, h } = TIP_RECT(), cx = x + w / 2, cy = y + h / 2, t = time * 60;
+    const ph = t % 120, sc = ph < 40 ? 1 + 0.1 * Math.sin(Math.PI * ph / 40) : 1, glowA = 0.35 + 0.25 * Math.sin(t * 0.1);
+    ctx.save(); ctx.translate(cx, cy); ctx.scale(sc, sc); ctx.translate(-cx, -cy);
+    ctx.shadowColor = `rgba(255,79,184,${0.5 + glowA})`; ctx.shadowBlur = 12; // a soft pink glow
+    ctx.fillStyle = '#ffcf3a'; ctx.beginPath(); ctx.roundRect(x - 1.5, y - 1.5, w + 3, h + 3, 6); ctx.fill(); ctx.shadowBlur = 0;
+    const g = ctx.createLinearGradient(0, y, 0, y + h); g.addColorStop(0, '#ff7cc4'); g.addColorStop(0.5, '#ff2d95'); g.addColorStop(1, '#a8106a');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.roundRect(x, y, w, h, 5); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.45)'; ctx.fillRect(x + 4, y + 1.5, w - 8, 1);
+    const sweep = (t * 2) % 220 - 30; // a shine sweeping across
+    if (sweep < w + 20) { ctx.save(); ctx.beginPath(); ctx.roundRect(x, y, w, h, 5); ctx.clip(); ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.beginPath(); ctx.moveTo(x + sweep, y); ctx.lineTo(x + sweep + 8, y); ctx.lineTo(x + sweep - 4, y + h); ctx.lineTo(x + sweep - 12, y + h); ctx.fill(); ctx.restore(); }
+    // a black coffee cup with a pink heart, and rising steam
+    ctx.fillStyle = '#16020c'; ctx.beginPath(); ctx.roundRect(x + 6, y + 8, 12, 10, 2); ctx.fill(); ctx.strokeStyle = '#16020c'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(x + 19, y + 12.5, 2.6, -Math.PI / 2, Math.PI / 2); ctx.stroke();
+    ctx.fillStyle = '#ff7cc4'; ctx.beginPath(); ctx.moveTo(x + 12, y + 16); ctx.bezierCurveTo(x + 7, y + 12, x + 9, y + 9.5, x + 12, y + 11.5); ctx.bezierCurveTo(x + 15, y + 9.5, x + 17, y + 12, x + 12, y + 16); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.lineWidth = 0.9;
+    for (const [sx, off] of [[10, 0], [14, 1.6]]) { const wv = Math.sin(time * 4 + off); ctx.beginPath(); ctx.moveTo(x + sx, y + 7); ctx.quadraticCurveTo(x + sx + 2 * wv, y + 4.5, x + sx, y + 2.5); ctx.stroke(); }
+    ctx.font = 'bold 10px monospace'; ctx.textAlign = 'left'; ctx.fillStyle = '#3a0020'; ctx.fillText('TIP JAR', x + 28, y + 15.5); ctx.fillStyle = '#ffffff'; ctx.fillText('TIP JAR', x + 27, y + 14.5);
+    ctx.restore();
+    const spark = (sx, sy, on) => { if (!on) return; ctx.fillStyle = '#fff6c0'; ctx.fillRect(sx - 0.5, sy - 3, 1, 7); ctx.fillRect(sx - 3, sy - 0.5, 7, 1); };
+    const k = Math.floor(t / 16) % 3; spark(x - 4, y + 4, k === 0); spark(x + w + 4, y + h - 4, k === 1); spark(x + w - 14, y - 4, k === 2); spark(x + 16, y + h + 4, k === 1);
+  }
+  function openTipJar() {
+    const name = kofiName(); if (!name) return;
+    const a = document.createElement('a'); a.href = 'https://ko-fi.com/' + name; a.target = '_blank'; a.rel = 'noopener noreferrer';
+    document.body.appendChild(a); a.click(); a.remove();
+    msg = 'Thank you! Opening the tip jar...'; msgT = 3;
+  }
   function drawTitle() {
     ctx.fillStyle = '#07030a'; ctx.fillRect(0, 0, W, H);
     if (titleImg) {
@@ -3171,7 +3203,7 @@
         if (sel) { ctx.fillStyle = 'rgba(255,79,184,0.18)'; ctx.fillRect(12, y - 8, 203, 10); }
         label((sel ? '> ' : '  ') + it.text, 16, y, sel ? '#ffffff' : '#ff9be0', 'left', 8.5);
       });
-      if (state === 'title') drawTitlePad();
+      if (state === 'title') { drawTitlePad(); drawTipJar(); }
     }
     const lines = ['WASD / ARROWS  move    MOUSE  look    CLICK / CTRL  fire    E  use', 'SPACE  jump    G  grenade    1-9 / Q / WHEEL  weapons    SHIFT run',
       'MOUSE UP/DOWN or R / F  aim up and down (C centres)   TAB map   N radar   L torch   H photo   K screenshot'];
@@ -4026,6 +4058,6 @@
     titleImg = photos.title;
     state = 'title';
     // expose a tiny debug hook for testing
-    window.GOFFI = { get state() { return state; }, get player() { return player; }, get level() { return L; }, start: startGame, completeLevel, ach, ACHIEVEMENTS, get quality() { return QUALITY; }, get score() { return runScore; }, highScores, get diff() { return diff; }, set diff(v) { diff = v; }, continueGame, savedGame, setLevel: i => { levelIndex = i; loadLevel(i, null); state = 'playing'; }, get mode() { return mode; }, get menuSel() { return menuSel; }, get song() { return Sfx.song; }, get musicMode() { return musicMode; }, get look() { return LOOK_SENS; }, get touchState() { return touch; }, get menuItems() { return menuItems().map(i => i.id); }, get lamps() { return L && L.lamps; }, get shafts() { return L && L.shafts; }, get pitch() { return pitch; }, set pitch(v) { pitch = v; HOR = VIEW_H / 2 + v; }, get horde() { return horde; }, throwNade, jump: () => { jumpReq = true; }, get paused() { return paused; }, spawn: (t, x, y) => spawnEnemy(t, x, y), startHorde: () => startSolo('horde', DM_LEVELS[0]), get fxHigh() { return FX_HIGH; }, set fxHigh(v) { FX_HIGH = v; }, get fxDrop() { return fxDrop; }, set fxDrop(v) { fxDrop = v; if (v < 4 && renderScale !== 1) { renderScale = 1; fitScreen(); } }, get renderScale() { return renderScale; }, get res() { return RES; }, get online() { return online; }, Net, get menuPage() { return menuPage; }, weeklyInfo, editor, LevelCode, get sharedLvl() { return sharedLvl; }, get levelTime() { return levelTime; }, set levelTime(v) { levelTime = v; } };
+    window.GOFFI = { get state() { return state; }, get player() { return player; }, get level() { return L; }, start: startGame, completeLevel, ach, ACHIEVEMENTS, get quality() { return QUALITY; }, get score() { return runScore; }, highScores, get diff() { return diff; }, set diff(v) { diff = v; }, continueGame, savedGame, setLevel: i => { levelIndex = i; loadLevel(i, null); state = 'playing'; }, get mode() { return mode; }, get tipRect() { return kofiName() ? TIP_RECT() : null; }, get menuSel() { return menuSel; }, get song() { return Sfx.song; }, get musicMode() { return musicMode; }, get look() { return LOOK_SENS; }, get touchState() { return touch; }, get menuItems() { return menuItems().map(i => i.id); }, get lamps() { return L && L.lamps; }, get shafts() { return L && L.shafts; }, get pitch() { return pitch; }, set pitch(v) { pitch = v; HOR = VIEW_H / 2 + v; }, get horde() { return horde; }, throwNade, jump: () => { jumpReq = true; }, get paused() { return paused; }, spawn: (t, x, y) => spawnEnemy(t, x, y), startHorde: () => startSolo('horde', DM_LEVELS[0]), get fxHigh() { return FX_HIGH; }, set fxHigh(v) { FX_HIGH = v; }, get fxDrop() { return fxDrop; }, set fxDrop(v) { fxDrop = v; if (v < 4 && renderScale !== 1) { renderScale = 1; fitScreen(); } }, get renderScale() { return renderScale; }, get res() { return RES; }, get online() { return online; }, Net, get menuPage() { return menuPage; }, weeklyInfo, editor, LevelCode, get sharedLvl() { return sharedLvl; }, get levelTime() { return levelTime; }, set levelTime(v) { levelTime = v; } };
   });
 })();
