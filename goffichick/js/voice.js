@@ -9,7 +9,7 @@
 
 const VOICE_FILES = {
   // levelStart: [], kill: [], boss: [], hurt: [], lowHealth: [], weapon: [], power: [],
-  // rage: [], key: [], secret: [], exit: [], death: [],
+  // rage: [], key: [], secret: [], exit: [], death: [], heedshot: [],
 };
 
 const VOICE_LINES = {
@@ -61,9 +61,47 @@ const Voice = (() => {
       speechSynthesis.speak(u);
     } catch (e) {}
   }
+  // ---- monsters talk too, each in a voice of its own (pitch, speed and, where the device has
+  // several voices, a different one per monster type). They never talk over anybody.
+  const MONSTER_VOICES = {
+    zombie: { pitch: 0.35, rate: 0.72 }, manager: { pitch: 0.9, rate: 1.35 }, wally: { pitch: 1.25, rate: 1.2 }, wallyfit: { pitch: 1.4, rate: 1.4 },
+    wallydeluxe: { pitch: 0.75, rate: 0.95 }, boss: { pitch: 0.15, rate: 0.8 }, wallylive: { pitch: 1.1, rate: 1.25 }, brute: { pitch: 0.25, rate: 0.9 },
+    skull: { pitch: 1.9, rate: 1.35 }, orb: { pitch: 2, rate: 1.5 }, bubbly: { pitch: 2, rate: 1.7 }, mini: { pitch: 2, rate: 1.9 }, megaorb: { pitch: 0.6, rate: 1.1 },
+    yoga: { pitch: 1.45, rate: 0.72 }, coach: { pitch: 1.1, rate: 1.45 }, bridezilla: { pitch: 1.7, rate: 1.35 }, redcoat: { pitch: 1.3, rate: 1.25 },
+    hypeman: { pitch: 1.0, rate: 1.7 }, ghost: { pitch: 1.8, rate: 1.1 }, popper: { pitch: 2, rate: 1.6 }, guru: { pitch: 1.3, rate: 0.68 }, riot: { pitch: 0.8, rate: 1.05 },
+  };
+  let enVoices = null;
+  const hash = str => { let h = 7; for (const ch of str) h = (h * 31 + ch.charCodeAt(0)) | 0; return Math.abs(h); };
+  function monster(type, text, dist = 5) {
+    if (!on || !window.speechSynthesis) return;
+    try {
+      if (speechSynthesis.speaking || speechSynthesis.pending) return;
+      if (!enVoices || !enVoices.length) enVoices = speechSynthesis.getVoices().filter(v => /^en/i.test(v.lang));
+      const prof = MONSTER_VOICES[type] || { pitch: 1, rate: 1 }, u = new SpeechSynthesisUtterance(text);
+      if (enVoices.length) u.voice = enVoices[hash(type) % enVoices.length];
+      u.pitch = prof.pitch; u.rate = prof.rate; u.volume = Math.max(0.15, Math.min(1, 4 / (dist + 2)));
+      speechSynthesis.speak(u);
+    } catch (e) {}
+  }
+  // "HEED SHOT!" - in a Scottish accent where the device has one (or your own recording: VOICE_FILES.heedshot)
+  let heedVoice;
+  function heed() {
+    if (!on) return;
+    const files = VOICE_FILES.heedshot;
+    if (files && files.length) { try { const a = new Audio(files[Math.floor(Math.random() * files.length)]); a.play().catch(() => {}); } catch (e) {} return; }
+    if (!window.speechSynthesis) return;
+    try {
+      if (heedVoice === undefined) { const vs = speechSynthesis.getVoices(); heedVoice = vs.find(v => /scot|fiona|en[-_]?gb[-_]?sct/i.test(v.name + ' ' + v.lang)) || vs.find(v => /^en-GB/i.test(v.lang)) || null; }
+      speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance('Heed shot!');
+      if (heedVoice) u.voice = heedVoice;
+      u.pitch = 0.8; u.rate = 0.85; u.volume = 1;
+      speechSynthesis.speak(u);
+    } catch (e) {}
+  }
   function toggle() { on = !on; try { localStorage.setItem('goffichick-voice', on ? 'on' : 'off'); } catch (e) {} if (!on && window.speechSynthesis) speechSynthesis.cancel(); return on; }
   return {
-    say, toggle, get on() { return on; },
+    say, toggle, monster, heed, get on() { return on; },
     update(dt) { subT = Math.max(0, subT - dt); },
     get subtitle() { return subT > 0 ? subtitle : ''; },
   };
