@@ -243,7 +243,7 @@
   let fxDrop = 0, frameAvg = 1 / 60, slowFor = 0;
   // LOOK SPEED: how fast dragging, the right-hand stick and the gamepad turn and aim (the mouse scales from 1.5)
   const LOOK_STEPS = [0.75, 1, 1.5, 2, 2.5, 3, 4, 5, 6];
-  let LOOK_SENS = 2; try { const v = parseFloat(localStorage.getItem('goffichick-look')); if (LOOK_STEPS.includes(v)) LOOK_SENS = v; } catch (e) {}
+  let LOOK_SENS = 1; try { const v = parseFloat(localStorage.getItem('goffichick-look')); if (LOOK_STEPS.includes(v)) LOOK_SENS = v; } catch (e) {}
   const setLook = v => { LOOK_SENS = v; try { localStorage.setItem('goffichick-look', String(v)); } catch (e) {} };
   const nextLook = (dir = 1) => LOOK_STEPS[(LOOK_STEPS.indexOf(LOOK_SENS) + dir + LOOK_STEPS.length) % LOOK_STEPS.length];
   // MUSIC: 'shuffle' plays the level's theme, then random tunes; 'level' keeps repeating the level's theme
@@ -2825,11 +2825,11 @@
   let menuPage = 'main', onKind = 'dm', onLvl = 0;
   function menuItems() {
     if (menuPage === 'options') return [
-      { id: 'gfx', text: `GRAPHICS   ${QUALITY > 1 ? 'HD' : 'CLASSIC'}` },
-      { id: 'fx', text: `EFFECTS   ${FX_HIGH ? 'HIGH' : 'LOW (faster)'}` },
+      { id: 'gfx', lr: true, text: `GRAPHICS   ${QUALITY > 1 ? 'HD' : 'CLASSIC'}` },
+      { id: 'fx', lr: true, text: `EFFECTS   ${FX_HIGH ? 'HIGH' : 'LOW (faster)'}` },
       { id: 'look', lr: true, text: `LOOK SPEED   <  ${LOOK_SENS}  >` },
-      { id: 'musicMode', text: `MUSIC   ${musicMode === 'shuffle' ? 'SHUFFLE (level theme, then random)' : 'LEVEL THEMES ONLY'}` },
-      { id: 'voice', text: Voice.available() ? `VOICES   ${Voice.on ? 'ON' : 'OFF'}` : 'VOICES   (not available in this browser)' },
+      { id: 'musicMode', lr: true, text: `MUSIC   ${musicMode === 'shuffle' ? 'SHUFFLE (level theme, then random)' : 'LEVEL THEMES ONLY'}` },
+      { id: 'voice', lr: true, text: Voice.available() ? `VOICES   ${Voice.on ? 'ON' : 'OFF'}` : 'VOICES   (not available in this browser)' },
       { id: 'optBack', text: 'BACK' },
     ];
     if (menuPage === 'online') {
@@ -2917,7 +2917,7 @@
         const it = items[Math.min(menuSel, items.length - 1)];
         if (pb.id === 'up') menuMove(-1);
         else if (pb.id === 'down') menuMove(1);
-        else if (pb.id === 'left' || pb.id === 'right') { if (it.lr) menuActivate(it, pb.id === 'left' ? -1 : 1); else menuMove(pb.id === 'left' ? -1 : 1); }
+        else if (pb.id === 'left' || pb.id === 'right') { if (it.lr) menuActivate(it, pb.id === 'left' ? -1 : 1); }
         else menuActivate(it, 1);
         return;
       }
@@ -4015,6 +4015,6 @@
     titleImg = photos.title;
     state = 'title';
     // expose a tiny debug hook for testing
-    window.GOFFI = { get state() { return state; }, get player() { return player; }, get level() { return L; }, start: startGame, completeLevel, ach, ACHIEVEMENTS, get quality() { return QUALITY; }, get score() { return runScore; }, highScores, get diff() { return diff; }, set diff(v) { diff = v; }, continueGame, savedGame, setLevel: i => { levelIndex = i; loadLevel(i, null); state = 'playing'; }, get mode() { return mode; }, get song() { return Sfx.song; }, get musicMode() { return musicMode; }, get look() { return LOOK_SENS; }, get touchState() { return touch; }, get menuItems() { return menuItems().map(i => i.id); }, get lamps() { return L && L.lamps; }, get shafts() { return L && L.shafts; }, get pitch() { return pitch; }, set pitch(v) { pitch = v; HOR = VIEW_H / 2 + v; }, get horde() { return horde; }, throwNade, jump: () => { jumpReq = true; }, get paused() { return paused; }, spawn: (t, x, y) => spawnEnemy(t, x, y), startHorde: () => startSolo('horde', DM_LEVELS[0]), get fxHigh() { return FX_HIGH; }, set fxHigh(v) { FX_HIGH = v; }, get fxDrop() { return fxDrop; }, set fxDrop(v) { fxDrop = v; }, get online() { return online; }, Net, get menuPage() { return menuPage; }, weeklyInfo, editor, LevelCode, get sharedLvl() { return sharedLvl; }, get levelTime() { return levelTime; }, set levelTime(v) { levelTime = v; } };
+    window.GOFFI = { get state() { return state; }, get player() { return player; }, get level() { return L; }, start: startGame, completeLevel, ach, ACHIEVEMENTS, get quality() { return QUALITY; }, get score() { return runScore; }, highScores, get diff() { return diff; }, set diff(v) { diff = v; }, continueGame, savedGame, setLevel: i => { levelIndex = i; loadLevel(i, null); state = 'playing'; }, get mode() { return mode; }, get menuSel() { return menuSel; }, get song() { return Sfx.song; }, get musicMode() { return musicMode; }, get look() { return LOOK_SENS; }, get touchState() { return touch; }, get menuItems() { return menuItems().map(i => i.id); }, get lamps() { return L && L.lamps; }, get shafts() { return L && L.shafts; }, get pitch() { return pitch; }, set pitch(v) { pitch = v; HOR = VIEW_H / 2 + v; }, get horde() { return horde; }, throwNade, jump: () => { jumpReq = true; }, get paused() { return paused; }, spawn: (t, x, y) => spawnEnemy(t, x, y), startHorde: () => startSolo('horde', DM_LEVELS[0]), get fxHigh() { return FX_HIGH; }, set fxHigh(v) { FX_HIGH = v; }, get fxDrop() { return fxDrop; }, set fxDrop(v) { fxDrop = v; }, get online() { return online; }, Net, get menuPage() { return menuPage; }, weeklyInfo, editor, LevelCode, get sharedLvl() { return sharedLvl; }, get levelTime() { return levelTime; }, set levelTime(v) { levelTime = v; } };
   });
 })();
