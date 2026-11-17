@@ -53,12 +53,19 @@ const Sfx = (() => {
     splat: dist => { const v = vol(dist); noise(0.22, 650, 0.38 * v, 'lowpass', 1, 160); tone(150, 0.16, 'sine', 0.22 * v, 55); setTimeout(() => noise(0.14, 420, 0.22 * v, 'bandpass', 1, 180), 60); },
     squelch: dist => { const v = vol(dist); noise(0.3, 1100, 0.45 * v, 'bandpass', 1, 220); tone(320, 0.22, 'triangle', 0.2 * v, 70); setTimeout(() => { noise(0.18, 500, 0.3 * v, 'lowpass', 1, 120); tone(90, 0.15, 'sine', 0.25 * v, 50); }, 90); },
     swing: () => noise(0.15, 2500, 0.15, 'bandpass', 1, 600),
+    handcannon: () => { noise(0.08, 6000, 0.8, 'highpass', 1, 2500); noise(0.6, 2600, 1.0, 'lowpass', 1, 140); tone(110, 0.5, 'sine', 0.8, 30); tone(55, 0.7, 'sine', 0.5, 25); },
     pistol: () => { noise(0.18, 3000, 0.7, 'lowpass', 1, 400); tone(220, 0.08, 'square', 0.15, 80); },
     shotgun: () => { noise(0.45, 2200, 0.9, 'lowpass', 1, 150); tone(90, 0.3, 'sine', 0.6, 35); },
     shotgunPump: () => { noise(0.05, 1500, 0.3, 'bandpass'); setTimeout(() => noise(0.06, 1200, 0.3, 'bandpass'), 140); },
     gatling: () => { noise(0.1, 3500, 0.5, 'lowpass', 1, 600); tone(160, 0.05, 'square', 0.1, 90); },
     launcher: () => { noise(0.6, 600, 0.6, 'bandpass', 1, 3000); tone(140, 0.3, 'sawtooth', 0.15, 60); },
-    explode: (d) => { const v = vol(d); noise(1.1, 1200, 1.0, 'lowpass', v, 60); tone(70, 0.7, 'sine', 0.8 * v, 25); },
+    // a sharp crack, a deep thump you feel, a long rolling rumble and debris pattering down; far away it's muffled
+    explode: (d) => { const v = vol(d), far = d == null ? 0 : Math.min(1, d / 14);
+      if (far < 0.7) noise(0.09, 5200 * (1 - far), 0.9 * v, 'highpass', 1, 1800);
+      tone(95, 0.9, 'sine', 0.95 * v, 22); tone(48, 1.3, 'sine', 0.7 * v, 18);
+      noise(1.9, 1500 * (1 - far * 0.6), 1.0 * v, 'lowpass', 1, 45);
+      setTimeout(() => noise(1.4, 380, 0.45 * v, 'lowpass', 1, 60), 120);
+      if (far < 0.6) for (let i = 0; i < 5; i++) setTimeout(() => noise(0.05, 2600 + Math.random() * 2000, 0.12 * v, 'bandpass'), 380 + i * 110 + Math.random() * 120); },
     hex: () => { tone(900, 0.12, 'sawtooth', 0.15, 300); tone(1400, 0.08, 'square', 0.08, 500); },
     hexHit: (d) => { tone(600, 0.15, 'triangle', 0.2 * vol(d), 150); },
     bfgCharge: () => { tone(80, 0.9, 'sawtooth', 0.3, 900); tone(120, 0.9, 'square', 0.12, 1300); },
