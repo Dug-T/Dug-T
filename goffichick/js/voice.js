@@ -13,10 +13,10 @@ const VOICE_FILES = {
 };
 
 const VOICE_LINES = {
-  levelStart: ["Ugh. Somebody's been having fun in here.", 'Time to bring the gloom.', "Let's ruin somebody's good mood.", 'Too bright. Too cheerful. Fixing it.'],
-  kill: ['Unsubscribed.', 'Have a nice day. Not.', 'Back to the void with you.', 'Cheer up? No.', 'Rest in pieces.'],
+  levelStart: ["Ugh. Somebody's been having fun in here.", 'Time to bring the gloom.', "Let's ruin somebody's good mood.", 'Too bright. Too cheerful. Fixing it.', 'Who decorated this? A golden retriever?', 'I can smell the scented candles from here.', "Right. Who's ready to be disappointed?"],
+  kill: ['Unsubscribed.', 'Have a nice day. Not.', 'Back to the void with you.', 'Cheer up? No.', 'Rest in pieces.', 'Thoughts and prayers.', 'And stay sad.', 'Block. Delete.', 'Leave a review.'],
   boss: ["Who's smiling now?", 'Positivity. Cancelled.'],
-  hurt: ['Ow. Rude.', 'That was annoyingly upbeat.', 'Watch the eyeliner!'],
+  hurt: ['Ow. Rude.', 'That was annoyingly upbeat.', 'Watch the eyeliner!', 'Not the hair!', 'I bruise in black, you know.'],
   lowHealth: ['I need a black heart. Literally.', 'Running low on darkness here.'],
   weapon: ['Ooh. I love this one.', "Now we're talking."],
   power: ['Darkness suits me.', 'Oh, this is very me.'],
@@ -24,7 +24,11 @@ const VOICE_LINES = {
   key: ['Ooh, shiny. And spooky.', 'A key! How mysterious.'],
   secret: ['Ooh, a secret. My favourite kind of thing.'],
   exit: ['Next. Please be gloomier.', "That's one less happy place."],
-  death: ['Too. Much. Sunshine.'],
+  death: ['Too. Much. Sunshine.', 'Tell my bats I love them.', 'Bury me in something black.'],
+  nade: ['Catch.', 'Fire in the hole. Gothically.', 'A little gift. Wrapped in doom.'],
+  rose: ["A black rose. For me? You shouldn't have.", 'Ooh. My favourite flower.', 'Another one for the collection.'],
+  champion: ['Ooh, a fancy one.', 'Gold? Tacky.'],
+  combo: ['Two for one. Bargain.', 'Buy one, get one dead.', 'Group discount.'],
 };
 
 const Voice = (() => {

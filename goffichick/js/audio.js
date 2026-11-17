@@ -80,7 +80,23 @@ const Sfx = (() => {
     empty: () => tone(1800, 0.03, 'square', 0.1),
     pickup: () => { tone(660, 0.06, 'square', 0.15); tone(990, 0.09, 'square', 0.15, null, 0.06); },
     weaponUp: () => { tone(330, 0.08, 'square', 0.2); tone(495, 0.08, 'square', 0.2, null, 0.08); tone(660, 0.18, 'square', 0.2, null, 0.16); },
-    door: () => { noise(0.7, 400, 0.4, 'lowpass', 1, 150); tone(55, 0.6, 'sawtooth', 0.12, 45); },
+    door: () => { noise(0.7, 400, 0.4, 'lowpass', 1, 150); tone(55, 0.6, 'sawtooth', 0.12, 45); }, // lifts
+    // Doors, in the spirit of the classic: a heavy clunk, then a grinding hydraulic rush as the slab slides up...
+    doorOpen: dist => {
+      const v = vol(dist);
+      noise(0.09, 220, 0.55 * v, 'lowpass'); tone(62, 0.12, 'sine', 0.35 * v, 40);                 // the latch lets go
+      tone(70, 0.6, 'sawtooth', 0.13 * v, 150); tone(104, 0.55, 'square', 0.05 * v, 210);              // motor whine climbing
+      noise(0.6, 500, 0.32 * v, 'bandpass', 1, 1700);                                                  // hydraulic rush
+      for (let i = 1; i < 8; i++) setTimeout(() => noise(0.045, 900 + i * 90, 0.12 * v, 'bandpass'), i * 62); // gears chugging
+    },
+    // ...and on the way down it grinds the other way and lands with a thud
+    doorClose: dist => {
+      const v = vol(dist);
+      tone(150, 0.5, 'sawtooth', 0.12 * v, 72); tone(210, 0.45, 'square', 0.04 * v, 100);
+      noise(0.5, 1500, 0.26 * v, 'bandpass', 1, 450);
+      for (let i = 1; i < 7; i++) setTimeout(() => noise(0.045, 1300 - i * 110, 0.11 * v, 'bandpass'), i * 62);
+      setTimeout(() => { noise(0.16, 260, 0.7 * v, 'lowpass', 1, 90); tone(48, 0.22, 'sine', 0.45 * v, 32); }, 470);
+    },
     switch: () => { tone(300, 0.05, 'square', 0.3); noise(0.1, 2000, 0.3, 'bandpass'); },
     oof: () => { tone(220, 0.18, 'sawtooth', 0.25, 110); noise(0.1, 800, 0.2); },
     playerPain: () => { tone(520, 0.12, 'sawtooth', 0.25, 260); tone(400, 0.2, 'triangle', 0.2, 200, 0.05); },
