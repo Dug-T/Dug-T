@@ -2591,9 +2591,10 @@
     const turnSpeed = 2.8, prevA = p.a;
     if (keys.ArrowLeft) p.a -= turnSpeed * dt;
     if (keys.ArrowRight) p.a += turnSpeed * dt;
-    const curve = v => Math.sign(v) * Math.pow(Math.abs(v), 1.25); // fine aim near the middle of the right stick
-    p.a += mouseDX * 0.0028 * (LOOK_SENS / 1.5) + touch.turn + pad.turn + curve(touch.rx) * 3.6 * LOOK_SENS * dt; mouseDX = 0; touch.turn = 0;
-    pitch -= curve(touch.ry) * 150 * LOOK_SENS * dt;
+    const ease = Math.min(1, dt * 10); // edge-hold turning eases in and out instead of snapping
+    touch.rxs = (touch.rxs || 0) + (touch.rx - (touch.rxs || 0)) * ease; touch.rys = (touch.rys || 0) + (touch.ry - (touch.rys || 0)) * ease;
+    p.a += mouseDX * 0.0028 * (LOOK_SENS / 1.5) + touch.turn + pad.turn + touch.rxs * 2.6 * LOOK_SENS * dt; mouseDX = 0; touch.turn = 0;
+    pitch -= touch.rys * 110 * LOOK_SENS * dt;
     // look up and down: mouse, a vertical drag on the right of the screen, the right stick, or R / F (C centres)
     pitch -= mouseDY * 0.25 * (LOOK_SENS / 1.5) + touch.pitch + (pad.pitch || 0) - ((keys.KeyR || keys.PageUp ? 90 : 0) - (keys.KeyF || keys.PageDown ? 90 : 0)) * dt;
     mouseDY = 0; touch.pitch = 0; pitch = clamp(pitch, -PITCH_MAX, PITCH_MAX); HOR = VIEW_H / 2 + pitch;
@@ -3586,19 +3587,27 @@
     // right-hand stick: aim (turn and look up/down) for as long as it is held over
     const rstick = document.getElementById('rstick'), rknob = document.getElementById('rknob');
     let rId = null, rx0 = 0, ry0 = 0;
+    // Aiming works like Call of Duty Mobile: the view follows your thumb 1:1 as you swipe (precise),
+    // and holding your thumb out near the edge keeps turning (for big spins). Wherever your thumb lands
+    // becomes the centre, so touching the pad never makes the view jump.
+    let lastX = 0, lastY = 0;
     const moveR = e => {
       if (e.pointerId !== rId) return;
       const rad = rstick.getBoundingClientRect().width / 2, pt = toLocal(e.clientX, e.clientY);
-      let dx = (pt.x - rx0) / rad, dy = (pt.y - ry0) / rad; const l = Math.hypot(dx, dy); if (l > 1) { dx /= l; dy /= l; }
-      touch.rx = Math.abs(dx) < 0.08 ? 0 : dx; touch.ry = Math.abs(dy) < 0.1 ? 0 : dy;
+      touch.turn += (pt.x - lastX) * 0.011 * LOOK_SENS; touch.pitch += (pt.y - lastY) * 0.5 * LOOK_SENS; // swipe: direct
+      lastX = pt.x; lastY = pt.y;
+      let dx = (pt.x - rx0) / rad, dy = (pt.y - ry0) / rad; const l = Math.hypot(dx, dy);
+      if (l > 1) { rx0 = pt.x - dx / l * rad; ry0 = pt.y - dy / l * rad; dx /= l; dy /= l; } // the centre follows a thumb that keeps going
+      const edge = v => Math.abs(v) < 0.6 ? 0 : Math.sign(v) * (Math.abs(v) - 0.6) / 0.4; // only the outer part keeps turning
+      touch.rx = edge(dx); touch.ry = edge(dy);
       rknob.style.transform = `translate(${dx * rad * 0.6}px, ${dy * rad * 0.6}px)`;
     };
-    if (rstick) rstick.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); if (primaryAction(e)) return; rId = e.pointerId; const r = rstick.getBoundingClientRect(), c = toLocal(r.left + r.width / 2, r.top + r.height / 2); rx0 = c.x; ry0 = c.y; rstick.setPointerCapture(e.pointerId); moveR(e); });
+    if (rstick) rstick.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); if (primaryAction(e)) return; rId = e.pointerId; const pt = toLocal(e.clientX, e.clientY); rx0 = lastX = pt.x; ry0 = lastY = pt.y; rstick.setPointerCapture(e.pointerId); rknob.style.transform = ''; });
     const endR = e => { if (e.pointerId !== rId) return; rId = null; touch.rx = touch.ry = 0; rknob.style.transform = ''; };
     if (rstick) { rstick.addEventListener('pointermove', moveR); rstick.addEventListener('pointerup', endR); rstick.addEventListener('pointercancel', endR); rstick.addEventListener('lostpointercapture', endR); }
     const look = document.getElementById('look'); let lookId = null, lx = 0, ly = 0;
     look.addEventListener('pointerdown', e => { if (primaryAction(e)) return; lookId = e.pointerId; const l0 = toLocal(e.clientX, e.clientY); lx = l0.x; ly = l0.y; look.setPointerCapture(e.pointerId); });
-    look.addEventListener('pointermove', e => { if (e.pointerId === lookId) { const l1 = toLocal(e.clientX, e.clientY); touch.turn += (l1.x - lx) * 0.009 * LOOK_SENS; touch.pitch += (l1.y - ly) * 0.45 * LOOK_SENS; lx = l1.x; ly = l1.y; } });
+    // (dragging on the rest of the screen used to turn too; now only the cyan pad aims)
     const endLook = e => { if (e.pointerId === lookId) lookId = null; };
     look.addEventListener('pointerup', endLook); look.addEventListener('pointercancel', endLook);
     const btn = (id, down, up) => { const b = document.getElementById(id); if (!b) return; b.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); if (!primaryAction(e)) down(); }); if (up) { b.addEventListener('pointerup', up); b.addEventListener('pointercancel', up); b.addEventListener('pointerleave', up); } };
