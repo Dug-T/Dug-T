@@ -188,6 +188,10 @@
   .vcount { font-size: 11px; color: var(--dim); margin-left: auto; }
   .vcount.has { color: var(--green); }
   #briefText p { font-size: 16px; }
+  #modeBar { position: absolute; left: 50%; top: 44px; transform: translateX(-50%); z-index: 9; display: none; gap: 10px; align-items: center; background: #2a2410ee; border: 1px solid var(--accent); border-radius: 8px; padding: 5px 6px 5px 12px; font: 700 14px 'Rajdhani'; color: #fff; white-space: nowrap; box-shadow: 0 4px 16px #0008; }
+  #modeBar .btn { padding: 4px 12px; border-color: #ff6a5a; }
+  body.photo #modeBar { display: none !important; }
+  @media (max-height: 520px) and (orientation: landscape) { #modeBar { top: 36px; font-size: 12px; } }
   .medit { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 14px; }
   #meCanvas { width: 100%; max-width: 512px; aspect-ratio: 1; border: 2px solid var(--line2); border-radius: 6px; cursor: crosshair; display: block; }
   .meHint { font-size: 13px; color: var(--dim); margin-top: 4px; min-height: 34px; }
@@ -297,6 +301,7 @@
   <button class="btn" id="tBox">Box select</button>
 </div>
 <div id="msgs"></div>
+<div id="modeBar"><span id="modeText"></span><button class="btn" id="modeCancel">✖ Cancel</button></div>
 <div id="selPanel"><div id="selTitle" class="title"></div><div id="selSub" class="sub"></div><div class="hp"><div id="selHp"></div></div><div id="selIcons"></div><div id="selCmds"></div></div>
 <div id="side">
   <div id="credits">$ 0</div>

@@ -639,7 +639,8 @@ function tryPlace() {
     if (!ok.length) { Audio.play('error'); message('Cannot build there', true); return; }
     issue({ t: 'inst', type: G.placing, cells: ok });
     Audio.play('build');
-    if (G.players[G.player].credits < d.cost * (ok.length + 1)) cancelPlacing();
+    const keepGoing = (keys.ShiftLeft || keys.ShiftRight) && G.players[G.player].credits >= d.cost * (ok.length + 1);
+    if (!keepGoing) cancelPlacing();
     return;
   }
   if (!canPlace(G.player, G.placing, cx, cz)) { Audio.play('error'); message('Cannot build there', true); return; }
@@ -679,7 +680,25 @@ function setCursor() {
   gl.style.cursor = G.mode === 'sell' ? 'copy' : G.mode === 'repair' ? 'cell' : G.mode === 'super' || (G.mode && G.mode.startsWith('power:')) || attackMoveArmed ? 'crosshair' : 'default';
 }
 let hoverT = 0;
+let barSig = '';
+function updateModeBar() {
+  const what = G.placing ? `Placing ${BUILDINGS[G.placing].name}` + (BUILDINGS[G.placing].isWall ? ' · drag for a line' : '') + ' · tap a green spot'
+    : G.mode === 'sell' ? 'Sell mode · tap your building' : G.mode === 'repair' ? 'Repair mode · tap your building'
+    : G.mode === 'super' ? 'Superweapon · tap the target' : G.mode && G.mode.startsWith('power:') ? 'Support power · tap the target'
+    : attackMoveArmed ? 'Attack-move · tap the destination' : '';
+  if (what === barSig) return;
+  barSig = what;
+  const bar = $('modeBar');
+  bar.style.display = what ? 'flex' : 'none';
+  $('modeText').textContent = what;
+}
+export function cancelAllModes() {
+  if (G.placing) cancelPlacing();
+  if (G.mode) setMode(null);
+  if (attackMoveArmed) { attackMoveArmed = false; $('tAM').classList.remove('on'); setCursor(); }
+}
 export function updateHover(dt) {
+  updateModeBar();
   hoverT -= dt;
   G.mouse.ground = G.mouse.inside || isTouch ? screenToGround(G.mouse.x, G.mouse.y) : null;
   updateGhost();
@@ -705,6 +724,7 @@ function bindTouch(gl) {
       start = { ...p, cx: G.camera.x, cz: G.camera.z, moved: false, t: performance.now(), box: touchBoxMode };
       G.mouse.x = p.x; G.mouse.y = p.y;
       if (touchBoxMode) drag = { x0: p.x, y0: p.y, x1: p.x, y1: p.y, active: true };
+      if (G.placing && BUILDINGS[G.placing].isWall) { const g = screenToGround(p.x, p.y); if (g) wallStart = placementCell(g.x, g.z); }
     } else if (pts.size === 2) {
       const [a, b] = [...pts.values()];
       pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), dist: G.camera.dist, cx: G.camera.x, cz: G.camera.z, mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2 };
@@ -743,7 +763,7 @@ function bindTouch(gl) {
       const { x, y } = start;
       if (start.box && drag) { boxSelect(drag.x0, drag.y0, drag.x1, drag.y1, false); drag = null; touchBoxMode = false; $('tBox').classList.remove('on'); }
       else if (!start.moved) touchTap(x, y);
-      else if (G.placing) { G.mouse.ground = screenToGround(G.mouse.x, G.mouse.y); }
+      else if (G.placing) { G.mouse.ground = screenToGround(G.mouse.x, G.mouse.y); if (wallStart) tryPlace(); }
       start = null;
     }
   };
@@ -769,6 +789,7 @@ function touchTap(x, y) {
 }
 
 function bindButtons() {
+  $('modeCancel').onclick = () => { cancelAllModes(); Audio.play('click'); };
   $('sideToggle').onclick = () => {
     document.body.classList.toggle('sideHidden');
     $('sideToggle').textContent = document.body.classList.contains('sideHidden') ? '◀ BUILD' : '▶';
