@@ -114,7 +114,7 @@ const DEBRIS_MAX = 400;
 
 export function initFX(sc) {
   scene = sc;
-  G.fx = { ember, finale };
+  G.fx = { ember, finale, firework };
   add = new PSys(scene, 9000, softSprite(), true);
   smoke = new PSys(scene, 7000, smokeSprite(), false);
   for (let i = 0; i < 6; i++) {
@@ -295,6 +295,24 @@ export function steam(x, y, z) {
 export function finale(x, y, z) {
   explosion(x, y + 1, z, 3.2, { force: true });
   for (let i = 0; i < 6; i++) setTimeout(() => explosion(x + rr(-4, 4), y + rr(0.5, 3), z + rr(-4, 4), rr(1.2, 2.2), { force: true, sound: i % 2 === 0 }), 250 + i * 260);
+}
+// victory fireworks: a rocket climbs, then bursts into a coloured sphere of sparks
+const FW_COLORS = [[5, 1.2, 1, 1], [1, 4, 1.4, 1], [1.4, 2, 6, 1], [5, 4, 1, 1], [4, 1.4, 5, 1], [1, 4.5, 4.5, 1]];
+export function firework(x, y, z) {
+  const h = y + rr(10, 16), col = FW_COLORS[(Math.random() * FW_COLORS.length) | 0];
+  let t = 0; const rise = 0.9;
+  const climb = () => {
+    t += 0.05; const k = Math.min(1, t / rise);
+    add.spawn(x, y + (h - y) * k, z, rr(-0.3, 0.3), -1, rr(-0.3, 0.3), 0.4, 0.35, 0.05, [4, 3, 2, 1], [1, 0.4, 0.1, 0], 1, 0);
+    if (k < 1) return setTimeout(climb, 50);
+    for (let i = 0; i < 90; i++) {
+      const a = Math.random() * Math.PI * 2, b = Math.acos(rr(-1, 1)), sp = rr(8, 13);
+      add.spawn(x, h, z, Math.sin(b) * Math.cos(a) * sp, Math.cos(b) * sp, Math.sin(b) * Math.sin(a) * sp, rr(1.1, 1.8), 0.5, 0.08, col, [col[0] * 0.3, col[1] * 0.3, col[2] * 0.3, 0], 1.6, 5);
+    }
+    flash(x, h, z, 40, 0.4, new THREE.Color(col[0] / 5, col[1] / 5, col[2] / 5).getHex(), 30);
+    G.sfx?.play('cannon', x, z);
+  };
+  climb();
 }
 // lava embers: a few glowing sparks that pop out of a lava pool and fade
 export function ember(x, y, z) {

@@ -171,6 +171,7 @@
   #objectives { position: absolute; left: 10px; top: 46px; z-index: 4; background: var(--panel); border: 1px solid var(--line2); border-radius: 6px; padding: 6px 10px; font-size: 14px; display: none; max-width: 320px; }
   #objectives .obHint { margin: 3px 0 2px 14px; font-size: 12px; color: var(--muted, #b9c6d6); line-height: 1.35; }
   #objectives .ob { margin: 2px 0; }
+  .cheatRow input { background: #0d1520; color: #fff; border: 1px solid var(--line2); border-radius: 4px; font: 600 15px Rajdhani, sans-serif; padding: 6px 10px; width: 220px; text-transform: uppercase; letter-spacing: 1px; }
   #qOpts { display: none; padding: 0 6px 4px; } #qOpts .btn { width: 100%; padding: 3px 6px; font-size: 12px; }
   #qOpts .btn.on { background: rgba(255,194,58,0.2); border-color: var(--accent); color: var(--accent); }
   .swatch { width: 30px; height: 30px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.25); cursor: pointer; padding: 0; } .swatch.on { border-color: #fff; box-shadow: 0 0 0 2px var(--accent); }
@@ -369,8 +370,11 @@
   </div>
   <div class="card wide" id="menuCampaign" style="display:none">
     <h2>CAMPAIGN</h2>
-    <p style="text-align:center">Lead Wally's squad through five missions against the Grimlock Warlord.</p>
+    <p style="text-align:center">Lead Wally Man and the Wally Squad against the Grimlock Legion - or switch sides and lead Warlord Grak.</p>
+    <div class="label">★ Wally Squad campaign</div>
     <div id="missionList" class="cardList"></div>
+    <div class="label">👹 Grimlock campaign</div>
+    <div id="missionListGrim" class="cardList"></div>
     <div class="row"><button class="btn" data-panel="menuMain">◀ Back</button></div>
   </div>
   <div class="card wide" id="menuSkirmish" style="display:none">
@@ -515,6 +519,7 @@
     <h2>PAUSED</h2>
     <div class="row"><button class="btn big" id="bResume">Resume</button></div>
     <div class="row"><button class="btn" id="bSpeed">Game speed: 1x</button><button class="btn" id="bRestart">Restart</button></div>
+    <div class="row cheatRow"><input id="cheatIn" type="text" maxlength="20" placeholder="Enter a cheat code" autocomplete="off" autocapitalize="characters" spellcheck="false"><button class="btn" id="bCheat">✓</button></div>
     <div class="row"><button class="btn" id="bPhoto">📷 Photo mode (F9)</button><button class="btn" id="bGfx">⚙ Graphics</button><button class="btn" id="bSurrender">🏳 Surrender</button><button class="btn" onclick="location.href=location.pathname">Quit to menu</button></div>
   </div>
 </div>
