@@ -67,7 +67,7 @@ export class Lockstep {
     }
   }
 
-  publicCfg() { const c = { ...this.cfg }; c.mp = { room: this.room, role: 'guest', seed: this.cfg.mp.seed, hostFaction: this.cfg.faction }; c.faction = this.cfg.faction === 'wally' ? 'grim' : 'wally'; return c; }
+  publicCfg() { const c = { ...this.cfg, customUnits: this.cfg.customUnits || [] }; c.mp = { room: this.room, role: 'guest', seed: this.cfg.mp.seed, hostFaction: this.cfg.faction }; c.faction = this.cfg.faction === 'wally' ? 'grim' : 'wally'; return c; }
 
   begin() {
     this.started = true; this.active = true;

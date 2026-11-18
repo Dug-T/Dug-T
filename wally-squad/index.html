@@ -183,6 +183,21 @@
   .vcount { font-size: 11px; color: var(--dim); margin-left: auto; }
   .vcount.has { color: var(--green); }
   #briefText p { font-size: 16px; }
+  #fps { position: absolute; left: 50%; bottom: 6px; transform: translateX(-50%); z-index: 8; font: 700 12px monospace; color: #9f9; background: #0008; padding: 2px 6px; border-radius: 4px; pointer-events: none; display: none; }
+  .gfxRow { display: flex; align-items: center; gap: 10px; justify-content: center; } .gfxRow b { color: var(--accent); min-width: 170px; }
+  .dsg { display: grid; grid-template-columns: 300px 1fr; gap: 16px; }
+  .dsgList { display: flex; flex-wrap: wrap; gap: 4px; min-height: 30px; }
+  .dsgList .btn { font-size: 12px; padding: 3px 8px; }
+  #dsgPreview { width: 100%; height: 220px; background: radial-gradient(ellipse at center, #22384a, #0b131a); border: 1px solid var(--line); border-radius: 6px; margin-top: 6px; display: block; }
+  .dsgStats { display: grid; grid-template-columns: auto auto; gap: 2px 12px; margin-top: 6px; font-size: 13px; }
+  .dsgStats span { color: var(--dim); } .dsgStats b { color: var(--accent); text-align: right; }
+  .chips { display: flex; flex-wrap: wrap; gap: 4px; }
+  .chip { font-size: 12px; padding: 3px 8px; }
+  .swatchBtn { width: 26px; height: 26px; border-radius: 50%; border: 2px solid #0008; cursor: pointer; }
+  .swatchBtn.on { border-color: #fff; box-shadow: 0 0 0 2px var(--accent); }
+  .dsgName { font: 700 18px 'Rajdhani'; background: #0d151c; color: #fff; border: 1px solid var(--line2); border-radius: 5px; padding: 4px 8px; width: 100%; max-width: 320px; }
+  .dsgRange { width: 100%; max-width: 320px; accent-color: #ffc23a; }
+  @media (max-width: 760px) { .dsg { grid-template-columns: 1fr; } #dsgPreview { height: 170px; } }
   @media (max-height: 520px) and (orientation: landscape) {
     /* menus: compact so every option fits on a short screen */
     .screen { align-items: flex-start; padding: 6px 0; }
@@ -259,7 +274,9 @@
       <button class="btn big" data-panel="menuCampaign">★ CAMPAIGN</button>
       <button class="btn big" data-panel="menuSkirmish">⚔ SKIRMISH</button>
       <button class="btn big" data-panel="menuOnline">🌐 ONLINE BATTLE</button>
+      <button class="btn big" data-panel="menuDesigner">🛠 UNIT DESIGNER</button>
       <button class="btn big" data-panel="menuVoices">🎙 VOICE STUDIO</button>
+      <button class="btn big" data-panel="menuGraphics">⚙ GRAPHICS</button>
       <button class="btn" id="bHow">How to play</button>
     </div>
   </div>
@@ -293,6 +310,17 @@
     </div>
     <div class="row"><button class="btn" data-panel="menuMain">◀ Back</button></div>
   </div>
+  <div class="card wide" id="menuDesigner" style="display:none">
+    <h2>UNIT DESIGNER</h2>
+    <p style="text-align:center">Invent your own infantry and vehicles. Saved designs appear in the Barracks and War Factory build menus in every game mode for both factions (online, everyone uses the host's designs).</p>
+    <div id="designer"></div>
+    <div class="row"><button class="btn" data-panel="menuMain">◀ Back</button></div>
+  </div>
+  <div class="card wide" id="menuGraphics" style="display:none">
+    <h2>GRAPHICS</h2>
+    <div id="gfxPanel"></div>
+    <div class="row"><button class="btn" data-panel="menuMain">◀ Back</button></div>
+  </div>
   <div class="card wide" id="menuVoices" style="display:none">
     <h2>VOICE STUDIO</h2>
     <p style="text-align:center">Record your own voice lines - and your friends' - for every unit. Each line keeps up to 3 takes and picks one at random. Lines without a recording use a computer voice.</p>
@@ -303,6 +331,10 @@
   </div>
 </div>
 
+<div id="gfxScreen" class="screen" style="display:none;z-index:22">
+  <div class="card wide"><h2>GRAPHICS</h2><div id="gfxPanel2"></div><div class="row"><button class="btn big" id="bGfxClose">Done</button></div></div>
+</div>
+<div id="fps"></div>
 <div id="briefing" class="screen" style="display:none">
   <div class="card">
     <div class="tag" id="briefNum"></div>
@@ -330,6 +362,11 @@
       <li><b>Engineers</b> capture enemy buildings. <b>Wally</b> (hero) snipes infantry and plants C4 on buildings.</li>
       <li><b>Veterancy:</b> units with 3 kills become Veterans (★), 6 kills Elite (★★) and self-repair.</li>
       <li><b>Factions:</b> the Wally Squad has Titan tanks, Field Medics, Wally Man (Gatling gun), Wally and the Sky Lance. The Grimlock Legion has Shade stealth tanks, Inferno flame tanks and the Doom Missile.</li>
+      <li><b>Unit Designer</b> (main menu): invent your own infantry and vehicles. They appear in the Barracks and War Factory build menus.</li>
+      <li><b>Waypoints:</b> hold <kbd>Shift</kbd> and right-click to queue up a route.</li>
+      <li><b>Wally Man's Gatling Frenzy:</b> select Wally Man and press <kbd>G</kbd> (or the button) for 8 seconds of super-fast fire and speed.</li>
+      <li><b>Supply crates</b> drop on the battlefield: drive over them for money, repairs, promotions, reinforcements... or a trap!</li>
+      <li><b>Tech buildings:</b> grey neutral buildings (Crystal Derrick, Field Hospital, Repair Depot) can be captured with an Engineer.</li>
       <li><b>Superweapons:</b> build the Uplink / Silo after a Tech Lab. When charged, press LAUNCH in the sidebar and click a target.</li>
       <li><b>Walls, gates &amp; mines</b> (Defence tab): drag to lay a wall line. Gates open for your units only. Mines are invisible to the enemy.</li>
       <li><b>Weather &amp; night:</b> rain and snow slow vehicles, fog, blizzards, sandstorms and darkness cut sight range.</li>
@@ -344,7 +381,7 @@
     <h2>PAUSED</h2>
     <div class="row"><button class="btn big" id="bResume">Resume</button></div>
     <div class="row"><button class="btn" id="bSpeed">Game speed: 1x</button><button class="btn" id="bRestart">Restart</button></div>
-    <div class="row"><button class="btn" id="bSurrender">🏳 Surrender</button><button class="btn" onclick="location.href=location.pathname">Quit to menu</button></div>
+    <div class="row"><button class="btn" id="bGfx">⚙ Graphics</button><button class="btn" id="bSurrender">🏳 Surrender</button><button class="btn" onclick="location.href=location.pathname">Quit to menu</button></div>
   </div>
 </div>
 
@@ -353,6 +390,7 @@
     <h1 class="logo" id="endTitle">VICTORY</h1>
     <div class="tag" id="endSub"></div>
     <div class="stats" id="endStats"></div>
+    <canvas id="endGraph" width="520" height="150" style="width:100%;max-width:520px;display:block;margin:4px auto"></canvas>
     <div class="row"><button class="btn big" id="bNext" style="display:none">Next mission ▶</button><button class="btn big" id="bAgain">Play again</button><button class="btn big" id="bWatch">Keep watching</button></div>
     <div class="row"><button class="btn" onclick="location.href=location.pathname">Main menu</button></div>
   </div>

@@ -58,7 +58,7 @@ export function resize() {
 
 // ------------------------------------------------------------ icons (rendered from the real 3D models)
 export function renderIcons(renderer) {
-  const size = 160;
+  const size = 256;
   const rt = new THREE.WebGLRenderTarget(size, Math.round(size * 0.8), { samples: 4 });
   rt.texture.colorSpace = THREE.SRGBColorSpace;
   const scene = new THREE.Scene();
@@ -380,7 +380,7 @@ function select(list, add = false) {
 }
 const myUnits = () => G.selection.filter(e => e.kind === 'unit' && e.faction === G.player);
 
-function commandAt(sx, sy, attackMove = false) {
+function commandAt(sx, sy, attackMove = false, queue = false) {
   const units = myUnits();
   const target = pickAt(sx, sy);
   const g = screenToGround(sx, sy);
@@ -411,7 +411,7 @@ function commandAt(sx, sy, attackMove = false) {
   const harvs = units.filter(u => u.type === 'harvester');
   if (harvs.length && cell >= 0) issue({ t: 'harv', ids: harvs.map(u => u.id), cell });
   const movers = units.filter(u => !(u.type === 'harvester' && cell >= 0));
-  if (movers.length) issue({ t: 'move', ids: movers.map(u => u.id), x: g.x, z: g.z, am: attackMove ? 1 : 0 });
+  if (movers.length) issue({ t: 'move', ids: movers.map(u => u.id), x: g.x, z: g.z, am: attackMove ? 1 : 0, q: queue ? 1 : 0 });
   flashMarker(g.x, g.z, attackMove ? 0xff9a33 : 0x55ff77);
   Voices.say(units[0].type, attackMove ? 'attack' : 'move');
 }
@@ -505,7 +505,7 @@ function bindInput() {
         if (G.placing) cancelPlacing();
         else if (G.mode) setMode(null);
         else if (attackMoveArmed) { attackMoveArmed = false; setCursor(); }
-        else commandAt(x, y, false);
+        else commandAt(x, y, false, e.shiftKey);
       }
       rmb = null;
     }
@@ -540,6 +540,7 @@ function bindInput() {
     if (k === 'KeyA' && !e.ctrlKey) { if (myUnits().length) { attackMoveArmed = true; setCursor(); } return; }
     if (k === 'KeyA' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); selectArmy(); return; }
     if (k === 'KeyS' && !e.ctrlKey) { if (myUnits().length) issue({ t: 'stop', ids: myUnits().map(u => u.id) }); Audio.play('ack'); return; }
+    if (k === 'KeyG') { const w = myUnits().filter(u => u.type === 'wallyman'); if (w.length) { issue({ t: 'ability', ids: w.map(u => u.id) }); Voices.say('wallyman', 'attack', true); } return; }
     if (k === 'KeyH') { const b = G.buildings.find(b => b.faction === G.player && b.type === 'conyard') || G.buildings.find(b => b.faction === G.player); if (b) centerOn(b.x, b.z); return; }
     if (k === 'Space') { e.preventDefault(); if (G.alertAt) centerOn(G.alertAt.x, G.alertAt.z); return; }
     if (k === 'KeyR') { setMode(G.mode === 'repair' ? null : 'repair'); return; }
@@ -753,11 +754,11 @@ function refreshSelPanel(force) {
   const sel = G.selection.filter(alive);
   if (!sel.length) { panel.style.display = 'none'; selSig = ''; return; }
   panel.style.display = 'block';
-  const sig = sel.map(s => s.id).join(',') + (force ? Math.random() : '');
+  const sig = sel.map(s => s.id).join(',') + '|' + sel.map(s => Math.ceil(s.frenzyCD || 0)).join(',') + (force ? Math.random() : '');
   const first = sel[0];
   if (sel.length === 1) {
     const e = first; const d = e.def;
-    $('selTitle').innerHTML = `${d.name}${e.rank ? ' ' + '★'.repeat(e.rank) : ''} <span style="font-size:13px;color:${FACTIONS[e.faction].css}">${FACTIONS[e.faction].name}</span>`;
+    $('selTitle').innerHTML = `${e.hero ? 'Wally Man (Hero)' : d.name}${e.rank ? ' ' + '★'.repeat(e.rank) : ''} <span style="font-size:13px;color:${FACTIONS[e.faction].css}">${FACTIONS[e.faction].name}</span>`;
     let sub = `HP ${Math.ceil(e.hp)}/${e.maxHp}`;
     if (e.kind === 'unit') {
       if (e.kills) sub += ` · Kills ${e.kills}`;
@@ -795,6 +796,11 @@ function refreshSelPanel(force) {
     if (first.kind === 'unit') {
       addBtn('■ Stop (S)', () => issue({ t: 'stop', ids: myUnits().map(u => u.id) }));
       if (myUnits().some(u => u.weapon)) addBtn('⚔ Attack-move (A)', () => { attackMoveArmed = true; setCursor(); });
+      const wm = myUnits().filter(u => u.type === 'wallyman');
+      if (wm.length) {
+        const cd = Math.max(...wm.map(u => u.frenzyCD || 0));
+        addBtn(cd > 0 ? `⚡ Frenzy (${Math.ceil(cd)}s)` : '⚡ Gatling Frenzy (G)', () => { issue({ t: 'ability', ids: wm.map(u => u.id) }); Voices.say('wallyman', 'attack', true); selSig = ''; }, '8 seconds of super-fast fire and +35% speed. 45 second cooldown.');
+      }
       if (first.type === 'harvester') addBtn('⛏ Harvest', () => issue({ t: 'seek', ids: myUnits().map(u => u.id) }));
       addBtn('⌖ Focus (F)', () => centerOn(first.x, first.z));
     } else {
@@ -926,6 +932,17 @@ export function drawOverlay() {
     if (a.behind || b.behind) continue;
     octx.strokeStyle = u.order?.type === 'attackMove' ? 'rgba(255,150,50,0.35)' : 'rgba(80,255,120,0.3)';
     octx.lineWidth = 1; octx.beginPath(); octx.moveTo(a.x, a.y); octx.lineTo(b.x, b.y); octx.stroke();
+  }
+  for (const u of G.selection) {
+    if (u.kind !== 'unit' || u.dead || !u.waypoints || !u.waypoints.length) continue;
+    let prev = u.path && u.path.length ? u.path[u.path.length - 1] : { x: u.x, z: u.z };
+    octx.strokeStyle = 'rgba(120,255,160,0.55)'; octx.setLineDash([4, 4]); octx.lineWidth = 1.2;
+    for (const w of u.waypoints) {
+      const a = project(prev.x, heightAt(prev.x, prev.z) + 0.3, prev.z), b = project(w.x, heightAt(w.x, w.z) + 0.3, w.z);
+      if (!a.behind && !b.behind) { octx.beginPath(); octx.moveTo(a.x, a.y); octx.lineTo(b.x, b.y); octx.stroke(); octx.fillStyle = '#7dff9a'; octx.fillRect(b.x - 2, b.y - 2, 4, 4); }
+      prev = w;
+    }
+    octx.setLineDash([]);
   }
   if (drag && drag.active) {
     octx.strokeStyle = '#7dff9a'; octx.lineWidth = 1.5; octx.fillStyle = 'rgba(80,255,120,0.08)';

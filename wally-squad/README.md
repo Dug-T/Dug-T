@@ -6,15 +6,19 @@ Play it by opening `wally-squad/index.html` from any web server (GitHub Pages wo
 
 ## Game modes
 
-- **Campaign:** five story missions in which Wally's squad takes on the Grimlock Warlord. Each mission has a briefing, objectives and scripted events, and completing one unlocks the next.
-  1. **First Contact** – a strike team with no base. Destroy an outpost and keep Wally alive.
+- **Campaign:** five story missions in which the hero **Wally Man** leads the squad against the Grimlock Warlord. Every mission lets you train infantry and vehicles, and every mission is lost if Wally Man falls. Each mission has a briefing, objectives and scripted events, and completing one unlocks the next.
+  1. **First Contact** – a small field base and a strike team. Destroy an outpost and keep Wally Man alive.
   2. **Hold the Line** – fortify Frostbite Pass against seven waves until reinforcements arrive.
   3. **Crystal Rush** – out-harvest the enemy in the Dune Sea and burn down its refineries.
   4. **Lights Out** – at night, cut the enemy's power so its Plasma Towers go dark, then finish the fortress.
   5. **The Warlord** – a full base battle against a Doom Missile silo.
 - **Skirmish:** choose a map, your faction and the difficulty, and turn the day–night cycle and dynamic weather on or off.
 - **Online battle:** 1 v 1 against a friend. One player hosts and shares a 5-letter room code; the other joins with it.
-- **Voice Studio:** record your own voice lines for every unit.
+- **Unit Designer:** invent your own infantry and vehicles:
+  - Pick a weapon, chassis (tracks, wheels or hover), size, armour, speed, colours and looks (hats, glasses, capes and more).
+  - Watch a live 3D preview.
+  - Saved designs appear in the Barracks and War Factory build menus in every mode. Online games use the host's designs.
+- **Voice Studio:** record your own voice lines for every unit, including your own designs.
 
 ## Factions
 
@@ -42,6 +46,18 @@ Both factions share the basic army: riflemen, rocket troopers, Scorchers, engine
 - **Superweapons:** each one charges up with a countdown, shown in the sidebar for both sides. The computer opponent uses its superweapon too.
 - **Stealth:** Shade tanks are invisible until they fire or an enemy gets close.
 - **Unit voices:** record your own lines (up to 3 takes per line), or let the computer voice play. Voice packs can be exported and imported so you can swap them with friends.
+- **Graphics settings** (main menu and pause menu):
+  - Low/Medium/High/Ultra presets.
+  - A resolution scale from 50% to 150% (anything over 100% is supersampling).
+  - Shadows up to 4096, anti-aliasing up to 8×, bloom, an FPS counter, and auto-adjust, which keeps play smooth by lowering the resolution when needed.
+- **Supply crates** drop on the battlefield. Drive over one for money, repairs, promotions, free reinforcements or a map reveal. Some are booby-trapped!
+- **Neutral tech buildings** sit beside each lane, and an Engineer can capture them:
+  - Crystal Derrick: steady income.
+  - Field Hospital: heals nearby infantry.
+  - Repair Depot: repairs nearby vehicles.
+- **Waypoints:** Shift + right-click queues up a route.
+- **Gatling Frenzy:** Wally Man's special ability (key `G`). It gives 8 seconds of super-fast fire and extra speed, with a 45-second cooldown.
+- **End-of-game graphs** show army strength and crystal harvested over time for both sides.
 - **Effects:** layered explosions with a fireball, smoke, sparks, a shockwave, burning debris, dynamic light and scorch marks. Tank turrets get blown into the air and buildings collapse.
 
 ## Online play: how it works
