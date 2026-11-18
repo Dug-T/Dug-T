@@ -162,6 +162,39 @@ export const MISSIONS = [
       if (!G.buildings.some(b => b.faction === G.player && !b.dead && !b.def.isMine && !b.def.isWall) && !G.units.some(u => u.faction === G.player && !u.dead && u.weapon)) return ctx.fail('Our base has fallen.');
     },
   },
+  {
+    id: 'm6', title: 'Into the Fire', map: 'magma', difficulty: 'hard',
+    story: [
+      'The Warlord is gone, but his champion is not. WARLORD GRAK has gathered the last Grimlock legions in a fortress on the far side of the Magma Rift.',
+      'The lava river can only be crossed at three points. Grak hides his Shade tanks along the crossings - bring Recon Drones to see them, Repair Trucks to keep your armour rolling, and APCs to rush infantry across.',
+      'Tip: Grak\'s War Cry makes nearby Grimlocks fire much faster. Focus him down first - and keep Wally Man alive.',
+    ],
+    objectives: [{ id: 'grak', text: 'Defeat Warlord Grak' }, { id: 'all', text: 'Destroy the Grimlock fortress' }, { id: 'hero', text: 'Wally Man must survive' }],
+    allowed: null,
+    setup(ctx) {
+      const s = BASES[G.player], e = BASES[G.enemy];
+      ctx.base(G.player, s, ['conyard', 'power', 'power', 'refinery', 'barracks', 'factory']);
+      ctx.hero(G.player, s.x + 10, s.z + 6);
+      ctx.squad(G.player, s.x + 12, s.z + 9, [['tank', 3], ['rifle', 6], ['rocket', 3], ['apc', 1], ['repair', 1]]);
+      ctx.base(G.enemy, e, ['conyard', 'power', 'power', 'power', 'refinery', 'refinery', 'barracks', 'factory', 'radar', 'helipad', 'turret', 'turret', 'bunker', 'bunker', 'plasma', 'sam']);
+      const [grak] = ctx.squad(G.enemy, e.x - 10, e.z - 8, [['warlord', 1]], true);
+      grak.maxHp = grak.hp = 1400; grak.rank = 2;
+      ctx.state.grak = grak;
+      ctx.squad(G.enemy, e.x - 14, e.z - 12, [['tank', 3], ['inferno', 2], ['rifle', 6], ['rocket', 3]], true);
+      ctx.squad(G.enemy, 0, 0, [['stealth', 2]], true);
+      ctx.squad(G.enemy, -32, 48, [['stealth', 1], ['rifle', 3]], true);
+      ctx.squad(G.enemy, 32, -48, [['stealth', 1], ['rifle', 3]], true);
+      ctx.credits(G.player, 5000); ctx.credits(G.enemy, 5000);
+      ctx.ai({});
+      revealCircle(s.x, s.z, 42);
+    },
+    tick(ctx) {
+      if (ctx.state.grak && ctx.state.grak.dead && !ctx.done('grak')) { ctx.complete('grak'); G.announce?.('Warlord Grak has fallen!'); }
+      if (!G.buildings.some(b => b.faction === G.enemy && !b.dead && !b.def.isMine && !b.def.isWall)) ctx.complete('all');
+      if (ctx.done('grak') && ctx.done('all')) return ctx.win();
+      if (!G.buildings.some(b => b.faction === G.player && !b.dead && !b.def.isMine && !b.def.isWall) && !G.units.some(u => u.faction === G.player && !u.dead && u.weapon)) return ctx.fail('Our base has fallen.');
+    },
+  },
 ];
 
 // ------------------------------------------------------------------ Boot Camp tutorial

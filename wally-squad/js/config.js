@@ -38,6 +38,7 @@ export const WEAPONS = {
   gatling:  { warhead: 'bullet', damage: 9, range: 12.5, rof: 0.085, proj: 'bullet', air: true, ground: true, sound: 'mg', vsLight: true },
   flamer:   { warhead: 'flame', damage: 26, range: 7, rof: 0.25, proj: 'flame', air: false, ground: true, splash: 1.6, sound: 'flame' },
   inferno:  { warhead: 'flame', damage: 44, range: 8.5, rof: 0.3, proj: 'flame', air: false, ground: true, splash: 2.4, sound: 'flame', big: true },
+  warCannon: { warhead: 'rocket', damage: 34, range: 12, rof: 0.75, proj: 'rocket', air: true, ground: true, splash: 1.6, sound: 'rocket' },
   shadeRkt: { warhead: 'rocket', damage: 50, range: 13, rof: 2.2, proj: 'rocket', air: false, ground: true, sound: 'rocket', twin: true },
 };
 
@@ -76,6 +77,7 @@ export const UNITS = {
   rifle:    { name: 'Rifle Trooper', cost: 100, time: 4, hp: 100, armor: 'infantry', speed: 3.4, sight: 13, radius: 0.45, weapon: 'rifle', tab: 'infantry', req: ['barracks'], desc: 'Cheap all-round infantry.' },
   rocket:   { name: 'Rocket Trooper', cost: 300, time: 7, hp: 90, armor: 'infantry', speed: 3.0, sight: 14, radius: 0.45, weapon: 'bazooka', tab: 'infantry', req: ['barracks'], desc: 'Anti-tank and anti-air.' },
   flamer:   { name: 'Scorcher', cost: 250, time: 6, hp: 120, armor: 'infantry', speed: 3.2, sight: 11, radius: 0.45, weapon: 'flamer', tab: 'infantry', req: ['barracks', 'refinery'], desc: 'Flamethrower. Burns infantry and buildings.' },
+  warlord:  { name: 'Warlord Grak', fac: 'grim', cost: 900, time: 13, hp: 520, armor: 'infantry', speed: 3.3, sight: 15, radius: 0.6, weapon: 'warCannon', tab: 'infantry', req: ['barracks', 'radar'], limit: 1, desc: 'Grimlock only. Hulking hero with a rocket cannon. War Cry (G): nearby Grimlock troops fire much faster for 6 seconds.' },
   wallyman: { name: 'Wally Man', fac: 'wally', cost: 800, time: 12, hp: 300, armor: 'infantry', speed: 3.6, sight: 15, radius: 0.5, weapon: 'gatling', tab: 'infantry', req: ['barracks', 'radar'], desc: 'Wally Squad only. Caped super-soldier with a spinning Gatling gun that shreds infantry.' },
   engineer: { name: 'Engineer', cost: 500, time: 8, hp: 70, armor: 'infantry', speed: 3.4, sight: 10, radius: 0.45, weapon: null, tab: 'infantry', req: ['barracks'], desc: 'Captures enemy buildings or fully repairs your own.' },
   wally:    { name: 'Wally (Hero)', fac: 'wally', cost: 1500, time: 25, hp: 320, armor: 'infantry', speed: 4.2, sight: 19, radius: 0.5, weapon: 'sniper', tab: 'infantry', req: ['barracks', 'tech'], limit: 1, desc: 'Elite sniper. One-shots infantry and plants C4 on buildings.' },

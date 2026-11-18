@@ -138,6 +138,7 @@ export class Unit {
   moveTo(x, z, opts = {}) {
     if (!opts.keepWaypoints) this.waypoints = null;
     this.order = { type: opts.attackMove ? 'attackMove' : 'move', x, z };
+    if (opts.patrol) this.order.patrol = opts.patrol;
     if (!opts.keepTarget) this.target = null;
     this.requestPath(x, z);
     if (this.type === 'harvester' && !opts.harvest) this.hState = 'manual';
@@ -153,9 +154,17 @@ export class Unit {
   }
   // Wally Man's special ability: Gatling Frenzy
   frenzy() {
-    if (this.type !== 'wallyman' || this.frenzyCD > 0 || this.dead) return false;
-    this.frenzyT = 8; this.frenzyCD = 45;
-    FX.sparkBurst(this.x, this.y + 1.2, this.z, 30, [3.5, 1.5, 0.4, 1]);
+    if ((this.type !== 'wallyman' && this.type !== 'warlord') || this.frenzyCD > 0 || this.dead) return false;
+    if (this.type === 'warlord') {
+      // War Cry: every friendly fighter close by (and Grak himself) fires much faster for 6 seconds
+      this.frenzyCD = 55;
+      for (const u of G.units) if (!u.dead && !u.boarded && u.faction === this.faction && u.weapon && Math.hypot(u.x - this.x, u.z - this.z) < 13) { u.frenzyT = 6; FX.sparkBurst(u.x, u.y + 1.2, u.z, 8, [4, 0.8, 0.3, 1]); }
+      FX.sparkBurst(this.x, this.y + 1.6, this.z, 40, [4, 0.8, 0.3, 1]);
+      if (isVisibleAt(this.x, this.z)) G.camera.shake = Math.max(G.camera.shake || 0, 0.4);
+    } else {
+      this.frenzyT = 8; this.frenzyCD = 45;
+      FX.sparkBurst(this.x, this.y + 1.2, this.z, 30, [3.5, 1.5, 0.4, 1]);
+    }
     if (this.faction === G.player) G.sfx?.play('promote', this.x, this.z);
     return true;
   }
@@ -285,6 +294,7 @@ export class Unit {
     }
     // in range: stop and shoot
     if (this.path) { this.path = null; }
+    if (!(this.frenzyCD > 0) && (this.type === 'wallyman' || this.type === 'warlord') && G.players[this.faction]?.isAI) this.frenzy();
     const aimed = this.aimTurret(dt, t);
     if (aimed && this.cool <= 0 && canTarget(w, t)) {
       this.cool = w.rof * (0.9 + srand() * 0.2) * (this.frenzyT > 0 ? 0.4 : 1);
@@ -494,8 +504,14 @@ export class Unit {
         if (this.pi >= this.path.length) {
           this.path = null;
           if (this.order && (this.order.type === 'move' || this.order.type === 'attackMove')) {
+            const pt = this.order.patrol;
             this.order = null;
-            const w = this.waypoints && this.waypoints.shift();
+            if (pt) {
+              // patrol: walk back to the other end, fighting anything met on the way
+              const toA = Math.hypot(this.x - pt.bx, this.z - pt.bz) < Math.hypot(this.x - pt.ax, this.z - pt.az);
+              this.moveTo(toA ? pt.ax : pt.bx, toA ? pt.az : pt.bz, { attackMove: true, patrol: pt });
+            }
+            const w = !pt && this.waypoints && this.waypoints.shift();
             if (w) this.moveTo(w.x, w.z, { attackMove: w.am, keepWaypoints: true });
           }
         }

@@ -13,6 +13,7 @@ Play it by opening `wally-squad/index.html` from any web server (GitHub Pages wo
   3. **Crystal Rush** – out-harvest the enemy in the Dune Sea and burn down its refineries.
   4. **Lights Out** – at night, cut the enemy's power so its Plasma Towers go dark, then finish the fortress.
   5. **The Warlord** – a full base battle against a Doom Missile silo.
+  6. **Into the Fire** – cross the Magma Rift, find the cloaked Shade tanks and defeat Warlord Grak in his fortress.
 - **Survival:** endless enemy waves that grow stronger each time, with a boss every 5th wave. The game keeps your best score and wave for each map.
 - **Skirmish:** choose a map, your faction and the difficulty, and turn the day–night cycle and dynamic weather on or off.
   - Skirmish options: switch superweapons, support powers, supply crates, tech buildings, fog of war and starting armies on or off, and choose the starting money ($2,500–$15,000).
@@ -73,6 +74,10 @@ Both factions share the basic army: riflemen, rocket troopers, Scorchers, engine
   - Turbo Engines: vehicles are 15% faster.
   - Long-Range Optics: +20% sight and range.
   - The computer opponent researches them too.
+- **👹 Warlord Grak** (Grimlock hero, Barracks + Comms Center, one at a time): a hulking brute with a rotary rocket cannon. **War Cry** (`G`) makes every Grimlock fighter within 13 m fire much faster for 6 seconds. The computer uses heroes' abilities too.
+- **↔ Patrol** (`P` or the selection-panel button, then pick a point): units walk back and forth between where they are and that point, attacking anything they meet.
+- **Building info** closes by itself after 10 seconds. Touching the panel (or hovering over it with a mouse) restarts the countdown.
+- **New medals:** Graduate, Unstoppable, Fortified, Grak Smash, Trial by Fire, Mad Science, Daily Duty and Into the Fire.
 - **🌋 Magma Rift** (new map): a volcanic wasteland split by a river of glowing, bubbling lava with three crossings, charred dead trees and ashfall weather.
 - **🔧 Repair Truck** (War Factory): drives to damaged vehicles nearby and repairs them in the field.
 - **🛸 Recon Drone** (Helipad): a cheap, fast, unarmed scout with a huge sight range. It reveals cloaked Shade tanks within 14 m.
@@ -126,6 +131,8 @@ For testing, add `?loopnet` to the URL to connect two tabs on the same computer 
 | Superweapon | **LAUNCH** in the sidebar, then click a target |
 | Load / unload APC | Right-click the APC with infantry selected / `U` |
 | Next idle unit | `.` or the 💤 button |
+| Patrol | `P`, then click the far end of the route |
+| Hero ability (Frenzy / War Cry) | `G` |
 
 URL options: `?auto` starts a skirmish straight away (add `&map=frost|dunes|midnight`, `&faction=grim` or `&weather=storm` to change it), and `?reveal` turns off the fog of war.
 

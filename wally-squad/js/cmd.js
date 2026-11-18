@@ -38,6 +38,12 @@ export function execute(c) {
       break;
     }
     case 'atk': { const t = byId.get(c.tid); if (alive(t)) for (const u of myUnits(c)) if (u !== t) u.attack(t); break; }
+    case 'patrol': {
+      const units = myUnits(c).filter(u => u.weapon || u.def.heals || u.def.repairs);
+      const slots = formationSlots(c.x, c.z, units.length, units.some(u => !u.isInf) ? 2 : 1);
+      units.forEach((u, i) => { const s = u.air ? { x: c.x, z: c.z } : slots[i]; u.moveTo(s.x, s.z, { attackMove: true, patrol: { ax: u.x, az: u.z, bx: s.x, bz: s.z } }); });
+      break;
+    }
     case 'stop': for (const u of myUnits(c)) { u.stop(); u.waypoints = null; } break;
     case 'ability': for (const u of myUnits(c)) u.frenzy(); break;
     case 'board': { const apc = mine(c, c.tid); if (apc && capacityOf(apc)) { const room = capacityOf(apc) - (apc.passengers || []).length; myUnits(c).filter(u => u.isInf && !u.boarded).slice(0, room).forEach(u => u.board(apc)); } break; }

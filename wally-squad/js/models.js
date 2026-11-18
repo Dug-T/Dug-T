@@ -517,6 +517,67 @@ function wallyManMats() {
   };
   return wmMats;
 }
+// Warlord Grak: the Grimlock hero. Hulking armoured brute with a horned helmet, glowing eyes,
+// spiked shoulder plates, a trophy-skull belt and a shoulder-braced rotary rocket cannon.
+export function makeWarlord(faction) {
+  return cached(`warlord-${faction}`, () => {
+    const t = mats(faction), m = M();
+    const root = new THREE.Group();
+    const b = new Builder();
+    b.box(m.darkMetal, 0.66, 0.62, 0.4, 0, 1.06, 0);                    // armoured torso
+    b.box(t.team, 0.7, 0.3, 0.42, 0, 1.22, 0.02);                       // chest plate
+    b.box(t.accent, 0.16, 0.16, 0.02, 0, 1.2, 0.24, 0, 0, Math.PI / 4);  // emblem
+    b.box(m.black, 0.68, 0.12, 0.44, 0, 0.76, 0);                        // belt
+    for (let i = 0; i < 3; i++) b.sph(m.concrete, 0.06, -0.2 + i * 0.2, 0.74, 0.24, 1, 1.1, 0.9); // trophy skulls
+    for (const s of [-1, 1]) {
+      b.sph(t.teamDark, 0.2, s * 0.43, 1.33, 0, 1.2, 0.8, 1.1);          // shoulder plates
+      for (let k = 0; k < 3; k++) b.add(new THREE.ConeGeometry(0.045, 0.2, 6), m.gun, s * (0.36 + k * 0.08), 1.5, -0.08 + k * 0.08, 0, 0, -s * 0.5); // spikes
+      b.box(m.darkMetal, 0.17, 0.4, 0.17, s * 0.43, 1.0, 0.05, -0.3, 0, s * 0.1);  // arms
+      b.box(t.team, 0.19, 0.2, 0.19, s * 0.43, 0.8, 0.2, -1.0, 0, 0);    // gauntlets
+    }
+    // head: horned helmet with glowing eye slit and tusks
+    b.sph(m.darkMetal, 0.2, 0, 1.56, 0.02, 1, 1.05, 1);
+    b.box(m.black, 0.3, 0.06, 0.06, 0, 1.56, 0.19);
+    b.box(m.lampRed, 0.24, 0.035, 0.02, 0, 1.565, 0.215);               // glowing eyes
+    for (const s of [-1, 1]) {
+      b.add(new THREE.ConeGeometry(0.05, 0.36, 8), m.concrete, s * 0.2, 1.74, 0, 0, 0, -s * 0.9); // horns
+      b.add(new THREE.ConeGeometry(0.025, 0.1, 5), m.concrete, s * 0.08, 1.45, 0.2, Math.PI, 0, 0); // tusks
+    }
+    b.box(t.team, 0.04, 0.12, 0.3, 0, 1.76, -0.02);                      // crest
+    const body = b.build(); body.name = 'body';
+    root.add(body);
+    // tattered banner on the back
+    const ban = new Builder();
+    ban.cyl(m.gun, 0.02, 0.02, 1.1, 5, 0.18, 1.6, -0.24);
+    ban.box(t.team, 0.3, 0.42, 0.02, 0.35, 1.9, -0.24);
+    ban.box(t.accent, 0.12, 0.12, 0.025, 0.35, 1.92, -0.24, 0, 0, Math.PI / 4);
+    root.add(ban.build());
+    // rotary rocket cannon braced on the right shoulder
+    const gb = new Builder();
+    gb.add(new THREE.CylinderGeometry(0.13, 0.15, 0.5, 12), m.darkMetal, 0, 0, 0, Math.PI / 2, 0, 0);
+    gb.box(t.teamDark, 0.24, 0.2, 0.3, 0, -0.08, -0.25);
+    gb.box(m.hazard, 0.2, 0.16, 0.18, -0.17, -0.06, -0.15);
+    const gun = gb.build(); gun.position.set(0.3, 1.18, 0.38); gun.name = 'gatling';
+    const bb = new Builder();
+    for (let i = 0; i < 4; i++) { const a = i / 4 * Math.PI * 2; bb.cyl(m.gun, 0.05, 0.05, 0.5, 8, Math.cos(a) * 0.08, Math.sin(a) * 0.08, 0.25, Math.PI / 2, 0, 0); }
+    bb.add(new THREE.TorusGeometry(0.12, 0.02, 5, 14), m.darkMetal, 0, 0, 0.45);
+    const barrels = bb.build(); barrels.position.set(0, 0, 0.2); barrels.name = 'barrels';
+    gun.add(barrels);
+    root.add(gun);
+    for (const side of [-1, 1]) {
+      const lb = new Builder();
+      lb.box(m.darkMetal, 0.24, 0.32, 0.24, 0, -0.14, 0);
+      lb.box(t.teamDark, 0.25, 0.3, 0.25, 0, -0.44, 0.0);
+      lb.box(m.black, 0.26, 0.1, 0.34, 0, -0.58, 0.05);
+      const leg = lb.build(); leg.position.set(side * 0.17, 0.74, 0); leg.name = 'leg';
+      root.add(leg);
+    }
+    root.scale.setScalar(1.3);
+    root.userData.muzzle = new THREE.Vector3(0.3, 1.18, 1.1);
+    return root;
+  });
+}
+
 export function makeWallyMan(faction) {
   return cached(`wallyman-${faction}`, () => {
     const m = M(), w = wallyManMats();
@@ -796,6 +857,7 @@ export function makeUnitModel(type, faction) {
     case 'stealth': return makeStealth(faction);
     case 'inferno': return makeInferno(faction);
     case 'wallyman': return makeWallyMan(faction);
+    case 'warlord': return makeWarlord(faction);
     default: return type.startsWith('custom_') ? makeCustomModel(UNITS[type].design, faction) : makeInfantry(type, faction);
   }
 }

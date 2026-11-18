@@ -5,6 +5,7 @@ import { UNITS } from './config.js';
 
 export const EVENTS = { select: 'Selected', move: 'Move order', attack: 'Attack order' };
 const DEFAULT_LINES = {
+  warlord: { select: ['Grak hungers.', 'Who dares summon the Warlord?', 'Grimlock, to me!'], move: ['Grak marches!', 'Out of my way.'], attack: ['WAAAR!', 'Crush them all!', 'Feel the cannon of Grak!'] },
   wallyman: { select: ['Wally Man is here!', 'Never fear, Wally Man is near!', 'Cape on, glasses on!'], move: ['Up, up and away!', 'To the rescue!'], attack: ['Spin it up!', 'Taste the Gatling!', 'Wally Man, open fire!'] },
   rifle: { select: ['Rifleman reporting.', 'Ready for action!'], move: ['Moving out.', 'On my way.'], attack: ['Opening fire!', 'Engaging!'] },
   rocket: { select: ['Rockets loaded.', 'Anti-armour ready.'], move: ['Relocating.'], attack: ['Rocket away!', 'Tank spotted!'] },

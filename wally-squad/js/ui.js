@@ -34,6 +34,10 @@ let hoverEnt = null;
 
 export function initUI() {
   view = $('view'); overlay = $('overlay'); octx = overlay.getContext('2d');
+  { const sp = $('selPanel');
+    sp.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse') infoHover = true; });
+    sp.addEventListener('pointerleave', () => { infoHover = false; infoSince = performance.now(); });
+    sp.addEventListener('pointerdown', () => { infoSince = performance.now(); }); }
   G.ui = { message, refreshSelection: refreshSelPanel, setMode: m => setMode(m) };
   buildTabs();
   bindInput();
@@ -503,7 +507,7 @@ function bindInput() {
         tryPlace(); return;
       }
       if (G.mode) { modeClick(x, y); return; }
-      if (attackMoveArmed) { attackMoveArmed = false; commandAt(x, y, true); setCursor(); return; }
+      if (attackMoveArmed) { const pat = attackMoveArmed === 'patrol'; attackMoveArmed = false; if (pat) patrolAt(x, y); else commandAt(x, y, true); setCursor(); return; }
       drag = { x0: x, y0: y, x1: x, y1: y, active: false };
     } else if (e.button === 2) {
       rmb = { x, y, cx: G.camera.x, cz: G.camera.z, moved: false };
@@ -582,9 +586,10 @@ function bindInput() {
     if (k === 'KeyA' && !e.ctrlKey) { if (myUnits().length) { attackMoveArmed = true; setCursor(); } return; }
     if (k === 'KeyA' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); selectArmy(); return; }
     if (k === 'KeyS' && !e.ctrlKey) { if (myUnits().length) issue({ t: 'stop', ids: myUnits().map(u => u.id) }); Audio.play('ack'); return; }
-    if (k === 'KeyG') { const w = myUnits().filter(u => u.type === 'wallyman'); if (w.length) { issue({ t: 'ability', ids: w.map(u => u.id) }); Voices.say('wallyman', 'attack', true); } return; }
+    if (k === 'KeyG') { const w = myUnits().filter(u => u.type === 'wallyman' || u.type === 'warlord'); if (w.length) { issue({ t: 'ability', ids: w.map(u => u.id) }); Voices.say(w[0].type, 'attack', true); } return; }
     if (k === 'KeyU') { const a = G.selection.filter(e => alive(e) && e.faction === G.player && (e.def.transport || e.def.garrison) && (e.passengers || []).length); if (a.length) { issue({ t: 'unload', ids: a.map(u => u.id) }); Audio.play('ack'); } return; }
     if (k === 'Period') { selectNextIdle(); return; }
+    if (k === 'KeyP') { if (myUnits().length) { attackMoveArmed = 'patrol'; setCursor(); } return; }
     if (k === 'KeyH') { const b = G.buildings.find(b => b.faction === G.player && b.type === 'conyard') || G.buildings.find(b => b.faction === G.player); if (b) centerOn(b.x, b.z); return; }
     if (k === 'Space') { e.preventDefault(); if (G.alertAt) centerOn(G.alertAt.x, G.alertAt.z); return; }
     if (k === 'KeyR') { setMode(G.mode === 'repair' ? null : 'repair'); return; }
@@ -698,7 +703,7 @@ function updateModeBar() {
   const what = G.placing ? `Placing ${BUILDINGS[G.placing].name}` + (BUILDINGS[G.placing].isWall ? ' · drag for a line' : '') + ' · tap a green spot'
     : G.mode === 'sell' ? 'Sell mode · tap your building' : G.mode === 'repair' ? 'Repair mode · tap your building'
     : G.mode === 'super' ? 'Superweapon · tap the target' : G.mode && G.mode.startsWith('power:') ? 'Support power · tap the target'
-    : attackMoveArmed ? 'Attack-move · tap the destination' : '';
+    : attackMoveArmed === 'patrol' ? 'Patrol · tap the far end of the route' : attackMoveArmed ? 'Attack-move · tap the destination' : '';
   if (what === barSig) return;
   barSig = what;
   const bar = $('modeBar');
@@ -788,7 +793,7 @@ function touchTap(x, y) {
   G.mouse.ground = screenToGround(x, y);
   if (G.placing) { updateGhost(); tryPlace(); return; }
   if (G.mode) { modeClick(x, y); return; }
-  if (attackMoveArmed) { attackMoveArmed = false; $('tAM').classList.remove('on'); commandAt(x, y, true); return; }
+  if (attackMoveArmed) { const pat = attackMoveArmed === 'patrol'; attackMoveArmed = false; $('tAM').classList.remove('on'); if (pat) patrolAt(x, y); else commandAt(x, y, true); return; }
   const e = pickAt(x, y);
   const mine = myUnits();
   if (e && e.faction === G.player) {
@@ -819,10 +824,25 @@ function bindButtons() {
 
 // ------------------------------------------------------------ selection panel
 let selSig = '';
+// Building info closes by itself after 10 seconds (touching the panel restarts the countdown).
+const INFO_TIME = 10000;
+let infoKey = '', infoSince = 0, infoHover = false;
 function refreshSelPanel(force) {
   const panel = $('selPanel');
   const sel = G.selection.filter(alive);
-  if (!sel.length) { panel.style.display = 'none'; selSig = ''; return; }
+  if (!sel.length) { panel.style.display = 'none'; panel.style.opacity = ''; selSig = ''; infoKey = ''; return; }
+  const key = sel.map(s => s.id).join(',');
+  if (key !== infoKey || force) { infoKey = key; infoSince = performance.now(); }
+  if (sel.every(s => s.kind === 'building') && !infoHover) {
+    const age = performance.now() - infoSince;
+    if (age > INFO_TIME) {
+      for (const s of G.selection) s.setSelected(false);
+      G.selection = [];
+      panel.style.display = 'none'; panel.style.opacity = ''; selSig = ''; infoKey = '';
+      return;
+    }
+    panel.style.opacity = age > INFO_TIME - 1000 ? String(Math.max(0, (INFO_TIME - age) / 1000)) : ''; // fade out over the last second
+  } else panel.style.opacity = '';
   panel.style.display = 'block';
   const sig = sel.map(s => s.id).join(',') + '|' + sel.map(s => Math.ceil(s.frenzyCD || 0) + ':' + (s.passengers ? s.passengers.length : 0)).join(',') + (force ? Math.random() : '');
   const first = sel[0];
@@ -866,6 +886,9 @@ function refreshSelPanel(force) {
     if (first.kind === 'unit') {
       addBtn('■ Stop (S)', () => issue({ t: 'stop', ids: myUnits().map(u => u.id) }));
       if (myUnits().some(u => u.weapon)) addBtn('⚔ Attack-move (A)', () => { attackMoveArmed = true; setCursor(); });
+      if (myUnits().some(u => u.weapon)) addBtn('↔ Patrol (P)', () => { attackMoveArmed = 'patrol'; setCursor(); }, 'Walk back and forth between here and a point you pick, attacking any enemy on the way.');
+      const wl = myUnits().filter(u => u.type === 'warlord');
+      if (wl.length) { const cd = Math.max(...wl.map(u => u.frenzyCD || 0)); addBtn(cd > 0 ? `📣 War Cry (${Math.ceil(cd)}s)` : '📣 War Cry (G)', () => { issue({ t: 'ability', ids: wl.map(u => u.id) }); Voices.say('warlord', 'attack', true); selSig = ''; }, 'Every Grimlock fighter within 13 m fires much faster for 6 seconds. 55 second cooldown.'); }
       const wm = myUnits().filter(u => u.type === 'wallyman');
       if (wm.length) {
         const cd = Math.max(...wm.map(u => u.frenzyCD || 0));
@@ -1081,4 +1104,12 @@ export function selectNextIdle() {
   if (!list.length) { message('No idle units'); return; }
   const u = list[idleIdx++ % list.length];
   select([u]); centerOn(u.x, u.z); Audio.play('click');
+}
+
+function patrolAt(sx, sy) {
+  const g = screenToGround(sx, sy); if (!g) return;
+  const ids = myUnits().map(u => u.id); if (!ids.length) return;
+  issue({ t: 'patrol', ids, x: g.x, z: g.z });
+  flashMarker(g.x, g.z, 0x7fd0ff); Audio.play('ack');
+  Voices.say(myUnits()[0].type, 'move');
 }
