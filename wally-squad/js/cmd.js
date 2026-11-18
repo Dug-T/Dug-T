@@ -6,6 +6,7 @@ import { enqueue, dequeue, placeBuilding, placeInstant } from './production.js';
 import { formationSlots } from './pathfind.js';
 import { T, cellOf, idx, cellCenter } from './terrain.js';
 import { fireSuperweapon } from './superweapons.js';
+import { usePower } from './powers.js';
 
 export function issue(c) {
   c.f = c.f || G.player;
@@ -52,6 +53,7 @@ export function execute(c) {
     case 'rally': { const b = mine(c, c.id); if (b) b.rally = { x: c.x, z: c.z }; break; }
     case 'prim': { const b = mine(c, c.id); if (b) { for (const o of G.buildings) if (o.type === b.type && o.faction === c.f) o.primary = false; b.primary = true; } break; }
     case 'super': fireSuperweapon(c.f, c.x, c.z); break;
+    case 'power': usePower(c.f, c.type, c.x, c.z); break;
     case 'surrender': G.surrendered = c.f; break;
   }
 }

@@ -428,7 +428,11 @@ export function updateVision(dt) {
     fogTimer = 0.2;
     T.visible.fill(0); T.enemyVisible.fill(0);
     for (const u of G.units) if (!u.dead) stamp(u.faction === G.player ? T.visible : T.enemyVisible, u.x, u.z, u.def.sight * G.sightMult);
-    for (const b of G.buildings) if (!b.dead) stamp(b.faction === G.player ? T.visible : T.enemyVisible, b.x, b.z, b.def.sight + Math.max(b.def.w, b.def.h));
+    for (const b of G.buildings) if (!b.dead && b.faction !== 'neutral') stamp(b.faction === G.player ? T.visible : T.enemyVisible, b.x, b.z, b.def.sight + Math.max(b.def.w, b.def.h));
+    if (G.visionPings) {
+      G.visionPings = G.visionPings.filter(p => p.until > G.time);
+      for (const p of G.visionPings) stamp(p.f === G.player ? T.visible : T.enemyVisible, p.x, p.z, p.r);
+    }
     for (let i = 0; i < GRID * GRID; i++) {
       if (T.visible[i]) T.explored[i] = 1;
       fogRaw[i] = T.visible[i] ? 255 : T.explored[i] ? 125 : 0;

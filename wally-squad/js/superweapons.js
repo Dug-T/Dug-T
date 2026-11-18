@@ -1,6 +1,6 @@
 // Superweapons: the Wally Squad's Sky Lance orbital strike and the Grimlock Doom Missile.
 import * as THREE from 'three';
-import { G, later, rr } from './state.js';
+import { G, later, rr, emit } from './state.js';
 import { SUPERWEAPONS, FACTIONS } from './config.js';
 import { groundY, heightAt } from './terrain.js';
 import { damage, decay, distTo, alive } from './entities.js';
@@ -58,6 +58,7 @@ export function fireSuperweapon(f, x, z) {
   const st = superState(f);
   if (!st || !st.ready) return false;
   P.super.charge = 0;
+  emit('super', f, st.type);
   const b = superBuilding(f);
   if (f !== G.player) G.alertAt = { x, z, t: G.time };
   if (st.type === 'skylance') skyLance(f, x, z);
