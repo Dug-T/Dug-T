@@ -106,6 +106,35 @@
     .item .nm { display: none; }
   }
   body.touch #touchBar { display: flex; }
+  /* let the build list (and menus) scroll by touch even though the map itself handles all gestures */
+  #grid, .card, .vgrid, #objectives { touch-action: pan-y; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+  /* phones held sideways: minimap beside the money/tabs, build list gets the rest of the height */
+  @media (max-height: 520px) and (orientation: landscape) {
+    :root { --side: 286px; }
+    #side { display: grid; grid-template-columns: 104px 1fr; grid-template-rows: auto auto auto auto 1fr auto;
+      grid-template-areas: "map cred" "map pow" "map super" "map tabs" "grid grid" "mode mode"; column-gap: 6px; padding-top: 4px; }
+    #credits { grid-area: cred; font-size: 17px; padding: 2px 0 0; }
+    #powerRow { grid-area: pow; padding: 0 6px 2px 0; font-size: 11px; }
+    #minimapWrap { grid-area: map; width: 100px; height: 100px; max-height: none; margin: 0 0 0 4px; align-self: start; }
+    #radarOff { font-size: 9px; padding: 4px; }
+    #superRow { grid-area: super; margin: 2px 6px 2px 0; padding: 3px; font-size: 10px; }
+    #tabs { grid-area: tabs; grid-template-columns: repeat(3, 1fr); margin: 2px 6px 2px 0; gap: 2px; }
+    .tab { font-size: 9px; padding: 4px 0; }
+    #grid { grid-area: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding: 4px 6px; }
+    .item { aspect-ratio: 1.3; }
+    .item .nm { display: none; }
+    .item .cost, .item .key { font-size: 10px; }
+    .item .state { font-size: 11px; }
+    #modeRow { grid-area: mode; padding: 4px 6px 6px; gap: 3px; }
+    #modeRow .btn { padding: 3px 4px; font-size: 12px; }
+    #topbar { right: var(--side); gap: 8px; padding: 0 8px; }
+    #topbar .btn { font-size: 12px; padding: 3px 7px; white-space: nowrap; }
+    #clock, #wx { font-size: 12px; white-space: nowrap; }
+    #selPanel { bottom: 6px; left: 6px; }
+    #touchBar { top: 40px; gap: 4px; } #touchBar .btn { padding: 5px 8px; font-size: 12px; }
+    body.touch #objectives { top: 40px; left: 120px; font-size: 12px; max-width: 220px; }
+    .card { padding: 14px 18px; }
+  }
   .menuCol { display: flex; flex-direction: column; gap: 8px; align-items: center; margin-top: 12px; }
   .menuCol .big { width: 280px; }
   .card.wide { width: min(860px, 94vw); }
