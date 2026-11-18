@@ -690,12 +690,48 @@ function customVehicle(d, faction) {
   return root;
 }
 
+export function makeAPC(faction) {
+  return cached(`apc-${faction}`, () => {
+    const t = mats(faction), m = M();
+    const root = new THREE.Group();
+    const b = new Builder();
+    for (const z of [1.15, 0.38, -0.38, -1.15]) for (const x of [-0.92, 0.92]) wheel(b, m.metal, x, 0.45, z, 0.44, 0.32);
+    b.box(t.team, 1.6, 0.8, 3.4, 0, 1.05, 0);                        // armoured box
+    b.add(new THREE.BoxGeometry(1.6, 0.7, 0.9), t.team, 0, 1.0, 1.85, -0.75, 0, 0); // sloped nose
+    b.add(new THREE.BoxGeometry(1.5, 0.12, 3.2), t.teamDark, 0, 1.5, -0.05);
+    for (const s of [-1, 1]) {
+      b.add(new THREE.BoxGeometry(0.1, 0.55, 3.0), t.teamDark, s * 0.84, 1.1, 0, 0, 0, s * 0.18);   // sloped side armour
+      for (let i = 0; i < 3; i++) b.box(m.glass, 0.04, 0.16, 0.3, s * 0.86, 1.2, -0.9 + i * 0.7); // firing ports
+      b.box(m.darkMetal, 0.06, 0.12, 2.8, s * 0.95, 0.7, 0);                                       // fender
+    }
+    b.box(m.glass, 1.1, 0.25, 0.04, 0, 1.3, 2.18, -0.75, 0, 0);          // driver's visor
+    b.box(m.darkMetal, 1.3, 0.75, 0.08, 0, 0.95, -1.72);                  // rear ramp
+    b.box(m.hazard, 1.3, 0.08, 0.1, 0, 0.6, -1.76);
+    b.box(m.lampWhite, 0.16, 0.1, 0.05, 0.55, 0.95, 2.2); b.box(m.lampWhite, 0.16, 0.1, 0.05, -0.55, 0.95, 2.2);
+    b.box(m.lampRed, 0.12, 0.08, 0.04, 0.6, 1.2, -1.77); b.box(m.lampRed, 0.12, 0.08, 0.04, -0.6, 1.2, -1.77);
+    b.box(m.metal, 0.35, 0.18, 0.5, -0.45, 1.62, -0.9);                   // hatch
+    b.cyl(m.gun, 0.03, 0.03, 1.0, 5, 0.6, 2.0, -1.2);                     // antenna
+    b.box(t.accent, 0.5, 0.3, 0.02, 0.85, 1.1, 0.9, 0, Math.PI / 2, 0);   // faction plate
+    root.add(b.build());
+    const g = new Builder();
+    g.cyl(m.darkMetal, 0.3, 0.36, 0.25, 10, 0, 0, 0);
+    g.box(m.gun, 0.18, 0.18, 0.45, 0, 0.12, 0.2);
+    g.cyl(m.gun, 0.045, 0.045, 0.8, 8, 0, 0.14, 0.75, Math.PI / 2, 0, 0);
+    g.box(t.teamDark, 0.55, 0.3, 0.05, 0, 0.2, 0.05);
+    const tur = g.build(); tur.position.set(0.25, 1.7, 0.6); tur.name = 'turret';
+    root.add(tur);
+    root.userData.muzzle = new THREE.Vector3(0, 0.14, 1.15);
+    return root;
+  });
+}
+
 export function makeUnitModel(type, faction) {
   switch (type) {
     case 'tank': return makeTank(faction);
     case 'titan': return makeTitan(faction);
     case 'buggy': return makeBuggy(faction);
     case 'harvester': return makeHarvester(faction);
+    case 'apc': return makeAPC(faction);
     case 'arty': return makeArtillery(faction);
     case 'gunship': return makeGunship(faction);
     case 'stealth': return makeStealth(faction);

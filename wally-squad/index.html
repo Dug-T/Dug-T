@@ -169,6 +169,7 @@
   .roomcode { font: 46px 'Black Ops One'; color: var(--accent); text-align: center; letter-spacing: 8px; margin: 10px 0; }
   #mpOverlay { position: absolute; inset: 0; z-index: 25; display: none; align-items: center; justify-content: center; background: #000a; }
   #objectives { position: absolute; left: 10px; top: 46px; z-index: 4; background: var(--panel); border: 1px solid var(--line2); border-radius: 6px; padding: 6px 10px; font-size: 14px; display: none; max-width: 320px; }
+  #objectives .obHint { margin: 3px 0 2px 14px; font-size: 12px; color: var(--muted, #b9c6d6); line-height: 1.35; }
   #objectives .ob { margin: 2px 0; } #objectives .done { color: var(--green); } #objectives .failed { color: var(--red); }
   body.touch #objectives { top: 230px; }
   #superRow { margin: 6px 8px 0; padding: 6px; border: 1px solid var(--line2); border-radius: 5px; background: #1a1210; display: grid; grid-template-columns: 1fr auto; gap: 4px; align-items: center; font: 700 12px 'Rajdhani'; }
@@ -326,6 +327,7 @@
     <div class="tag">REAL-TIME STRATEGY · BUILD · HARVEST · CONQUER</div>
     <p style="text-align:center">The <b style="color:var(--blue)">Wally Squad</b> has landed in the Crystal Valley. The <b style="color:var(--red)">Grimlock Legion</b> wants every last crystal. Build your base, harvest crystal, raise an army and wipe them off the map.</p>
     <div class="menuCol">
+      <button class="btn big" id="bTutorial">🎓 BOOT CAMP</button>
       <button class="btn big" data-panel="menuCampaign">★ CAMPAIGN</button>
       <button class="btn big" data-panel="menuSkirmish">⚔ SKIRMISH</button>
       <button class="btn big" data-panel="menuSurvival">☠ SURVIVAL</button>
@@ -443,6 +445,9 @@
       <li><b>Support powers</b> (buttons above the build tabs): Recon Sweep, Paradrop and Airstrike recharge over time. Click one, then click the map.</li>
       <li><b>Research</b> (TECH tab): one-off upgrades for armour, damage, income, speed and range.</li>
       <li><b>Stances</b> (selection panel): Aggressive, Hold position or Hold fire.</li>
+      <li><b>Game over</b> when all your buildings are destroyed. Destroy every enemy building to win.</li>
+      <li><b>APC:</b> select infantry and right-click the Squad Carrier APC to load up to 5. <kbd>U</kbd> unloads them.</li>
+      <li><b>New to RTS?</b> Play <b>Boot Camp</b> from the main menu for a step-by-step tutorial.</li>
       <li><b>Map Editor</b> (main menu): build your own maps. <b>Photo mode</b>: <kbd>F9</kbd>.</li>
       <li><b>Survival</b> (main menu): hold out against endless waves for a high score.</li>
       <li><b>Waypoints:</b> hold <kbd>Shift</kbd> and right-click to queue up a route.</li>

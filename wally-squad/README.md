@@ -6,6 +6,7 @@ Play it by opening `wally-squad/index.html` from any web server (GitHub Pages wo
 
 ## Game modes
 
+- **🎓 Boot Camp:** an interactive tutorial. Step by step, it teaches you to move the camera, select and move troops, build a Power Plant, Refinery and Barracks, train riflemen, use an APC and attack an outpost. Each step shows mouse or touch instructions.
 - **Campaign:** five story missions in which the hero **Wally Man** leads the squad against the Grimlock Warlord. Every mission lets you train infantry and vehicles, and every mission is lost if Wally Man falls. Each mission has a briefing, objectives and scripted events, and completing one unlocks the next.
   1. **First Contact** – a small field base and a strike team. Destroy an outpost and keep Wally Man alive.
   2. **Hold the Line** – fortify Frostbite Pass against seven waves until reinforcements arrive.
@@ -14,6 +15,8 @@ Play it by opening `wally-squad/index.html` from any web server (GitHub Pages wo
   5. **The Warlord** – a full base battle against a Doom Missile silo.
 - **Survival:** endless enemy waves that grow stronger each time, with a boss every 5th wave. The game keeps your best score and wave for each map.
 - **Skirmish:** choose a map, your faction and the difficulty, and turn the day–night cycle and dynamic weather on or off.
+  - Skirmish options: switch superweapons, support powers, supply crates, tech buildings, fog of war and starting armies on or off, and choose the starting money ($2,500–$15,000).
+- **Game over:** in every mode you lose as soon as **all your buildings are destroyed** (walls, gates and mines don't count). Destroy every enemy building to win.
 - **Online battle:** 1 v 1 against a friend. One player hosts and shares a 5-letter room code; the other joins with it.
 - **Unit Designer:** invent your own infantry and vehicles:
   - Pick a weapon, chassis (tracks, wheels or hover), size, armour, speed, colours and looks (hats, glasses, capes and more).
@@ -67,6 +70,8 @@ Both factions share the basic army: riflemen, rocket troopers, Scorchers, engine
   - Turbo Engines: vehicles are 15% faster.
   - Long-Range Optics: +20% sight and range.
   - The computer opponent researches them too.
+- **🚚 Squad Carrier APC** (War Factory, needs a Barracks): an armoured troop carrier with a machine gun. To load up to 5 infantry, select them and right-click (or tap) the APC. Press Unload (`U`) to drop them off. Green pips show how many are inside. If the APC is destroyed, its passengers bail out wounded.
+- **🎵 Dynamic music:** the soundtrack follows the fighting. It is calm and sparse in quiet moments, becomes the full battle loop in a skirmish, and goes to all-out war (double hats, drum fills and a lead arpeggio) in big fights. The Music button shows the current mood. Victory and defeat each play a short phrase.
 - **Unit stances:** in the selection panel, choose Aggressive (chase enemies), Hold Position (shoot only what's in range and never move) or Hold Fire (never shoot unless ordered, good for sneaking).
 - **📷 Photo mode** (pause menu or `F9`): hides the interface and slows or freezes time. You can zoom right in and tilt the camera (`Z`/`C` or Shift + wheel), then save a picture.
 - **Graphics settings** (main menu and pause menu):
@@ -102,6 +107,7 @@ For testing, add `?loopnet` to the URL to connect two tabs on the same computer 
 | Base / last alert | `H` / `Space` |
 | Repair / sell mode | `R` / `X` |
 | Superweapon | **LAUNCH** in the sidebar, then click a target |
+| Load / unload APC | Right-click the APC with infantry selected / `U` |
 
 URL options: `?auto` starts a skirmish straight away (add `&map=frost|dunes|midnight`, `&faction=grim` or `&weather=storm` to change it), and `?reveal` turns off the fog of war.
 

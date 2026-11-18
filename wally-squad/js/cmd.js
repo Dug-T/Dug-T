@@ -40,6 +40,8 @@ export function execute(c) {
     case 'atk': { const t = byId.get(c.tid); if (alive(t)) for (const u of myUnits(c)) if (u !== t) u.attack(t); break; }
     case 'stop': for (const u of myUnits(c)) { u.stop(); u.waypoints = null; } break;
     case 'ability': for (const u of myUnits(c)) u.frenzy(); break;
+    case 'board': { const apc = mine(c, c.tid); if (apc && apc.def.transport) { const room = apc.def.transport - (apc.passengers || []).length; myUnits(c).filter(u => u.isInf && !u.boarded).slice(0, room).forEach(u => u.board(apc)); } break; }
+    case 'unload': for (const u of myUnits(c)) if (u.def.transport) u.unload(); break;
     case 'stance': for (const u of myUnits(c)) { u.stance = c.s === 'aggressive' ? null : c.s; if (c.s === 'holdfire') u.target = null; } break;
     case 'harv': for (const u of myUnits(c)) if (u.type === 'harvester') { u.oreCell = c.cell; u.hState = 'toOre'; u.requestPath(cellCenter(c.cell % 128), cellCenter((c.cell / 128) | 0)); } break;
     case 'seek': for (const u of myUnits(c)) if (u.type === 'harvester') { u.hState = 'seek'; u.path = null; u.hT = 0; } break;

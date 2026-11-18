@@ -34,7 +34,7 @@ const buckets = Array.from({ length: HN * HN }, () => []);
 export function rebuildHash() {
   for (const b of buckets) b.length = 0;
   for (const u of G.units) {
-    if (u.dead) continue;
+    if (u.dead || u.boarded) continue;
     const bx = clamp(Math.floor((u.x + HALF) / HS), 0, HN - 1), bz = clamp(Math.floor((u.z + HALF) / HS), 0, HN - 1);
     buckets[bz * HN + bx].push(u);
   }
@@ -63,6 +63,7 @@ export function aimPoint(e) {
 export const FACIDX = { wally: 1, grim: 2 };
 function canTarget(w, e) {
   if (!alive(e)) return false;
+  if (e.boarded) return false;
   if (e.cloaked) return false;
   if (e.kind === 'building' && e.def.isMine) return false;
   const air = e.kind === 'unit' && e.def.air;
@@ -138,6 +139,40 @@ export class Unit {
     if (this.faction === G.player) G.sfx?.play('promote', this.x, this.z);
     return true;
   }
+  // ---- APC transport ----
+  board(apc) {
+    if (!this.isInf || !alive(apc) || !apc.def.transport) return;
+    this.order = { type: 'board', target: apc };
+    this.target = null;
+    this.requestPath(apc.x, apc.z);
+  }
+  boardLogic() {
+    const apc = this.order.target;
+    if (!alive(apc) || (apc.passengers || []).length >= apc.def.transport) { this.order = null; this.path = null; return; }
+    if (Math.hypot(apc.x - this.x, apc.z - this.z) < 2.8) {
+      apc.passengers = apc.passengers || [];
+      apc.passengers.push(this);
+      this.boarded = apc; this.order = null; this.path = null; this.target = null;
+      this.setSelected(false); this.mesh.visible = false;
+      if (G.selection.includes(this)) G.selection = G.selection.filter(s => s !== this);
+      if (this.faction === G.player) G.sfx?.play('click', this.x, this.z);
+      return;
+    }
+    if (!this.path) this.requestPath(apc.x, apc.z);
+  }
+  unload() {
+    const list = this.passengers || [];
+    this.passengers = [];
+    list.forEach((u, i) => {
+      if (u.dead) return;
+      const a = this.heading + Math.PI + (i - (list.length - 1) / 2) * 0.55;
+      u.boarded = null;
+      u.x = this.x + Math.sin(a) * 2.6; u.z = this.z + Math.cos(a) * 2.6;
+      if (!u.canStand(u.x, u.z)) { u.x = this.x; u.z = this.z; }
+      u.heading = a; u.mesh.visible = true; u.order = null; u.path = null;
+    });
+    return list.length;
+  }
   stop() { this.order = null; this.target = null; this.path = null; if (this.type === 'harvester') this.hState = 'seek'; }
 
   requestPath(x, z, ignoreId = 0) {
@@ -151,6 +186,8 @@ export class Unit {
   update(dt) {
     if (this.dead) return;
     if (this.dropH > 0) { paraFall(this, dt); return; } // still floating down under a parachute
+    if (this.boarded) { this.x = this.boarded.x; this.z = this.boarded.z; this.y = this.boarded.y; return; } // riding inside an APC
+    if (this.order && this.order.type === 'board') { this.boardLogic(); }
     if (this.def.selfRepair && this.hp < this.maxHp * 0.5) this.hp = Math.min(this.maxHp * 0.5, this.hp + 6 * dt);
     if (this.rank >= 2 && this.hp < this.maxHp) this.hp = Math.min(this.maxHp, this.hp + 2 * dt);
     this.cool -= dt; this.cool2 -= dt;
@@ -280,7 +317,7 @@ export class Unit {
     let best = null, bd = 1e9;
     const w = this.weapon, w2 = this.weapon2;
     for (const u of G.units) {
-      if (u.dead || u.faction === this.faction || u.faction === 'neutral') continue;
+      if (u.dead || u.boarded || u.faction === this.faction || u.faction === 'neutral') continue;
       if (!canTarget(w, u) && !(w2 && canTarget(w2, u))) continue;
       const d = Math.hypot(u.x - this.x, u.z - this.z);
       if (d > range) continue;
@@ -594,6 +631,7 @@ export class Unit {
   // ---------------------------------------------------- death
   die(killer) {
     if (this.dead) return;
+    if (this.passengers && this.passengers.length) { const ps = this.passengers.slice(); this.unload(); for (const p of ps) damage(p, p.maxHp * 0.5, killer); }
     this.dead = true;
     this.setSelected(false);
     if (this.refinery && this.refinery.dockedBy === this) this.refinery.dockedBy = null;
@@ -1176,6 +1214,8 @@ export function damage(target, amount, src, kind) {
   }
   target.hp -= amount;
   target.lastHit = G.time;
+  // how hot the fighting is for the player (drives the dynamic music; never read by the simulation)
+  if (target.faction === G.player || (src && src.faction === G.player)) G.combatHeat = Math.min(40, (G.combatHeat || 0) + Math.min(amount, 250) / 60);
   if (target.faction === G.player && src && src.faction !== G.player) {
     if (target.kind === 'building') G.announce?.('Our base is under attack', G.player, 20);
     else G.announce?.('Unit under attack', G.player, 30);

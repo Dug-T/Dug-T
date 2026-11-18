@@ -139,6 +139,18 @@ if ('speechSynthesis' in window) speechSynthesis.onvoiceschanged = () => { voice
 // ---------------- procedural battle music ----------------
 let musicOn = true;
 export function toggleMusic() { musicOn = !musicOn; if (musicBus) musicBus.gain.value = musicOn ? 0.22 : 0; return musicOn; }
+// Dynamic: the score follows the fighting. intensity 0 = calm (sparse drums and a soft pad),
+// ~0.5 = the normal battle loop, 1 = all-out war (double hats, fills, lead arpeggio, more drive).
+let target = 0.15, level = 0.15;
+export function setIntensity(x) { target = Math.max(0, Math.min(1, x)); }
+export function musicLevel() { return level; }
+// short victory / defeat phrase over the top of the music
+export function sting(win) {
+  if (!ctx || !musicOn) return;
+  const mtof = n => 440 * Math.pow(2, (n - 69) / 12), t0 = ctx.currentTime + 0.1;
+  const notes = win ? [[57, 0], [61, 0.18], [64, 0.36], [69, 0.54], [73, 0.54], [76, 0.54]] : [[57, 0], [56, 0.3], [55, 0.6], [53, 0.9], [48, 0.9]];
+  for (const [n, d] of notes) { tone(musicBus, t0 + d, win && d === 0.54 ? 1.6 : 0.5, 'square', mtof(n), 0, 0.08); tone(musicBus, t0 + d, 0.5, 'sawtooth', mtof(n - 12), 0, 0.06); }
+}
 function startMusic() {
   // a driving minor-key loop: kick, snare, hats, bass line and a synth stab
   const bpm = 112, beat = 60 / bpm;
@@ -147,17 +159,25 @@ function startMusic() {
   const mtof = n => 440 * Math.pow(2, (n - 69) / 12);
   let next = ctx.currentTime + 0.5, step = 0;
   function schedule() {
+    // rise quickly when fighting starts, calm down slowly
+    level += (target - level) * (target > level ? 0.25 : 0.03);
+    const L = level, calm = L < 0.28, war = L > 0.62;
     while (next < ctx.currentTime + 0.4) {
       const t = next, s = step % 16, bar = Math.floor(step / 16) % 8;
-      if (s % 4 === 0) tone(musicBus, t, 0.35, 'sine', 120, 38, 1.1);           // kick
-      if (s % 8 === 4) env(noise(musicBus, t, 0.2, 'bandpass', 1800, 0.7), t, 0.002, 0.5, 0.18); // snare
-      if (s % 2 === 1) env(noise(musicBus, t, 0.05, 'highpass', 7000, 0.7), t, 0.001, 0.18, 0.04); // hats
-      if (s % 2 === 0) {
+      const chord = stab[(bar / 2 | 0) % 4];
+      if (calm ? s === 0 || s === 8 : s % 4 === 0) tone(musicBus, t, 0.35, 'sine', 120, 38, calm ? 0.7 : 1.1);           // kick
+      if (war && (s === 14 || s === 7)) tone(musicBus, t, 0.25, 'sine', 120, 38, 0.8);                                  // extra kicks
+      if (!calm && s % 8 === 4) env(noise(musicBus, t, 0.2, 'bandpass', 1800, 0.7), t, 0.002, 0.5, 0.18);               // snare
+      if (war && bar === 7 && s >= 12) env(noise(musicBus, t, 0.12, 'bandpass', 2000, 0.7), t, 0.002, 0.25 + (s - 12) * 0.08, 0.1); // fill
+      if (!calm && (war || s % 2 === 1)) env(noise(musicBus, t, 0.05, 'highpass', 7000, 0.7), t, 0.001, war && s % 2 === 0 ? 0.1 : 0.18, 0.04); // hats
+      if (calm ? s % 8 === 0 : s % 2 === 0) {
         const n = bassNotes[(Math.floor(step / 4)) % 8] - 12;
-        tone(musicBus, t, beat * 0.45, 'sawtooth', mtof(n), 0, 0.22);
+        tone(musicBus, t, calm ? beat * 1.6 : beat * 0.45, calm ? 'triangle' : 'sawtooth', mtof(n), 0, calm ? 0.2 : war ? 0.26 : 0.22);
       }
-      if (s === 0 && bar % 2 === 0) for (const n of stab[(bar / 2) % 4]) tone(musicBus, t, beat * 1.6, 'square', mtof(n), 0, 0.045);
-      if (s === 10 && bar % 4 === 3) for (const n of stab[(bar / 2 | 0) % 4]) tone(musicBus, t, beat * 0.5, 'square', mtof(n + 12), 0, 0.04);
+      if (calm && s === 0 && bar % 2 === 0) for (const n of chord) tone(musicBus, t, beat * 7, 'sine', mtof(n), 0, 0.05); // soft pad
+      if (!calm && s === 0 && bar % 2 === 0) for (const n of chord) tone(musicBus, t, beat * 1.6, 'square', mtof(n), 0, 0.045);
+      if (!calm && s === 10 && bar % 4 === 3) for (const n of chord) tone(musicBus, t, beat * 0.5, 'square', mtof(n + 12), 0, 0.04);
+      if (war && s % 2 === 0) tone(musicBus, t, beat * 0.4, 'square', mtof(chord[(step / 2) % 3] + 24), 0, 0.022);      // lead arpeggio
       next += beat / 4; step++;
     }
   }

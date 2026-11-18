@@ -18,7 +18,7 @@ import * as Audio from './audio.js';
 import * as Voices from './voices.js';
 import { initWeather, updateWeatherSim, updateWeatherFX } from './weather.js';
 import { updateSuper } from './superweapons.js';
-import { MISSIONS, makeContext, campaignProgress, unlockNext } from './missions.js';
+import { MISSIONS, TUTORIAL, makeContext, campaignProgress, unlockNext } from './missions.js';
 import { Lockstep, joinRoom } from './mp.js';
 import { randomRoomCode } from './net.js';
 import { issue } from './cmd.js';
@@ -54,8 +54,8 @@ if (cfg && cfg.mode !== 'mp') sessionStorage.removeItem('ws_cfg');
 if (cfg && cfg.mode === 'mp') sessionStorage.removeItem('ws_cfg');
 if (cfg) sessionStorage.setItem('ws_last', JSON.stringify(cfg));
 const run = cfg || { mode: 'title', map: 'valley', faction: 'wally', difficulty: 'normal', daynight: false };
-if (run.mode === 'campaign') {
-  mission = MISSIONS[run.mission] || MISSIONS[0];
+if (run.mode === 'campaign' || run.mode === 'tutorial') {
+  mission = run.mode === 'tutorial' ? TUTORIAL : MISSIONS[run.mission] || MISSIONS[0];
   run.map = mission.map; run.faction = 'wally'; run.difficulty = mission.difficulty; run.daynight = false;
 }
 G.cfg = run;
@@ -160,8 +160,10 @@ async function boot() {
 
   // ---------- players and starting forces ----------
   initPlayer(G.player, false);
+  if (run.credits) G.players[G.player].credits = run.credits;
   initPlayer(G.enemy, run.mode !== 'mp');
   initPlayer('neutral', false); G.players.neutral.credits = 0;
+  if (run.credits) G.players[G.enemy].credits = run.credits;
   if (mission) {
     G.allowed = mission.allowed ? [...mission.allowed, ...customTypes] : null;
     mctx = makeContext(mission, {
@@ -202,6 +204,7 @@ async function boot() {
 
 function setupBase(faction, pos) {
   new Building('conyard', faction, cellOf(pos.x) - 2, cellOf(pos.z) - 2, true);
+  if (run.army === false) return;
   // starting force rolls out toward the middle of the map
   const l = Math.hypot(pos.x, pos.z) || 1;
   const fx = -pos.x / l, fz = -pos.z / l;
@@ -258,6 +261,18 @@ function setupMenus() {
   const toggle = (label, get, set) => { const b = document.createElement('button'); b.className = 'btn' + (get() ? ' on' : ''); b.textContent = label; b.onclick = () => { set(!get()); b.classList.toggle('on', get()); }; opt.appendChild(b); };
   toggle('Day–night cycle', () => sk.daynight, v => { sk.daynight = v; });
   toggle('Dynamic weather', () => !sk.weather, v => { sk.weather = v ? null : 'clear'; });
+  toggle('Superweapons', () => sk.supers !== false, v => { sk.supers = v; });
+  toggle('Support powers', () => sk.powers !== false, v => { sk.powers = v; });
+  toggle('Supply crates', () => sk.crates !== false, v => { sk.crates = v; });
+  toggle('Tech buildings', () => sk.tech !== false, v => { sk.tech = v; });
+  toggle('Fog of war', () => sk.fog !== false, v => { sk.fog = v; });
+  toggle('Starting armies', () => sk.army !== false, v => { sk.army = v; });
+  // starting money cycles through a few amounts
+  const money = [2500, 4000, 7500, 15000];
+  const mb = document.createElement('button'); mb.className = 'btn on';
+  const showMoney = () => { mb.textContent = `💰 Start: $${(sk.credits || 4000).toLocaleString()}`; };
+  mb.onclick = () => { sk.credits = money[(money.indexOf(sk.credits || 4000) + 1) % money.length]; showMoney(); Audio.play('click'); };
+  showMoney(); opt.appendChild(mb);
   $('bStart').onclick = () => startWith(sk);
   // survival
   const sv = { mode: 'survival', map: 'valley', faction: 'wally', difficulty: 'normal', daynight: true, weather: null };
@@ -309,7 +324,8 @@ function setupMenus() {
   const again = () => { const last = sessionStorage.getItem('ws_last'); if (last && JSON.parse(last).mode !== 'mp') startWith(JSON.parse(last)); else location.href = location.pathname; };
   $('bRestart').onclick = again;
   $('bAgain').onclick = again;
-  $('bNext').onclick = () => startWith({ mode: 'campaign', mission: Math.min(MISSIONS.length - 1, run.mission + 1) });
+  $('bNext').onclick = () => startWith({ mode: 'campaign', mission: mission && mission.tutorial ? 0 : Math.min(MISSIONS.length - 1, run.mission + 1) });
+  $('bTutorial').onclick = () => startWith({ mode: 'tutorial' });
   $('bWatch').onclick = () => { $('end').style.display = 'none'; G.paused = false; };
   // ---- photo mode: hide the interface, slow time, free camera, save pictures ----
   let photoPrevSpeed = 1;
@@ -359,7 +375,7 @@ function setupMenus() {
   G.togglePause = togglePause;
 
   if (run.mode === 'title') { $('title').style.display = 'flex'; showPanel('menuMain'); revealAll(true); G.cfg.daynight = false; }
-  else if (run.mode === 'campaign') showBriefing();
+  else if (run.mode === 'campaign' || run.mode === 'tutorial') showBriefing();
   else if (run.mode === 'mp') {
     $('bSpeed').style.display = 'none';
     lockstep = new Lockstep(run, start);
@@ -369,7 +385,7 @@ function setupMenus() {
 }
 
 function showBriefing() {
-  $('briefNum').textContent = `MISSION ${run.mission + 1} OF ${MISSIONS.length} · ${MAPS[mission.map].name.toUpperCase()}`;
+  $('briefNum').textContent = mission.tutorial ? 'TRAINING · ' + MAPS[mission.map].name.toUpperCase() : `MISSION ${run.mission + 1} OF ${MISSIONS.length} · ${MAPS[mission.map].name.toUpperCase()}`;
   $('briefTitle').textContent = mission.title.toUpperCase();
   $('briefText').innerHTML = mission.story.map(p => `<p>${p}</p>`).join('');
   $('briefObj').innerHTML = mission.objectives.map(o => `<li>${o.text}</li>`).join('');
@@ -381,8 +397,10 @@ function renderObjectives() {
   if (run.mode === 'survival') { const el = $('objectives'); el.style.display = 'block'; el.innerHTML = survivalPanel(); return; }
   if (!mission) return;
   const el = $('objectives'); el.style.display = 'block';
-  el.innerHTML = '<div class="label" style="margin:0 0 3px">Objectives</div>' + mission.objectives.map(o => {
+  let seenOpen = false;
+  el.innerHTML = `<div class="label" style="margin:0 0 3px">${mission.tutorial ? 'Boot Camp' : 'Objectives'}</div>` + mission.objectives.map(o => {
     const st = mctx.status[o.id];
+    if (mission.tutorial && st === 'open') { if (seenOpen) return ''; seenOpen = true; const h = mission.hint(mctx); return `<div class="ob">▶ <b>${o.text}</b>${o.progress ? ` <b style="color:var(--accent)">${o.progress()}</b>` : ''}</div>${h ? `<div class="obHint">${h}</div>` : ''}`; }
     let extra = '';
     if (o.timer && st === 'open') { const left = Math.max(0, o.timer - G.time); extra = ` <b style="color:var(--accent)">${Math.floor(left / 60)}:${String(Math.floor(left % 60)).padStart(2, '0')}</b>`; }
     if (o.progress && st === 'open') extra = ` <b style="color:var(--accent)">${o.progress()}</b>`;
@@ -393,6 +411,7 @@ function renderObjectives() {
 function start() {
   Audio.initAudio();
   $('title').style.display = 'none';
+  if (run.fog === false) G.revealed = true;
   revealAll(!!G.revealed);
   G.started = true; G.paused = false;
   if (run.mode === 'skirmish') ais = [new AI(G.enemy)];
@@ -415,7 +434,8 @@ function endGame(win, text) {
   G.over = true;
   emit('end', win);
   Audio.announce(win ? 'Mission accomplished' : 'Mission failed');
-  if (mission && win) unlockNext(run.mission);
+  Audio.sting(win);
+  if (mission && win && !mission.tutorial) unlockNext(run.mission);
   setTimeout(() => {
     $('endTitle').textContent = win ? 'VICTORY' : 'DEFEAT';
     $('endTitle').style.color = win ? 'var(--accent)' : 'var(--red)';
@@ -423,27 +443,30 @@ function endGame(win, text) {
     const t = Math.floor(G.time);
     $('endStats').innerHTML = `<span>Mission time</span><span>${Math.floor(t / 60)}m ${t % 60}s</span>${run.mode === 'mp' ? '' : `<span>Difficulty</span><span>${DIFFICULTY[G.difficulty].label}</span>`}<span>Enemies destroyed</span><span>${G.stats.killed}</span><span>Units lost</span><span>${G.stats.lost}</span><span>Structures built</span><span>${G.stats.built}</span><span>Credits harvested</span><span>${Math.round(G.stats.harvested)}</span>`;
     recordHistory(99); drawHistory($('endGraph'));
-    $('bNext').style.display = mission && win && run.mission < MISSIONS.length - 1 ? '' : 'none';
+    $('bNext').style.display = mission && win && (mission.tutorial || run.mission < MISSIONS.length - 1) ? '' : 'none';
     $('bAgain').style.display = run.mode === 'mp' ? 'none' : '';
     $('end').style.display = 'flex';
   }, 2500);
 }
 
+// A side is beaten when it has no buildings left (walls, gates and mines don't count)
+const hasStructures = f => G.buildings.some(b => !b.dead && b.faction === f && !b.def.isMine && !b.def.isWall && !b.def.isGate);
+
 function checkEnd(dt) {
   winT -= dt; if (winT > 0 || G.over) return; winT = 1;
   if (G.surrendered) { endGame(G.surrendered !== G.player, G.surrendered === G.player ? 'You surrendered.' : 'The enemy has surrendered!'); return; }
-  if (mission) return; // missions decide victory themselves
+  const pAlive = hasStructures(G.player);
+  if (mission) { if (!pAlive) mctx.fail('All our buildings have been destroyed. Mission failed.'); return; }
   if (run.mode === 'survival') {
-    const alive = G.buildings.some(b => !b.dead && b.faction === G.player && !b.def.isMine && !b.def.isWall) || G.units.some(u => !u.dead && u.faction === G.player && u.type !== 'harvester');
-    if (!alive) {
+    if (!pAlive) {
       const { prev, isNew } = saveBest(run.map);
-      endGame(false, `You survived ${Math.max(0, survival.wave - 1)} waves. Score ${survival.score.toLocaleString()}${isNew ? ' - NEW BEST!' : ` (best ${prev.score.toLocaleString()})`}`);
+      endGame(false, `All your buildings were destroyed after ${Math.max(0, survival.wave - 1)} waves. Score ${survival.score.toLocaleString()}${isNew ? ' - NEW BEST!' : ` (best ${prev.score.toLocaleString()})`}`);
     }
     return;
   }
-  const has = f => G.buildings.some(b => !b.dead && b.faction === f && !b.def.isMine && !b.def.isWall) || G.units.some(u => !u.dead && u.faction === f && u.type !== 'harvester');
-  const pAlive = has(G.player), eAlive = has(G.enemy);
-  if (!pAlive || !eAlive) endGame(pAlive);
+  const eAlive = hasStructures(G.enemy);
+  if (!pAlive) endGame(false, 'All your buildings have been destroyed.');
+  else if (!eAlive) endGame(true, `Every ${FACTIONS[G.enemy].name} building has been destroyed!`);
 }
 
 function simStep(dt) {
@@ -471,10 +494,13 @@ function simStep(dt) {
   checkEnd(dt);
 }
 
-let last = performance.now();
+let last = performance.now(), musicLabelT = 0;
 function loop(now) {
   requestAnimationFrame(loop);
   const real = Math.min(0.05, (now - last) / 1000); last = now;
+  G.combatHeat = (G.combatHeat || 0) * Math.exp(-real / 5);
+  Audio.setIntensity(G.over || !G.started ? 0.15 : Math.min(1, (G.combatHeat || 0) / 10));
+  if ((musicLabelT -= real) < 0) { musicLabelT = 1; const b = $('bMusic'); if (b && !b.classList.contains('on')) { const l = Audio.musicLevel(); b.textContent = l > 0.62 ? '♪ War' : l < 0.28 ? '♪ Calm' : '♪ Battle'; } }
   // adaptive quality: drop resolution if the frame rate is poor
   fpsAcc += (now - (loop.lastNow || now)) / 1000; loop.lastNow = now; fpsN++;
   if (fpsAcc > 1.5) { autoTune(fpsN / fpsAcc); fpsAcc = 0; fpsN = 0; }

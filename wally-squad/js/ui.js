@@ -379,7 +379,7 @@ function pickAt(sx, sy) {
     if (p) { const d = p.distanceTo(ray.origin); if (d < bd) { bd = d; best = e; } }
   };
   for (const u of G.units) {
-    if (u.dead || (u.faction !== G.player && !u.mesh.visible)) continue;
+    if (u.dead || u.boarded || (u.faction !== G.player && !u.mesh.visible)) continue;
     const r = Math.max(0.75, u.def.radius * 1.1), h = u.isInf ? 2 : u.air ? 1.6 : 2.2;
     const y0 = u.air ? u.y - 1 : u.y;
     test(u, u.x - r, y0, u.z - r, u.x + r, y0 + h, u.z + r);
@@ -426,6 +426,10 @@ function commandAt(sx, sy, attackMove = false, queue = false) {
     Voices.say(units[0].type, 'attack');
     return;
   }
+  if (target && target.faction === G.player && target.kind === 'unit' && target.def.transport) {
+    const inf = units.filter(u => u.isInf && u !== target);
+    if (inf.length) { issue({ t: 'board', ids: inf.map(u => u.id), tid: target.id }); flashMarker(target.x, target.z, 0x55ff77); Audio.play('ack'); return; }
+  }
   if (target && target.faction === G.player && target.kind === 'building') {
     const eng = units.filter(u => u.type === 'engineer' && target.hp < target.maxHp);
     const harv = units.filter(u => u.type === 'harvester' && target.type === 'refinery');
@@ -459,7 +463,7 @@ export function updateMarkers(dt) {
 
 function boxSelect(x0, y0, x1, y1, add) {
   const minX = Math.min(x0, x1), maxX = Math.max(x0, x1), minY = Math.min(y0, y1), maxY = Math.max(y0, y1);
-  let list = G.units.filter(u => !u.dead && u.faction === G.player && (() => { const p = project(u.x, u.y + 0.8, u.z); return !p.behind && p.x >= minX && p.x <= maxX && p.y >= minY && p.y <= maxY; })());
+  let list = G.units.filter(u => !u.dead && !u.boarded && u.faction === G.player && (() => { const p = project(u.x, u.y + 0.8, u.z); return !p.behind && p.x >= minX && p.x <= maxX && p.y >= minY && p.y <= maxY; })());
   const combat = list.filter(u => u.type !== 'harvester');
   if (combat.length) list = combat; // prefer combat units over harvesters
   select(list, add);
@@ -572,6 +576,7 @@ function bindInput() {
     if (k === 'KeyA' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); selectArmy(); return; }
     if (k === 'KeyS' && !e.ctrlKey) { if (myUnits().length) issue({ t: 'stop', ids: myUnits().map(u => u.id) }); Audio.play('ack'); return; }
     if (k === 'KeyG') { const w = myUnits().filter(u => u.type === 'wallyman'); if (w.length) { issue({ t: 'ability', ids: w.map(u => u.id) }); Voices.say('wallyman', 'attack', true); } return; }
+    if (k === 'KeyU') { const a = myUnits().filter(u => u.def.transport && (u.passengers || []).length); if (a.length) { issue({ t: 'unload', ids: a.map(u => u.id) }); Audio.play('ack'); } return; }
     if (k === 'KeyH') { const b = G.buildings.find(b => b.faction === G.player && b.type === 'conyard') || G.buildings.find(b => b.faction === G.player); if (b) centerOn(b.x, b.z); return; }
     if (k === 'Space') { e.preventDefault(); if (G.alertAt) centerOn(G.alertAt.x, G.alertAt.z); return; }
     if (k === 'KeyR') { setMode(G.mode === 'repair' ? null : 'repair'); return; }
@@ -811,7 +816,7 @@ function refreshSelPanel(force) {
   const sel = G.selection.filter(alive);
   if (!sel.length) { panel.style.display = 'none'; selSig = ''; return; }
   panel.style.display = 'block';
-  const sig = sel.map(s => s.id).join(',') + '|' + sel.map(s => Math.ceil(s.frenzyCD || 0)).join(',') + (force ? Math.random() : '');
+  const sig = sel.map(s => s.id).join(',') + '|' + sel.map(s => Math.ceil(s.frenzyCD || 0) + ':' + (s.passengers ? s.passengers.length : 0)).join(',') + (force ? Math.random() : '');
   const first = sel[0];
   if (sel.length === 1) {
     const e = first; const d = e.def;
@@ -857,6 +862,11 @@ function refreshSelPanel(force) {
       if (wm.length) {
         const cd = Math.max(...wm.map(u => u.frenzyCD || 0));
         addBtn(cd > 0 ? `⚡ Frenzy (${Math.ceil(cd)}s)` : '⚡ Gatling Frenzy (G)', () => { issue({ t: 'ability', ids: wm.map(u => u.id) }); Voices.say('wallyman', 'attack', true); selSig = ''; }, '8 seconds of super-fast fire and +35% speed. 45 second cooldown.');
+      }
+      const apcs = myUnits().filter(u => u.def.transport);
+      if (apcs.length) {
+        const n = apcs.reduce((a, u) => a + (u.passengers || []).length, 0), cap = apcs.reduce((a, u) => a + u.def.transport, 0);
+        addBtn(`⏏ Unload (${n}/${cap}) (U)`, () => { issue({ t: 'unload', ids: apcs.map(u => u.id) }); Audio.play('ack'); setTimeout(() => refreshSelPanel(true), 150); }, 'Drop off the infantry inside. To load: select infantry and right-click (or tap) the APC.');
       }
       if (first.type === 'harvester') addBtn('⛏ Harvest', () => issue({ t: 'seek', ids: myUnits().map(u => u.id) }));
       addBtn('⌖ Focus (F)', () => centerOn(first.x, first.z));
@@ -960,6 +970,7 @@ export function drawOverlay() {
     if (p.behind || p.x < -20 || p.x > W + 20 || p.y < -20 || p.y > H + 20) continue;
     const w = u.isInf ? 22 : clamp(u.def.radius * 26, 26, 52);
     if (show) bar(u, p.x, p.y, w);
+    if (u.def.transport && (u.passengers || []).length) { for (let i = 0; i < u.def.transport; i++) { octx.fillStyle = i < u.passengers.length ? '#7dff9a' : 'rgba(0,0,0,0.5)'; octx.fillRect(p.x - 14 + i * 6, p.y - 8, 4, 4); } }
     if (u.stance && u.selected) { octx.font = '11px sans-serif'; octx.textAlign = 'center'; octx.fillText(u.stance === 'hold' ? '🛡' : '✋', p.x + w / 2 + 8, p.y + 6); }
     if (u.rank) { octx.fillStyle = '#ffd34a'; octx.font = 'bold 11px Rajdhani'; octx.textAlign = 'center'; octx.fillText('★'.repeat(u.rank), p.x, p.y - 3); }
     if (show && u.type === 'harvester') {
