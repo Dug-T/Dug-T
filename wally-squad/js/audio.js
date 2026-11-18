@@ -138,51 +138,179 @@ export function announce(text, faction, cooldown = 4) {
 if ('speechSynthesis' in window) speechSynthesis.onvoiceschanged = () => { voice = pickVoice(); };
 
 // ---------------- procedural battle music ----------------
+// Six tunes, played in random order. Each tune has its own tempo, key, chord progressions, drum style,
+// bass line, lead melody and arpeggios, arranged into sections:
+// intro · verse · chorus · breakdown · verse · chorus (about a minute and a half). The arrangement also
+// follows the fighting: calm = stripped back, battle = full band, war = extra drums, doubled lead.
 let musicOn = true;
 export function toggleMusic() { musicOn = !musicOn; if (musicBus) musicBus.gain.value = musicOn ? 0.22 : 0; return musicOn; }
-// Dynamic: the score follows the fighting. intensity 0 = calm (sparse drums and a soft pad),
-// ~0.5 = the normal battle loop, 1 = all-out war (double hats, fills, lead arpeggio, more drive).
 let target = 0.15, level = 0.15;
 export function setIntensity(x) { target = Math.max(0, Math.min(1, x)); }
 export function musicLevel() { return level; }
+const mtof = n => 440 * Math.pow(2, (n - 69) / 12);
+
 // short victory / defeat phrase over the top of the music
 export function sting(win) {
   if (!ctx || !musicOn) return;
-  const mtof = n => 440 * Math.pow(2, (n - 69) / 12), t0 = ctx.currentTime + 0.1;
+  const t0 = ctx.currentTime + 0.1;
   const notes = win ? [[57, 0], [61, 0.18], [64, 0.36], [69, 0.54], [73, 0.54], [76, 0.54]] : [[57, 0], [56, 0.3], [55, 0.6], [53, 0.9], [48, 0.9]];
   for (const [n, d] of notes) { tone(musicBus, t0 + d, win && d === 0.54 ? 1.6 : 0.5, 'square', mtof(n), 0, 0.08); tone(musicBus, t0 + d, 0.5, 'sawtooth', mtof(n - 12), 0, 0.06); }
 }
-function startMusic() {
-  // a driving minor-key loop: kick, snare, hats, bass line and a synth stab
-  const bpm = 112, beat = 60 / bpm;
-  const bassNotes = [45, 45, 48, 45, 43, 43, 41, 43]; // A2 C3 G2 F2
-  const stab = [[57, 60, 64], [57, 60, 64], [55, 59, 62], [53, 57, 60]];
-  const mtof = n => 440 * Math.pow(2, (n - 69) / 12);
-  let next = ctx.currentTime + 0.5, step = 0;
-  function schedule() {
-    // rise quickly when fighting starts, calm down slowly
-    level += (target - level) * (target > level ? 0.25 : 0.03);
-    const L = level, calm = L < 0.28, war = L > 0.62;
-    while (next < ctx.currentTime + 0.4) {
-      const t = next, s = step % 16, bar = Math.floor(step / 16) % 8;
-      const chord = stab[(bar / 2 | 0) % 4];
-      if (calm ? s === 0 || s === 8 : s % 4 === 0) tone(musicBus, t, 0.35, 'sine', 120, 38, calm ? 0.7 : 1.1);           // kick
-      if (war && (s === 14 || s === 7)) tone(musicBus, t, 0.25, 'sine', 120, 38, 0.8);                                  // extra kicks
-      if (!calm && s % 8 === 4) env(noise(musicBus, t, 0.2, 'bandpass', 1800, 0.7), t, 0.002, 0.5, 0.18);               // snare
-      if (war && bar === 7 && s >= 12) env(noise(musicBus, t, 0.12, 'bandpass', 2000, 0.7), t, 0.002, 0.25 + (s - 12) * 0.08, 0.1); // fill
-      if (!calm && (war || s % 2 === 1)) env(noise(musicBus, t, 0.05, 'highpass', 7000, 0.7), t, 0.001, war && s % 2 === 0 ? 0.1 : 0.18, 0.04); // hats
-      if (calm ? s % 8 === 0 : s % 2 === 0) {
-        const n = bassNotes[(Math.floor(step / 4)) % 8] - 12;
-        tone(musicBus, t, calm ? beat * 1.6 : beat * 0.45, calm ? 'triangle' : 'sawtooth', mtof(n), 0, calm ? 0.2 : war ? 0.26 : 0.22);
-      }
-      if (calm && s === 0 && bar % 2 === 0) for (const n of chord) tone(musicBus, t, beat * 7, 'sine', mtof(n), 0, 0.05); // soft pad
-      if (!calm && s === 0 && bar % 2 === 0) for (const n of chord) tone(musicBus, t, beat * 1.6, 'square', mtof(n), 0, 0.045);
-      if (!calm && s === 10 && bar % 4 === 3) for (const n of chord) tone(musicBus, t, beat * 0.5, 'square', mtof(n + 12), 0, 0.04);
-      if (war && s % 2 === 0) tone(musicBus, t, beat * 0.4, 'square', mtof(chord[(step / 2) % 3] + 24), 0, 0.022);      // lead arpeggio
-      next += beat / 4; step++;
-    }
+
+// chords: [root midi note, 'm' minor | 'M' major] one per bar
+const TRACKS = [
+  { name: 'Wally Squad Assemble', bpm: 128, key: 57, minor: true, drums: 'rock', bass: 'eighth', lead: 'square', arp: true,
+    verse: [[57, 'm'], [53, 'M'], [48, 'M'], [55, 'M']], chorus: [[53, 'M'], [55, 'M'], [57, 'm'], [57, 'm']], seed: 11 },
+  { name: 'Grimlock Rising', bpm: 140, key: 50, minor: true, drums: 'four', bass: 'octave', lead: 'saw', arp: false,
+    verse: [[50, 'm'], [50, 'm'], [46, 'M'], [45, 'M']], chorus: [[46, 'M'], [48, 'M'], [50, 'm'], [45, 'M']], seed: 23 },
+  { name: 'Crystal Rush', bpm: 168, key: 52, minor: true, drums: 'dnb', bass: 'synco', lead: 'pluck', arp: true,
+    verse: [[52, 'm'], [48, 'M'], [55, 'M'], [50, 'M']], chorus: [[48, 'M'], [50, 'M'], [52, 'm'], [52, 'm']], seed: 37 },
+  { name: 'Steel Thunder', bpm: 112, key: 55, minor: true, drums: 'half', bass: 'gallop', lead: 'saw', arp: false,
+    verse: [[55, 'm'], [55, 'm'], [51, 'M'], [53, 'M']], chorus: [[51, 'M'], [53, 'M'], [55, 'm'], [50, 'M']], seed: 41 },
+  { name: 'Lava Run', bpm: 150, key: 54, minor: true, drums: 'four', bass: 'gallop', lead: 'square', arp: true,
+    verse: [[54, 'm'], [50, 'M'], [52, 'M'], [49, 'M']], chorus: [[50, 'M'], [52, 'M'], [54, 'm'], [54, 'm']], seed: 53 },
+  { name: 'Victory Road', bpm: 134, key: 48, minor: false, drums: 'march', bass: 'octave', lead: 'square', arp: true,
+    verse: [[48, 'M'], [55, 'M'], [57, 'm'], [53, 'M']], chorus: [[53, 'M'], [55, 'M'], [48, 'M'], [48, 'M']], seed: 67 },
+];
+// song layout in bars
+const SECTIONS = [['intro', 4], ['verse', 8], ['chorus', 8], ['break', 4], ['verse', 8], ['chorus', 8]];
+const SONG_BARS = SECTIONS.reduce((a, s) => a + s[1], 0);
+const sectionAt = bar => { let b = bar; for (const [n, l] of SECTIONS) { if (b < l) return { name: n, bar: b, len: l }; b -= l; } return { name: 'chorus', bar: 0, len: 8 }; };
+
+// a catchy 2-bar melody per tune (fixed per tune so it is recognisable), built from the pentatonic
+// scale with chord tones on the strong beats
+const RHYTHMS = [
+  [1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0],
+  [1, 0, 1, 0, 1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
+  [1, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0],
+  [1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+];
+function seeded(seed) { let s = seed * 9301 + 49297; return () => { s = (s * 1103515245 + 12345) & 0x7fffffff; return s / 0x7fffffff; }; }
+function buildMelody(tr) {
+  const r = seeded(tr.seed);
+  const pent = tr.minor ? [0, 3, 5, 7, 10] : [0, 2, 4, 7, 9];
+  const rhythm = RHYTHMS[Math.floor(r() * RHYTHMS.length)];
+  const notes = [];
+  let deg = 2 + Math.floor(r() * 3); // index into a 2-octave pentatonic ladder
+  const ladder = []; for (let o = 0; o < 3; o++) for (const p of pent) ladder.push(tr.key + 12 + o * 12 + p - 12);
+  for (let s = 0; s < 32; s++) {
+    if (!rhythm[s]) { notes.push(null); continue; }
+    if (s % 8 === 0) deg = Math.max(2, Math.min(ladder.length - 3, deg + (r() < 0.5 ? -2 : 2)));
+    else deg = Math.max(1, Math.min(ladder.length - 2, deg + [-2, -1, -1, 1, 1, 2][Math.floor(r() * 6)]));
+    let len = 1; while (s + len < 32 && !rhythm[s + len] && len < 4) len++;
+    notes.push({ n: ladder[deg] + 12, len });
   }
-  setInterval(schedule, 100);
+  if (notes[30] === null && notes[28] === null) notes[28] = { n: tr.key + 24, len: 4 }; // resolve home at the end
+  return notes;
+}
+
+// ---- voices
+let pump, leadIn, delay, fb, wet, musicStarted = false;
+function synth(dest, t, dur, type, freq, gain, cutoff = 2400, cutEnd = 600, detune = 7, attack = 0.005) {
+  const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.Q.value = 2.5;
+  f.frequency.setValueAtTime(cutoff, t); f.frequency.exponentialRampToValueAtTime(Math.max(80, cutEnd), t + Math.max(0.05, dur));
+  const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(gain, t + attack);
+  g.gain.setValueAtTime(gain, t + Math.max(attack, dur * 0.6)); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  for (const d of detune ? [-detune, detune] : [0]) { const o = ctx.createOscillator(); o.type = type; o.frequency.value = freq; o.detune.value = d; o.connect(f); o.start(t); o.stop(t + dur + 0.05); }
+  f.connect(g); g.connect(dest);
+}
+const kick = (t, v = 1) => {
+  tone(musicBus, t, 0.4, 'sine', 150, 40, 1.2 * v);
+  env(noise(musicBus, t, 0.02, 'highpass', 3000), t, 0.001, 0.25 * v, 0.02);
+  pump.gain.cancelScheduledValues(t); pump.gain.setValueAtTime(0.45, t); pump.gain.linearRampToValueAtTime(1, t + 0.22); // sidechain pump
+};
+const snare = (t, v = 1) => { env(noise(musicBus, t, 0.22, 'bandpass', 1900, 0.8), t, 0.002, 0.55 * v, 0.2); tone(musicBus, t, 0.12, 'triangle', 220, 160, 0.3 * v); };
+const hat = (t, v = 1, open = false) => env(noise(pump, t, open ? 0.3 : 0.05, 'highpass', 8000, 0.7), t, 0.001, 0.16 * v, open ? 0.25 : 0.04);
+const tom = (t, f) => tone(musicBus, t, 0.3, 'sine', f, f * 0.55, 0.7);
+const crash = t => env(noise(musicBus, t, 1.8, 'highpass', 5000, 0.5), t, 0.002, 0.3, 1.6);
+
+let tr = null, melody = null, step = 0, next = 0, lastIdx = -1, onTrack = null;
+export function onTrackChange(fn) { onTrack = fn; }
+export function currentTrack() { return tr ? tr.name : ''; }
+function pickTrack(force) {
+  let i; do { i = Math.floor(Math.random() * TRACKS.length); } while (i === lastIdx && TRACKS.length > 1);
+  if (force !== undefined) i = force;
+  lastIdx = i; tr = TRACKS[i]; melody = buildMelody(tr); step = 0;
+  if (delay) delay.delayTime.setValueAtTime(60 / tr.bpm * 0.75, ctx.currentTime);
+  onTrack?.(tr.name);
+}
+// skip to another random tune (starts on the next beat)
+export function nextTrack() { if (!ctx) return ''; pickTrack(); next = ctx.currentTime + 0.15; return tr.name; }
+
+function startMusic() {
+  if (musicStarted) return; musicStarted = true;
+  pump = ctx.createGain(); pump.connect(musicBus);
+  leadIn = ctx.createGain(); leadIn.gain.value = 1; leadIn.connect(pump);
+  delay = ctx.createDelay(1.5); fb = ctx.createGain(); fb.gain.value = 0.3; wet = ctx.createGain(); wet.gain.value = 0.32;
+  leadIn.connect(delay); delay.connect(fb); fb.connect(delay); delay.connect(wet); wet.connect(pump);
+  pickTrack();
+  next = ctx.currentTime + 0.4;
+  setInterval(schedule, 90);
+}
+
+function schedule() {
+  level += (target - level) * (target > level ? 0.25 : 0.03);
+  const L = level, calm = L < 0.28, war = L > 0.62;
+  while (next < ctx.currentTime + 0.35) {
+    const t = next, sixteenth = 60 / tr.bpm / 4, beat = sixteenth * 4;
+    const s = step % 16, bar = Math.floor(step / 16);
+    if (bar >= SONG_BARS) { pickTrack(); continue; }
+    const sec = sectionAt(bar);
+    const prog = sec.name === 'chorus' ? tr.chorus : tr.verse;
+    const [root, q] = prog[bar % 4];
+    const chord = [root, root + (q === 'm' ? 3 : 4), root + 7];
+    const intro = sec.name === 'intro', brk = sec.name === 'break', chorus = sec.name === 'chorus';
+    const lastBarOfSection = sec.bar === sec.len - 1;
+    const full = !calm && !intro && !brk;
+
+    // ---- drums
+    if (s === 0 && sec.bar === 0 && (chorus || sec.name === 'verse')) crash(t);
+    const d = tr.drums;
+    const kickHit = d === 'four' ? s % 4 === 0 : d === 'dnb' ? s === 0 || s === 10 : d === 'half' ? s === 0 || s === 7 || (s === 10 && chorus) : d === 'march' ? s % 8 === 0 || s === 6 : s === 0 || s === 8 || s === 10;
+    const snareHit = d === 'half' ? s === 8 : s === 4 || s === 12;
+    if (lastBarOfSection && s >= 12 && !calm && !intro) { if (s % 2 === 0 || war) tom(t, [200, 170, 140, 110][(s - 12)] || 120); }
+    else {
+      if (kickHit && (!calm || s === 0) && !(brk && s !== 0)) kick(t, calm ? 0.7 : 1);
+      if (war && (s === 14 || s === 3) && !brk) kick(t, 0.7);
+      if (snareHit && full) snare(t);
+      if (d === 'march' && full && (s === 14 || s === 15)) snare(t, 0.35);
+      if (d === 'dnb' && full && (s === 7 || s === 15)) snare(t, 0.25); // ghost notes
+      if (!brk && (intro || !calm) && (war ? true : d === 'dnb' ? s % 2 === 0 : s % 2 === 1)) hat(t, s % 4 === 2 ? 1 : 0.6, d === 'four' && s % 4 === 2 && full);
+      if (calm && s % 4 === 2) hat(t, 0.4);
+    }
+
+    // ---- bass
+    const bn = root - 24;
+    const b = tr.bass;
+    const bassHit = calm || brk ? s === 0 : b === 'eighth' ? s % 2 === 0 : b === 'octave' ? s % 2 === 0 : b === 'gallop' ? [0, 2, 3, 4, 6, 7, 8, 10, 11, 12, 14, 15].includes(s) : [0, 3, 6, 10, 12].includes(s);
+    if (bassHit && !intro) {
+      const n = b === 'octave' && s % 4 === 2 ? bn + 12 : bn;
+      const len = calm || brk ? beat * 3.5 : sixteenth * (b === 'gallop' ? 1 : 1.8);
+      synth(pump, t, len, calm ? 'triangle' : 'sawtooth', mtof(n), calm ? 0.22 : 0.2, calm ? 600 : war ? 1600 : 1100, 160, 4);
+    }
+
+    // ---- pads / stabs
+    if (s === 0 && (calm || brk || intro || chorus)) for (const n of chord) synth(pump, t, beat * 3.8, 'sawtooth', mtof(n), calm || brk ? 0.035 : 0.03, 1200, 500, 12, 0.25);
+    if (full && !chorus && (s === 0 || s === 6 || s === 12) && tr.drums !== 'dnb') for (const n of chord) synth(pump, t, sixteenth * 1.5, 'square', mtof(n + 12), 0.025, 3000, 900, 5);
+
+    // ---- arpeggio (verses, battle and war)
+    if (tr.arp && !calm && (sec.name === 'verse' || (war && chorus)) ) {
+      const an = chord[[0, 1, 2, 1][s % 4]] + 12 + (s % 8 >= 4 ? 12 : 0);
+      synth(leadIn, t, sixteenth * 0.9, 'square', mtof(an), 0.035, 3800, 700, 3);
+    }
+
+    // ---- lead melody (choruses always; quieter while calm; doubled an octave up in war)
+    if (chorus || (brk && sec.bar >= 2)) {
+      const m = melody[(bar % 2) * 16 + s];
+      if (m) {
+        const g = calm ? 0.05 : 0.075, len = sixteenth * m.len * 0.95;
+        const ty = tr.lead === 'pluck' ? 'square' : tr.lead === 'saw' ? 'sawtooth' : 'square';
+        synth(leadIn, t, len, ty, mtof(m.n), g, tr.lead === 'pluck' ? 4500 : 3200, tr.lead === 'pluck' ? 500 : 1500, 6);
+        if (war) synth(leadIn, t, len, 'sawtooth', mtof(m.n + 12), 0.03, 4000, 1500, 9);
+      }
+    }
+    next += sixteenth; step++;
+  }
 }
 
 export const sfx = { play, explosion };

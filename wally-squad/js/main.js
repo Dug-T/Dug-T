@@ -453,6 +453,8 @@ function setupMenus() {
     const once = () => { window.removeEventListener('pointerup', once, true); if (!document.fullscreenElement) goFull(); };
     window.addEventListener('pointerup', once, true);
   }
+  Audio.onTrackChange(name => { $('bMusic').title = `Now playing: ${name} - click to turn the music off`; if (G.started && !G.over) UI.message(`♪ Now playing: ${name}`); });
+  $('bNextTune').onclick = () => { Audio.initAudio(); const n = Audio.nextTrack(); if (!G.started) UI.message?.(`♪ ${n}`); };
   $('bMusic').onclick = () => { Audio.initAudio(); const on = Audio.toggleMusic(); $('bMusic').classList.toggle('on', !on); $('bMusic').textContent = on ? '♪ Music' : '♪ Off'; };
   $('bIdle').onclick = () => UI.selectNextIdle();
   const speeds = [1, 1.5, 2, 0.5];

@@ -99,7 +99,15 @@ Both factions share the basic army: riflemen, rocket troopers, Scorchers, engine
 - **🔥 Kill streaks:** quick kills in a row get a banner and a shout (Double kill, Triple kill, Rampage, Unstoppable and more). The end screen shows your **MVP** unit and your best streak.
 - **Unit voices:** select the Scorcher and he shouts "Wally Man to the rescue!"
 - **🚚 Squad Carrier APC** (War Factory, needs a Barracks): an armoured troop carrier with a machine gun. To load up to 5 infantry, select them and right-click (or tap) the APC. Press Unload (`U`) to drop them off. Green pips show how many are inside. If the APC is destroyed, its passengers bail out wounded.
-- **🎵 Dynamic music:** the soundtrack follows the fighting. It is calm and sparse in quiet moments, becomes the full battle loop in a skirmish, and goes to all-out war (double hats, drum fills and a lead arpeggio) in big fights. The Music button shows the current mood. Victory and defeat each play a short phrase.
+- **🎵 Soundtrack:** six original tunes, shuffled at random. A new one starts every minute and a half or so, and **⏭** in the top bar skips to another.
+  - **Wally Squad Assemble:** a heroic rock march.
+  - **Grimlock Rising:** a dark, four-on-the-floor stomp.
+  - **Crystal Rush:** fast drum & bass.
+  - **Steel Thunder:** heavy half-time with a galloping bass.
+  - **Lava Run:** an urgent chase.
+  - **Victory Road:** an upbeat major-key march.
+  - Each tune has its own tempo, key, chords, drum groove, bass line and lead melody, arranged into an intro, verses, catchy choruses and a breakdown. It also has crashes and tom fills, sidechain pumping and an echoing lead.
+  - **Dynamic:** the music follows the fighting. It is stripped back when calm, the full band in battle, and adds extra kicks, 16th-note hats and an octave-doubled lead in all-out war. The Music button shows the mood, and "♪ Now playing" names each new tune. Victory and defeat each play a short phrase.
 - **Unit stances:** in the selection panel, choose Aggressive (chase enemies), Hold Position (shoot only what's in range and never move) or Hold Fire (never shoot unless ordered, good for sneaking).
 - **📷 Photo mode** (pause menu or `F9`): hides the interface and slows or freezes time. You can zoom right in and tilt the camera (`Z`/`C` or Shift + wheel), then save a picture.
 - **Graphics settings** (main menu and pause menu):
