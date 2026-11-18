@@ -29,6 +29,8 @@ import { updateCrates, animateCrates, placeTechBuildings, recordHistory, drawHis
 import { updatePowers } from './powers.js';
 import { initAchievements, checkAchievements, buildMedals } from './achievements.js';
 import { registerCustomMaps, buildMapEditor } from './mapeditor.js';
+import { updateOrientation } from './orient.js';
+updateOrientation();
 import { initSurvival, updateSurvival, survivalPanel, saveBest, bestScores, survival } from './survival.js';
 
 const $ = id => document.getElementById(id);
@@ -41,7 +43,6 @@ let ais = [];
 let winT = 0, missionT = 0;
 let fpsAcc = 0, fpsN = 0;
 let mission = null, mctx = null, lockstep = null;
-const portraitBlock = matchMedia('(orientation: portrait) and (pointer: coarse)');
 
 // ---------------------------------------------------------------- configuration for this run
 // A game is started by storing a config in sessionStorage and reloading; no config = main menu.
@@ -483,7 +484,7 @@ function loop(now) {
     lockstep.update(real, simStep);
     dt = G.time - t0;
   } else {
-    dt = G.started && !G.paused && !portraitBlock.matches ? real * G.speed : 0;
+    dt = G.started && !G.paused ? real * G.speed : 0;
     if (dt > 0) simStep(dt);
   }
   G.dt = dt;
@@ -499,6 +500,7 @@ function loop(now) {
   updateVision(Math.max(dt, real * 0.5));
   updateFX(dt);
   updateWeatherFX(dt, real);
+  updateOrientation();
   UI.checkSize();
   UI.updateCamera(real);
   UI.updateHover(real);

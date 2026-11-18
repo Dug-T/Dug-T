@@ -40,7 +40,7 @@ function toast(m) {
   const el = document.createElement('div');
   el.className = 'medalToast';
   el.innerHTML = `<div class="mi">${m.icon}</div><div><div class="mt">MEDAL UNLOCKED</div><div class="mn">${m.name}</div><div class="md">${m.desc}</div></div>`;
-  document.body.appendChild(el);
+  (document.getElementById('app') || document.body).appendChild(el);
   G.sfx?.play('promote');
   requestAnimationFrame(() => el.classList.add('show'));
   setTimeout(() => el.classList.remove('show'), 4200);

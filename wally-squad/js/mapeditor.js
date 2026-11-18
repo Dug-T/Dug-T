@@ -2,6 +2,7 @@
 // with a live preview. Saved maps join the map lists for Skirmish, Survival and online battles.
 import { MAPS, THEMES } from './maps.js';
 import { previewMap } from './terrain.js';
+import { elemPos } from './orient.js';
 
 const KEY = 'ws_custom_maps';
 export const loadMaps = () => { try { return JSON.parse(localStorage.getItem(KEY) || '[]'); } catch { return []; } };
@@ -110,7 +111,7 @@ export function buildMapEditor(el, onPlay) {
     d.lakes.forEach((l, i) => test(l, 'lake', i, 0, l.r));
     return best;
   };
-  const evPos = e => { const r = cv.getBoundingClientRect(); return toWorld((e.clientX - r.left) / r.width * S, (e.clientY - r.top) / r.height * S); };
+  const evPos = e => { const p = elemPos(cv, e); return toWorld(p.x / p.w * S, p.y / p.h * S); };
   const clampW = w => ({ x: Math.max(-118, Math.min(118, w.x)), z: Math.max(-118, Math.min(118, w.z)) });
   cv.onpointerdown = e => {
     e.preventDefault();

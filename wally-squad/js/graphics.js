@@ -1,6 +1,7 @@
 // Graphics settings: resolution (including supersampling), shadow quality, bloom, FPS counter and
 // automatic quality. Saved in the browser and applied live.
 import * as THREE from 'three';
+import { appSize } from './orient.js';
 
 export const PRESETS = {
   low:    { label: 'Low',    maxDpr: 1,   scale: 0.85, shadows: 'off',  bloom: false, samples: 0 },
@@ -80,7 +81,7 @@ export function buildGraphicsPanel(el) {
     const res = document.createElement('div'); res.className = 'gfxRow';
     const r = document.createElement('input'); r.type = 'range'; r.min = 50; r.max = 150; r.step = 5; r.value = Math.round(gfx.scale * 100); r.className = 'dsgRange';
     const v = document.createElement('b');
-    const upd = () => { const pr = pixelRatio(); v.textContent = `${r.value}%  (${Math.round(innerWidth * pr)}×${Math.round(innerHeight * pr)})`; };
+    const upd = () => { const pr = pixelRatio(); const A = appSize(); v.textContent = `${r.value}%  (${Math.round(A.w * pr)}×${Math.round(A.h * pr)})`; };
     r.oninput = () => { gfx.scale = r.value / 100; gfx.preset = 'custom'; save(); apply(); upd(); };
     upd(); res.append(r, v);
     el.append(label('Resolution scale (over 100% = supersampling, sharpest image)'), res);

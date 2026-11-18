@@ -52,7 +52,7 @@ Both factions share the basic army: riflemen, rocket troopers, Scorchers, engine
 - **Superweapons:** each one charges up with a countdown, shown in the sidebar for both sides. The computer opponent uses its superweapon too.
 - **Stealth:** Shade tanks are invisible until they fire or an enemy gets close.
 - **Unit voices:** record your own lines (up to 3 takes per line), or let the computer voice play. Voice packs can be exported and imported so you can swap them with friends.
-- **Landscape only on phones and tablets:** held upright, the game pauses and asks you to rotate. **⛶ Fullscreen** (top bar) hides the browser bars and, where the phone allows it, locks the screen to landscape.
+- **Landscape only on phones and tablets:** websites can't stop a phone from rotating the page, so when the phone is held upright the whole game is drawn turned 90°. It stays horizontal whichever way you hold the phone, and taps are translated to match. **⛶ Fullscreen** (top bar) hides the browser bars and, on phones that allow it, also locks the screen to landscape.
 - **Support powers:** once you have the right buildings, they recharge and appear above the build tabs.
   - 📡 **Recon Sweep** (needs a Comms Center) reveals an area for 20 seconds.
   - 🪂 **Paradrop** (needs a Barracks and Comms Center) drops 7 troopers by parachute.

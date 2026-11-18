@@ -14,6 +14,7 @@ import { makeUnitModel, makeBuildingModel, makeGhost } from './models.js';
 import { formationSlots } from './pathfind.js';
 import { fogUniforms } from './materials.js';
 import * as Audio from './audio.js';
+import { elemPos, appPos, appSize } from './orient.js';
 
 const $ = id => document.getElementById(id);
 const raycaster = new THREE.Raycaster();
@@ -45,13 +46,11 @@ export function initUI() {
 
 // Some phones report the old size during rotation, so also check every frame and resize if it changed.
 export function checkSize() {
-  const r = view.getBoundingClientRect();
-  if (Math.abs(r.width - W) > 1 || Math.abs(r.height - H) > 1) resize();
+  if (Math.abs(view.clientWidth - W) > 1 || Math.abs(view.clientHeight - H) > 1) resize();
 }
 
 export function resize() {
-  const r = view.getBoundingClientRect();
-  W = Math.max(1, r.width); H = Math.max(1, r.height);
+  W = Math.max(1, view.clientWidth); H = Math.max(1, view.clientHeight);
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
   overlay.width = W * dpr; overlay.height = H * dpr; octx.setTransform(dpr, 0, 0, dpr, 0, 0);
   G.onResize?.(W, H);
@@ -190,7 +189,7 @@ function showTip(type, e) {
   tip.innerHTML = `<b>${d.name}</b> — $${d.cost}<br>${d.desc}${pw}${d.hp ? `<br>Armour: ${d.hp}` : ''}${ok ? '' : `<br><span class="req">Requires: ${reqText(type)}</span>`}<br><span style="color:var(--dim)">Left-click build · Right-click hold/cancel</span>`;
   tip.style.display = 'block'; moveTip(e);
 }
-function moveTip(e) { const tip = $('tooltip'); tip.style.left = Math.min(innerWidth - 250, e.clientX - 250) + 'px'; tip.style.top = Math.min(innerHeight - 120, e.clientY + 10) + 'px'; }
+function moveTip(e) { const tip = $('tooltip'), p = appPos(e), A = appSize(); tip.style.left = Math.max(4, Math.min(A.w - 250, p.x - 250)) + 'px'; tip.style.top = Math.min(A.h - 120, p.y + 10) + 'px'; }
 function hideTip() { $('tooltip').style.display = 'none'; }
 
 let sideT = 0;
@@ -486,7 +485,7 @@ function bindInput() {
   gl.addEventListener('pointerdown', e => {
     if (e.pointerType === 'touch') return;
     Audio.initAudio();
-    const r = view.getBoundingClientRect(); const x = e.clientX - r.left, y = e.clientY - r.top;
+    const { x, y } = elemPos(view, e);
     if (e.button === 0) {
       if (G.placing) {
         if (BUILDINGS[G.placing].isWall && G.mouse.ground) { wallStart = placementCell(G.mouse.ground.x, G.mouse.ground.z); return; }
@@ -503,7 +502,7 @@ function bindInput() {
   });
   window.addEventListener('pointermove', e => {
     if (e.pointerType === 'touch') return;
-    const r = view.getBoundingClientRect(); const x = e.clientX - r.left, y = e.clientY - r.top;
+    const { x, y } = elemPos(view, e);
     if (G.mouse.x !== x || G.mouse.y !== y) G.mouse.moved = true;
     G.mouse.x = x; G.mouse.y = y;
     if (drag) { drag.x1 = x; drag.y1 = y; if (Math.hypot(x - drag.x0, y - drag.y0) > 6) drag.active = true; }
@@ -522,7 +521,7 @@ function bindInput() {
   });
   window.addEventListener('pointerup', e => {
     if (e.pointerType === 'touch') return;
-    const r = view.getBoundingClientRect(); const x = e.clientX - r.left, y = e.clientY - r.top;
+    const { x, y } = elemPos(view, e);
     if (e.button === 0 && G.placing && wallStart) { tryPlace(); return; }
     if (e.button === 0 && drag) {
       if (drag.active) boxSelect(drag.x0, drag.y0, drag.x1, drag.y1, e.shiftKey);
@@ -592,7 +591,7 @@ function bindInput() {
   // minimap
   const mm = $('minimap');
   let mmDown = false;
-  const mmPos = e => { const r = mm.getBoundingClientRect(); return { x: (e.clientX - r.left) / r.width * WORLD - HALF, z: (e.clientY - r.top) / r.height * WORLD - HALF }; };
+  const mmPos = e => { const p = elemPos(mm, e); return { x: p.x / p.w * WORLD - HALF, z: p.y / p.h * WORLD - HALF }; };
   mm.addEventListener('contextmenu', e => e.preventDefault());
   mm.addEventListener('pointerdown', e => {
     e.preventDefault(); Audio.initAudio();
@@ -700,8 +699,7 @@ function bindTouch(gl) {
   let start = null, pinch = null, longT = null;
   gl.addEventListener('touchstart', e => {
     e.preventDefault(); Audio.initAudio();
-    const r = view.getBoundingClientRect();
-    for (const t of e.changedTouches) pts.set(t.identifier, { x: t.clientX - r.left, y: t.clientY - r.top });
+    for (const t of e.changedTouches) { const p = elemPos(view, t); pts.set(t.identifier, { x: p.x, y: p.y }); }
     if (pts.size === 1) {
       const p = [...pts.values()][0];
       start = { ...p, cx: G.camera.x, cz: G.camera.z, moved: false, t: performance.now(), box: touchBoxMode };
@@ -716,8 +714,7 @@ function bindTouch(gl) {
   }, { passive: false });
   gl.addEventListener('touchmove', e => {
     e.preventDefault();
-    const r = view.getBoundingClientRect();
-    for (const t of e.changedTouches) pts.set(t.identifier, { x: t.clientX - r.left, y: t.clientY - r.top });
+    for (const t of e.changedTouches) { const p = elemPos(view, t); pts.set(t.identifier, { x: p.x, y: p.y }); }
     if (pinch && pts.size >= 2) {
       const [a, b] = [...pts.values()];
       const d = Math.hypot(a.x - b.x, a.y - b.y);
