@@ -115,6 +115,7 @@ export class Unit {
     this.legs = []; this.mesh.traverse(o => { if (o.name === 'leg') this.legs.push(o); });
     this.cape = this.mesh.getObjectByName('cape'); this.barrels = this.mesh.getObjectByName('barrels');
     this.loadMesh = this.mesh.getObjectByName('load');
+    this.fans = this.mesh.getObjectByName('fans');
     if (!this.isInf && !this.air) { this.lights = makeHeadlights(this.def.radius); this.mesh.add(this.lights); }
     G.three.scene.add(this.mesh);
     this.ring = null;
@@ -138,6 +139,7 @@ export class Unit {
   moveTo(x, z, opts = {}) {
     if (!opts.keepWaypoints) this.waypoints = null;
     this.order = { type: opts.attackMove ? 'attackMove' : 'move', x, z };
+    if (opts.patrol) this.order.patrol = opts.patrol;
     if (!opts.keepTarget) this.target = null;
     this.requestPath(x, z);
     if (this.type === 'harvester' && !opts.harvest) this.hState = 'manual';
@@ -153,9 +155,17 @@ export class Unit {
   }
   // Wally Man's special ability: Gatling Frenzy
   frenzy() {
-    if (this.type !== 'wallyman' || this.frenzyCD > 0 || this.dead) return false;
-    this.frenzyT = 8; this.frenzyCD = 45;
-    FX.sparkBurst(this.x, this.y + 1.2, this.z, 30, [3.5, 1.5, 0.4, 1]);
+    if ((this.type !== 'wallyman' && this.type !== 'warlord') || this.frenzyCD > 0 || this.dead) return false;
+    if (this.type === 'warlord') {
+      // War Cry: every friendly fighter close by (and Grak himself) fires much faster for 6 seconds
+      this.frenzyCD = 55;
+      for (const u of G.units) if (!u.dead && !u.boarded && u.faction === this.faction && u.weapon && Math.hypot(u.x - this.x, u.z - this.z) < 13) { u.frenzyT = 6; FX.sparkBurst(u.x, u.y + 1.2, u.z, 8, [4, 0.8, 0.3, 1]); }
+      FX.sparkBurst(this.x, this.y + 1.6, this.z, 40, [4, 0.8, 0.3, 1]);
+      if (isVisibleAt(this.x, this.z)) G.camera.shake = Math.max(G.camera.shake || 0, 0.4);
+    } else {
+      this.frenzyT = 8; this.frenzyCD = 45;
+      FX.sparkBurst(this.x, this.y + 1.2, this.z, 30, [3.5, 1.5, 0.4, 1]);
+    }
     if (this.faction === G.player) G.sfx?.play('promote', this.x, this.z);
     return true;
   }
@@ -185,7 +195,7 @@ export class Unit {
 
   requestPath(x, z, ignoreId = 0) {
     if (this.air) { this.path = [{ x, z }]; this.pi = 0; return; }
-    this.path = findPath(this.x, this.z, x, z, { ignoreId, gate: FACIDX[this.faction] });
+    this.path = findPath(this.x, this.z, x, z, { ignoreId, gate: FACIDX[this.faction], hover: !!this.def.hover });
     this.pi = 0; this.stuckT = 0;
     this.pathGoal = { x, z, ignoreId };
   }
@@ -197,7 +207,9 @@ export class Unit {
     if (this.boarded) { this.x = this.boarded.x; this.z = this.boarded.z; this.y = this.boarded.y; return; } // riding inside an APC
     if (this.order && this.order.type === 'board') { this.boardLogic(); }
     if (this.def.selfRepair && this.hp < this.maxHp * 0.5) this.hp = Math.min(this.maxHp * 0.5, this.hp + 6 * dt);
-    if (this.rank >= 2 && this.hp < this.maxHp) this.hp = Math.min(this.maxHp, this.hp + 2 * dt);
+    if (this.rank >= 2 && this.hp < this.maxHp) this.hp = Math.min(this.maxHp, this.hp + (this.rank >= 3 ? 6 : 2) * dt);
+    if (this.rank >= 3 && Math.random() < dt * 3 && this.mesh.visible) FX.sparkBurst(this.x, this.y + (this.isInf ? 1.9 : 2.4), this.z, 1, [4, 3.2, 0.8, 1]); // golden glint
+    if (this.empT > 0) { this.empT -= dt; if (Math.random() < dt * 10 && this.mesh.visible) FX.sparkBurst(this.x, this.y + 1.2, this.z, 2, [1.2, 2.5, 5, 1]); this.path = null; this.syncMesh(dt); return; } // knocked out by an EMP
     this.cool -= dt; this.cool2 -= dt;
     if (this.frenzyCD > 0) this.frenzyCD -= dt;
     if (this.frenzyT > 0) {
@@ -263,7 +275,7 @@ export class Unit {
     const useW = canTarget(w, t) ? w : this.weapon2;
     const range = useW.range * (this.rank ? 1.05 : 1) * (upg(this.faction, 'optics') ? 1.2 : 1);
     // leash for auto targets
-    if ((!this.order || this.order.type !== 'attack') && this.guardPos && Math.hypot(this.x - this.guardPos.x, this.z - this.guardPos.z) > this.def.sight * 1.6 && this.order?.type !== 'attackMove') {
+    if ((!this.order || this.order.type !== 'attack') && this.guardPos && Math.hypot(this.x - this.guardPos.x, this.z - this.guardPos.z) > this.def.sight * (this.target === this.retal ? 3 : 1.6) && this.order?.type !== 'attackMove') { // chase whoever shot us further
       this.target = null; this.path = null; return;
     }
     if ((d > range || (useW.minRange && d < useW.minRange)) && this.stance === 'hold' && (!this.order || this.order.type !== 'attack')) { this.target = null; return; } // hold position: never chase
@@ -285,6 +297,7 @@ export class Unit {
     }
     // in range: stop and shoot
     if (this.path) { this.path = null; }
+    if (!(this.frenzyCD > 0) && (this.type === 'wallyman' || this.type === 'warlord') && G.players[this.faction]?.isAI) this.frenzy();
     const aimed = this.aimTurret(dt, t);
     if (aimed && this.cool <= 0 && canTarget(w, t)) {
       this.cool = w.rof * (0.9 + srand() * 0.2) * (this.frenzyT > 0 ? 0.4 : 1);
@@ -494,8 +507,14 @@ export class Unit {
         if (this.pi >= this.path.length) {
           this.path = null;
           if (this.order && (this.order.type === 'move' || this.order.type === 'attackMove')) {
+            const pt = this.order.patrol;
             this.order = null;
-            const w = this.waypoints && this.waypoints.shift();
+            if (pt) {
+              // patrol: walk back to the other end, fighting anything met on the way
+              const toA = Math.hypot(this.x - pt.bx, this.z - pt.bz) < Math.hypot(this.x - pt.ax, this.z - pt.az);
+              this.moveTo(toA ? pt.ax : pt.bx, toA ? pt.az : pt.bz, { attackMove: true, patrol: pt });
+            }
+            const w = !pt && this.waypoints && this.waypoints.shift();
             if (w) this.moveTo(w.x, w.z, { attackMove: w.am, keepWaypoints: true });
           }
         }
@@ -560,7 +579,7 @@ export class Unit {
     const cx = cellOf(x), cz = cellOf(z);
     if (!inGrid(cx, cz)) return false;
     const i = idx(cx, cz);
-    if (T.blocked[i]) return false;
+    if (T.blocked[i] && !(this.def.hover && T.water[i] && !T.tree[i])) return false;
     const b = T.bld[i];
     if (b) {
       if (this.type === 'harvester' && this.refinery && b === this.refinery.id) return true;
@@ -602,8 +621,10 @@ export class Unit {
         this.barrels.rotation.z += this.spin * dt;
       }
     } else {
-      this.y = gy;
-      m.position.set(this.x, gy, this.z);
+      this.y = this.def.hover ? Math.max(gy, WATER_LEVEL) + 0.15 + Math.sin(G.time * 3 + this.id) * 0.06 : gy; // hovercraft float over water and lava
+      if (this.fans) for (const f of this.fans.children) f.rotation.z += dt * 30;
+      if (this.def.hover && this.speedNow > 1 && Math.random() < dt * 8 && this.mesh.visible) FX.dust(this.x - Math.sin(this.heading) * 1.5, this.z - Math.cos(this.heading) * 1.5, 0.6);
+      m.position.set(this.x, this.y, this.z);
       normalAt(this.x, this.z, _n);
       if (!this.sn) this.sn = _n.clone();
       this.sn.lerp(_n, Math.min(1, dt * 6)).normalize();
@@ -648,7 +669,8 @@ export class Unit {
     if (killer && killer.kind === 'unit' && !killer.dead) {
       killer.kills++;
       if (killer.faction === G.player && killer.kills > (G.mvp?.kills || 0)) G.mvp = { kills: killer.kills, name: killer.hero ? 'Wally Man (Hero)' : killer.def.name, type: killer.type };
-      const r = killer.kills >= 6 ? 2 : killer.kills >= 3 ? 1 : 0;
+      const r = killer.kills >= 10 ? 3 : killer.kills >= 6 ? 2 : killer.kills >= 3 ? 1 : 0;
+      if (r === 3 && killer.rank < 3) { FX.sparkBurst(killer.x, killer.y + 1.5, killer.z, 40, [4, 3.2, 0.8, 1]); if (killer.faction === G.player) G.announce?.(`${killer.hero ? 'Wally Man' : killer.def.name} is now HEROIC!`, G.player, 2); emit('heroic', killer); }
       if (r > killer.rank) { killer.rank = r; if (killer.faction === G.player) G.sfx?.play('promote', killer.x, killer.z); }
     }
     if (this.faction === G.player) { G.stats.lost++; G.announce?.('Unit lost', G.player, 6); }
@@ -937,8 +959,9 @@ export class Building {
       const px = this.x + rr(-0.4, 0.4) * this.def.w * CELL, pz = this.z + rr(-0.4, 0.4) * this.def.h * CELL;
       if (frac < 0.3) FX.fireSmoke(px, this.baseY + 2, pz, 1.2); else FX.blackSmoke(px, this.baseY + 2.2, pz, 1.2);
     }
+    if (this.empT > 0) { this.empT -= dt; if (Math.random() < dt * 8 && this.mesh.visible) FX.sparkBurst(this.x + rr(-1, 1) * this.def.w, this.baseY + 2, this.z + rr(-1, 1) * this.def.h, 2, [1.2, 2.5, 5, 1]); }
     // defensive weapon
-    if (this.def.weapon && this.buildAnim >= 1) this.defend(dt);
+    if (this.def.weapon && this.buildAnim >= 1 && !(this.empT > 0)) this.defend(dt);
     if (this.passengers && this.passengers.length) this.garrisonFire(dt);
     if (this.def.tech) techEffect(this, dt);
     if (this.faction !== G.player) this.mesh.visible = !!T.explored[idx(cellOf(this.x), cellOf(this.z))] || G.revealed;
@@ -1236,7 +1259,7 @@ function impact(p) {
 }
 
 function hit(src, w, target, at) {
-  let dmg = w.damage * (src.rank === 2 ? 1.5 : src.rank === 1 ? 1.25 : 1) * (upg(src.faction, 'shells') ? 1.2 : 1);
+  let dmg = w.damage * (src.rank === 3 ? 1.75 : src.rank === 2 ? 1.5 : src.rank === 1 ? 1.25 : 1) * (upg(src.faction, 'shells') ? 1.2 : 1);
   damage(target, dmg * (WARHEADS[w.warhead][target.kind === 'building' ? 'building' : target.def.armor] ?? 1), src);
   if (w.splash) splash(src, w, at.x, at.z, w.splash, src.faction, target);
 }
@@ -1256,6 +1279,24 @@ function splash(src, w, x, z, r, faction, except) {
   }
 }
 
+const helpBuf = [];
+// should u switch to attacking `src`, which just shot it (or a friend)?
+function retaliate(u, src) {
+  if (u.dead || u.boarded || !u.weapon || u.stance === 'holdfire' || u.def.heals || u.def.repairs) return;
+  if (u.order && u.order.type !== 'attackMove') return; // a direct order (move, attack, board...) wins
+  const can = canTarget(u.weapon, src) || (u.weapon2 && canTarget(u.weapon2, src));
+  if (!can) return;
+  const cur = u.target;
+  if (cur && alive(cur) && cur !== src) {
+    // keep a unit target we can already hit; drop buildings and out-of-range targets for the shooter
+    const w = canTarget(u.weapon, cur) ? u.weapon : u.weapon2;
+    if (cur.kind === 'unit' && w && distTo(cur, u.x, u.z) <= w.range) return;
+  }
+  if (u.stance === 'hold') { const w = canTarget(u.weapon, src) ? u.weapon : u.weapon2; if (distTo(src, u.x, u.z) > w.range) return; }
+  u.target = src; u.retal = src;
+  u.guardPos = u.guardPos || { x: u.x, z: u.z };
+}
+
 export function damage(target, amount, src, kind) {
   if (!alive(target)) return;
   if (kind === 'c4') {
@@ -1272,9 +1313,13 @@ export function damage(target, amount, src, kind) {
     else G.announce?.('Unit under attack', G.player, 30);
     G.alertAt = { x: target.x, z: target.z, t: G.time };
   }
-  // retaliate
-  if (target.kind === 'unit' && src && alive(src) && !target.target && target.weapon && target.stance !== 'holdfire' && (!target.order || target.order.type === 'attackMove')) {
-    if (canTarget(target.weapon, src) || (target.weapon2 && canTarget(target.weapon2, src))) { target.target = src; target.guardPos = target.guardPos || { x: target.x, z: target.z }; }
+  // fight back: infantry and vehicles turn on whoever shoots them, and idle friends nearby join in
+  if (target.kind === 'unit' && src && alive(src) && src.faction !== target.faction && src.faction !== 'neutral') {
+    retaliate(target, src);
+    if (G.time - (target.helpT ?? -9) > 1) {
+      target.helpT = G.time;
+      for (const u of unitsNear(target.x, target.z, 11, helpBuf)) if (u !== target && u.faction === target.faction && !u.target && !u.order) retaliate(u, src);
+    }
   }
   if (target.kind === 'unit' && target.type === 'harvester' && src && alive(src) && target.hState !== 'unload') {
     // harvesters flee home when attacked

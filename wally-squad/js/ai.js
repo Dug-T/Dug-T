@@ -132,7 +132,7 @@ export class AI {
     if (P.credits < reserve) return;
     if (this.saving && P.credits < 1600 && this.army.size >= 0 && this.ownCombat() > 6) return;
     if (P.queues.infantry.items.length < 2) {
-      const opts = ['rifle', 'rifle', 'rocket', 'rocket', 'flamer', 'engineer', 'medic', 'wallyman'].filter(t => hasReqs(this.f, t));
+      const opts = ['rifle', 'rifle', 'rocket', 'rocket', 'flamer', 'engineer', 'medic', 'wallyman', 'warlord'].filter(t => hasReqs(this.f, t));
       if (hasReqs(this.f, 'wally') && srand() < 0.2) opts.push('wally');
       if (opts.length) {
         let t = opts[Math.floor(srand() * opts.length)];
@@ -141,7 +141,7 @@ export class AI {
       }
     }
     if (P.queues.vehicle.items.length < 2) {
-      const opts = ['tank', 'tank', 'buggy', 'arty', 'titan', 'titan', 'stealth', 'stealth', 'inferno', 'inferno', 'repair'].filter(t => hasReqs(this.f, t));
+      const opts = ['tank', 'tank', 'buggy', 'arty', 'titan', 'titan', 'stealth', 'stealth', 'inferno', 'inferno', 'repair', 'hover'].filter(t => hasReqs(this.f, t));
       if (opts.length) enqueue(this.f, opts[Math.floor(srand() * opts.length)]);
     }
     if (P.credits > 2200 && !P.queues.research.items.length) {

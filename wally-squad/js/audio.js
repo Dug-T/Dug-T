@@ -79,6 +79,7 @@ const SOUNDS = {
   error(o, t) { tone(o, t, 0.25, 'sawtooth', 140, 110, 0.2); },
   beep(o, t) { for (let i = 0; i < 3; i++) tone(o, t + i * 0.18, 0.08, 'square', 1800, 0, 0.12); },
   promote(o, t) { tone(o, t, 0.1, 'triangle', 523, 0, 0.3); tone(o, t + 0.1, 0.1, 'triangle', 659, 0, 0.3); tone(o, t + 0.2, 0.25, 'triangle', 784, 0, 0.3); },
+  zap(o, t) { tone(o, t, 0.9, 'sawtooth', 2400, 60, 0.35); tone(o, t + 0.05, 0.7, 'square', 180, 40, 0.25); env(noise(o, t, 0.8, 'bandpass', 4000, 3), t, 0.005, 0.5, 0.7); },
   scream(o, t) { tone(o, t, 0.35, 'sawtooth', 500 + Math.random() * 200, 250, 0.06); },
 };
 

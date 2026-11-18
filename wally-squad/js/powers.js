@@ -12,6 +12,7 @@ export const POWERS = {
   recon:     { name: 'Recon Sweep', icon: '📡', req: ['radar'], charge: 75, desc: 'Reveals a large area for 20 seconds.' },
   paradrop:  { name: 'Paradrop', icon: '🪂', req: ['barracks', 'radar'], charge: 150, desc: 'A transport drops 7 troopers by parachute.' },
   airstrike: { name: 'Airstrike', icon: '✈', req: ['helipad'], charge: 210, desc: 'Bombers carpet-bomb a line through the target.' },
+  emp:       { name: 'EMP Strike', icon: '⚡', req: ['tech'], charge: 180, desc: 'An electromagnetic pulse knocks out enemy vehicles, aircraft and defences in a wide area for 12 seconds.' },
 };
 
 export function powerStates(f) {
@@ -52,8 +53,9 @@ export function usePower(f, type, x, z) {
   x = Math.max(-HALF + 8, Math.min(HALF - 8, x)); z = Math.max(-HALF + 8, Math.min(HALF - 8, z));
   if (type === 'recon') recon(f, x, z);
   else if (type === 'paradrop') paradrop(f, x, z);
+  else if (type === 'emp') emp(f, x, z);
   else airstrike(f, x, z);
-  if (f !== G.player && type !== 'recon') { G.announce?.(type === 'airstrike' ? 'Warning: enemy aircraft approaching' : 'Enemy paratroopers detected', G.player, 3); G.alertAt = { x, z, t: G.time }; }
+  if (f !== G.player && type !== 'recon') { G.announce?.(type === 'airstrike' ? 'Warning: enemy aircraft approaching' : type === 'emp' ? 'Warning: enemy EMP strike!' : 'Enemy paratroopers detected', G.player, 3); G.alertAt = { x, z, t: G.time }; }
   return true;
 }
 
@@ -138,6 +140,21 @@ export function paraFall(u, dt) {
   if (u.dropH <= 0) { u.mesh.remove(u.chute); u.chute = null; u.mesh.rotation.z = 0; FX.dust(u.x, u.z, 1); }
 }
 
+// ---------------------------------------------------------------- EMP strike
+const EMP_R = 15;
+function emp(f, x, z) {
+  for (const u of unitsNear(x, z, EMP_R, [])) if (u.faction !== f && u.faction !== 'neutral' && !u.isInf) u.empT = 12;
+  for (const b of G.buildings) if (!b.dead && b.faction !== f && b.faction !== 'neutral' && distTo(b, x, z) < EMP_R && (b.def.weapon || b.def.power < 0)) b.empT = 12;
+  // blue shockwave + flash (visual only)
+  const ring = new THREE.Mesh(new THREE.RingGeometry(0.9, 1, 64).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: new THREE.Color(1, 2.5, 6), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
+  ring.position.set(x, groundY(x, z) + 0.6, z); G.three.scene.add(ring);
+  FX.sparkBurst(x, groundY(x, z) + 2, z, 60, [1.2, 2.5, 5, 1]);
+  G.sfx?.play('zap', x, z);
+  let t = 0;
+  decay.push({ update: dt => { t += dt; const r = EMP_R * Math.min(1, t / 0.6); ring.scale.set(r, 1, r); ring.material.opacity = Math.max(0, 1 - t / 1.2); if (t > 1.2) { G.three.scene.remove(ring); return false; } return true; } });
+  if (f === G.player) G.announce?.('EMP strike', G.player, 1);
+}
+
 // ---------------------------------------------------------------- airstrike
 function airstrike(f, x, z) {
   if (f === G.player) G.announce?.('Airstrike inbound', G.player, 1);
@@ -162,7 +179,7 @@ export function aiUsePowers(f, target) {
   for (const s of powerStates(f)) {
     if (!s.ready || !target) continue;
     if (s.type === 'recon') usePower(f, 'recon', target.x, target.z);
-    else if (s.type === 'airstrike') usePower(f, 'airstrike', target.x, target.z);
+    else if (s.type === 'airstrike' || s.type === 'emp') usePower(f, s.type, target.x, target.z);
     else if (s.type === 'paradrop') {
       // drop beside the target, not on top of its defences
       const home = BASES[f] || { x: 0, z: 0 };

@@ -38,6 +38,8 @@ export const WEAPONS = {
   gatling:  { warhead: 'bullet', damage: 9, range: 12.5, rof: 0.085, proj: 'bullet', air: true, ground: true, sound: 'mg', vsLight: true },
   flamer:   { warhead: 'flame', damage: 26, range: 7, rof: 0.25, proj: 'flame', air: false, ground: true, splash: 1.6, sound: 'flame' },
   inferno:  { warhead: 'flame', damage: 44, range: 8.5, rof: 0.3, proj: 'flame', air: false, ground: true, splash: 2.4, sound: 'flame', big: true },
+  warCannon: { warhead: 'rocket', damage: 34, range: 12, rof: 0.75, proj: 'rocket', air: true, ground: true, splash: 1.6, sound: 'rocket' },
+  hoverRkt: { warhead: 'rocket', damage: 30, range: 11.5, rof: 1.3, proj: 'rocket', air: true, ground: true, sound: 'rocket', twin: true },
   shadeRkt: { warhead: 'rocket', damage: 50, range: 13, rof: 2.2, proj: 'rocket', air: false, ground: true, sound: 'rocket', twin: true },
 };
 
@@ -76,6 +78,7 @@ export const UNITS = {
   rifle:    { name: 'Rifle Trooper', cost: 100, time: 4, hp: 100, armor: 'infantry', speed: 3.4, sight: 13, radius: 0.45, weapon: 'rifle', tab: 'infantry', req: ['barracks'], desc: 'Cheap all-round infantry.' },
   rocket:   { name: 'Rocket Trooper', cost: 300, time: 7, hp: 90, armor: 'infantry', speed: 3.0, sight: 14, radius: 0.45, weapon: 'bazooka', tab: 'infantry', req: ['barracks'], desc: 'Anti-tank and anti-air.' },
   flamer:   { name: 'Scorcher', cost: 250, time: 6, hp: 120, armor: 'infantry', speed: 3.2, sight: 11, radius: 0.45, weapon: 'flamer', tab: 'infantry', req: ['barracks', 'refinery'], desc: 'Flamethrower. Burns infantry and buildings.' },
+  warlord:  { name: 'Warlord Grak', fac: 'grim', cost: 900, time: 13, hp: 520, armor: 'infantry', speed: 3.3, sight: 15, radius: 0.6, weapon: 'warCannon', tab: 'infantry', req: ['barracks', 'radar'], limit: 1, desc: 'Grimlock only. Hulking hero with a rocket cannon. War Cry (G): nearby Grimlock troops fire much faster for 6 seconds.' },
   wallyman: { name: 'Wally Man', fac: 'wally', cost: 800, time: 12, hp: 300, armor: 'infantry', speed: 3.6, sight: 15, radius: 0.5, weapon: 'gatling', tab: 'infantry', req: ['barracks', 'radar'], desc: 'Wally Squad only. Caped super-soldier with a spinning Gatling gun that shreds infantry.' },
   engineer: { name: 'Engineer', cost: 500, time: 8, hp: 70, armor: 'infantry', speed: 3.4, sight: 10, radius: 0.45, weapon: null, tab: 'infantry', req: ['barracks'], desc: 'Captures enemy buildings or fully repairs your own.' },
   wally:    { name: 'Wally (Hero)', fac: 'wally', cost: 1500, time: 25, hp: 320, armor: 'infantry', speed: 4.2, sight: 19, radius: 0.5, weapon: 'sniper', tab: 'infantry', req: ['barracks', 'tech'], limit: 1, desc: 'Elite sniper. One-shots infantry and plants C4 on buildings.' },
@@ -83,6 +86,7 @@ export const UNITS = {
   tank:     { name: 'Battle Tank', cost: 800, time: 12, hp: 560, armor: 'heavy', speed: 5.6, sight: 14, radius: 1.35, weapon: 'cannon', turnRate: 2.6, tab: 'vehicle', req: ['factory'], desc: 'Main battle tank.' },
   apc:      { name: 'Squad Carrier APC', cost: 700, time: 11, hp: 650, armor: 'heavy', speed: 7.2, sight: 13, radius: 1.35, weapon: 'mg', turnRate: 2.8, tab: 'vehicle', req: ['factory', 'barracks'], transport: 5, desc: 'Armoured carrier. Right-click it with infantry selected to load up to 5; Unload (U) drops them off.' },
   repair:   { name: 'Repair Truck', cost: 600, time: 9, hp: 420, armor: 'light', speed: 6.8, sight: 12, radius: 1.15, weapon: null, repairs: true, turnRate: 2.8, tab: 'vehicle', req: ['factory'], desc: 'Fixes nearby vehicles in the field. Park it behind your tanks.' },
+  hover:    { name: 'Skimmer Hovercraft', cost: 650, time: 9, hp: 320, armor: 'light', speed: 9, sight: 14, radius: 1.2, weapon: 'hoverRkt', turnRate: 3.2, hover: true, tab: 'vehicle', req: ['factory', 'radar'], desc: 'Fast amphibious raider. Skims over water and even lava to flank the enemy. Twin rockets hit ground and air.' },
   harvester:{ name: 'Harvester', cost: 1200, time: 16, hp: 950, armor: 'heavy', speed: 4.6, sight: 9, radius: 1.5, weapon: null, turnRate: 2.0, tab: 'vehicle', req: ['factory', 'refinery'], desc: 'Gathers crystal for the refinery.' },
   arty:     { name: 'Thunder Artillery', cost: 900, time: 14, hp: 230, armor: 'light', speed: 4.3, sight: 12, radius: 1.3, weapon: 'arty', turnRate: 2.0, tab: 'vehicle', req: ['factory', 'radar'], desc: 'Long-range siege gun. Cannot hit close targets.' },
   titan:    { name: 'Titan Tank', fac: 'wally', cost: 1700, time: 24, hp: 1350, armor: 'heavy', speed: 3.5, sight: 15, radius: 1.8, weapon: 'twin', weapon2: 'titanMsl', turnRate: 1.5, tab: 'vehicle', req: ['factory', 'tech'], selfRepair: true, desc: 'Twin cannons + missiles. Self-repairs to half health.' },
@@ -131,6 +135,7 @@ export const MUTATORS = {
   glass:    { name: 'Glass Cannons', icon: '💥', desc: 'Everything takes 75% more damage.' },
   infantry: { name: 'Boots Only', icon: '🥾', desc: 'No vehicles or aircraft (except Harvesters and APCs).' },
   veterans: { name: 'Veteran Armies', icon: '★', desc: 'Every unit starts as a Veteran.' },
+  disasters: { name: 'Natural Disasters', icon: '🌪', desc: 'Tornadoes roam the battlefield, wrecking anything in their path.' },
   crates:   { name: 'Crate Rain', icon: '📦', desc: 'Supply crates drop four times as often.' },
 };
 export const hasMut = (cfg, k) => !!(cfg && cfg.mut && cfg.mut.includes(k));

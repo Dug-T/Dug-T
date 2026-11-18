@@ -10,7 +10,7 @@ export const survival = S;
 
 const POOL = {
   wally: [['rifle', 1], ['rocket', 1], ['flamer', 0.6], ['buggy', 1], ['tank', 1.2], ['arty', 0.5], ['titan', 0.5], ['wallyman', 0.4], ['gunship', 0.4]],
-  grim: [['rifle', 1], ['rocket', 1], ['flamer', 0.8], ['buggy', 1], ['tank', 1.2], ['arty', 0.5], ['inferno', 0.6], ['stealth', 0.5], ['gunship', 0.4]],
+  grim: [['rifle', 1], ['rocket', 1], ['flamer', 0.8], ['buggy', 1], ['tank', 1.2], ['arty', 0.5], ['inferno', 0.6], ['stealth', 0.5], ['warlord', 0.3], ['gunship', 0.4]],
 };
 
 export function initSurvival() {

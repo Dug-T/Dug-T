@@ -22,6 +22,15 @@ export const MEDALS = {
   survive10:    { icon: '☠', name: 'Survivor', desc: 'Reach wave 10 in Survival.' },
   survive20:    { icon: '💀', name: 'Unbreakable', desc: 'Reach wave 20 in Survival.' },
   online:       { icon: '🌐', name: 'Online Champion', desc: 'Win an online battle.' },
+  bootcamp:     { icon: '🎓', name: 'Graduate', desc: 'Finish Boot Camp.' },
+  streak:       { icon: '🔥', name: 'Unstoppable', desc: 'Get a kill streak of 8.' },
+  garrison:     { icon: '🏰', name: 'Fortified', desc: 'Fill a Battle Bunker with 4 troops.' },
+  grak:         { icon: '👹', name: 'Grak Smash', desc: 'Warlord Grak destroys 10 enemies.' },
+  magma:        { icon: '🌋', name: 'Trial by Fire', desc: 'Win a battle on Magma Rift.' },
+  mutant:       { icon: '🎲', name: 'Mad Science', desc: 'Win a skirmish with 2 or more mutators.' },
+  daily:        { icon: '📅', name: 'Daily Duty', desc: 'Win a Daily Challenge.' },
+  heroic:       { icon: '🌟', name: 'Heroic', desc: 'Promote a unit to Heroic rank (10 kills).' },
+  epilogue:     { icon: '🗡', name: 'Into the Fire', desc: 'Defeat Warlord Grak in the final campaign mission.' },
 };
 
 const KEY = 'ws_medals';
@@ -55,15 +64,21 @@ export function initAchievements(run) {
     if (killer.kind === 'unit') {
       if (killer.rank >= 2) unlock('elite');
       if (killer.type === 'wallyman' && killer.kills >= 10) unlock('rampage');
+      if (killer.type === 'warlord' && killer.kills >= 10) unlock('grak');
     }
   });
+  on('heroic', u => { if (u.faction === G.player) unlock('heroic'); });
   on('crate', f => { if (f === G.player && ++session.crates >= 5) unlock('crates'); });
   on('capture', (b, f) => { if (f === G.player) unlock('capture'); });
   on('super', f => { if (f === G.player) unlock('superweapon'); });
   on('power', (f, type) => { if (f === G.player) { session.powers.add(type); if (session.powers.size >= 3) unlock('powers'); } });
   on('end', win => {
     if (!win) return;
-    if (run.mode === 'campaign') { unlock('mission'); if (run.mission === 4) unlock('campaign'); }
+    if (run.mode === 'campaign') { unlock('mission'); if (run.mission === 4) unlock('campaign'); if (run.mission === 5) unlock('epilogue'); }
+    if (run.mode === 'tutorial') unlock('bootcamp');
+    if (run.map === 'magma') unlock('magma');
+    if (run.daily) unlock('daily');
+    if (run.mode === 'skirmish' && run.mut && run.mut.length >= 2) unlock('mutant');
     if (run.mode === 'skirmish') {
       if (run.difficulty === 'hard') unlock('commander');
       if (G.time < 15 * 60) unlock('blitz');
@@ -77,6 +92,8 @@ let t = 0;
 export function checkAchievements(dt) {
   t -= dt; if (t > 0) return; t = 1;
   if (G.stats.built >= 20) unlock('builder');
+  if ((G.bestStreak || 0) >= 8) unlock('streak');
+  if (G.buildings.some(b => !b.dead && b.faction === G.player && b.def.garrison && (b.passengers || []).length >= b.def.garrison)) unlock('garrison');
   if (G.stats.harvested >= 20000) unlock('tycoon');
   if (G.units.some(u => !u.dead && u.faction === G.player && u.def.custom)) unlock('designer');
   if (G.units.some(u => !u.dead && u.faction === G.player && u.rank >= 2 && !u.hero)) unlock('elite');

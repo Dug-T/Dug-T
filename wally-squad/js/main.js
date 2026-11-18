@@ -27,6 +27,7 @@ import { gfx, initGraphics, pixelRatio, autoTune, buildGraphicsPanel, maxAnisotr
 import { allMaterials } from './materials.js';
 import { updateCrates, animateCrates, placeTechBuildings, recordHistory, drawHistory } from './features.js';
 import { updatePowers } from './powers.js';
+import { updateHazards } from './hazards.js';
 import { initAchievements, checkAchievements, buildMedals } from './achievements.js';
 import { registerCustomMaps, buildMapEditor } from './mapeditor.js';
 import { updateOrientation } from './orient.js';
@@ -536,6 +537,7 @@ function simStep(dt) {
   cleanupDead();
   regrowOre(dt);
   updateCrates(dt);
+  updateHazards(dt);
   recordHistory(dt);
   if (run.mode === 'survival' && !G.over) { updateSurvival(dt); missionT -= dt; if (missionT <= 0) { missionT = 0.5; renderObjectives(); } }
   if (mission && !G.over) { missionT -= dt; if (missionT <= 0) { missionT = 0.5; if (mctx.heroCheck()) mission.tick(mctx); renderObjectives(); } }
