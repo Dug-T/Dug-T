@@ -114,6 +114,7 @@ const DEBRIS_MAX = 400;
 
 export function initFX(sc) {
   scene = sc;
+  G.fx = { ember };
   add = new PSys(scene, 9000, softSprite(), true);
   smoke = new PSys(scene, 7000, smokeSprite(), false);
   for (let i = 0; i < 6; i++) {
@@ -289,6 +290,11 @@ export function blackSmoke(x, y, z, intensity = 1) {
 }
 export function steam(x, y, z) {
   smoke.spawn(x, y, z, rr(-0.2, 0.2), rr(1.5, 2.5), rr(-0.2, 0.2), 2.2, 0.6, 3, [0.9, 0.9, 0.92, 0.35], [0.9, 0.9, 0.92, 0], 0.6, -0.1, rr(-1, 1));
+}
+// lava embers: a few glowing sparks that pop out of a lava pool and fade
+export function ember(x, y, z) {
+  for (let i = 0; i < 3; i++) add.spawn(x, y, z, rr(-1, 1), rr(3, 7), rr(-1, 1), rr(0.8, 1.6), rr(0.15, 0.3), 0.05, [5, 1.6, 0.3, 1], [1.2, 0.2, 0.05, 0], 1, 6);
+  if (Math.random() < 0.3) smoke.spawn(x, y + 0.5, z, rr(-0.3, 0.3), rr(1, 2), rr(-0.3, 0.3), rr(2, 3.5), 1.2, 3, [0.25, 0.2, 0.18, 0.45], [0.2, 0.18, 0.16, 0], 0, 0);
 }
 export function sparkBurst(x, y, z, n = 10, color) {
   for (let i = 0; i < n; i++) add.spawn(x, y, z, rr(-4, 4), rr(2, 7), rr(-4, 4), rr(0.3, 0.7), 0.3, 0.05, color || C.spark, C.sparkEnd, 1, 12);

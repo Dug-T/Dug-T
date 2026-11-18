@@ -68,10 +68,34 @@ export const MAPS = {
     ridge: 50, forest: 0.08,
     theme: 'night', weather: ['clear', 'rain', 'fog', 'storm'], night: true,
   },
+  magma: {
+    name: 'Magma Rift', desc: 'A volcanic wasteland split by a river of glowing lava. Three crossings, falling ash.',
+    seed: [41, -73, 12, 66],
+    slots: [{ x: -90, z: -60 }, { x: 90, z: 60 }],
+    lanes: [
+      [[-90, -60], [0, 0], [90, 60]],
+      [[-90, -60], [-62, 18], [-32, 48], [40, 82], [90, 60]],
+      [[-90, -60], [-40, -82], [32, -48], [62, -18], [90, 60]],
+    ],
+    ore: [
+      { x: -112, z: -24, r: 10 }, { x: -58, z: -104, r: 10 }, { x: 112, z: 24, r: 10 }, { x: 58, z: 104, r: 10 },
+      { x: -12, z: -46, r: 7, rich: 1 }, { x: 12, z: 46, r: 7, rich: 1 },
+    ],
+    // the rift: a chain of lava pools across the map with three gaps to cross
+    lakes: [{ x: -16, z: 25, r: 12 }, { x: 16, z: -25, r: 12 }, { x: -50, z: 76, r: 15 }, { x: 50, z: -76, r: 15 }, { x: -70, z: 108, r: 12 }, { x: 70, z: -108, r: 12 }],
+    ridge: 55, forest: 0.07,
+    theme: 'volcanic', weather: ['clear', 'ashfall', 'clear', 'fog', 'ashfall'],
+  },
 };
 
 // Visual themes
 export const THEMES = {
+  volcanic: {
+    grass1: 0x4a413b, grass2: 0x645549, dirt: 0x6e4a33, rock: 0x2a2624, sand: 0x6b5848, mud: 0x8a3212, base: 0x5a524c,
+    oreTint: 0x7a4a2a, water: 0xff5a14, lava: true,
+    skyTop: 0x4a2f36, horizon: 0xc27a52, skyBottom: 0x3a2420, sun: 0xffc8a0, sunI: 2.6, hemiSky: 0xffb894, hemiGround: 0x4a2014, hemiI: 0.75,
+    trees: { dead: 1 }, rockTint: [0.03, 0.15, 0.22],
+  },
   temperate: {
     grass1: 0x4f7a2a, grass2: 0x76913a, dirt: 0x8a7150, rock: 0x6e6a64, sand: 0xc2ac7c, mud: 0x4a4232, base: 0x8d8270,
     oreTint: 0x4f6b3a, water: 0x1d4b63,

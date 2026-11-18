@@ -16,6 +16,7 @@ Play it by opening `wally-squad/index.html` from any web server (GitHub Pages wo
 - **Survival:** endless enemy waves that grow stronger each time, with a boss every 5th wave. The game keeps your best score and wave for each map.
 - **Skirmish:** choose a map, your faction and the difficulty, and turn the day–night cycle and dynamic weather on or off.
   - Skirmish options: switch superweapons, support powers, supply crates, tech buildings, fog of war and starting armies on or off, and choose the starting money ($2,500–$15,000).
+- **🎖 Commander Profile** (main menu): every game earns XP for taking part, winning, kills and buildings, scaled by difficulty. Climb nine ranks from Private to Field Marshal. The profile also tracks career games, wins, kills and time played, and the end screen shows the XP earned and any promotion.
 - **📅 Daily Challenge** (main menu): everyone gets the same map, faction and two mutators for the day, on Commander difficulty. Win as fast as you can; the game keeps your best time for the day.
 - **🎲 Mutators** (skirmish menu): Turbo Build, Crystal Rush (double crystal value), Glass Cannons (+75% damage), Boots Only (no vehicles except Harvesters and APCs), Veteran Armies and Crate Rain.
 - **Game over:** in every mode you lose as soon as **all your buildings are destroyed** (walls, gates and mines don't count). Destroy every enemy building to win.
@@ -72,6 +73,10 @@ Both factions share the basic army: riflemen, rocket troopers, Scorchers, engine
   - Turbo Engines: vehicles are 15% faster.
   - Long-Range Optics: +20% sight and range.
   - The computer opponent researches them too.
+- **🌋 Magma Rift** (new map): a volcanic wasteland split by a river of glowing, bubbling lava with three crossings, charred dead trees and ashfall weather.
+- **🔧 Repair Truck** (War Factory): drives to damaged vehicles nearby and repairs them in the field.
+- **🛸 Recon Drone** (Helipad): a cheap, fast, unarmed scout with a huge sight range. It reveals cloaked Shade tanks within 14 m.
+- **💤 Idle units:** the top bar shows how many fighting units are idle. Click it (or press `.`) to jump to the next one.
 - **🏰 Battle Bunker** (Defence tab, needs a Barracks): a sandbagged pillbox for up to 4 infantry. Select infantry and right-click (or tap) it to garrison.
   - Troops inside shoot out with +25% range and can't be hurt until the bunker falls; then they bail out wounded.
   - Evacuate (`U`) sends them back out. The computer builds and garrisons bunkers too.
@@ -120,6 +125,7 @@ For testing, add `?loopnet` to the URL to connect two tabs on the same computer 
 | Repair / sell mode | `R` / `X` |
 | Superweapon | **LAUNCH** in the sidebar, then click a target |
 | Load / unload APC | Right-click the APC with infantry selected / `U` |
+| Next idle unit | `.` or the 💤 button |
 
 URL options: `?auto` starts a skirmish straight away (add `&map=frost|dunes|midnight`, `&faction=grim` or `&weather=storm` to change it), and `?reveal` turns off the fog of war.
 

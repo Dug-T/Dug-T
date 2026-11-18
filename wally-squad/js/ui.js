@@ -197,6 +197,7 @@ const setText = (el, t) => { t = String(t); if (el.textContent !== t) el.textCon
 const setStyle = (el, k, v) => { if (el.style[k] !== v) el.style[k] = v; };
 export function updateSidebar(dt) {
   sideT -= dt; if (sideT > 0) return; sideT = 0.1;
+  { const n = idleUnits().length, b = $('bIdle'); setStyle(b, 'display', n ? '' : 'none'); setText(b, `💤 ${n}`); }
   const P = G.players[G.player];
   setText($('credits'), '$ ' + Math.floor(P.credits).toLocaleString());
   const maxP = Math.max(P.powerProd, P.powerUse, 100) * 1.15;
@@ -583,6 +584,7 @@ function bindInput() {
     if (k === 'KeyS' && !e.ctrlKey) { if (myUnits().length) issue({ t: 'stop', ids: myUnits().map(u => u.id) }); Audio.play('ack'); return; }
     if (k === 'KeyG') { const w = myUnits().filter(u => u.type === 'wallyman'); if (w.length) { issue({ t: 'ability', ids: w.map(u => u.id) }); Voices.say('wallyman', 'attack', true); } return; }
     if (k === 'KeyU') { const a = G.selection.filter(e => alive(e) && e.faction === G.player && (e.def.transport || e.def.garrison) && (e.passengers || []).length); if (a.length) { issue({ t: 'unload', ids: a.map(u => u.id) }); Audio.play('ack'); } return; }
+    if (k === 'Period') { selectNextIdle(); return; }
     if (k === 'KeyH') { const b = G.buildings.find(b => b.faction === G.player && b.type === 'conyard') || G.buildings.find(b => b.faction === G.player); if (b) centerOn(b.x, b.z); return; }
     if (k === 'Space') { e.preventDefault(); if (G.alertAt) centerOn(G.alertAt.x, G.alertAt.z); return; }
     if (k === 'KeyR') { setMode(G.mode === 'repair' ? null : 'repair'); return; }
@@ -1067,4 +1069,16 @@ export function streakBanner(text) {
   const el = document.getElementById('streak'); if (!el) return;
   el.textContent = text; el.classList.add('show');
   clearTimeout(streakTimer); streakTimer = setTimeout(() => el.classList.remove('show'), 1600);
+}
+
+// ---- idle units: fighting units that have nothing to do
+export function idleUnits() {
+  return G.units.filter(u => !u.dead && !u.boarded && u.faction === G.player && (u.weapon || u.def.repairs || u.def.heals || u.def.detector) && !u.order && !u.target && !u.path && !(u.dropH > 0));
+}
+let idleIdx = 0;
+export function selectNextIdle() {
+  const list = idleUnits();
+  if (!list.length) { message('No idle units'); return; }
+  const u = list[idleIdx++ % list.length];
+  select([u]); centerOn(u.x, u.z); Audio.play('click');
 }

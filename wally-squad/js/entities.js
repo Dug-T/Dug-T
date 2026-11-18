@@ -212,10 +212,12 @@ export class Unit {
         let near = G.time - (this.lastFire ?? -99) < 2.5 || this.hp < this.maxHp * 0.25;
         if (!near) for (const o of unitsNear(this.x, this.z, 5.5, cloakBuf)) if (o.faction !== this.faction && !o.dead) { near = true; break; }
         if (!near) for (const b of G.buildings) if (!b.dead && b.faction !== this.faction && !b.def.isMine && distTo(b, this.x, this.z) < 4) { near = true; break; }
+        // recon drones see through the cloak
+        if (!near) for (const o of G.units) if (o.def.detector && !o.dead && o.faction !== this.faction && Math.hypot(o.x - this.x, o.z - this.z) < o.def.detector) { near = true; break; }
         this.cloaked = !near;
       }
     }
-    if (this.def.heals) this.medicLogic(dt);
+    if (this.def.heals || this.def.repairs) this.medicLogic(dt);
     else if (this.type === 'harvester') this.harvestLogic(dt);
     else if (this.order && (this.order.type === 'capture' || this.order.type === 'c4')) this.specialLogic(dt);
     else this.combatLogic(dt);
@@ -304,19 +306,19 @@ export class Unit {
         this.healTarget = null;
         let bd = 1e9;
         for (const u of unitsNear(this.x, this.z, this.def.sight, healBuf)) {
-          if (u === this || u.faction !== this.faction || !u.isInf || u.hp >= u.maxHp) continue;
+          if (u === this || u.faction !== this.faction || u.boarded || u.hp >= u.maxHp || (this.def.repairs ? u.isInf || u.air : !u.isInf)) continue;
           const d = Math.hypot(u.x - this.x, u.z - this.z);
           if (d < bd) { bd = d; this.healTarget = u; }
         }
       }
       const h = this.healTarget;
-      if (h && !this.order && Math.hypot(h.x - this.x, h.z - this.z) > 2.5) this.requestPath(h.x, h.z);
+      if (h && !this.order && Math.hypot(h.x - this.x, h.z - this.z) > (this.def.repairs ? 3.5 : 2.5)) this.requestPath(h.x, h.z);
     }
     const h = this.healTarget;
-    if (h && !h.dead && Math.hypot(h.x - this.x, h.z - this.z) < 3) {
+    if (h && !h.dead && Math.hypot(h.x - this.x, h.z - this.z) < (this.def.repairs ? 4.5 : 3)) {
       if (this.path && !this.order) this.path = null;
-      h.hp = Math.min(h.maxHp, h.hp + 16 * dt);
-      if (Math.random() < dt * 8) FX.sparkBurst(h.x, h.y + 1.2, h.z, 2, [1, 4, 1.5, 1]);
+      h.hp = Math.min(h.maxHp, h.hp + (this.def.repairs ? 28 : 16) * dt);
+      if (Math.random() < dt * 8) FX.sparkBurst(h.x, h.y + 1.2, h.z, 2, this.def.repairs ? [4, 3, 1, 1] : [1, 4, 1.5, 1]);
       this.heading += clamp(angleDiff(this.heading, Math.atan2(h.x - this.x, h.z - this.z)), -dt * 8, dt * 8);
     }
   }

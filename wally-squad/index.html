@@ -171,6 +171,11 @@
   #objectives { position: absolute; left: 10px; top: 46px; z-index: 4; background: var(--panel); border: 1px solid var(--line2); border-radius: 6px; padding: 6px 10px; font-size: 14px; display: none; max-width: 320px; }
   #objectives .obHint { margin: 3px 0 2px 14px; font-size: 12px; color: var(--muted, #b9c6d6); line-height: 1.35; }
   #objectives .ob { margin: 2px 0; }
+  #profile { margin: 6px auto 10px; max-width: 420px; padding: 8px 12px; border: 1px solid var(--line2); border-radius: 8px; background: rgba(0,0,0,0.25); font-size: 14px; }
+  #profile .profRank { font-size: 16px; } #profile .profIcon { color: var(--accent); font-weight: 900; }
+  #profile .profBar { height: 6px; background: rgba(255,255,255,0.12); border-radius: 3px; margin: 5px 0 4px; overflow: hidden; }
+  #profile .profBar div { height: 100%; background: linear-gradient(90deg, #ffc23a, #ff8a2a); }
+  #profile .profSub { font-size: 12px; color: var(--dim); }
   .btn.daily small { display: block; font-size: 11px; font-weight: 500; letter-spacing: 0; opacity: 0.8; margin-top: 2px; text-transform: none; }
   #streak { position: absolute; left: 50%; top: 22%; transform: translate(-50%, -50%) scale(0.6); z-index: 6; pointer-events: none; font: 900 40px/1 'Black Ops One', Rajdhani, sans-serif; color: #ffc23a; text-shadow: 0 0 18px rgba(255, 120, 30, 0.9), 0 3px 0 #6b2a00; opacity: 0; transition: opacity 0.25s, transform 0.25s; white-space: nowrap; }
   #streak.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
@@ -295,6 +300,7 @@
   <div id="fps" title="Frames per second (turn off in Graphics)"></div>
   <div class="spacer"></div>
   <button class="btn" id="bFull" title="Fullscreen">⛶</button>
+  <button class="btn" id="bIdle" title="Idle units: select the next idle soldier or vehicle (. key)" style="display:none">💤 0</button>
   <button class="btn" id="bMusic" title="Toggle music">♪ Music</button>
   <button class="btn" id="bHelp" title="Controls (F1)">? Help</button>
   <button class="btn" id="bPause" title="Pause (P / Esc)">❚❚ Menu</button>
@@ -329,6 +335,7 @@
   <div class="card" id="menuMain">
     <h1 class="logo">WALLY <br>SQUAD</h1>
     <div class="tag">REAL-TIME STRATEGY · BUILD · HARVEST · CONQUER</div>
+    <div id="profile" title="Your Commander profile: earn XP in every game to rise through the ranks"></div>
     <p style="text-align:center">The <b style="color:var(--blue)">Wally Squad</b> has landed in the Crystal Valley. The <b style="color:var(--red)">Grimlock Legion</b> wants every last crystal. Build your base, harvest crystal, raise an army and wipe them off the map.</p>
     <div class="menuCol">
       <button class="btn big" id="bTutorial">🎓 BOOT CAMP</button>
@@ -453,6 +460,8 @@
       <li><b>Research</b> (TECH tab): one-off upgrades for armour, damage, income, speed and range.</li>
       <li><b>Stances</b> (selection panel): Aggressive, Hold position or Hold fire.</li>
       <li><b>Game over</b> when all your buildings are destroyed. Destroy every enemy building to win.</li>
+      <li><b>Idle units:</b> the 💤 button (or <kbd>.</kbd>) jumps to fighting units with nothing to do.</li>
+      <li><b>Repair Truck</b> fixes vehicles in the field; the <b>Recon Drone</b> scouts and reveals cloaked tanks.</li>
       <li><b>Battle Bunker</b> (Defence tab): right-click it with infantry to garrison up to 4. They shoot out safely; <kbd>U</kbd> evacuates.</li>
       <li><b>Daily Challenge &amp; Mutators:</b> a new challenge every day, plus optional rule changes in Skirmish.</li>
       <li><b>APC:</b> select infantry and right-click the Squad Carrier APC to load up to 5. <kbd>U</kbd> unloads them.</li>

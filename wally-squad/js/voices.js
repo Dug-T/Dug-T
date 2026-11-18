@@ -20,6 +20,9 @@ const DEFAULT_LINES = {
   gunship: { select: ['Hornet in the air.', 'Gunship ready.'], move: ['Flying there.'], attack: ['Rockets hot!', 'Strafing run!'] },
   stealth: { select: ['Shade, cloaked.', 'Unseen.'], move: ['Slipping through.'], attack: ['Decloaking.', 'Surprise.'] },
   inferno: { select: ['Inferno ready.', 'Fuel tanks full.'], move: ['Rolling.'], attack: ['Burn them all!'] },
+  apc: { select: ['Carrier ready.', 'Room for five!'], move: ['Moving the squad.', 'Hold on back there!'], attack: ['Covering fire!'] },
+  repair: { select: ['Repair crew here.', 'Who needs fixing?'], move: ['On my way with the wrench.'], attack: ['I fix things, not fight them!'] },
+  drone: { select: ['Drone online.', 'Eyes in the sky.'], move: ['Scouting ahead.'], attack: ['No weapons, just cameras!'] },
 };
 const VOICE_STYLE = {
   wally: { pitch: 1.4, rate: 1.15 }, wallyman: { pitch: 0.9, rate: 1.05 }, medic: { pitch: 1.3, rate: 1.05 }, engineer: { pitch: 1.2, rate: 1.1 },

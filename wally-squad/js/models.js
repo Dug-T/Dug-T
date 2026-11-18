@@ -339,6 +339,57 @@ export function makeArtillery(faction) {
   });
 }
 
+export function makeRepairTruck(faction) {
+  return cached(`repair-${faction}`, () => {
+    const t = mats(faction), m = M();
+    const root = new THREE.Group();
+    const b = new Builder();
+    for (const z of [1.0, -0.2, -1.0]) for (const x of [-0.8, 0.8]) wheel(b, m.metal, x, 0.42, z, 0.4, 0.3);
+    b.box(t.team, 1.5, 0.95, 1.0, 0, 1.05, 1.15);                     // cab
+    b.box(m.glass, 1.3, 0.4, 0.04, 0, 1.3, 1.66);                     // windscreen
+    b.box(m.darkMetal, 1.55, 0.3, 3.0, 0, 0.62, -0.2);                // chassis
+    b.box(t.teamDark, 1.55, 0.55, 1.9, 0, 1.0, -0.7);                 // tool bed
+    b.box(m.hazard, 1.6, 0.08, 1.95, 0, 1.3, -0.7);
+    for (const s of [-1, 1]) b.box(m.metal, 0.05, 0.4, 1.7, s * 0.79, 1.05, -0.7);  // tool lockers
+    b.box(m.lampWhite, 0.18, 0.1, 0.04, 0.5, 0.95, 1.66); b.box(m.lampWhite, 0.18, 0.1, 0.04, -0.5, 0.95, 1.66);
+    b.box(m.lampRed, 0.3, 0.1, 0.12, -0.35, 1.58, 1.15); b.box(m.lampWhite, 0.3, 0.1, 0.12, 0.35, 1.58, 1.15); // beacon bar
+    b.box(t.accent, 0.5, 0.5, 0.02, 0.77, 1.05, 1.15, 0, Math.PI / 2, 0);
+    root.add(b.build());
+    // crane arm with a wrench hook (turret so it swings toward what it repairs)
+    const c = new Builder();
+    c.cyl(m.darkMetal, 0.22, 0.26, 0.3, 10, 0, 0, 0);
+    c.box(m.hazard, 0.18, 0.18, 1.6, 0, 0.35, 0.6, -0.45, 0, 0);
+    c.cyl(m.gun, 0.03, 0.03, 0.7, 4, 0, 0.55, 1.35);
+    c.box(m.metal, 0.3, 0.12, 0.12, 0, 0.2, 1.35);
+    const crane = c.build(); crane.position.set(0, 1.45, -1.2); crane.name = 'turret';
+    root.add(crane);
+    return root;
+  });
+}
+
+export function makeDrone(faction) {
+  return cached(`drone-${faction}`, () => {
+    const t = mats(faction), m = M();
+    const root = new THREE.Group();
+    const b = new Builder();
+    b.sph(t.team, 0.45, 0, 0, 0, 1, 0.45, 1.3);                       // body
+    b.sph(m.glass, 0.2, 0, -0.12, 0.45, 1, 1, 1);                       // camera ball
+    b.box(t.teamDark, 2.0, 0.06, 0.14, 0, 0.04, 0, 0, Math.PI / 4, 0);  // X frame
+    b.box(t.teamDark, 2.0, 0.06, 0.14, 0, 0.04, 0, 0, -Math.PI / 4, 0);
+    for (const [x, z] of [[0.7, 0.7], [-0.7, 0.7], [0.7, -0.7], [-0.7, -0.7]]) b.cyl(m.darkMetal, 0.1, 0.1, 0.16, 8, x, 0.1, z);
+    b.box(m.lampRed, 0.08, 0.05, 0.08, 0, 0.22, -0.4);
+    b.cyl(m.gun, 0.015, 0.015, 0.5, 4, 0.15, 0.4, -0.3);
+    root.add(b.build());
+    // spinning prop discs (blurred)
+    const discMat = new THREE.MeshBasicMaterial({ color: 0x222222, transparent: true, opacity: 0.35, depthWrite: false });
+    const props = new THREE.Group(); props.name = 'props';
+    for (const [x, z] of [[0.7, 0.7], [-0.7, 0.7], [0.7, -0.7], [-0.7, -0.7]]) { const d = new THREE.Mesh(new THREE.CircleGeometry(0.42, 16).rotateX(-Math.PI / 2), discMat); d.position.set(x, 0.2, z); props.add(d); }
+    root.add(props);
+    root.scale.setScalar(1.2);
+    return root;
+  });
+}
+
 export function makeGunship(faction) {
   return cached(`heli-${faction}`, () => {
     const t = mats(faction), m = M();
@@ -740,6 +791,8 @@ export function makeUnitModel(type, faction) {
     case 'apc': return makeAPC(faction);
     case 'arty': return makeArtillery(faction);
     case 'gunship': return makeGunship(faction);
+    case 'repair': return makeRepairTruck(faction);
+    case 'drone': return makeDrone(faction);
     case 'stealth': return makeStealth(faction);
     case 'inferno': return makeInferno(faction);
     case 'wallyman': return makeWallyMan(faction);

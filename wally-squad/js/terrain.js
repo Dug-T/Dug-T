@@ -179,7 +179,10 @@ export function buildTerrain(scene) {
 
   // ---- water ----
   const wn = waterNormalTexture();
-  const wmat = fogify(new THREE.MeshStandardMaterial({ color: TH.water, roughness: TH.ice ? 0.35 : 0.08, metalness: TH.ice ? 0.2 : 0.6, normalMap: wn, normalScale: new THREE.Vector2(0.35, 0.35), transparent: true, opacity: 0.86 }));
+  const wmat = fogify(TH.lava
+    // glowing lava: bright emissive so the bloom makes it shine, normal map for a crusty surface
+    ? new THREE.MeshStandardMaterial({ color: 0x3a0e04, emissive: TH.water, emissiveIntensity: 1.6, roughness: 0.85, metalness: 0, normalMap: wn, normalScale: new THREE.Vector2(1.4, 1.4) })
+    : new THREE.MeshStandardMaterial({ color: TH.water, roughness: TH.ice ? 0.35 : 0.08, metalness: TH.ice ? 0.2 : 0.6, normalMap: wn, normalScale: new THREE.Vector2(0.35, 0.35), transparent: true, opacity: 0.86 }));
   const water = new THREE.Mesh(new THREE.PlaneGeometry(WORLD, WORLD, 1, 1).rotateX(-Math.PI / 2), wmat);
   water.position.y = WATER_LEVEL;
   water.receiveShadow = true;
@@ -271,6 +274,10 @@ function treeKinds() {
   const cac = [new THREE.CylinderGeometry(0.32, 0.36, 2.6, 9).translate(0, 1.3, 0), new THREE.SphereGeometry(0.32, 9, 6).translate(0, 2.6, 0),
     new THREE.CylinderGeometry(0.2, 0.2, 0.7, 8).rotateZ(Math.PI / 2).translate(0.5, 1.2, 0), new THREE.CylinderGeometry(0.2, 0.2, 1.0, 8).translate(0.82, 1.65, 0), new THREE.SphereGeometry(0.2, 8, 6).translate(0.82, 2.15, 0),
     new THREE.CylinderGeometry(0.18, 0.18, 0.6, 8).rotateZ(Math.PI / 2).translate(-0.45, 1.6, 0), new THREE.CylinderGeometry(0.18, 0.18, 0.7, 8).translate(-0.72, 1.95, 0), new THREE.SphereGeometry(0.18, 8, 6).translate(-0.72, 2.3, 0)];
+  // dead tree: bare charred trunk with a few crooked branches (volcanic maps)
+  const dead = [new THREE.CylinderGeometry(0.12, 0.26, 3.6, 6).translate(0, 1.8, 0)];
+  for (let i = 0; i < 4; i++) dead.push(new THREE.CylinderGeometry(0.04, 0.09, 1.3, 5).translate(0, 0.65, 0).rotateZ(0.8 + i * 0.15).rotateY(i * 1.7).translate(0, 1.8 + i * 0.45, 0));
+  K.dead = [[mergeSimple(dead), std({ color: 0x2a221e, roughness: 1, flatShading: true }), true]];
   K.cactus = [[mergeSimple(cac), std({ color: 0x5f8a3a, roughness: 0.8, flatShading: true }), true]];
   return K;
 }
@@ -536,7 +543,7 @@ function buildMinimapImage(col, geo) {
     const vi = Math.round((wz + HALF) / VS) * (RES + 1) + Math.round((wx + HALF) / VS);
     let r = col[vi * 3], g = col[vi * 3 + 1], b = col[vi * 3 + 2];
     const ci = idx(cellOf(wx), cellOf(wz));
-    if (T.water[ci]) { r = 0.1; g = 0.25; b = 0.35; }
+    if (T.water[ci]) { if (TH.lava) { r = 1.0; g = 0.4; b = 0.08; } else { r = 0.1; g = 0.25; b = 0.35; } }
     if (T.tree[ci]) { r *= 0.6; g *= 0.75; b *= 0.6; }
     const h = pos.getY(vi); const sh = 0.8 + clamp(h / 20, 0, 0.5);
     const k = (j * S + i) * 4;
@@ -548,7 +555,17 @@ function buildMinimapImage(col, geo) {
 
 export function animateWater(t) {
   const w = G.three.water;
-  if (w) { w.material.normalMap.offset.set(t * 0.01, t * 0.006); }
+  if (!w) return;
+  w.material.normalMap.offset.set(t * 0.01, t * 0.006);
+  if (TH && TH.lava) {
+    // slow glowing pulse, and embers spitting out of the lava pools
+    w.material.emissiveIntensity = 1.5 + 0.35 * Math.sin(t * 1.3) + 0.15 * Math.sin(t * 3.7);
+    if (LAKES.length && Math.random() < 0.25) {
+      const l = LAKES[(Math.random() * LAKES.length) | 0], a = Math.random() * 6.28, r = Math.random() * l.r * 0.7;
+      const x = l.x + Math.cos(a) * r, z = l.z + Math.sin(a) * r;
+      if (isVisibleAt(x, z)) G.fx?.ember?.(x, WATER_LEVEL + 0.2, z);
+    }
+  }
 }
 
 // ---- Map Editor preview: height + colour image of any map design (doesn't touch the live world) ----

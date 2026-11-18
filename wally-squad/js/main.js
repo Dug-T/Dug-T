@@ -30,6 +30,7 @@ import { updatePowers } from './powers.js';
 import { initAchievements, checkAchievements, buildMedals } from './achievements.js';
 import { registerCustomMaps, buildMapEditor } from './mapeditor.js';
 import { updateOrientation } from './orient.js';
+import { awardGame, profileCard } from './profile.js';
 updateOrientation();
 import { initSurvival, updateSurvival, survivalPanel, saveBest, bestScores, survival } from './survival.js';
 
@@ -236,7 +237,7 @@ function dailyChallenge() {
   const d = new Date(), date = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   let h = 2166136261; for (const ch of date) h = Math.imul(h ^ ch.charCodeAt(0), 16777619) >>> 0;
   const rnd = () => { h = Math.imul(h ^ (h >>> 15), 2246822519) >>> 0; h = (h + 0x6D2B79F5) >>> 0; return h / 4294967296; };
-  const maps = ['valley', 'frost', 'dunes', 'midnight'].filter(m => MAPS[m]);
+  const maps = ['valley', 'frost', 'dunes', 'midnight', 'magma'].filter(m => MAPS[m]);
   const muts = Object.keys(MUTATORS);
   const a = muts.splice(Math.floor(rnd() * muts.length), 1)[0], b = muts[Math.floor(rnd() * muts.length)];
   return { mode: 'skirmish', daily: date, map: maps[Math.floor(rnd() * maps.length)], faction: rnd() < 0.5 ? 'wally' : 'grim', difficulty: 'hard', daynight: true, weather: null, mut: [a, b] };
@@ -256,7 +257,7 @@ function optionCards(el, items, sel, onPick) {
     el.appendChild(d);
   }
 }
-const MAP_SWATCH = { valley: 'linear-gradient(135deg,#4f7a2a,#76913a 50%,#1d4b63)', frost: 'linear-gradient(135deg,#f4f7fa,#a7b0b8 60%,#6f9fb8)', dunes: 'linear-gradient(135deg,#e8d29c,#b48a58 60%,#2a7d86)', midnight: 'linear-gradient(135deg,#0a1124,#1d2b4a 60%,#ffd27a)' };
+const MAP_SWATCH = { magma: 'linear-gradient(135deg,#2a2624,#5e3f2d 55%,#ff5a14)', valley: 'linear-gradient(135deg,#4f7a2a,#76913a 50%,#1d4b63)', frost: 'linear-gradient(135deg,#f4f7fa,#a7b0b8 60%,#6f9fb8)', dunes: 'linear-gradient(135deg,#e8d29c,#b48a58 60%,#2a7d86)', midnight: 'linear-gradient(135deg,#0a1124,#1d2b4a 60%,#ffd27a)' };
 const THEME_SWATCH = { temperate: MAP_SWATCH.valley, snow: MAP_SWATCH.frost, desert: MAP_SWATCH.dunes, night: MAP_SWATCH.midnight };
 const mapItems = () => Object.entries(MAPS).map(([id, m]) => ({ id, title: (m.custom ? '🗺 ' : '') + m.name, desc: m.desc, swatch: MAP_SWATCH[id] || THEME_SWATCH[m.theme] }));
 const facItems = [{ id: 'wally', title: 'Wally Squad', desc: 'Titan tanks, medics, Wally the hero, Sky Lance' }, { id: 'grim', title: 'Grimlock Legion', desc: 'Stealth tanks, Inferno tanks, Doom Missile' }];
@@ -299,6 +300,7 @@ function setupMenus() {
     mrow.appendChild(b);
   }
   $('bStart').onclick = () => startWith(sk);
+  $('profile').innerHTML = profileCard();
   // daily challenge
   const dc = dailyChallenge(), rec = dailyRecord();
   $('bDaily').innerHTML = `📅 DAILY CHALLENGE<small>${MAPS[dc.map].name} · ${FACTIONS[dc.faction].short || FACTIONS[dc.faction].name} · ${dc.mut.map(k => MUTATORS[k].icon + ' ' + MUTATORS[k].name).join(' · ')}${rec && rec.date === dc.daily ? ` · ✔ Best ${fmtTime(rec.best)}` : ''}</small>`;
@@ -398,6 +400,7 @@ function setupMenus() {
     window.addEventListener('pointerup', once, true);
   }
   $('bMusic').onclick = () => { Audio.initAudio(); const on = Audio.toggleMusic(); $('bMusic').classList.toggle('on', !on); $('bMusic').textContent = on ? '♪ Music' : '♪ Off'; };
+  $('bIdle').onclick = () => UI.selectNextIdle();
   const speeds = [1, 1.5, 2, 0.5];
   $('bSpeed').onclick = () => { if (lockstep) return; G.speed = speeds[(speeds.indexOf(G.speed) + 1) % speeds.length]; $('bSpeed').textContent = `Game speed: ${G.speed}x`; };
   $('bSuper').onclick = () => { G.ui.setMode?.('super'); };
@@ -477,6 +480,8 @@ function endGame(win, text) {
   Audio.announce(win ? 'Mission accomplished' : 'Mission failed');
   Audio.sting(win);
   if (mission && win && !mission.tutorial) unlockNext(run.mission);
+  const award = run.mode === 'title' ? null : awardGame({ win, kills: G.stats.killed, lost: G.stats.lost, built: G.stats.built, time: G.time, difficulty: G.difficulty, mode: mission && mission.tutorial ? 'tutorial' : run.mode, streak: G.bestStreak });
+  if (award && award.promoted) setTimeout(() => { Audio.announce(`Promoted to ${award.promoted.name}`); }, 3200);
   let dailyNote = '';
   if (run.daily && win) { const r = dailyRecord(); const best = r && r.date === run.daily ? r.best : Infinity; dailyNote = G.time < best ? `New best: ${fmtTime(G.time)}!` : `${fmtTime(G.time)} (best ${fmtTime(best)})`; if (G.time < best) { try { localStorage.setItem('ws_daily', JSON.stringify({ date: run.daily, best: G.time })); } catch { /* ignore */ } } }
   setTimeout(() => {
@@ -484,7 +489,7 @@ function endGame(win, text) {
     $('endTitle').style.color = win ? 'var(--accent)' : 'var(--red)';
     $('endSub').textContent = text || (win ? (mission ? `${mission.title}: mission complete.` : `The ${FACTIONS[G.enemy].name} has been crushed!`) : 'Our forces have fallen. Regroup, commander.');
     const t = Math.floor(G.time);
-    $('endStats').innerHTML = `<span>Mission time</span><span>${Math.floor(t / 60)}m ${t % 60}s</span>${run.mode === 'mp' ? '' : `<span>Difficulty</span><span>${DIFFICULTY[G.difficulty].label}</span>`}<span>Enemies destroyed</span><span>${G.stats.killed}</span><span>Units lost</span><span>${G.stats.lost}</span><span>Structures built</span><span>${G.stats.built}</span><span>Credits harvested</span><span>${Math.round(G.stats.harvested)}</span>${G.mvp ? `<span>MVP</span><span>🏅 ${G.mvp.name} · ${G.mvp.kills} kills</span>` : ''}${G.bestStreak > 1 ? `<span>Best kill streak</span><span>${G.bestStreak}</span>` : ''}${run.daily && win ? `<span>Daily Challenge</span><span>${dailyNote}</span>` : ''}`;
+    $('endStats').innerHTML = `<span>Mission time</span><span>${Math.floor(t / 60)}m ${t % 60}s</span>${run.mode === 'mp' ? '' : `<span>Difficulty</span><span>${DIFFICULTY[G.difficulty].label}</span>`}<span>Enemies destroyed</span><span>${G.stats.killed}</span><span>Units lost</span><span>${G.stats.lost}</span><span>Structures built</span><span>${G.stats.built}</span><span>Credits harvested</span><span>${Math.round(G.stats.harvested)}</span>${G.mvp ? `<span>MVP</span><span>🏅 ${G.mvp.name} · ${G.mvp.kills} kills</span>` : ''}${G.bestStreak > 1 ? `<span>Best kill streak</span><span>${G.bestStreak}</span>` : ''}${run.daily && win ? `<span>Daily Challenge</span><span>${dailyNote}</span>` : ''}${award ? `<span>Experience</span><span>+${award.xp} XP · ${award.rank.icon} ${award.rank.name}${award.promoted ? ' · <b style="color:var(--accent)">PROMOTED!</b>' : ''}</span>` : ''}`;
     recordHistory(99); drawHistory($('endGraph'));
     $('bNext').style.display = mission && win && (mission.tutorial || run.mission < MISSIONS.length - 1) ? '' : 'none';
     $('bAgain').style.display = run.mode === 'mp' ? 'none' : '';
