@@ -32,6 +32,7 @@ import { initAchievements, checkAchievements, buildMedals } from './achievements
 import { registerCustomMaps, buildMapEditor } from './mapeditor.js';
 import { updateOrientation } from './orient.js';
 import { awardGame, profileCard } from './profile.js';
+import { initTipJar } from './tipjar.js';
 updateOrientation();
 import { initSurvival, updateSurvival, survivalPanel, saveBest, bestScores, survival } from './survival.js';
 
@@ -399,6 +400,7 @@ function setupMenus() {
   }
   $('bStart').onclick = () => startWith(sk);
   $('profile').innerHTML = profileCard();
+  initTipJar();
   // daily challenge
   const dc = dailyChallenge(), rec = dailyRecord();
   $('bDaily').innerHTML = `📅 DAILY CHALLENGE<small>${MAPS[dc.map].name} · ${FACTIONS[dc.faction].short || FACTIONS[dc.faction].name} · ${dc.mut.map(k => MUTATORS[k].icon + ' ' + MUTATORS[k].name).join(' · ')}${rec && rec.date === dc.daily ? ` · ✔ Best ${fmtTime(rec.best)}` : ''}</small>`;
