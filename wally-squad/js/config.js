@@ -35,6 +35,14 @@ export const WEAPONS = {
   sam:      { warhead: 'rocket', damage: 85, range: 22, rof: 1.9, proj: 'missile', air: true, ground: false, sound: 'rocket', twin: true },
   plasma:   { warhead: 'beam', damage: 210, range: 21, rof: 3.4, proj: 'beam', air: false, ground: true, splash: 2.2, sound: 'beam', needsPower: true },
   flamer:   { warhead: 'flame', damage: 26, range: 7, rof: 0.25, proj: 'flame', air: false, ground: true, splash: 1.6, sound: 'flame' },
+  inferno:  { warhead: 'flame', damage: 44, range: 8.5, rof: 0.3, proj: 'flame', air: false, ground: true, splash: 2.4, sound: 'flame', big: true },
+  shadeRkt: { warhead: 'rocket', damage: 50, range: 13, rof: 2.2, proj: 'rocket', air: false, ground: true, sound: 'rocket', twin: true },
+};
+
+// Superweapons (one per faction)
+export const SUPERWEAPONS = {
+  skylance: { name: 'Sky Lance', charge: 240, radius: 9, damage: 1150, desc: 'Orbital energy lance' },
+  doom: { name: 'Doom Missile', charge: 270, radius: 11.5, damage: 1300, desc: 'Ballistic warhead' },
 };
 
 // footprint in cells (w x h), power: + produces / - consumes
@@ -47,22 +55,30 @@ export const BUILDINGS = {
   radar:    { name: 'Comms Center', cost: 1000, time: 14, hp: 1000, w: 3, h: 3, power: -40, sight: 22, req: ['refinery'], tab: 'build', key: 'C', desc: 'Enables the minimap radar and advanced units.' },
   tech:     { name: 'Tech Lab', cost: 1500, time: 20, hp: 1000, w: 3, h: 3, power: -60, sight: 10, req: ['factory', 'radar'], tab: 'build', key: 'T', desc: 'Unlocks Titan Tanks, Plasma Towers and the hero Wally.' },
   helipad:  { name: 'Helipad', cost: 1200, time: 16, hp: 800, w: 3, h: 3, power: -20, sight: 10, req: ['radar'], tab: 'build', key: 'H', desc: 'Builds Hornet gunships.' },
+  uplink:   { name: 'Sky Lance Uplink', fac: 'wally', cost: 2500, time: 30, hp: 1500, w: 3, h: 3, power: -100, sight: 12, req: ['tech'], tab: 'build', key: 'U', limit: 1, superweapon: 'skylance', desc: 'Wally Squad superweapon. Charges an orbital energy lance that obliterates anything it touches.' },
+  silo:     { name: 'Doom Missile Silo', fac: 'grim', cost: 2500, time: 30, hp: 1500, w: 3, h: 3, power: -100, sight: 12, req: ['tech'], tab: 'build', key: 'U', limit: 1, superweapon: 'doom', desc: 'Grimlock superweapon. Launches a devastating ballistic warhead.' },
+  wall:     { name: 'Concrete Wall', cost: 60, time: 0, instant: true, hp: 900, w: 1, h: 1, power: 0, sight: 3, req: ['barracks'], tab: 'defense', isWall: true, desc: 'Cheap barrier. Drag to build a line of wall.' },
+  gate:     { name: 'Gate', cost: 250, time: 0, instant: true, hp: 1300, w: 2, h: 1, power: -5, sight: 4, req: ['barracks'], tab: 'defense', isGate: true, desc: 'Opens for your units, blocks the enemy.' },
+  mine:     { name: 'Land Mine', cost: 100, time: 0, instant: true, hp: 60, w: 1, h: 1, power: 0, sight: 1, req: ['factory'], tab: 'defense', isMine: true, noFootprint: true, placeRange: 22, desc: 'Hidden explosive. Detonates under enemy ground units.' },
   turret:   { name: 'Gun Turret', cost: 600, time: 10, hp: 750, w: 1, h: 1, power: -20, sight: 16, req: ['barracks'], tab: 'defense', weapon: 'turretGun', desc: 'Anti-vehicle cannon emplacement.' },
   sam:      { name: 'SAM Site', cost: 750, time: 12, hp: 650, w: 2, h: 2, power: -20, sight: 22, req: ['radar'], tab: 'defense', weapon: 'sam', desc: 'Anti-aircraft missile launcher.' },
   plasma:   { name: 'Plasma Tower', cost: 1500, time: 18, hp: 950, w: 1, h: 1, power: -75, sight: 21, req: ['tech'], tab: 'defense', weapon: 'plasma', desc: 'Devastating energy beam. Needs power.' },
 };
 
 export const UNITS = {
+  medic:    { name: 'Field Medic', fac: 'wally', cost: 300, time: 6, hp: 90, armor: 'infantry', speed: 3.5, sight: 12, radius: 0.45, weapon: null, heals: true, tab: 'infantry', req: ['barracks'], desc: 'Wally Squad only. Heals nearby infantry.' },
   rifle:    { name: 'Rifle Trooper', cost: 100, time: 4, hp: 100, armor: 'infantry', speed: 3.4, sight: 13, radius: 0.45, weapon: 'rifle', tab: 'infantry', req: ['barracks'], desc: 'Cheap all-round infantry.' },
   rocket:   { name: 'Rocket Trooper', cost: 300, time: 7, hp: 90, armor: 'infantry', speed: 3.0, sight: 14, radius: 0.45, weapon: 'bazooka', tab: 'infantry', req: ['barracks'], desc: 'Anti-tank and anti-air.' },
   flamer:   { name: 'Scorcher', cost: 250, time: 6, hp: 120, armor: 'infantry', speed: 3.2, sight: 11, radius: 0.45, weapon: 'flamer', tab: 'infantry', req: ['barracks', 'refinery'], desc: 'Flamethrower. Burns infantry and buildings.' },
   engineer: { name: 'Engineer', cost: 500, time: 8, hp: 70, armor: 'infantry', speed: 3.4, sight: 10, radius: 0.45, weapon: null, tab: 'infantry', req: ['barracks'], desc: 'Captures enemy buildings or fully repairs your own.' },
-  wally:    { name: 'Wally (Hero)', cost: 1500, time: 25, hp: 320, armor: 'infantry', speed: 4.2, sight: 19, radius: 0.5, weapon: 'sniper', tab: 'infantry', req: ['barracks', 'tech'], limit: 1, desc: 'Elite sniper. One-shots infantry and plants C4 on buildings.' },
+  wally:    { name: 'Wally (Hero)', fac: 'wally', cost: 1500, time: 25, hp: 320, armor: 'infantry', speed: 4.2, sight: 19, radius: 0.5, weapon: 'sniper', tab: 'infantry', req: ['barracks', 'tech'], limit: 1, desc: 'Elite sniper. One-shots infantry and plants C4 on buildings.' },
   buggy:    { name: 'Scout Buggy', cost: 400, time: 8, hp: 260, armor: 'light', speed: 10, sight: 16, radius: 1.0, weapon: 'mg', tab: 'vehicle', req: ['factory'], desc: 'Fast raider with a heavy machine gun.' },
   tank:     { name: 'Battle Tank', cost: 800, time: 12, hp: 560, armor: 'heavy', speed: 5.6, sight: 14, radius: 1.35, weapon: 'cannon', turnRate: 2.6, tab: 'vehicle', req: ['factory'], desc: 'Main battle tank.' },
   harvester:{ name: 'Harvester', cost: 1200, time: 16, hp: 950, armor: 'heavy', speed: 4.6, sight: 9, radius: 1.5, weapon: null, turnRate: 2.0, tab: 'vehicle', req: ['factory', 'refinery'], desc: 'Gathers crystal for the refinery.' },
   arty:     { name: 'Thunder Artillery', cost: 900, time: 14, hp: 230, armor: 'light', speed: 4.3, sight: 12, radius: 1.3, weapon: 'arty', turnRate: 2.0, tab: 'vehicle', req: ['factory', 'radar'], desc: 'Long-range siege gun. Cannot hit close targets.' },
-  titan:    { name: 'Titan Tank', cost: 1700, time: 24, hp: 1350, armor: 'heavy', speed: 3.5, sight: 15, radius: 1.8, weapon: 'twin', weapon2: 'titanMsl', turnRate: 1.5, tab: 'vehicle', req: ['factory', 'tech'], selfRepair: true, desc: 'Twin cannons + missiles. Self-repairs to half health.' },
+  titan:    { name: 'Titan Tank', fac: 'wally', cost: 1700, time: 24, hp: 1350, armor: 'heavy', speed: 3.5, sight: 15, radius: 1.8, weapon: 'twin', weapon2: 'titanMsl', turnRate: 1.5, tab: 'vehicle', req: ['factory', 'tech'], selfRepair: true, desc: 'Twin cannons + missiles. Self-repairs to half health.' },
+  stealth:  { name: 'Shade Stealth Tank', fac: 'grim', cost: 1100, time: 16, hp: 430, armor: 'light', speed: 6.6, sight: 14, radius: 1.3, weapon: 'shadeRkt', turnRate: 2.8, tab: 'vehicle', req: ['factory', 'tech'], stealth: true, desc: 'Grimlock only. Invisible until it fires or enemies come close.' },
+  inferno:  { name: 'Inferno Tank', fac: 'grim', cost: 1000, time: 15, hp: 820, armor: 'heavy', speed: 4.6, sight: 12, radius: 1.4, weapon: 'inferno', turnRate: 2.2, tab: 'vehicle', req: ['factory', 'radar'], desc: 'Grimlock only. Heavy flamethrower tank that roasts infantry and buildings.' },
   gunship:  { name: 'Hornet Gunship', cost: 1200, time: 16, hp: 360, armor: 'air', speed: 10, sight: 18, radius: 1.6, weapon: 'heliRkt', tab: 'air', req: ['helipad'], air: true, desc: 'Fast attack helicopter. Hit it with rockets and SAMs.' },
 };
 

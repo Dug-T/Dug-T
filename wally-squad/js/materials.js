@@ -9,7 +9,9 @@ export const fogUniforms = {
   uFogOn: { value: 1 },
 };
 
+export const allMaterials = [];
 export function fogify(mat) {
+  allMaterials.push(mat);
   mat.onBeforeCompile = (shader) => {
     shader.uniforms.uFogTex = fogUniforms.uFogTex;
     shader.uniforms.uWorld = fogUniforms.uWorld;
@@ -74,6 +76,7 @@ export function M() {
     energy: std({ color: 0x66e0ff, emissive: 0x66e0ff, emissiveIntensity: 3.5, roughness: 0.2 }),
     plasma: std({ color: 0xd070ff, emissive: 0xc050ff, emissiveIntensity: 4, roughness: 0.2 }),
     skin: std({ color: 0xd9a77e, roughness: 0.75 }),
+    medic: std({ color: 0xeef0f2, roughness: 0.7 }),
     cloth: std({ color: 0x4e5a3a, roughness: 0.9 }),
     black: std({ color: 0x0c0c0c, roughness: 0.8 }),
     wood: std({ color: 0x6b4a2e, roughness: 0.9 }),

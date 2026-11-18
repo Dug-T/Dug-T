@@ -1,5 +1,5 @@
 // Economy: credits, power, build queues, tech tree and building placement.
-import { G, rr, later } from './state.js';
+import { G, srr as rr, later } from './state.js';
 import { BUILDINGS, UNITS, PRODUCERS, QUEUE_OF, CELL, START_CREDITS, GRID } from './config.js';
 import { T, idx, inGrid, cellOf, cellCenter, heightAt } from './terrain.js';
 import { Building, Unit, alive } from './entities.js';
@@ -33,6 +33,8 @@ export const powerFactor = P => (P.powerUse <= P.powerProd ? 1 : Math.max(0.3, P
 export function hasReqs(faction, type) {
   const P = G.players[faction];
   const d = defOf(type);
+  if (d.fac && d.fac !== faction) return false;
+  if (G.allowed && !G.allowed.includes(type)) return false; // campaign tech restrictions
   if (!d.req.every(r => P.owned[r] > 0)) return false;
   const q = QUEUE_OF[d.tab];
   if (!PRODUCERS[d.tab].some(p => P.owned[p] > 0)) return false;
@@ -46,6 +48,7 @@ export function hasReqs(faction, type) {
 // Adds item to the right queue; returns false on failure
 export function enqueue(faction, type) {
   const d = defOf(type);
+  if (d.instant) return false; // walls, gates and mines are bought on placement
   if (!hasReqs(faction, type)) return false;
   const P = G.players[faction];
   const q = P.queues[QUEUE_OF[d.tab]];
@@ -130,6 +133,14 @@ function spawnFromProducer(faction, type) {
 export function canPlace(faction, type, cx, cz, ignoreUnits = false) {
   const d = BUILDINGS[type];
   let nearOwn = false;
+  if (d.isMine) {
+    if (!inGrid(cx, cz)) return false;
+    const k = idx(cx, cz);
+    if (T.blocked[k] || T.bld[k] || T.ore[k] > 0 || !T.explored[k] && faction === G.player) return false;
+    if (G.buildings.some(b => !b.dead && b.def.isMine && b.cx === cx && b.cz === cz)) return false;
+    const R = d.placeRange;
+    return G.buildings.some(b => !b.dead && b.faction === faction && !b.def.isMine && Math.abs(b.cx - cx) < R && Math.abs(b.cz - cz) < R);
+  }
   for (let j = 0; j < d.h; j++) for (let i = 0; i < d.w; i++) {
     const X = cx + i, Z = cz + j;
     if (!inGrid(X, Z) || X < 2 || Z < 2 || X > GRID - 3 || Z > GRID - 3) return false;
@@ -142,9 +153,9 @@ export function canPlace(faction, type, cx, cz, ignoreUnits = false) {
   for (let j = 0; j <= d.h; j++) for (let i = 0; i <= d.w; i++) { const h = heightAt(x0 + i * CELL, z0 + j * CELL); lo = Math.min(lo, h); hi = Math.max(hi, h); }
   if (hi - lo > 2.2) return false;
   // must be near an existing structure
-  const R = 5;
+  const R = d.isWall || d.isGate ? 8 : 5;
   for (const b of G.buildings) {
-    if (b.dead || b.faction !== faction) continue;
+    if (b.dead || b.faction !== faction || b.def.isMine) continue;
     if (cx + d.w + R > b.cx && cx - R < b.cx + b.def.w && cz + d.h + R > b.cz && cz - R < b.cz + b.def.h) { nearOwn = true; break; }
   }
   if (!nearOwn) return false;
@@ -176,4 +187,31 @@ export function placeBuilding(faction, type, cx, cz) {
   }
   if (faction === G.player) G.stats.built++;
   return b;
+}
+
+// Walls, gates and mines: paid for when placed, no build time. cells: [[cx,cz],...]
+export function placeInstant(faction, type, cells) {
+  const d = BUILDINGS[type];
+  if (!d || !d.instant || !hasReqs(faction, type)) return 0;
+  const P = G.players[faction];
+  let n = 0;
+  for (const [cx, cz] of cells) {
+    if (P.credits < d.cost) { if (faction === G.player) G.announce?.('Insufficient funds', faction, 6); break; }
+    if (!canPlace(faction, type, cx, cz)) continue;
+    P.credits -= d.cost;
+    new Building(type, faction, cx, cz);
+    n++;
+  }
+  return n;
+}
+// cells along a straight line (for dragging walls)
+export function lineCells(c0, c1) {
+  const out = [];
+  const dx = c1.cx - c0.cx, dz = c1.cz - c0.cz;
+  const n = Math.max(Math.abs(dx), Math.abs(dz));
+  for (let i = 0; i <= n; i++) {
+    const cx = Math.round(c0.cx + dx * (n ? i / n : 0)), cz = Math.round(c0.cz + dz * (n ? i / n : 0));
+    if (!out.some(([a, b]) => a === cx && b === cz)) out.push([cx, cz]);
+  }
+  return out.slice(0, 40);
 }

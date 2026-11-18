@@ -106,6 +106,45 @@
     .item .nm { display: none; }
   }
   body.touch #touchBar { display: flex; }
+  .menuCol { display: flex; flex-direction: column; gap: 8px; align-items: center; margin-top: 12px; }
+  .menuCol .big { width: 280px; }
+  .card.wide { width: min(860px, 94vw); }
+  .label { color: var(--accent); font: 700 13px 'Rajdhani'; letter-spacing: 1px; margin: 12px 0 4px; text-transform: uppercase; }
+  .label.small { font-size: 11px; margin: 6px 0 3px; }
+  .cardList { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; }
+  .cardList.small { grid-template-columns: 1fr 1fr; }
+  .opt { background: #111b24; border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; cursor: pointer; }
+  .opt:hover { border-color: var(--accent); }
+  .opt.on { border-color: var(--accent); background: #2a2410; }
+  .opt.locked { opacity: 0.4; cursor: not-allowed; }
+  .opt b { color: #fff; font-size: 16px; display: block; }
+  .opt span { color: var(--dim); font-size: 13px; }
+  .opt .swatch { height: 46px; border-radius: 4px; margin-bottom: 6px; }
+  .twoCol { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  @media (max-width: 700px) { .twoCol { grid-template-columns: 1fr; } }
+  #roomInput { font: 700 28px 'Black Ops One'; width: 170px; text-align: center; text-transform: uppercase; background: #0d151c; color: var(--accent); border: 1px solid var(--line2); border-radius: 6px; padding: 6px; letter-spacing: 4px; }
+  .roomcode { font: 46px 'Black Ops One'; color: var(--accent); text-align: center; letter-spacing: 8px; margin: 10px 0; }
+  #mpOverlay { position: absolute; inset: 0; z-index: 25; display: none; align-items: center; justify-content: center; background: #000a; }
+  #objectives { position: absolute; left: 10px; top: 46px; z-index: 4; background: var(--panel); border: 1px solid var(--line2); border-radius: 6px; padding: 6px 10px; font-size: 14px; display: none; max-width: 320px; }
+  #objectives .ob { margin: 2px 0; } #objectives .done { color: var(--green); } #objectives .failed { color: var(--red); }
+  body.touch #objectives { top: 230px; }
+  #superRow { margin: 6px 8px 0; padding: 6px; border: 1px solid var(--line2); border-radius: 5px; background: #1a1210; display: grid; grid-template-columns: 1fr auto; gap: 4px; align-items: center; font: 700 12px 'Rajdhani'; }
+  #superBar { grid-column: 1; height: 6px; background: #2b1d18; border-radius: 3px; overflow: hidden; }
+  #superFill { height: 100%; width: 0; background: linear-gradient(90deg, #ff6a3a, #ffd34a); }
+  #bSuper { grid-row: 1 / span 2; grid-column: 2; padding: 4px 8px; font-size: 12px; }
+  #bSuper:disabled { opacity: 0.4; }
+  #bSuper.ready { animation: blink 0.7s infinite; border-color: #ff6a3a; color: #ffd34a; }
+  #enemySuper { grid-column: 1 / span 2; color: var(--red); font-size: 11px; }
+  .vgrid { display: grid; grid-template-columns: 170px repeat(3, 1fr); gap: 4px; max-height: 46vh; overflow-y: auto; margin-top: 8px; }
+  .vh { font: 700 12px 'Rajdhani'; color: var(--accent); text-transform: uppercase; padding: 2px; }
+  .vname { display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 13px; }
+  .vname img { width: 44px; height: 35px; object-fit: cover; border-radius: 3px; }
+  .vcell { display: flex; align-items: center; gap: 3px; background: #0f171e; border-radius: 4px; padding: 3px; }
+  .vbtn { padding: 2px 6px; font-size: 12px; }
+  .vbtn.on { background: #5a1010; border-color: #ff4a3d; color: #fff; animation: blink 0.6s infinite; }
+  .vcount { font-size: 11px; color: var(--dim); margin-left: auto; }
+  .vcount.has { color: var(--green); }
+  #briefText p { font-size: 16px; }
 </style>
 <script type="importmap">
 { "imports": { "three": "./lib/three.module.min.js" } }
@@ -119,6 +158,7 @@
 <div id="topbar">
   <div class="brand">WALLY SQUAD</div>
   <div id="clock" style="font-weight:700;color:var(--dim)">00:00</div>
+  <div id="wx" style="font-weight:700;color:#bfe6ff"></div>
   <div class="spacer"></div>
   <button class="btn" id="bMusic" title="Toggle music">♪ Music</button>
   <button class="btn" id="bHelp" title="Controls (F1)">? Help</button>
@@ -136,6 +176,7 @@
   <div id="credits">$ 0</div>
   <div id="powerRow"><span>⚡</span><div id="powerBar"><div id="powerFill"></div><div id="powerUse"></div></div><span id="powerTxt">0/0</span></div>
   <div id="minimapWrap"><canvas id="minimap" width="256" height="256"></canvas><div id="radarOff"></div></div>
+  <div id="superRow" style="display:none"><div id="superName"></div><div id="superBar"><div id="superFill"></div></div><button class="btn" id="bSuper">LAUNCH</button><div id="enemySuper"></div></div>
   <div id="tabs"></div>
   <div id="grid"></div>
   <div id="modeRow">
@@ -147,15 +188,69 @@
 <div id="tooltip"></div>
 
 <div id="title" class="screen" style="display:none">
-  <div class="card">
+  <div class="card" id="menuMain">
     <h1 class="logo">WALLY<br>SQUAD</h1>
     <div class="tag">REAL-TIME STRATEGY · BUILD · HARVEST · CONQUER</div>
     <p style="text-align:center">The <b style="color:var(--blue)">Wally Squad</b> has landed in the Crystal Valley. The <b style="color:var(--red)">Grimlock Legion</b> wants every last crystal. Build your base, harvest crystal, raise an army and wipe them off the map.</p>
-    <div class="row" id="diffRow"></div>
-    <div class="row"><button class="btn big" id="bStart">▶ DEPLOY</button></div>
-    <div class="row"><button class="btn" id="bHow">How to play</button></div>
+    <div class="menuCol">
+      <button class="btn big" data-panel="menuCampaign">★ CAMPAIGN</button>
+      <button class="btn big" data-panel="menuSkirmish">⚔ SKIRMISH</button>
+      <button class="btn big" data-panel="menuOnline">🌐 ONLINE BATTLE</button>
+      <button class="btn big" data-panel="menuVoices">🎙 VOICE STUDIO</button>
+      <button class="btn" id="bHow">How to play</button>
+    </div>
+  </div>
+  <div class="card wide" id="menuCampaign" style="display:none">
+    <h2>CAMPAIGN</h2>
+    <p style="text-align:center">Lead Wally's squad through five missions against the Grimlock Warlord.</p>
+    <div id="missionList" class="cardList"></div>
+    <div class="row"><button class="btn" data-panel="menuMain">◀ Back</button></div>
+  </div>
+  <div class="card wide" id="menuSkirmish" style="display:none">
+    <h2>SKIRMISH</h2>
+    <div class="label">Map</div><div id="mapList" class="cardList maps"></div>
+    <div class="label">Your faction</div><div class="row" id="facRow"></div>
+    <div class="label">Enemy difficulty</div><div class="row" id="diffRow"></div>
+    <div class="label">Battlefield</div><div class="row" id="optRow"></div>
+    <div class="row"><button class="btn" data-panel="menuMain">◀ Back</button><button class="btn big" id="bStart">▶ DEPLOY</button></div>
+  </div>
+  <div class="card wide" id="menuOnline" style="display:none">
+    <h2>ONLINE BATTLE</h2>
+    <p style="text-align:center">Play 1 v 1 against a friend over the internet. One of you hosts and shares the room code.</p>
+    <div class="twoCol">
+      <div><div class="label">Host a battle</div>
+        <div class="label small">Map</div><div id="mapListMp" class="cardList maps small"></div>
+        <div class="label small">Your faction</div><div class="row" id="facRowMp"></div>
+        <div class="row"><button class="btn big" id="bHost">Create room</button></div></div>
+      <div><div class="label">Join a battle</div>
+        <p style="text-align:center;color:var(--dim)">Type the room code your friend gives you.</p>
+        <div class="row"><input id="roomInput" maxlength="5" placeholder="ROOM" autocomplete="off"></div>
+        <div class="row"><button class="btn big" id="bJoin">Join</button></div>
+        <p id="joinStatus" style="text-align:center;color:var(--accent)"></p></div>
+    </div>
+    <div class="row"><button class="btn" data-panel="menuMain">◀ Back</button></div>
+  </div>
+  <div class="card wide" id="menuVoices" style="display:none">
+    <h2>VOICE STUDIO</h2>
+    <p style="text-align:center">Record your own voice lines - and your friends' - for every unit. Each line keeps up to 3 takes and picks one at random. Lines without a recording use a computer voice.</p>
+    <div class="row"><label><input type="checkbox" id="vOn"> Unit voices on</label><label><input type="checkbox" id="vTts"> Computer voice for missing lines</label></div>
+    <div id="studio"></div>
+    <div class="row"><button class="btn" id="bExport">⬇ Export voice pack</button><label class="btn">⬆ Import voice pack<input type="file" id="importFile" accept=".json" style="display:none"></label></div>
+    <div class="row"><button class="btn" data-panel="menuMain">◀ Back</button></div>
   </div>
 </div>
+
+<div id="briefing" class="screen" style="display:none">
+  <div class="card">
+    <div class="tag" id="briefNum"></div>
+    <h1 class="logo" id="briefTitle" style="font-size:44px"></h1>
+    <div id="briefText"></div>
+    <div class="label">Objectives</div>
+    <ul id="briefObj"></ul>
+    <div class="row"><button class="btn" onclick="location.href=location.pathname">◀ Menu</button><button class="btn big" id="bBegin">▶ BEGIN MISSION</button></div>
+  </div>
+</div>
+<div id="objectives"></div>
 
 <div id="help" class="screen" style="display:none">
   <div class="card">
@@ -171,6 +266,10 @@
       <li><b>Buildings:</b> select a factory and right-click to set a rally point. <kbd>R</kbd> repair mode, <kbd>X</kbd> sell mode.</li>
       <li><b>Engineers</b> capture enemy buildings. <b>Wally</b> (hero) snipes infantry and plants C4 on buildings.</li>
       <li><b>Veterancy:</b> units with 3 kills become Veterans (★), 6 kills Elite (★★) and self-repair.</li>
+      <li><b>Factions:</b> the Wally Squad has Titan tanks, Field Medics, Wally and the Sky Lance. The Grimlock Legion has Shade stealth tanks, Inferno flame tanks and the Doom Missile.</li>
+      <li><b>Superweapons:</b> build the Uplink / Silo after a Tech Lab. When charged, press LAUNCH in the sidebar and click a target.</li>
+      <li><b>Walls, gates &amp; mines</b> (Defence tab): drag to lay a wall line. Gates open for your units only. Mines are invisible to the enemy.</li>
+      <li><b>Weather &amp; night:</b> rain and snow slow vehicles, fog, blizzards, sandstorms and darkness cut sight range.</li>
       <li><b>Touch:</b> tap to select / command, one finger drag to scroll, pinch to zoom, use <b>Box select</b> for drag-selecting.</li>
     </ul>
     <div class="row"><button class="btn big" id="bHelpClose">Got it</button></div>
@@ -181,7 +280,8 @@
   <div class="card">
     <h2>PAUSED</h2>
     <div class="row"><button class="btn big" id="bResume">Resume</button></div>
-    <div class="row"><button class="btn" id="bSpeed">Game speed: 1x</button><button class="btn" id="bRestart">Restart mission</button></div>
+    <div class="row"><button class="btn" id="bSpeed">Game speed: 1x</button><button class="btn" id="bRestart">Restart</button></div>
+    <div class="row"><button class="btn" id="bSurrender">🏳 Surrender</button><button class="btn" onclick="location.href=location.pathname">Quit to menu</button></div>
   </div>
 </div>
 
@@ -190,7 +290,8 @@
     <h1 class="logo" id="endTitle">VICTORY</h1>
     <div class="tag" id="endSub"></div>
     <div class="stats" id="endStats"></div>
-    <div class="row"><button class="btn big" id="bAgain">Play again</button><button class="btn big" id="bWatch">Keep watching</button></div>
+    <div class="row"><button class="btn big" id="bNext" style="display:none">Next mission ▶</button><button class="btn big" id="bAgain">Play again</button><button class="btn big" id="bWatch">Keep watching</button></div>
+    <div class="row"><button class="btn" onclick="location.href=location.pathname">Main menu</button></div>
   </div>
 </div>
 

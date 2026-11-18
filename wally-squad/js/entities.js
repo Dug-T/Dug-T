@@ -1,6 +1,6 @@
 // Units, buildings, projectiles, combat and death.
 import * as THREE from 'three';
-import { G, nextId, rr, clamp, angleDiff, later } from './state.js';
+import { G, nextId, rr, clamp, angleDiff, later, srand, srr } from './state.js';
 import { UNITS, BUILDINGS, WEAPONS, WARHEADS, CELL, HALF, GRID, HARVEST_CAPACITY, FACTIONS, WATER_LEVEL } from './config.js';
 import { T, heightAt, groundY, normalAt, cellOf, cellCenter, idx, isWalkable, isVisibleAt, inGrid } from './terrain.js';
 import { makeUnitModel, makeBuildingModel, makeRubble, charModel } from './models.js';
@@ -54,11 +54,14 @@ export function distTo(e, x, z) {
   return Math.hypot(e.x - x, e.z - z) - (e.def.radius || 0) * 0.5;
 }
 export function aimPoint(e) {
-  if (e.kind === 'building') return { x: e.x + rr(-0.6, 0.6) * e.def.w, y: e.baseY + 1.2 + Math.random() * 1.2, z: e.z + rr(-0.6, 0.6) * e.def.h };
+  if (e.kind === 'building') return { x: e.x + srr(-0.6, 0.6) * e.def.w, y: e.baseY + 1.2 + srand() * 1.2, z: e.z + srr(-0.6, 0.6) * e.def.h };
   return { x: e.x, y: e.y + (e.def.air ? 0.2 : e.def.armor === 'infantry' ? 1.0 : 1.1), z: e.z };
 }
+export const FACIDX = { wally: 1, grim: 2 };
 function canTarget(w, e) {
   if (!alive(e)) return false;
+  if (e.cloaked) return false;
+  if (e.kind === 'building' && e.def.isMine) return false;
   const air = e.kind === 'unit' && e.def.air;
   return air ? w.air : w.ground;
 }
@@ -70,7 +73,7 @@ export class Unit {
     this.x = x; this.z = z; this.y = groundY(x, z); this.heading = heading; this.turretYaw = heading;
     this.hp = this.def.hp; this.maxHp = this.def.hp;
     this.path = null; this.pi = 0; this.order = null; this.target = null; this.cool = 0; this.cool2 = 0;
-    this.speedNow = 0; this.walkPhase = Math.random() * 6; this.scanT = Math.random() * 0.5; this.stuckT = 0; this.lastPos = { x, z };
+    this.speedNow = 0; this.walkPhase = Math.random() * 6; this.scanT = srand() * 0.5; this.stuckT = 0; this.lastPos = { x, z };
     this.kills = 0; this.rank = 0; this.idleT = 0;
     this.weapon = this.def.weapon ? WEAPONS[this.def.weapon] : null;
     this.weapon2 = this.def.weapon2 ? WEAPONS[this.def.weapon2] : null;
@@ -86,6 +89,7 @@ export class Unit {
     this.tailrotor = this.mesh.getObjectByName('tailrotor');
     this.legs = []; this.mesh.traverse(o => { if (o.name === 'leg') this.legs.push(o); });
     this.loadMesh = this.mesh.getObjectByName('load');
+    if (!this.isInf && !this.air) { this.lights = makeHeadlights(this.def.radius); this.mesh.add(this.lights); }
     G.three.scene.add(this.mesh);
     this.ring = null;
     G.units.push(this); byId.set(this.id, this);
@@ -124,7 +128,7 @@ export class Unit {
 
   requestPath(x, z, ignoreId = 0) {
     if (this.air) { this.path = [{ x, z }]; this.pi = 0; return; }
-    this.path = findPath(this.x, this.z, x, z, { ignoreId });
+    this.path = findPath(this.x, this.z, x, z, { ignoreId, gate: FACIDX[this.faction] });
     this.pi = 0; this.stuckT = 0;
     this.pathGoal = { x, z, ignoreId };
   }
@@ -136,7 +140,18 @@ export class Unit {
     if (this.rank >= 2 && this.hp < this.maxHp) this.hp = Math.min(this.maxHp, this.hp + 2 * dt);
     this.cool -= dt; this.cool2 -= dt;
 
-    if (this.type === 'harvester') this.harvestLogic(dt);
+    if (this.def.stealth) {
+      this.cloakT = (this.cloakT || 0) - dt;
+      if (this.cloakT <= 0) {
+        this.cloakT = 0.3;
+        let near = G.time - (this.lastFire ?? -99) < 2.5 || this.hp < this.maxHp * 0.25;
+        if (!near) for (const o of unitsNear(this.x, this.z, 5.5, cloakBuf)) if (o.faction !== this.faction && !o.dead) { near = true; break; }
+        if (!near) for (const b of G.buildings) if (!b.dead && b.faction !== this.faction && !b.def.isMine && distTo(b, this.x, this.z) < 4) { near = true; break; }
+        this.cloaked = !near;
+      }
+    }
+    if (this.def.heals) this.medicLogic(dt);
+    else if (this.type === 'harvester') this.harvestLogic(dt);
     else if (this.order && (this.order.type === 'capture' || this.order.type === 'c4')) this.specialLogic(dt);
     else this.combatLogic(dt);
 
@@ -156,14 +171,14 @@ export class Unit {
     this.scanT -= dt;
     const mayScan = !this.order || this.order.type === 'attackMove' || (this.order.type === 'move' && this.faction !== G.player && false);
     if (this.scanT <= 0) {
-      this.scanT = 0.4 + Math.random() * 0.2;
+      this.scanT = 0.4 + srand() * 0.2;
       if (!this.target && mayScan) {
-        const t = this.findTarget(this.def.sight);
+        const t = this.findTarget(this.def.sight * G.sightMult);
         if (t) { this.target = t; this.guardPos = this.guardPos || { x: this.x, z: this.z }; }
       }
       if (this.target && this.target.kind === 'building' && mayScan && this.order?.type !== 'attack') {
         // prefer units over buildings when auto-targeting
-        const t = this.findTarget(this.def.sight, true);
+        const t = this.findTarget(this.def.sight * G.sightMult, true);
         if (t) this.target = t;
       }
     }
@@ -204,7 +219,7 @@ export class Unit {
     if (this.path) { this.path = null; }
     const aimed = this.aimTurret(dt, t);
     if (aimed && this.cool <= 0 && canTarget(w, t)) {
-      this.cool = w.rof * (0.9 + Math.random() * 0.2);
+      this.cool = w.rof * (0.9 + srand() * 0.2);
       fireWeapon(this, w, t, this.mesh.userData.muzzle, this.turret);
       if (w.twin) later(0.14, () => { if (alive(this) && alive(t)) fireWeapon(this, w, t, this.mesh.userData.muzzle2 || this.mesh.userData.muzzle, this.turret); });
     }
@@ -212,6 +227,31 @@ export class Unit {
       this.cool2 = this.weapon2.rof;
       fireWeapon(this, this.weapon2, t, new THREE.Vector3(1.2, 0.5, 0.3), this.turret);
       later(0.18, () => { if (alive(this) && alive(t)) fireWeapon(this, this.weapon2, t, new THREE.Vector3(-1.2, 0.5, 0.3), this.turret); });
+    }
+  }
+
+  medicLogic(dt) {
+    this.scanT -= dt;
+    if (this.scanT <= 0) {
+      this.scanT = 0.5;
+      if (!this.healTarget || this.healTarget.dead || this.healTarget.hp >= this.healTarget.maxHp) {
+        this.healTarget = null;
+        let bd = 1e9;
+        for (const u of unitsNear(this.x, this.z, this.def.sight, healBuf)) {
+          if (u === this || u.faction !== this.faction || !u.isInf || u.hp >= u.maxHp) continue;
+          const d = Math.hypot(u.x - this.x, u.z - this.z);
+          if (d < bd) { bd = d; this.healTarget = u; }
+        }
+      }
+      const h = this.healTarget;
+      if (h && !this.order && Math.hypot(h.x - this.x, h.z - this.z) > 2.5) this.requestPath(h.x, h.z);
+    }
+    const h = this.healTarget;
+    if (h && !h.dead && Math.hypot(h.x - this.x, h.z - this.z) < 3) {
+      if (this.path && !this.order) this.path = null;
+      h.hp = Math.min(h.maxHp, h.hp + 16 * dt);
+      if (Math.random() < dt * 8) FX.sparkBurst(h.x, h.y + 1.2, h.z, 2, [1, 4, 1.5, 1]);
+      this.heading += clamp(angleDiff(this.heading, Math.atan2(h.x - this.x, h.z - this.z)), -dt * 8, dt * 8);
     }
   }
 
@@ -230,7 +270,7 @@ export class Unit {
     }
     if (best || unitsOnly) return best;
     for (const b of G.buildings) {
-      if (b.dead || b.faction === this.faction || !w.ground) continue;
+      if (b.dead || b.faction === this.faction || !w.ground || b.def.isMine || b.def.isWall) continue;
       const d = distTo(b, this.x, this.z);
       if (d > range) continue;
       const score = d + (b.def.weapon ? -5 : 5);
@@ -375,7 +415,7 @@ export class Unit {
 
   // ---------------------------------------------------- movement
   moveLogic(dt) {
-    const sp = this.def.speed * (this.rank >= 1 ? 1.05 : 1);
+    const sp = this.def.speed * (this.rank >= 1 ? 1.05 : 1) * (this.isInf || this.air ? 1 : G.speedMult);
     let moving = false;
     if (this.path && this.pi < this.path.length) {
       const wp = this.path[this.pi];
@@ -450,6 +490,7 @@ export class Unit {
     if (b) {
       if (this.type === 'harvester' && this.refinery && b === this.refinery.id) return true;
       if (this.pathGoal && this.pathGoal.ignoreId === b) return true;
+      if (T.gate[i] && T.gate[i] === FACIDX[this.faction]) return true;
       return false;
     }
     return true;
@@ -505,8 +546,10 @@ export class Unit {
       if (this.hp < this.maxHp * 0.25) FX.fireSmoke(this.x, this.y + 1.4, this.z, 0.7);
       else FX.blackSmoke(this.x, this.y + 1.4, this.z, 0.8);
     }
+    if (this.def.stealth) setCloakLook(this, this.cloaked && this.faction === G.player);
+    if (this.lights) this.lights.visible = (G.nightLevel || 0) > 0.3;
     // visibility (fog)
-    if (this.faction !== G.player) m.visible = isVisibleAt(this.x, this.z);
+    if (this.faction !== G.player) m.visible = isVisibleAt(this.x, this.z) && !this.cloaked;
   }
 
   // ---------------------------------------------------- death
@@ -587,7 +630,66 @@ export class Unit {
     G.three.scene.remove(this.mesh);
   }
 }
-const sepBuf = [];
+const sepBuf = [], cloakBuf = [], healBuf = [], gateBuf = [];
+
+// --- stealth look: swap to a shimmering glass material while cloaked (own units only)
+const cloakMats = {};
+function setCloakLook(u, on) {
+  if (!!u._cloakLook === on) return;
+  u._cloakLook = on;
+  if (!cloakMats[u.faction]) cloakMats[u.faction] = new THREE.MeshStandardMaterial({ color: 0x9ad8ff, transparent: true, opacity: 0.22, roughness: 0.1, metalness: 0.9, emissive: 0x2a6a9a, emissiveIntensity: 0.4, depthWrite: false });
+  u.mesh.traverse(o => {
+    if (!o.isMesh || o === u.ring) return;
+    if (on) { o.userData.realMat = o.userData.realMat || o.material; o.material = cloakMats[u.faction]; o.castShadow = false; }
+    else if (o.userData.realMat) { o.material = o.userData.realMat; o.castShadow = true; }
+  });
+}
+
+// --- fake volumetric lights for the night: beam cones + glowing ground pools
+let beamTex = null, poolTex = null;
+function lightTextures() {
+  if (beamTex) return;
+  const c = document.createElement('canvas'); c.width = 4; c.height = 128;
+  const x = c.getContext('2d'); const g = x.createLinearGradient(0, 0, 0, 128);
+  g.addColorStop(0, 'rgba(255,255,255,0.9)'); g.addColorStop(0.35, 'rgba(255,255,255,0.35)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+  x.fillStyle = g; x.fillRect(0, 0, 4, 128);
+  beamTex = new THREE.CanvasTexture(c);
+  const c2 = document.createElement('canvas'); c2.width = c2.height = 64;
+  const x2 = c2.getContext('2d'); const g2 = x2.createRadialGradient(32, 32, 0, 32, 32, 32);
+  g2.addColorStop(0, 'rgba(255,255,255,1)'); g2.addColorStop(0.5, 'rgba(255,255,255,0.35)'); g2.addColorStop(1, 'rgba(255,255,255,0)');
+  x2.fillStyle = g2; x2.fillRect(0, 0, 64, 64);
+  poolTex = new THREE.CanvasTexture(c2);
+}
+let beamGeo = null, poolGeo = null, beamMat = null, poolMat = null, searchMat = null;
+function lightAssets() {
+  lightTextures();
+  if (beamGeo) return;
+  // cone with its apex at the origin pointing down +z; uv.v=1 at the apex
+  beamGeo = new THREE.CylinderGeometry(0.05, 1.6, 9, 16, 1, true).translate(0, -4.5, 0).rotateX(-Math.PI / 2);
+  poolGeo = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2);
+  beamMat = new THREE.MeshBasicMaterial({ color: 0xfff1c8, map: beamTex, transparent: true, opacity: 0.22, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
+  poolMat = new THREE.MeshBasicMaterial({ color: 0xffe6b0, map: poolTex, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false });
+  searchMat = beamMat.clone(); searchMat.color.set(0xd8ecff); searchMat.opacity = 0.16;
+}
+function makeHeadlights(r) {
+  lightAssets();
+  const g = new THREE.Group();
+  for (const s of [-0.5, 0.5]) {
+    const b = new THREE.Mesh(beamGeo, beamMat); b.position.set(s * r, 0.9, r * 1.1); b.rotation.x = 0.22; b.scale.set(0.6, 0.6, 1); g.add(b);
+  }
+  const pool = new THREE.Mesh(poolGeo, poolMat); pool.scale.set(5, 1, 8); pool.position.set(0, 0.2, r + 5.5); g.add(pool);
+  g.visible = false;
+  return g;
+}
+function makeSearchlight(h) {
+  lightAssets();
+  const g = new THREE.Group();
+  const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.22, 10, 8), M().lampWhite); lamp.position.y = h; g.add(lamp);
+  const b = new THREE.Mesh(beamGeo, searchMat); b.position.y = h; b.rotation.x = 0.55; b.scale.set(1.3, 1.3, 2.2); g.add(b);
+  const pool = new THREE.Mesh(poolGeo, poolMat); pool.scale.set(7, 1, 7); pool.position.set(0, 0.25 - h * 0 + 0.1, h / Math.tan(0.55) * 1.0 + 4); g.add(pool);
+  g.visible = false;
+  return g;
+}
 
 function nearestOwn(u, type) {
   let best = null, bd = 1e9;
@@ -628,7 +730,8 @@ export class Building {
     this.hp = this.def.hp; this.maxHp = this.def.hp;
     this.cool = 0; this.turretYaw = Math.PI * 0.75 + (faction === 'grim' ? Math.PI : 0);
     this.rally = null; this.repairing = false; this.dockedBy = null;
-    for (let j = 0; j < this.def.h; j++) for (let i = 0; i < this.def.w; i++) T.bld[idx(cx + i, cz + j)] = this.id;
+    if (!this.def.noFootprint) for (let j = 0; j < this.def.h; j++) for (let i = 0; i < this.def.w; i++) { T.bld[idx(cx + i, cz + j)] = this.id; if (this.def.isGate) T.gate[idx(cx + i, cz + j)] = FACIDX[faction]; }
+    if (this.def.instant) instant = instant || this.def.isMine;
     // ground level: highest corner so nothing clips into the slope
     let hmax = -1e9, hmin = 1e9;
     for (let j = 0; j <= this.def.h; j++) for (let i = 0; i <= this.def.w; i++) {
@@ -658,6 +761,9 @@ export class Building {
     this.dish = m.getObjectByName('dish');
     this.core = m.getObjectByName('core');
     this.parts = m.userData.parts || {};
+    this.gateDoor = m.getObjectByName('gatedoor');
+    if (['conyard', 'turret', 'radar', 'plasma'].includes(this.type)) { this.search = makeSearchlight(this.type === 'conyard' ? 7 : this.type === 'radar' ? 4.2 : 3.2); this.mesh.add(this.search); }
+    if (this.def.isMine) this.mesh.visible = this.faction === G.player;
     G.three.scene.add(this.mesh);
     if (this.selected) { this.ring = null; this.setSelected(true); }
   }
@@ -684,6 +790,7 @@ export class Building {
     this.faction = faction;
     if (this.dockedBy) this.dockedBy = null;
     this.repairing = false;
+    if (this.def.isGate) for (let j = 0; j < this.def.h; j++) for (let i = 0; i < this.def.w; i++) T.gate[idx(this.cx + i, this.cz + j)] = FACIDX[faction];
     this.makeMesh();
     if (faction === G.player) G.announce?.('Building captured', G.player);
     if (old === G.player) G.announce?.('Building lost', G.player);
@@ -701,6 +808,18 @@ export class Building {
       if (Math.random() < 0.3) FX.dust(this.x + rr(-1, 1) * this.def.w, this.z + rr(-1, 1) * this.def.h, 1.5);
     }
     const t = G.time;
+    if (this.def.isMine) { this.mineLogic(dt); return; }
+    if (this.gateDoor) {
+      this.gateT = (this.gateT || 0) - dt;
+      if (this.gateT <= 0) { this.gateT = 0.25; this.gateOpen = unitsNear(this.x, this.z, 5, gateBuf).some(u => u.faction === this.faction && !u.air); }
+      const want = this.gateOpen ? -0.95 : 1.05;
+      this.gateDoor.position.y += (want - this.gateDoor.position.y) * Math.min(1, dt * 5);
+    }
+    if (this.search) {
+      const on = (G.nightLevel || 0) > 0.3 && this.powered;
+      this.search.visible = on;
+      if (on) this.search.rotation.y = Math.sin(t * 0.35 + this.id * 1.7) * 2.2 + this.id;
+    }
     if (this.crane) this.crane.rotation.y = Math.sin(t * 0.3 + this.id) * 1.6;
     if (this.dish) this.dish.rotation.y += dt * (this.powered ? 0.8 : 0.05);
     if (this.core) { this.core.rotation.y += dt * 1.5; this.core.rotation.x = Math.sin(t) * 0.3; this.core.position.y = (this.type === 'plasma' ? 4.7 : 3.4) + Math.sin(t * 2) * 0.1; }
@@ -767,14 +886,39 @@ export class Building {
     }
   }
 
+  mineLogic(dt) {
+    this.mesh.visible = this.faction === G.player;
+    this.scanT = (this.scanT || 0) - dt;
+    if (this.scanT > 0) return;
+    this.scanT = 0.15;
+    const trig = unitsNear(this.x, this.z, 1.6, gateBuf).find(u => u.faction !== this.faction && !u.air && !u.dead);
+    if (!trig) return;
+    FX.explosion(this.x, this.baseY + 0.3, this.z, 1.5, { force: true });
+    for (const u of unitsNear(this.x, this.z, 3.5, gateBuf.slice())) {
+      if (u.faction === this.faction || u.air) continue;
+      const k = 1 - Math.hypot(u.x - this.x, u.z - this.z) / 4;
+      damage(u, 420 * k * (u.def.armor === 'infantry' ? 1.2 : 1), this);
+    }
+    this.dead = true; G.three.scene.remove(this.mesh);
+  }
+
   die(killer) {
     if (this.dead) return;
+    if (this.def.isMine || this.def.isWall || this.def.isGate) {
+      this.dead = true; this.setSelected(false);
+      for (let j = 0; j < this.def.h; j++) for (let i = 0; i < this.def.w; i++) if (T.bld[idx(this.cx + i, this.cz + j)] === this.id) { T.bld[idx(this.cx + i, this.cz + j)] = 0; T.gate[idx(this.cx + i, this.cz + j)] = 0; }
+      FX.explosion(this.x, this.baseY + 1, this.z, this.def.isGate ? 1.4 : 0.9, {});
+      const rub = makeRubble(this.def.w * CELL, this.def.h * CELL); rub.position.set(this.x, this.baseY, this.z); G.three.scene.add(rub);
+      G.three.scene.remove(this.mesh);
+      let t = 0; decay.push({ update: dt => { t += dt; if (t > 30) { G.three.scene.remove(rub); return false; } return true; } });
+      return;
+    }
     this.dead = true;
     this.setSelected(false);
     if (killer && killer.kind === 'unit' && !killer.dead) killer.kills++;
     if (this.faction === G.player) { G.announce?.('Structure lost', G.player); }
     else if (killer && killer.faction === G.player) G.stats.killed++;
-    for (let j = 0; j < this.def.h; j++) for (let i = 0; i < this.def.w; i++) if (T.bld[idx(this.cx + i, this.cz + j)] === this.id) T.bld[idx(this.cx + i, this.cz + j)] = 0;
+    for (let j = 0; j < this.def.h; j++) for (let i = 0; i < this.def.w; i++) if (T.bld[idx(this.cx + i, this.cz + j)] === this.id) { T.bld[idx(this.cx + i, this.cz + j)] = 0; T.gate[idx(this.cx + i, this.cz + j)] = 0; }
     // chain of explosions then a big one
     const W = this.def.w * CELL, D = this.def.h * CELL;
     const n = 3 + this.def.w * 2;
@@ -810,13 +954,13 @@ export class Building {
     P.credits += Math.round(this.def.cost * 0.5 * this.hp / this.maxHp);
     G.sfx?.play('sell', this.x, this.z);
     this.dead = true; this.setSelected(false);
-    for (let j = 0; j < this.def.h; j++) for (let i = 0; i < this.def.w; i++) if (T.bld[idx(this.cx + i, this.cz + j)] === this.id) T.bld[idx(this.cx + i, this.cz + j)] = 0;
+    for (let j = 0; j < this.def.h; j++) for (let i = 0; i < this.def.w; i++) if (T.bld[idx(this.cx + i, this.cz + j)] === this.id) { T.bld[idx(this.cx + i, this.cz + j)] = 0; T.gate[idx(this.cx + i, this.cz + j)] = 0; }
     // a couple of survivors walk out
     const crew = Math.min(3, Math.floor(this.def.cost / 600));
     for (let i = 0; i < crew; i++) {
       const p = this.exitPoint();
-      const u = new Unit('rifle', this.faction, p.x + rr(-1, 1), p.z + rr(-1, 1));
-      u.moveTo(u.x + rr(-3, 3), u.z + rr(1, 4));
+      const u = new Unit('rifle', this.faction, p.x + srr(-1, 1), p.z + srr(-1, 1));
+      u.moveTo(u.x + srr(-3, 3), u.z + srr(1, 4));
     }
     const mesh = this.mesh; let t = 0;
     decay.push({ update: dt => {
@@ -858,6 +1002,8 @@ function freeProj(kind, m) { G.three.scene.remove(m); pools[kind].push(m); }
 
 const _mz = new THREE.Vector3();
 export function fireWeapon(src, w, target, muzzleLocal, frame) {
+  src.lastFire = G.time;
+  if (src.cloaked) { src.cloaked = false; src.cloakT = 0.3; }
   const obj = frame || src.mesh;
   obj.updateWorldMatrix(true, false);
   const mz = obj.localToWorld(_mz.copy(muzzleLocal || new THREE.Vector3(0, 1, 1)));
@@ -887,11 +1033,11 @@ export function fireWeapon(src, w, target, muzzleLocal, frame) {
   const p = { kind, src, w, target, x: mz.x, y: mz.y, z: mz.z, tx: tp.x, ty: tp.y, tz: tp.z, speed, t: 0, faction: src.faction };
   if (kind === 'artillery') {
     const scatter = 1.5;
-    p.tx += rr(-scatter, scatter); p.tz += rr(-scatter, scatter); p.ty = groundY(p.tx, p.tz);
+    p.tx += srr(-scatter, scatter); p.tz += srr(-scatter, scatter); p.ty = groundY(p.tx, p.tz);
     p.flight = 1.2 + dl / 22; p.x0 = mz.x; p.y0 = mz.y; p.z0 = mz.z;
     p.arc = 6 + dl * 0.45;
   }
-  if (kind === 'rocket' || kind === 'missile') { p.wob = Math.random() * 6; p.vy = 4 + Math.random() * 3; }
+  if (kind === 'rocket' || kind === 'missile') { p.wob = srand() * 6; p.vy = 4 + srand() * 3; }
   p.mesh = getProj(kind === 'missile' ? 'rocket' : kind);
   p.mesh.position.set(p.x, p.y, p.z);
   p.mesh.visible = vis;
@@ -997,7 +1143,7 @@ export function damage(target, amount, src, kind) {
   }
   if (target.kind === 'unit' && target.type === 'harvester' && src && alive(src) && target.hState !== 'unload') {
     // harvesters flee home when attacked
-    if (Math.random() < 0.05) { target.hState = 'return'; }
+    if (srand() < 0.05) { target.hState = 'return'; }
   }
   G.onDamage?.(target, src);
   if (target.hp <= 0) { target.hp = 0; target.die(src); }

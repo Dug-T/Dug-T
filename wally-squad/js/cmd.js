@@ -1,0 +1,52 @@
+// Command layer: every player order goes through issue(). In single player it runs at once;
+// in multiplayer it is sent to the lockstep scheduler so both machines run it on the same tick.
+import { G } from './state.js';
+import { byId, alive } from './entities.js';
+import { enqueue, dequeue, placeBuilding, placeInstant } from './production.js';
+import { formationSlots } from './pathfind.js';
+import { T, cellOf, idx, cellCenter } from './terrain.js';
+import { fireSuperweapon } from './superweapons.js';
+
+export function issue(c) {
+  c.f = c.f || G.player;
+  if (G.net) { if (G.net.active) G.net.queue(c); return; } // online: nothing runs until the match starts
+  execute(c);
+}
+
+const mine = (c, id) => { const e = byId.get(id); return alive(e) && e.faction === c.f ? e : null; };
+const myUnits = c => (c.ids || []).map(id => mine(c, id)).filter(e => e && e.kind === 'unit');
+
+export function execute(c) {
+  const P = G.players[c.f];
+  if (!P) return;
+  switch (c.t) {
+    case 'move': {
+      const units = myUnits(c);
+      const ground = units.filter(u => !u.air), air = units.filter(u => u.air);
+      const slots = formationSlots(c.x, c.z, ground.length, ground.some(u => !u.isInf) ? 2 : 1);
+      ground.sort((a, b) => Math.hypot(a.x - c.x, a.z - c.z) - Math.hypot(b.x - c.x, b.z - c.z) || a.id - b.id);
+      ground.forEach((u, i) => u.moveTo(slots[i].x, slots[i].z, { attackMove: !!c.am }));
+      air.forEach((u, i) => { const a = i / Math.max(1, air.length) * Math.PI * 2, r = air.length > 1 ? 3 : 0; u.moveTo(c.x + Math.cos(a) * r, c.z + Math.sin(a) * r, { attackMove: !!c.am }); });
+      break;
+    }
+    case 'atk': { const t = byId.get(c.tid); if (alive(t)) for (const u of myUnits(c)) if (u !== t) u.attack(t); break; }
+    case 'stop': for (const u of myUnits(c)) u.stop(); break;
+    case 'harv': for (const u of myUnits(c)) if (u.type === 'harvester') { u.oreCell = c.cell; u.hState = 'toOre'; u.requestPath(cellCenter(c.cell % 128), cellCenter((c.cell / 128) | 0)); } break;
+    case 'seek': for (const u of myUnits(c)) if (u.type === 'harvester') { u.hState = 'seek'; u.path = null; u.hT = 0; } break;
+    case 'dock': { const r = mine(c, c.rid); if (r) for (const u of myUnits(c)) if (u.type === 'harvester') { u.refinery = r; u.hState = 'return'; u.path = null; } break; }
+    case 'q': enqueue(c.f, c.type); break;
+    case 'dq': dequeue(c.f, c.type); break;
+    case 'hold': { for (const q of Object.values(P.queues)) if (q.items[0] === c.type) q.hold = !!c.on; break; }
+    case 'place': placeBuilding(c.f, c.type, c.cx, c.cz); break;
+    case 'inst': placeInstant(c.f, c.type, c.cells); break;
+    case 'sell': { const b = mine(c, c.id); if (b && b.kind === 'building') b.sell(); break; }
+    case 'rep': { const b = mine(c, c.id); if (b && b.kind === 'building') b.repairing = c.on; break; }
+    case 'rally': { const b = mine(c, c.id); if (b) b.rally = { x: c.x, z: c.z }; break; }
+    case 'prim': { const b = mine(c, c.id); if (b) { for (const o of G.buildings) if (o.type === b.type && o.faction === c.f) o.primary = false; b.primary = true; } break; }
+    case 'super': fireSuperweapon(c.f, c.x, c.z); break;
+    case 'surrender': G.surrendered = c.f; break;
+  }
+}
+
+// helpers used by the UI
+export function oreCellAt(x, z) { const i = idx(cellOf(x), cellOf(z)); return T.ore[i] > 0 ? i : -1; }

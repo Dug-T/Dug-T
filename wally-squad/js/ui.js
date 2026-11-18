@@ -4,7 +4,11 @@ import { G, clamp, lerp } from './state.js';
 import { BUILDINGS, UNITS, TABS, CELL, HALF, WORLD, GRID, FACTIONS, QUEUE_OF, HARVEST_CAPACITY } from './config.js';
 import { T, heightAt, cellOf, cellCenter, idx, isVisibleAt, isExploredAt, BASES } from './terrain.js';
 import { Unit, Building, alive, byId } from './entities.js';
-import { enqueue, dequeue, hasReqs, canPlace, placeBuilding, defOf, isBuildingType, powerFactor } from './production.js';
+import { hasReqs, canPlace, defOf, isBuildingType, powerFactor, lineCells } from './production.js';
+import { issue, oreCellAt } from './cmd.js';
+import * as Voices from './voices.js';
+import { superState } from './superweapons.js';
+import { weatherLabel, clockString } from './weather.js';
 import { makeUnitModel, makeBuildingModel, makeGhost } from './models.js';
 import { formationSlots } from './pathfind.js';
 import { fogUniforms } from './materials.js';
@@ -28,7 +32,7 @@ let hoverEnt = null;
 
 export function initUI() {
   view = $('view'); overlay = $('overlay'); octx = overlay.getContext('2d');
-  G.ui = { message, refreshSelection: refreshSelPanel };
+  G.ui = { message, refreshSelection: refreshSelPanel, setMode: m => setMode(m) };
   buildTabs();
   bindInput();
   bindButtons();
@@ -119,7 +123,7 @@ function buildTabs() {
 let gridItems = [];
 export function buildGrid() {
   const grid = $('grid'); grid.innerHTML = ''; gridItems = [];
-  const list = [...Object.entries(BUILDINGS), ...Object.entries(UNITS)].filter(([, d]) => d.tab === curTab);
+  const list = [...Object.entries(BUILDINGS), ...Object.entries(UNITS)].filter(([, d]) => d.tab === curTab && (!d.fac || d.fac === G.player));
   for (const [type, d] of list) {
     const el = document.createElement('div'); el.className = 'item';
     el.innerHTML = `<img src="${icons[type] || ''}" alt=""><canvas class="clock" width="100" height="80"></canvas><div class="cost">$${d.cost}</div>${d.key ? `<div class="key">${d.key}</div>` : ''}<div class="count"></div><div class="state"></div><div class="nm">${d.name}</div>`;
@@ -133,19 +137,27 @@ export function buildGrid() {
 function clickItem(type) {
   const P = G.players[G.player];
   const d = defOf(type);
+  if (d.instant) {
+    if (!hasReqs(G.player, type)) { Audio.play('error'); message(`Requires: ${reqText(type)}`, true); return; }
+    if (P.credits < d.cost) { Audio.play('error'); Audio.announce('Insufficient funds'); return; }
+    startPlacing(type); return;
+  }
   const q = P.queues[QUEUE_OF[d.tab]];
   if (isBuildingType(type) && q.ready && q.items[0] === type) { startPlacing(type); return; }
-  if (isBuildingType(type) && q.items[0] === type && q.hold) { q.hold = false; Audio.play('click'); return; }
-  if (!hasReqs(G.player, type)) { Audio.play('error'); message(d.limit && (P.owned[type] || 0) >= d.limit ? `Only ${d.limit} ${d.name} allowed` : `Requires: ${reqText(type)}`, true); return; }
-  if (enqueue(G.player, type)) { Audio.play('click'); if (isBuildingType(type)) Audio.announce('Building'); else Audio.announce('Training', G.player, 1.5); }
-  else { Audio.play('error'); message(isBuildingType(type) ? 'Already building a structure' : 'Queue full', true); }
+  if (q.items[0] === type && q.hold) { issue({ t: 'hold', type, on: false }); Audio.play('click'); return; }
+  if (!hasReqs(G.player, type)) { Audio.play('error'); message(d.fac && d.fac !== G.player ? `${d.name} is not available to your faction` : d.limit && (P.owned[type] || 0) >= d.limit ? `Only ${d.limit} ${d.name} allowed` : `Requires: ${reqText(type)}`, true); return; }
+  if (isBuildingType(type) && q.items.length) { Audio.play('error'); message('Already building a structure', true); return; }
+  if (!isBuildingType(type) && q.items.length >= 12) { Audio.play('error'); message('Queue full', true); return; }
+  issue({ t: 'q', type });
+  Audio.play('click'); if (isBuildingType(type)) Audio.announce('Building'); else Audio.announce('Training', G.player, 1.5);
 }
 function rightClickItem(type) {
   const P = G.players[G.player];
   const d = defOf(type);
+  if (d.instant) return;
   const q = P.queues[QUEUE_OF[d.tab]];
-  if (q.items[0] === type && !q.hold && q.items.filter(i => i === type).length === 1 && q.progress > 0 && !q.ready) { q.hold = true; Audio.announce('On hold'); return; }
-  if (dequeue(G.player, type)) { Audio.play('click'); Audio.announce('Cancelled'); if (G.placing === type) cancelPlacing(); }
+  if (q.items[0] === type && !q.hold && q.items.filter(i => i === type).length === 1 && q.progress > 0 && !q.ready) { issue({ t: 'hold', type, on: true }); Audio.announce('On hold'); return; }
+  if (q.items.includes(type)) { issue({ t: 'dq', type }); Audio.play('click'); Audio.announce('Cancelled'); if (G.placing === type) cancelPlacing(); }
 }
 function reqText(type) {
   const d = defOf(type);
@@ -203,6 +215,18 @@ export function updateSidebar(dt) {
     const qn = QUEUE_OF[el.dataset.tab];
     el.classList.toggle('ready', qn === 'build' && P.queues.build.ready && defOf(P.queues.build.items[0]).tab === el.dataset.tab);
   }
+  // superweapons
+  const ss = superState(G.player), es = superState(G.enemy);
+  $('superRow').style.display = ss || es ? 'grid' : 'none';
+  if (ss) {
+    const left = Math.max(0, ss.max - ss.charge);
+    $('superName').textContent = ss.ready ? `${ss.name}: READY` : `${ss.name}: ${Math.floor(left / 60)}:${String(Math.floor(left % 60)).padStart(2, '0')}`;
+    $('superFill').style.width = (ss.charge / ss.max * 100) + '%';
+    $('bSuper').disabled = !ss.ready; $('bSuper').classList.toggle('ready', ss.ready); $('bSuper').style.display = '';
+  } else { $('superName').textContent = ''; $('superFill').style.width = '0'; $('bSuper').style.display = 'none'; }
+  if (es) { const left = Math.max(0, es.max - es.charge); $('enemySuper').textContent = es.ready ? `⚠ Enemy ${es.name} ARMED` : `⚠ Enemy ${es.name}: ${Math.floor(left / 60)}:${String(Math.floor(left % 60)).padStart(2, '0')}`; }
+  else $('enemySuper').textContent = '';
+  $('wx').textContent = `${weatherLabel()} · ${clockString()}`;
   // clock
   const s = Math.floor(G.time); $('clock').textContent = `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
   refreshSelPanel();
@@ -223,6 +247,7 @@ function startPlacing(type) {
   Audio.play('click');
 }
 export function cancelPlacing() {
+  wallStart = null;
   if (ghost) G.three.scene.remove(ghost);
   if (footprint) G.three.scene.remove(footprint);
   ghost = null; footprint = null; G.placing = null; ghostType = null;
@@ -254,7 +279,7 @@ export function updateCamera(dt) {
   if (keys.ArrowUp) mz -= 1; if (keys.ArrowDown) mz += 1;
   if (keys.ArrowRight) mx += 1; if (keys.ArrowLeft) mx -= 1;
   // edge scroll
-  if (G.mouse.inside && !drag?.active && !isTouch && G.started) {
+  if (G.mouse.inside && G.mouse.moved && !drag?.active && !isTouch && G.started && document.hasFocus()) {
     const e = 10;
     if (G.mouse.x < e) mx -= 1; if (G.mouse.x > W - e) mx += 1;
     if (G.mouse.y < e) mz -= 1; if (G.mouse.y > H - e) mz += 1;
@@ -276,7 +301,9 @@ export function updateCamera(dt) {
   cam.lookAt(C.x + jx * 0.5, C.ty, C.z + jz * 0.5);
   // keep the shadow camera centred on what we look at
   const sun = G.three.sun;
-  sun.target.position.set(C.x, 0, C.z); sun.position.set(C.x + 60, 90, C.z + 35);
+  const sa = sun.userData.angle ?? 1.2;
+  const sx = Math.cos(sa), sy = Math.max(0.45, Math.abs(Math.sin(sa)));
+  sun.target.position.set(C.x, 0, C.z); sun.position.set(C.x + sx * 90 * (Math.sin(sa) < 0 ? -1 : 1), sy * 110, C.z + 35);
   const ext = clamp(C.dist * 0.9, 40, 110);
   if (sun.shadow.camera.right !== ext) { const sc = sun.shadow.camera; sc.left = -ext; sc.right = ext; sc.top = ext; sc.bottom = -ext; sc.updateProjectionMatrix(); }
 }
@@ -339,9 +366,7 @@ function select(list, add = false) {
   G.selection = [...set].filter(e => alive(e));
   for (const s of G.selection) s.setSelected(true);
   if (G.selection.length && G.selection[0].faction === G.player && G.selection[0].kind === 'unit') {
-    const u = G.selection[0];
-    if (u.type === 'wally') Audio.announce(['Wally here!', 'Where to, boss?', 'Glasses on, ready.'][Math.floor(Math.random() * 3)], G.player, 3);
-    else Audio.play('ack');
+    Voices.say(G.selection[0].type, 'select');
   }
   refreshSelPanel(true);
 }
@@ -351,46 +376,36 @@ function commandAt(sx, sy, attackMove = false) {
   const units = myUnits();
   const target = pickAt(sx, sy);
   const g = screenToGround(sx, sy);
+  const ids = units.map(u => u.id);
   // building selected: set rally point
   if (!units.length) {
     const b = G.selection.find(e => e.kind === 'building' && e.faction === G.player);
     if (b && g && ['barracks', 'factory', 'helipad', 'conyard'].includes(b.type)) {
-      b.rally = { x: g.x, z: g.z }; Audio.play('click'); message('Rally point set'); flashMarker(g.x, g.z, 0xffc23a);
+      issue({ t: 'rally', id: b.id, x: g.x, z: g.z }); Audio.play('click'); message('Rally point set'); flashMarker(g.x, g.z, 0xffc23a);
     }
     return;
   }
   if (target && target.faction !== G.player && !attackMove) {
-    for (const u of units) u.attack(target);
+    issue({ t: 'atk', ids, tid: target.id });
     flashMarker(target.x, target.z, 0xff4433);
-    Audio.play('ack');
+    Voices.say(units[0].type, 'attack');
     return;
   }
   if (target && target.faction === G.player && target.kind === 'building') {
-    let handled = false;
-    for (const u of units) {
-      if (u.type === 'engineer' && target.hp < target.maxHp) { u.attack(target); handled = true; }
-      else if (u.type === 'harvester' && target.type === 'refinery') { u.refinery = target; u.hState = 'return'; u.path = null; handled = true; }
-    }
-    if (handled) { Audio.play('ack'); return; }
+    const eng = units.filter(u => u.type === 'engineer' && target.hp < target.maxHp);
+    const harv = units.filter(u => u.type === 'harvester' && target.type === 'refinery');
+    if (eng.length) issue({ t: 'atk', ids: eng.map(u => u.id), tid: target.id });
+    if (harv.length) issue({ t: 'dock', ids: harv.map(u => u.id), rid: target.id });
+    if (eng.length || harv.length) { Audio.play('ack'); return; }
   }
   if (!g) return;
-  // harvesters right-clicked on ore go mine there
-  const ci = idx(cellOf(g.x), cellOf(g.z));
+  const cell = oreCellAt(g.x, g.z);
   const harvs = units.filter(u => u.type === 'harvester');
-  if (harvs.length && T.ore[ci] > 0) {
-    for (const h of harvs) { h.oreCell = ci; h.hState = 'toOre'; h.requestPath(g.x, g.z); }
-  }
-  const movers = units.filter(u => !(u.type === 'harvester' && T.ore[ci] > 0));
-  if (movers.length) {
-    const ground = movers.filter(u => !u.air), air = movers.filter(u => u.air);
-    const slots = formationSlots(g.x, g.z, ground.length, ground.some(u => !u.isInf) ? 2 : 1);
-    // assign nearest slots: sort units by distance to target so the front ones take the front slots
-    ground.sort((a, b) => Math.hypot(a.x - g.x, a.z - g.z) - Math.hypot(b.x - g.x, b.z - g.z));
-    ground.forEach((u, i) => u.moveTo(slots[i].x, slots[i].z, { attackMove }));
-    air.forEach((u, i) => { const a = i / Math.max(1, air.length) * Math.PI * 2; u.moveTo(g.x + Math.cos(a) * (air.length > 1 ? 3 : 0), g.z + Math.sin(a) * (air.length > 1 ? 3 : 0), { attackMove }); });
-  }
+  if (harvs.length && cell >= 0) issue({ t: 'harv', ids: harvs.map(u => u.id), cell });
+  const movers = units.filter(u => !(u.type === 'harvester' && cell >= 0));
+  if (movers.length) issue({ t: 'move', ids: movers.map(u => u.id), x: g.x, z: g.z, am: attackMove ? 1 : 0 });
   flashMarker(g.x, g.z, attackMove ? 0xff9a33 : 0x55ff77);
-  Audio.play('ack');
+  Voices.say(units[0].type, attackMove ? 'attack' : 'move');
 }
 
 const markers = [];
@@ -437,7 +452,10 @@ function bindInput() {
     Audio.initAudio();
     const r = view.getBoundingClientRect(); const x = e.clientX - r.left, y = e.clientY - r.top;
     if (e.button === 0) {
-      if (G.placing) { tryPlace(); return; }
+      if (G.placing) {
+        if (BUILDINGS[G.placing].isWall && G.mouse.ground) { wallStart = placementCell(G.mouse.ground.x, G.mouse.ground.z); return; }
+        tryPlace(); return;
+      }
       if (G.mode) { modeClick(x, y); return; }
       if (attackMoveArmed) { attackMoveArmed = false; commandAt(x, y, true); setCursor(); return; }
       drag = { x0: x, y0: y, x1: x, y1: y, active: false };
@@ -450,6 +468,7 @@ function bindInput() {
   window.addEventListener('pointermove', e => {
     if (e.pointerType === 'touch') return;
     const r = view.getBoundingClientRect(); const x = e.clientX - r.left, y = e.clientY - r.top;
+    if (G.mouse.x !== x || G.mouse.y !== y) G.mouse.moved = true;
     G.mouse.x = x; G.mouse.y = y;
     if (drag) { drag.x1 = x; drag.y1 = y; if (Math.hypot(x - drag.x0, y - drag.y0) > 6) drag.active = true; }
     if (rmb) {
@@ -468,6 +487,7 @@ function bindInput() {
   window.addEventListener('pointerup', e => {
     if (e.pointerType === 'touch') return;
     const r = view.getBoundingClientRect(); const x = e.clientX - r.left, y = e.clientY - r.top;
+    if (e.button === 0 && G.placing && wallStart) { tryPlace(); return; }
     if (e.button === 0 && drag) {
       if (drag.active) boxSelect(drag.x0, drag.y0, drag.x1, drag.y1, e.shiftKey);
       else leftClick(x, y, e.shiftKey, e.ctrlKey);
@@ -511,14 +531,14 @@ function bindInput() {
     }
     if (k === 'KeyA' && !e.ctrlKey) { if (myUnits().length) { attackMoveArmed = true; setCursor(); } return; }
     if (k === 'KeyA' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); selectArmy(); return; }
-    if (k === 'KeyS' && !e.ctrlKey) { for (const u of myUnits()) u.stop(); Audio.play('ack'); return; }
+    if (k === 'KeyS' && !e.ctrlKey) { if (myUnits().length) issue({ t: 'stop', ids: myUnits().map(u => u.id) }); Audio.play('ack'); return; }
     if (k === 'KeyH') { const b = G.buildings.find(b => b.faction === G.player && b.type === 'conyard') || G.buildings.find(b => b.faction === G.player); if (b) centerOn(b.x, b.z); return; }
     if (k === 'Space') { e.preventDefault(); if (G.alertAt) centerOn(G.alertAt.x, G.alertAt.z); return; }
     if (k === 'KeyR') { setMode(G.mode === 'repair' ? null : 'repair'); return; }
     if (k === 'KeyX') { setMode(G.mode === 'sell' ? null : 'sell'); return; }
     if (k === 'KeyP') { G.togglePause?.(); return; }
     if (k === 'F1') { e.preventDefault(); $('help').style.display = 'flex'; return; }
-    if (k === 'Delete' && G.selection.length === 1 && G.selection[0].kind === 'building' && G.selection[0].faction === G.player) { G.selection[0].sell(); return; }
+    if (k === 'Delete' && G.selection.length === 1 && G.selection[0].kind === 'building' && G.selection[0].faction === G.player) { issue({ t: 'sell', id: G.selection[0].id }); return; }
     // build hotkeys (Shift + letter)
     if (e.shiftKey) {
       for (const t in BUILDINGS) if (BUILDINGS[t].key && 'Key' + BUILDINGS[t].key === k) { clickItem(t); return; }
@@ -537,8 +557,7 @@ function bindInput() {
     e.preventDefault(); Audio.initAudio();
     const p = mmPos(e);
     if (e.button === 2 && myUnits().length) {
-      const units = myUnits(); const slots = formationSlots(p.x, p.z, units.length, 2);
-      units.forEach((u, i) => u.moveTo(slots[i].x, slots[i].z)); Audio.play('ack'); return;
+      issue({ t: 'move', ids: myUnits().map(u => u.id), x: p.x, z: p.z }); Audio.play('ack'); return;
     }
     mmDown = true; centerOn(p.x, p.z);
   });
@@ -560,7 +579,7 @@ function leftClick(x, y, shift, ctrl) {
       if (e.selected) { e.setSelected(false); G.selection = G.selection.filter(s => s !== e); refreshSelPanel(true); }
       else select([e], true);
     } else if (ctrl && myUnits().length && e.faction === G.player) {
-      for (const u of myUnits()) if (u !== e) u.attack(e); // force fire
+      issue({ t: 'atk', ids: myUnits().filter(u => u !== e).map(u => u.id), tid: e.id }); // force fire
     } else select([e]);
   } else if (!shift) {
     // left click on ground with own units selected: move (modern convenience)
@@ -571,26 +590,46 @@ function leftClick(x, y, shift, ctrl) {
 
 function tryPlace() {
   if (!G.mouse.ground) return;
+  const d = BUILDINGS[G.placing];
   const { cx, cz } = placementCell(G.mouse.ground.x, G.mouse.ground.z);
-  const b = placeBuilding(G.player, G.placing, cx, cz);
-  if (b) { cancelPlacing(); Audio.play('build'); }
-  else { Audio.play('error'); message('Cannot build there', true); }
+  if (d.instant) {
+    const cells = d.isWall && wallStart ? lineCells(wallStart, { cx, cz }) : [[cx, cz]];
+    wallStart = null;
+    const ok = cells.filter(([a, b]) => canPlace(G.player, G.placing, a, b));
+    if (!ok.length) { Audio.play('error'); message('Cannot build there', true); return; }
+    issue({ t: 'inst', type: G.placing, cells: ok });
+    Audio.play('build');
+    if (G.players[G.player].credits < d.cost * (ok.length + 1)) cancelPlacing();
+    return;
+  }
+  if (!canPlace(G.player, G.placing, cx, cz)) { Audio.play('error'); message('Cannot build there', true); return; }
+  issue({ t: 'place', type: G.placing, cx, cz });
+  cancelPlacing(); Audio.play('build');
 }
+let wallStart = null;
 
 function modeClick(x, y) {
+  if (G.mode === 'super') {
+    const g = screenToGround(x, y);
+    if (!g) return;
+    issue({ t: 'super', x: g.x, z: g.z });
+    setMode(null);
+    return;
+  }
   const e = pickAt(x, y);
   if (!e || e.kind !== 'building' || e.faction !== G.player) { Audio.play('error'); return; }
-  if (G.mode === 'sell') { e.sell(); message(`${e.def.name} sold`); if (!keys.ShiftLeft) setMode(null); }
-  else if (G.mode === 'repair') { e.repairing = !e.repairing; Audio.play('click'); message(e.repairing ? 'Repairing' : 'Repair stopped'); }
+  if (G.mode === 'sell') { issue({ t: 'sell', id: e.id }); message(`${e.def.name} sold`); if (!keys.ShiftLeft) setMode(null); }
+  else if (G.mode === 'repair') { issue({ t: 'rep', id: e.id, on: !e.repairing }); Audio.play('click'); message(!e.repairing ? 'Repairing' : 'Repair stopped'); }
 }
 function setMode(m) {
   G.mode = m;
   $('bSell').classList.toggle('on', m === 'sell'); $('bRepair').classList.toggle('on', m === 'repair');
+  if (m === 'super') Audio.announce('Select target');
   setCursor();
 }
 function setCursor() {
   const gl = $('gl');
-  gl.style.cursor = G.mode === 'sell' ? 'copy' : G.mode === 'repair' ? 'cell' : attackMoveArmed ? 'crosshair' : 'default';
+  gl.style.cursor = G.mode === 'sell' ? 'copy' : G.mode === 'repair' ? 'cell' : G.mode === 'super' || attackMoveArmed ? 'crosshair' : 'default';
 }
 let hoverT = 0;
 export function updateHover(dt) {
@@ -689,7 +728,7 @@ function bindButtons() {
   $('bRepair').onclick = () => setMode(G.mode === 'repair' ? null : 'repair');
   $('bHome').onclick = () => { const b = G.buildings.find(b => b.faction === G.player && b.type === 'conyard') || G.buildings.find(b => b.faction === G.player); if (b) centerOn(b.x, b.z); };
   $('tAll').onclick = selectArmy;
-  $('tStop').onclick = () => { for (const u of myUnits()) u.stop(); };
+  $('tStop').onclick = () => issue({ t: 'stop', ids: myUnits().map(u => u.id) });
   $('tAM').onclick = () => { attackMoveArmed = !attackMoveArmed; $('tAM').classList.toggle('on', attackMoveArmed); };
   $('tBox').onclick = () => { touchBoxMode = !touchBoxMode; $('tBox').classList.toggle('on', touchBoxMode); };
 }
@@ -741,15 +780,15 @@ function refreshSelPanel(force) {
   const addBtn = (label, fn, title) => { const b = document.createElement('button'); b.className = 'btn'; b.textContent = label; b.title = title || ''; b.onclick = fn; cmds.appendChild(b); };
   if (first.faction === G.player) {
     if (first.kind === 'unit') {
-      addBtn('■ Stop (S)', () => { for (const u of myUnits()) u.stop(); });
+      addBtn('■ Stop (S)', () => issue({ t: 'stop', ids: myUnits().map(u => u.id) }));
       if (myUnits().some(u => u.weapon)) addBtn('⚔ Attack-move (A)', () => { attackMoveArmed = true; setCursor(); });
-      if (first.type === 'harvester') addBtn('⛏ Harvest', () => { for (const u of myUnits()) if (u.type === 'harvester') { u.hState = 'seek'; u.path = null; u.hT = 0; } });
+      if (first.type === 'harvester') addBtn('⛏ Harvest', () => issue({ t: 'seek', ids: myUnits().map(u => u.id) }));
       addBtn('⌖ Focus (F)', () => centerOn(first.x, first.z));
     } else {
-      addBtn(first.repairing ? '🔧 Stop repair' : '🔧 Repair', () => { first.repairing = !first.repairing; selSig = ''; refreshSelPanel(true); });
-      addBtn('$ Sell', () => first.sell());
+      addBtn(first.repairing ? '🔧 Stop repair' : '🔧 Repair', () => { issue({ t: 'rep', id: first.id, on: !first.repairing }); selSig = ''; setTimeout(() => refreshSelPanel(true), 300); });
+      addBtn('$ Sell', () => issue({ t: 'sell', id: first.id }));
       if (['barracks', 'factory', 'helipad'].includes(first.type)) {
-        addBtn(first.primary ? '★ Primary' : '☆ Set primary', () => { for (const b of G.buildings) if (b.type === first.type && b.faction === G.player) b.primary = false; first.primary = true; selSig = ''; refreshSelPanel(true); });
+        addBtn(first.primary ? '★ Primary' : '☆ Set primary', () => { issue({ t: 'prim', id: first.id }); selSig = ''; refreshSelPanel(true); });
         const s = document.createElement('div'); s.className = 'sub'; s.style.width = '100%'; s.textContent = 'Right-click the map to set a rally point'; cmds.appendChild(s);
       }
     }
@@ -782,6 +821,7 @@ export function updateMinimap(dt) {
   for (let i = 0; i < GRID * GRID; i += 1) if (T.ore[i] > 40 && (T.explored[i] || G.revealed)) { c.fillStyle = T.oreRich[i] ? 'rgba(90,170,255,0.8)' : 'rgba(80,255,150,0.65)'; c.fillRect((i % GRID) * CELL * k, ((i / GRID) | 0) * CELL * k, CELL * k, CELL * k); }
   for (const b of G.buildings) {
     if (b.dead) continue;
+    if (b.def.isMine && b.faction !== G.player) continue;
     if (b.faction !== G.player && !isExploredAt(b.x, b.z)) continue;
     c.fillStyle = FACTIONS[b.faction].css;
     c.fillRect((b.x - b.def.w * CELL / 2 + HALF) * k, (b.z - b.def.h * CELL / 2 + HALF) * k, b.def.w * CELL * k, b.def.h * CELL * k);
@@ -878,6 +918,15 @@ export function drawOverlay() {
     octx.strokeStyle = '#7dff9a'; octx.lineWidth = 1.5; octx.fillStyle = 'rgba(80,255,120,0.08)';
     const x = Math.min(drag.x0, drag.x1), y = Math.min(drag.y0, drag.y1), w = Math.abs(drag.x1 - drag.x0), h = Math.abs(drag.y1 - drag.y0);
     octx.fillRect(x, y, w, h); octx.strokeRect(x, y, w, h);
+  }
+  if (G.placing && wallStart && G.mouse.ground) {
+    const n = lineCells(wallStart, placementCell(G.mouse.ground.x, G.mouse.ground.z)).length;
+    octx.fillStyle = '#fff'; octx.font = 'bold 13px Rajdhani'; octx.textAlign = 'left';
+    octx.fillText(n + ' x wall  $' + n * BUILDINGS.wall.cost, G.mouse.x + 14, G.mouse.y + 4);
+  }
+  if (G.mode === 'super' && G.mouse.inside) {
+    octx.fillStyle = '#ff5a3a'; octx.font = 'bold 14px Rajdhani'; octx.textAlign = 'left';
+    octx.fillText('SELECT TARGET', G.mouse.x + 16, G.mouse.y + 4);
   }
   if (attackMoveArmed && G.mouse.inside) {
     octx.fillStyle = '#ff9a33'; octx.font = 'bold 13px Rajdhani'; octx.textAlign = 'left';

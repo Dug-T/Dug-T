@@ -1,7 +1,7 @@
 // Terrain: heightfield, water, forests, rocks, crystal fields and the fog of war.
 import * as THREE from 'three';
 import { CELL, GRID, WORLD, HALF, WATER_LEVEL, ORE_MAX } from './config.js';
-import { G, fbm, noise2, mulberry32, clamp, lerp } from './state.js';
+import { G, fbm, noise2, mulberry32, clamp, lerp, srand } from './state.js';
 import { fogify, fogUniforms, M } from './materials.js';
 import { groundDetailTexture, groundNormalTexture, waterNormalTexture } from './textures.js';
 
@@ -14,6 +14,7 @@ export const T = {
   water: new Uint8Array(GRID * GRID),
   tree: new Uint8Array(GRID * GRID),
   bld: new Int32Array(GRID * GRID),       // building id occupying cell
+  gate: new Uint8Array(GRID * GRID),      // gate owner (faction index) - passable for that faction
   ore: new Float32Array(GRID * GRID),
   oreRich: new Uint8Array(GRID * GRID),
   oreDirty: false,
@@ -24,23 +25,18 @@ export const T = {
   minimapImage: null,
 };
 
-export const BASES = {
-  wally: { x: -82, z: 82 },
-  grim: { x: 82, z: -82 },
-};
-const LANES = [
-  [[-82, 82], [0, 0], [82, -82]],
-  [[-82, 82], [-70, -20], [-20, -72], [82, -82]],
-  [[-82, 82], [20, 72], [70, 20], [82, -82]],
-];
-const ORE_FIELDS = [
-  { x: -60, z: 104, r: 11, rich: 0 }, { x: -104, z: 52, r: 10, rich: 0 },
-  { x: 60, z: -104, r: 11, rich: 0 }, { x: 104, z: -52, r: 10, rich: 0 },
-  { x: 0, z: 0, r: 9, rich: 1 },
-  { x: -62, z: -58, r: 9, rich: 0 }, { x: 62, z: 58, r: 9, rich: 0 },
-  { x: -18, z: 46, r: 7, rich: 0 }, { x: 18, z: -46, r: 7, rich: 0 },
-];
-const LAKES = [{ x: -38, z: -2, r: 20 }, { x: 38, z: 2, r: 20 }, { x: -2, z: -40, r: 11 }, { x: 2, z: 40, r: 11 }];
+// Filled in from the chosen map by setupMap()
+export const BASES = {};
+let LANES = [], ORE_FIELDS = [], LAKES = [];
+let MAP = null, TH = null, SEED = [10, -4, 31, 17];
+export function setupMap(map, theme, slotFactions) {
+  MAP = map; TH = theme; SEED = map.seed;
+  LANES = map.lanes; LAKES = map.lakes; ORE_FIELDS = map.ore.map(o => ({ rich: 0, ...o }));
+  for (const k in BASES) delete BASES[k];
+  slotFactions.forEach((f, i) => { BASES[f] = map.slots[i]; });
+}
+export const currentMap = () => MAP;
+export const currentTheme = () => TH;
 
 export const cellOf = v => clamp(Math.floor((v + HALF) / CELL), 0, GRID - 1);
 export const cellCenter = i => i * CELL - HALF + CELL / 2;
@@ -60,9 +56,9 @@ function laneDist(x, z) {
 const smooth = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
 
 function rawHeight(x, z) {
-  let h = fbm(x * 0.011 + 10, z * 0.011 - 4, 5) * 7;
-  const ridge = 1 - Math.abs(fbm(x * 0.016 + 31, z * 0.016 + 17, 4) * 2);
-  h += Math.pow(Math.max(0, ridge - 0.38), 2) * 48;
+  let h = fbm(x * 0.011 + SEED[0], z * 0.011 + SEED[1], 5) * 7;
+  const ridge = 1 - Math.abs(fbm(x * 0.016 + SEED[2], z * 0.016 + SEED[3], 4) * 2);
+  h += Math.pow(Math.max(0, ridge - 0.38), 2) * (MAP.ridge || 48);
   // lakes
   for (const L of LAKES) {
     const d = Math.hypot(x - L.x, z - L.z) / L.r;
@@ -131,13 +127,13 @@ export function buildTerrain(scene) {
   for (let cz = 2; cz < GRID - 2; cz++) for (let cx = 2; cx < GRID - 2; cx++) {
     const i = idx(cx, cz); if (T.blocked[i] || T.ore[i]) continue;
     const x = cellCenter(cx), z = cellCenter(cz);
-    const f = fbm(x * 0.03 + 50, z * 0.03 + 80, 3);
-    const nearBase = Math.min(Math.hypot(x - BASES.wally.x, z - BASES.wally.z), Math.hypot(x - BASES.grim.x, z - BASES.grim.z));
+    const f = fbm(x * 0.03 + 50 + SEED[0], z * 0.03 + 80 + SEED[1], 3);
+    let nearBase = 1e9; for (const k in BASES) nearBase = Math.min(nearBase, Math.hypot(x - BASES[k].x, z - BASES[k].z));
     if (nearBase < 40 || laneDist(x, z) < 11) continue;
     let nearOre = false;
     for (const o of ORE_FIELDS) if (Math.hypot(x - o.x, z - o.z) < o.r + 6) nearOre = true;
     if (nearOre) continue;
-    if (f > 0.12 && R() < 0.75) { T.tree[i] = 1; T.blocked[i] = 1; treeSpots.push([x, z]); }
+    if (f > (MAP.forest ?? 0.12) && R() < 0.75) { T.tree[i] = 1; T.blocked[i] = 1; treeSpots.push([x, z]); }
   }
 
   // ---- terrain mesh ----
@@ -146,7 +142,8 @@ export function buildTerrain(scene) {
   const pos = geo.attributes.position;
   const col = new Float32Array(pos.count * 3);
   const cA = new THREE.Color(), cB = new THREE.Color();
-  const grass1 = new THREE.Color(0x4f7a2a), grass2 = new THREE.Color(0x76913a), dirt = new THREE.Color(0x8a7150), rock = new THREE.Color(0x6e6a64), sand = new THREE.Color(0xc2ac7c), mud = new THREE.Color(0x4a4232), base = new THREE.Color(0x8d8270);
+  const C = c => new THREE.Color(c);
+  const grass1 = C(TH.grass1), grass2 = C(TH.grass2), dirt = C(TH.dirt), rock = C(TH.rock), sand = C(TH.sand), mud = C(TH.mud), base = C(TH.base);
   for (let k = 0; k < pos.count; k++) {
     const x = pos.getX(k), z = pos.getZ(k);
     const h = heightAt(x, z);
@@ -166,7 +163,7 @@ export function buildTerrain(scene) {
     cA.lerp(rock, smooth(4, 8, h) * 0.8);
     // crystal-stained ground near ore
     const ci = idx(cellOf(x), cellOf(z));
-    if (T.ore[ci]) { cB.set(T.oreRich[ci] ? 0x3c5f7a : 0x4f6b3a); cA.lerp(cB, 0.45); }
+    if (T.ore[ci]) { cB.set(T.oreRich[ci] ? 0x3c5f7a : TH.oreTint); cA.lerp(cB, 0.45); }
     if (T.tree[ci]) cA.multiplyScalar(0.7);
     const ao = 0.85 + 0.15 * clamp(1 - slope * 2, 0, 1);
     col[k * 3] = cA.r * ao; col[k * 3 + 1] = cA.g * ao; col[k * 3 + 2] = cA.b * ao;
@@ -184,7 +181,7 @@ export function buildTerrain(scene) {
 
   // ---- water ----
   const wn = waterNormalTexture();
-  const wmat = fogify(new THREE.MeshStandardMaterial({ color: 0x1d4b63, roughness: 0.08, metalness: 0.6, normalMap: wn, normalScale: new THREE.Vector2(0.35, 0.35), transparent: true, opacity: 0.86 }));
+  const wmat = fogify(new THREE.MeshStandardMaterial({ color: TH.water, roughness: TH.ice ? 0.35 : 0.08, metalness: TH.ice ? 0.2 : 0.6, normalMap: wn, normalScale: new THREE.Vector2(0.35, 0.35), transparent: true, opacity: 0.86 }));
   const water = new THREE.Mesh(new THREE.PlaneGeometry(WORLD, WORLD, 1, 1).rotateX(-Math.PI / 2), wmat);
   water.position.y = WATER_LEVEL;
   water.receiveShadow = true;
@@ -200,38 +197,63 @@ export function buildTerrain(scene) {
   return terrain;
 }
 
-function buildTrees(scene, spots) {
-  const R = mulberry32(5);
+function treeKinds() {
+  const std = (o) => fogify(new THREE.MeshStandardMaterial(o));
+  const trunkM = std({ color: 0x4b3423, roughness: 1 });
+  const K = {};
+  const pineParts = [];
+  for (let k = 0; k < 3; k++) pineParts.push(new THREE.ConeGeometry(1.5 - k * 0.38, 2.0, 8).translate(0, 2.0 + k * 1.15, 0));
   const trunkG = new THREE.CylinderGeometry(0.16, 0.26, 2.2, 6).translate(0, 1.1, 0);
-  const pineG = [];
-  for (let k = 0; k < 3; k++) pineG.push(new THREE.ConeGeometry(1.5 - k * 0.38, 2.0, 8).translate(0, 2.0 + k * 1.15, 0));
-  const pineGeo = mergeSimple(pineG);
+  K.pine = [[trunkG, trunkM], [mergeSimple(pineParts), std({ color: 0x2c4a22, roughness: 0.9, flatShading: true }), true]];
   const leafG = new THREE.IcosahedronGeometry(1.4, 1);
   const lp = leafG.attributes.position;
   for (let i = 0; i < lp.count; i++) { const s = 1 + noise2(lp.getX(i) * 2, lp.getZ(i) * 2 + lp.getY(i)) * 0.35; lp.setXYZ(i, lp.getX(i) * s, lp.getY(i) * s * 0.85 + 3.0, lp.getZ(i) * s); }
   leafG.computeVertexNormals();
-  const trunkM = fogify(new THREE.MeshStandardMaterial({ color: 0x4b3423, roughness: 1 }));
-  const pineM = fogify(new THREE.MeshStandardMaterial({ color: 0x2c4a22, roughness: 0.9, flatShading: true }));
-  const leafM = fogify(new THREE.MeshStandardMaterial({ color: 0x4a6b26, roughness: 0.9, flatShading: true }));
-  const n = spots.length;
-  const trunks = new THREE.InstancedMesh(trunkG, trunkM, n);
-  const pines = new THREE.InstancedMesh(pineGeo, pineM, n);
-  const leaves = new THREE.InstancedMesh(leafG, leafM, n);
-  let np = 0, nl = 0;
+  K.leaf = [[trunkG, trunkM], [leafG, std({ color: 0x4a6b26, roughness: 0.9, flatShading: true }), true]];
+  // snowy pine: dark needles with white snow caps
+  const capParts = [];
+  for (let k = 0; k < 3; k++) capParts.push(new THREE.ConeGeometry(1.15 - k * 0.3, 0.9, 8).translate(0, 2.55 + k * 1.15, 0));
+  K.snowpine = [[trunkG, trunkM], [mergeSimple(pineParts), std({ color: 0x23392a, roughness: 0.9, flatShading: true })], [mergeSimple(capParts), std({ color: 0xf2f6fa, roughness: 0.7, flatShading: true })]];
+  // palm: curved segmented trunk + drooping fronds
+  const segs = [];
+  for (let i = 0; i < 6; i++) segs.push(new THREE.CylinderGeometry(0.17 - i * 0.012, 0.2 - i * 0.012, 0.75, 7).translate(i * i * 0.025, 0.37 + i * 0.7, 0));
+  const fronds = [];
+  for (let i = 0; i < 7; i++) {
+    const f = new THREE.ConeGeometry(0.35, 2.6, 4, 1).scale(1, 1, 0.15).rotateZ(Math.PI / 2 + 0.5).translate(1.2, -0.3, 0).rotateY(i / 7 * Math.PI * 2);
+    fronds.push(f.translate(0.9, 4.3, 0));
+  }
+  K.palm = [[mergeSimple(segs), std({ color: 0x7a5a38, roughness: 1, flatShading: true })], [mergeSimple(fronds), std({ color: 0x3f7a2a, roughness: 0.85, flatShading: true, side: THREE.DoubleSide }), true]];
+  // cactus
+  const cac = [new THREE.CylinderGeometry(0.32, 0.36, 2.6, 9).translate(0, 1.3, 0), new THREE.SphereGeometry(0.32, 9, 6).translate(0, 2.6, 0),
+    new THREE.CylinderGeometry(0.2, 0.2, 0.7, 8).rotateZ(Math.PI / 2).translate(0.5, 1.2, 0), new THREE.CylinderGeometry(0.2, 0.2, 1.0, 8).translate(0.82, 1.65, 0), new THREE.SphereGeometry(0.2, 8, 6).translate(0.82, 2.15, 0),
+    new THREE.CylinderGeometry(0.18, 0.18, 0.6, 8).rotateZ(Math.PI / 2).translate(-0.45, 1.6, 0), new THREE.CylinderGeometry(0.18, 0.18, 0.7, 8).translate(-0.72, 1.95, 0), new THREE.SphereGeometry(0.18, 8, 6).translate(-0.72, 2.3, 0)];
+  K.cactus = [[mergeSimple(cac), std({ color: 0x5f8a3a, roughness: 0.8, flatShading: true }), true]];
+  return K;
+}
+
+function buildTrees(scene, spots) {
+  const R = mulberry32(5);
+  const K = treeKinds();
+  const weights = Object.entries(TH.trees);
+  const groups = {};
   const m = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new THREE.Vector3(), p = new THREE.Vector3(), e = new THREE.Euler();
-  const c = new THREE.Color();
-  spots.forEach(([x, z], k) => {
-    x += (R() - 0.5) * 1.2; z += (R() - 0.5) * 1.2;
+  for (const [x0, z0] of spots) {
+    let r = R(), kind = weights[0][0];
+    for (const [k, w] of weights) { if (r < w) { kind = k; break; } r -= w; }
+    const x = x0 + (R() - 0.5) * 1.2, z = z0 + (R() - 0.5) * 1.2;
     const sc = 0.8 + R() * 0.6;
     p.set(x, heightAt(x, z) - 0.1, z); e.set((R() - 0.5) * 0.1, R() * 6.28, (R() - 0.5) * 0.1); q.setFromEuler(e); s.set(sc, sc * (0.9 + R() * 0.3), sc);
     m.compose(p, q, s);
-    trunks.setMatrixAt(k, m);
-    c.setHSL(0.22 + R() * 0.08, 0.45 + R() * 0.2, 0.75 + R() * 0.35);
-    if (R() < 0.6) { pines.setMatrixAt(np, m); pines.setColorAt(np++, c); }
-    else { leaves.setMatrixAt(nl, m); leaves.setColorAt(nl++, c); }
-  });
-  pines.count = np; leaves.count = nl;
-  for (const im of [trunks, pines, leaves]) { im.castShadow = true; im.receiveShadow = true; scene.add(im); }
+    (groups[kind] = groups[kind] || []).push({ m: m.clone(), c: new THREE.Color().setHSL(0.22 + R() * 0.08, 0.45 + R() * 0.2, 0.75 + R() * 0.35) });
+  }
+  for (const kind in groups) {
+    const list = groups[kind];
+    for (const [geo, mat, tint] of K[kind]) {
+      const im = new THREE.InstancedMesh(geo, mat, list.length);
+      list.forEach((t, i) => { im.setMatrixAt(i, t.m); if (tint) im.setColorAt(i, t.c); });
+      im.castShadow = true; im.receiveShadow = true; scene.add(im);
+    }
+  }
 }
 
 function mergeSimple(geos) {
@@ -284,7 +306,7 @@ function buildRocks(scene) {
       x += (R() - 0.5); z += (R() - 0.5);
       p.set(x, heightAt(x, z) + sc * 0.1, z); e.set(R(), R() * 6, R() * 0.4); q.setFromEuler(e); s.set(sc, sc * (0.7 + R() * 0.5), sc);
       m.compose(p, q, s); im.setMatrixAt(k, m);
-      c.setHSL(0.08, 0.03 + R() * 0.06, 0.33 + R() * 0.17); im.setColorAt(k, c);
+      c.setHSL(TH.rockTint[0], TH.rockTint[1] * (0.5 + R()), 0.33 + R() * 0.17); im.setColorAt(k, c);
     });
     im.count = list.length; im.castShadow = true; im.receiveShadow = true; scene.add(im);
   });
@@ -342,7 +364,7 @@ let regrowT = 0;
 export function regrowOre(dt) {
   regrowT += dt; if (regrowT < 2) return; regrowT = 0;
   for (let n = 0; n < 40; n++) {
-    const i = (Math.random() * T.ore.length) | 0;
+    const i = (srand() * T.ore.length) | 0;
     if (oreInst[i] && T.ore[i] < ORE_MAX) { T.ore[i] = Math.min(ORE_MAX, T.ore[i] + 25); T.oreDirty = true; }
   }
 }
@@ -405,7 +427,7 @@ export function updateVision(dt) {
   if (fogTimer <= 0) {
     fogTimer = 0.2;
     T.visible.fill(0); T.enemyVisible.fill(0);
-    for (const u of G.units) if (!u.dead) stamp(u.faction === G.player ? T.visible : T.enemyVisible, u.x, u.z, u.def.sight);
+    for (const u of G.units) if (!u.dead) stamp(u.faction === G.player ? T.visible : T.enemyVisible, u.x, u.z, u.def.sight * G.sightMult);
     for (const b of G.buildings) if (!b.dead) stamp(b.faction === G.player ? T.visible : T.enemyVisible, b.x, b.z, b.def.sight + Math.max(b.def.w, b.def.h));
     for (let i = 0; i < GRID * GRID; i++) {
       if (T.visible[i]) T.explored[i] = 1;

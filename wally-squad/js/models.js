@@ -77,7 +77,7 @@ export function makeInfantry(type, faction) {
     const S = type === 'wally' ? 1.15 : 1.0;
     // body (torso + head + gear)
     const b = new Builder();
-    const uniform = type === 'engineer' ? m.hazard : t.team;
+    const uniform = type === 'engineer' ? m.hazard : type === 'medic' ? M().medic : t.team;
     b.box(uniform, 0.46, 0.55, 0.28, 0, 1.0, 0);               // torso
     b.box(t.teamDark, 0.5, 0.18, 0.32, 0, 0.78, 0);           // belt / hips
     b.box(m.cloth, 0.36, 0.3, 0.12, 0, 1.05, -0.2);           // backpack
@@ -102,6 +102,10 @@ export function makeInfantry(type, faction) {
       b.cyl(t.teamDark, 0.2, 0.21, 0.04, 14, 0, 1.47, 0);
       b.box(m.glass, 0.22, 0.06, 0.04, 0, 1.45, 0.15);       // goggles
     }
+    if (type === 'medic') {
+      b.box(m.lampRed, 0.06, 0.2, 0.02, 0, 1.08, 0.15); b.box(m.lampRed, 0.2, 0.06, 0.02, 0, 1.08, 0.15);
+      b.box(M().medic, 0.3, 0.25, 0.14, 0, 1.0, -0.24); b.box(m.lampRed, 0.06, 0.16, 0.02, 0, 1.0, -0.32); b.box(m.lampRed, 0.16, 0.06, 0.02, 0, 1.0, -0.32);
+    }
     if (type === 'flamer') { b.cyl(m.lampRed, 0.08, 0.08, 0.5, 10, 0.1, 1.05, -0.28); b.cyl(m.lampRed, 0.08, 0.08, 0.5, 10, -0.1, 1.05, -0.28); }
     // arms holding weapon
     b.box(uniform, 0.12, 0.42, 0.12, 0.29, 1.05, 0.1, -0.7, 0, 0.1);
@@ -117,6 +121,8 @@ export function makeInfantry(type, faction) {
       b.cyl(m.darkMetal, 0.07, 0.07, 0.1, 10, 0.05, 0.98, 0.8, Math.PI / 2, 0, 0);
     } else if (type === 'engineer') {
       b.box(m.metal, 0.06, 0.06, 0.4, 0.05, 0.98, 0.42);
+    } else if (type === 'medic') {
+      b.box(M().medic, 0.18, 0.14, 0.1, 0.1, 0.95, 0.4); b.box(m.lampRed, 0.1, 0.03, 0.02, 0.1, 0.95, 0.46);
     } else {
       const L = type === 'wally' ? 1.0 : 0.7;
       b.box(m.gun, 0.07, 0.12, L, 0.05, 1.0, 0.3 + L / 2 - 0.2);
@@ -368,6 +374,69 @@ export function makeGunship(faction) {
   });
 }
 
+export function makeStealth(faction) {
+  return cached(`stealth-${faction}`, () => {
+    const t = mats(faction), m = M();
+    const root = new THREE.Group();
+    const b = new Builder();
+    trackUnit(b, -1, 3.2, 0.55, 0.55, 0.3, faction);
+    trackUnit(b, 1, 3.2, 0.55, 0.55, 0.3, faction);
+    // low faceted wedge hull
+    b.add(new THREE.CylinderGeometry(0.2, 1.25, 0.55, 4, 1), t.teamDark, 0, 0.78, 0.1, 0, Math.PI / 4, 0, 1, 1, 1.55);
+    b.add(new THREE.BoxGeometry(1.9, 0.12, 3.4), t.team, 0, 0.62, 0);
+    b.add(new THREE.BoxGeometry(1.2, 0.3, 0.9), t.teamDark, 0, 0.9, 1.45, -0.35, 0, 0);
+    b.box(m.glass, 0.7, 0.08, 0.35, 0, 1.06, 0.85, -0.2, 0, 0);
+    for (const s2 of [-1, 1]) b.add(new THREE.BoxGeometry(0.06, 0.35, 1.6), m.darkMetal, s2 * 0.75, 0.95, -0.6, 0, s2 * 0.15, s2 * 0.4);
+    b.box(m.lampRed, 0.5, 0.04, 0.04, 0, 0.82, 1.92);
+    root.add(b.build());
+    const tb = new Builder();
+    tb.box(t.teamDark, 0.9, 0.25, 0.9, 0, 0, 0);
+    for (const s2 of [-0.42, 0.42]) {
+      tb.box(m.darkMetal, 0.32, 0.32, 1.3, s2, 0.2, 0.2);
+      for (let r = 0; r < 2; r++) tb.cyl(m.lampRed, 0.06, 0.06, 0.04, 8, s2 + (r - 0.5) * 0.14, 0.2, 0.86, Math.PI / 2, 0, 0);
+    }
+    const tur = tb.build(); tur.position.set(0, 1.1, -0.5); tur.name = 'turret';
+    root.add(tur);
+    root.userData.muzzle = new THREE.Vector3(0.42, 0.2, 0.9);
+    root.userData.muzzle2 = new THREE.Vector3(-0.42, 0.2, 0.9);
+    return root;
+  });
+}
+
+export function makeInferno(faction) {
+  return cached(`inferno-${faction}`, () => {
+    const t = mats(faction), m = M();
+    const root = new THREE.Group();
+    const b = new Builder();
+    trackUnit(b, -1, 3.6, 0.75, 0.66, 0.4, faction);
+    trackUnit(b, 1, 3.6, 0.75, 0.66, 0.4, faction);
+    b.box(t.team, 1.6, 0.55, 3.4, 0, 0.88, 0);
+    b.add(new THREE.BoxGeometry(1.6, 0.5, 0.7), t.team, 0, 0.8, 1.9, -0.6, 0, 0);
+    b.box(t.team, 2.3, 0.08, 3.5, 0, 1.18, 0);
+    // fuel tanks on the back
+    for (const s2 of [-0.45, 0.45]) {
+      b.add(new THREE.CylinderGeometry(0.38, 0.38, 1.8, 14), m.lampRed, s2, 1.6, -0.9, Math.PI / 2, 0, 0);
+      b.sph(m.lampRed, 0.38, s2, 1.6, 0.0, 1, 1, 0.6); b.sph(m.lampRed, 0.38, s2, 1.6, -1.8, 1, 1, 0.6);
+      b.add(new THREE.TorusGeometry(0.4, 0.04, 6, 14), m.darkMetal, s2, 1.6, -0.5, 0, 0, 0);
+      b.add(new THREE.TorusGeometry(0.4, 0.04, 6, 14), m.darkMetal, s2, 1.6, -1.3, 0, 0, 0);
+    }
+    b.box(m.hazard, 1.4, 0.1, 0.1, 0, 1.25, 0.3);
+    b.box(m.lampWhite, 0.18, 0.1, 0.05, 0.6, 1.0, 2.2); b.box(m.lampWhite, 0.18, 0.1, 0.05, -0.6, 1.0, 2.2);
+    root.add(b.build());
+    const tb = new Builder();
+    tb.add(new THREE.CylinderGeometry(0.55, 0.7, 0.45, 8), t.teamDark, 0, 0, 0);
+    tb.box(m.darkMetal, 0.5, 0.4, 0.6, 0, 0.05, 0.5);
+    tb.cyl(m.gun, 0.12, 0.16, 1.6, 10, 0, 0.05, 1.4, Math.PI / 2, 0, 0);
+    tb.cyl(m.darkMetal, 0.2, 0.14, 0.3, 10, 0, 0.05, 2.25, Math.PI / 2, 0, 0);
+    tb.cyl(m.lampRed, 0.05, 0.05, 1.0, 6, 0.2, 0.25, 0.8, Math.PI / 2, 0, 0); // fuel line
+    tb.sph(m.lampRed, 0.06, 0, 0.05, 2.42); // pilot light
+    const tur = tb.build(); tur.position.set(0, 1.45, 0.7); tur.name = 'turret';
+    root.add(tur);
+    root.userData.muzzle = new THREE.Vector3(0, 0.05, 2.45);
+    return root;
+  });
+}
+
 export function makeUnitModel(type, faction) {
   switch (type) {
     case 'tank': return makeTank(faction);
@@ -376,6 +445,8 @@ export function makeUnitModel(type, faction) {
     case 'harvester': return makeHarvester(faction);
     case 'arty': return makeArtillery(faction);
     case 'gunship': return makeGunship(faction);
+    case 'stealth': return makeStealth(faction);
+    case 'inferno': return makeInferno(faction);
     default: return makeInfantry(type, faction);
   }
 }
@@ -400,8 +471,8 @@ export function makeBuildingModel(type, faction) {
     const t = mats(faction), m = M();
     const root = new THREE.Group();
     const b = new Builder();
-    const W = { conyard: 4, power: 3, refinery: 4, barracks: 3, factory: 4, radar: 3, tech: 3, helipad: 3, turret: 1, sam: 2, plasma: 1 };
-    const D = { conyard: 4, power: 3, refinery: 3, barracks: 3, factory: 4, radar: 3, tech: 3, helipad: 3, turret: 1, sam: 2, plasma: 1 };
+    const W = { conyard: 4, power: 3, refinery: 4, barracks: 3, factory: 4, radar: 3, tech: 3, helipad: 3, turret: 1, sam: 2, plasma: 1, uplink: 3, silo: 3, wall: 1, gate: 2, mine: 1 };
+    const D = { conyard: 4, power: 3, refinery: 3, barracks: 3, factory: 4, radar: 3, tech: 3, helipad: 3, turret: 1, sam: 2, plasma: 1, uplink: 3, silo: 3, wall: 1, gate: 1, mine: 1 };
     const w = W[type] * CELL - 0.3, d = D[type] * CELL - 0.3;
     const parts = {};
     switch (type) {
@@ -586,6 +657,86 @@ export function makeBuildingModel(type, faction) {
         parts.turret = tur; parts.muzzle = new THREE.Vector3(0.75, 0.8, 1.1); parts.muzzle2 = new THREE.Vector3(-0.75, 0.8, 1.1);
         break;
       }
+      case 'uplink': {
+        foundation(b, w, d);
+        b.box(t.teamDark, 4.6, 1.2, 4.6, 0, 0.8, 0);
+        b.box(m.windows, 4.62, 0.3, 0.02, 0, 0.9, 2.31);
+        // lattice tower
+        for (const [x, z] of [[-0.9, -0.9], [0.9, -0.9], [-0.9, 0.9], [0.9, 0.9]]) b.cyl(m.metal, 0.1, 0.14, 4.2, 6, x * 0.8, 3.4, z * 0.8, z * 0.08, 0, -x * 0.08);
+        for (let i = 0; i < 4; i++) b.box(m.metal, 1.6 - i * 0.2, 0.06, 1.6 - i * 0.2, 0, 1.9 + i * 0.9, 0);
+        b.cyl(t.team, 0.5, 0.6, 0.6, 12, 0, 5.4, 0);
+        b.box(m.hazard, 4.7, 0.1, 0.25, 0, 1.45, 2.2);
+        lamps(b, [[2.2, 1.55, 2.2], [-2.2, 1.55, 2.2], [2.2, 1.55, -2.2], [-2.2, 1.55, -2.2]], m.lampRed);
+        const db = new Builder();
+        db.add(new THREE.SphereGeometry(2.0, 24, 10, 0, Math.PI * 2, 0, Math.PI / 3.4), m.metal, 0, -1.2, 0);
+        db.add(new THREE.TorusGeometry(1.25, 0.08, 6, 28), t.accent, 0, -0.45, 0, Math.PI / 2, 0, 0);
+        for (let i = 0; i < 3; i++) { const a = i / 3 * Math.PI * 2; db.cyl(m.gun, 0.04, 0.04, 1.9, 5, Math.cos(a) * 0.55, 0.3, Math.sin(a) * 0.55, Math.sin(a) * 0.45, 0, -Math.cos(a) * 0.45); }
+        db.add(new THREE.IcosahedronGeometry(0.28, 1), m.energy, 0, 1.15, 0);
+        const dish = db.build(); dish.position.set(0, 6.0, 0); dish.rotation.x = -0.5;
+        const dr = new THREE.Group(); dr.name = 'dish'; dr.add(dish);
+        parts.dish = dr;
+        const cb = new Builder(); cb.add(new THREE.OctahedronGeometry(0.35, 0), m.energy, 0, 0, 0);
+        const core = cb.build(false); core.position.set(0, 3.4, 0); core.name = 'core';
+        parts.core = core; parts.coreY = 3.4;
+        break;
+      }
+      case 'silo': {
+        foundation(b, w, d);
+        b.box(m.concreteDark, 5.0, 0.9, 5.0, 0, 0.6, 0);
+        b.box(m.hazard, 5.05, 0.12, 5.05, 0, 1.05, 0);
+        b.box(m.black, 3.0, 0.1, 3.0, 0, 1.06, 0);
+        b.box(t.teamDark, 1.0, 1.6, 1.0, 2.0, 1.6, -2.0); b.box(m.windows, 0.02, 0.3, 0.8, 1.49, 2.0, -2.0);
+        b.cyl(m.gun, 0.04, 0.04, 1.8, 5, 2.0, 3.2, -2.0);
+        lamps(b, [[2.0, 4.15, -2.0], [-2.3, 1.2, 2.3], [2.3, 1.2, 2.3], [-2.3, 1.2, -2.3]], m.lampRed);
+        // the missile (rises when ready)
+        const mb = new Builder();
+        mb.cyl(m.metal, 0.42, 0.42, 3.4, 16, 0, 1.7, 0);
+        mb.add(new THREE.ConeGeometry(0.42, 1.2, 16), m.lampRed, 0, 4.0, 0);
+        mb.add(new THREE.TorusGeometry(0.43, 0.04, 6, 16), m.black, 0, 2.6, 0, Math.PI / 2, 0, 0);
+        mb.box(m.hazard, 0.86, 0.3, 0.86, 0, 1.2, 0);
+        for (let i = 0; i < 4; i++) { const a = i * Math.PI / 2; mb.box(t.team, 0.05, 0.8, 0.5, Math.cos(a) * 0.45, 0.4, Math.sin(a) * 0.45, 0, -a, 0); }
+        const missile = mb.build(); missile.position.set(0, -3.2, 0); missile.name = 'missile';
+        parts.missile = missile;
+        // sliding doors
+        for (const s2 of [-1, 1]) {
+          const db = new Builder(); db.box(t.team, 1.5, 0.18, 3.0, 0, 0, 0); db.box(m.hazard, 0.1, 0.2, 3.0, -s2 * 0.7, 0.02, 0);
+          const door = db.build(); door.position.set(s2 * 0.75, 1.18, 0); door.name = s2 < 0 ? 'siloL' : 'siloR';
+          parts[door.name] = door;
+        }
+        break;
+      }
+      case 'wall': {
+        b.box(m.concrete, 1.95, 1.7, 1.95, 0, 0.75, 0);
+        b.box(m.concreteDark, 2.0, 0.25, 2.0, 0, 1.7, 0);
+        b.box(t.team, 1.97, 0.18, 1.97, 0, 1.15, 0);
+        for (const [x, z] of [[-0.6, -0.6], [0.6, -0.6], [-0.6, 0.6], [0.6, 0.6]]) b.box(m.concreteDark, 0.45, 0.35, 0.45, x, 1.95, z);
+        b.box(m.concreteDark, 2.05, 0.6, 2.05, 0, -0.1, 0);
+        break;
+      }
+      case 'gate': {
+        for (const s2 of [-1, 1]) {
+          b.box(m.concrete, 0.7, 2.6, 1.9, s2 * 1.65, 1.15, 0);
+          b.box(t.team, 0.72, 0.25, 1.92, s2 * 1.65, 2.0, 0);
+          b.box(m.concreteDark, 0.85, 0.3, 2.0, s2 * 1.65, 2.5, 0);
+        }
+        b.box(m.darkMetal, 3.4, 0.25, 0.4, 0, 2.75, 0);
+        lamps(b, [[-1.65, 2.75, 0.9], [1.65, 2.75, 0.9]], m.lampGreen);
+        b.box(m.hazard, 2.6, 0.06, 1.9, 0, 0.06, 0);
+        const db = new Builder();
+        db.box(m.metal, 2.6, 2.0, 0.25, 0, 0, 0);
+        for (let i = 0; i < 5; i++) db.box(m.darkMetal, 2.6, 0.08, 0.3, 0, -0.8 + i * 0.4, 0);
+        db.box(m.hazard, 2.6, 0.25, 0.3, 0, 0.95, 0);
+        const door = db.build(); door.position.set(0, 1.05, 0); door.name = 'gatedoor';
+        const dg = new THREE.Group(); dg.add(door); dg.name = 'gatedoorRoot';
+        parts.gatedoor = door;
+        break;
+      }
+      case 'mine': {
+        b.cyl(m.darkMetal, 0.45, 0.5, 0.18, 12, 0, 0.08, 0);
+        b.cyl(t.teamDark, 0.3, 0.32, 0.08, 12, 0, 0.2, 0);
+        b.sph(m.lampRed, 0.07, 0, 0.26, 0);
+        break;
+      }
       case 'plasma': {
         b.cyl(m.concreteDark, 0.95, 1.05, 0.4, 8, 0, 0.1, 0);
         b.cyl(t.teamDark, 0.55, 0.85, 3.6, 8, 0, 2.1, 0);
@@ -600,8 +751,8 @@ export function makeBuildingModel(type, faction) {
       }
     }
     root.add(b.build());
-    for (const k of ['crane', 'door', 'dish', 'core', 'turret']) if (parts[k]) root.add(parts[k]);
-    root.userData.parts = { steam: parts.steam, muzzle: parts.muzzle, muzzle2: parts.muzzle2, flag: parts.flag };
+    for (const k of ['crane', 'door', 'dish', 'core', 'turret', 'missile', 'siloL', 'siloR', 'gatedoor']) if (parts[k]) root.add(parts[k]);
+    root.userData.parts = { steam: parts.steam, muzzle: parts.muzzle, muzzle2: parts.muzzle2, flag: parts.flag, coreY: parts.coreY };
     return root;
   });
 }

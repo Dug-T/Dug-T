@@ -1,32 +1,62 @@
-// Wally Squad — entry point: renderer, lighting, post-processing, game setup and main loop.
+// Wally Squad — entry point: renderer, lighting, post-processing, game modes, menus and the main loop.
 import * as THREE from 'three';
 import { EffectComposer } from '../lib/postprocessing/EffectComposer.js';
 import { RenderPass } from '../lib/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from '../lib/postprocessing/UnrealBloomPass.js';
 import { ShaderPass } from '../lib/postprocessing/ShaderPass.js';
 import { OutputPass } from '../lib/postprocessing/OutputPass.js';
-import { G, rr, runTimers } from './state.js';
-import { DIFFICULTY, UNITS, WORLD } from './config.js';
-import { buildTerrain, BASES, cellOf, updateVision, updateOre, regrowOre, animateWater, revealAll, revealCircle } from './terrain.js';
+import { G, runTimers, seedSim } from './state.js';
+import { DIFFICULTY, FACTIONS } from './config.js';
+import { MAPS, THEMES, getMap } from './maps.js';
+import { buildTerrain, setupMap, BASES, cellOf, updateVision, updateOre, regrowOre, animateWater, revealAll, revealCircle } from './terrain.js';
 import { initFX, updateFX, setParticleScale } from './particles.js';
 import { Building, Unit, rebuildHash, updateProjectiles, updateDecay, cleanupDead } from './entities.js';
 import { initPlayer, updatePower, updateProduction } from './production.js';
 import { AI } from './ai.js';
 import * as UI from './ui.js';
 import * as Audio from './audio.js';
+import * as Voices from './voices.js';
+import { initWeather, updateWeatherSim, updateWeatherFX } from './weather.js';
+import { updateSuper } from './superweapons.js';
+import { MISSIONS, makeContext, campaignProgress, unlockNext } from './missions.js';
+import { Lockstep, joinRoom } from './mp.js';
+import { randomRoomCode } from './net.js';
+import { issue } from './cmd.js';
 
 const $ = id => document.getElementById(id);
 const params = new URLSearchParams(location.search);
 const loadBar = $('loadBar');
 const step = async (p) => { loadBar.style.width = (p * 100) + '%'; await new Promise(r => requestAnimationFrame(() => setTimeout(r, 0))); };
 
-let renderer, scene, camera, composer, bloom, sun;
-let ai = null;
-let winT = 0;
+let renderer, scene, camera, composer, bloom, sun, hemi;
+let ais = [];
+let winT = 0, missionT = 0;
 let fpsAcc = 0, fpsN = 0, quality = 1;
+let mission = null, mctx = null, lockstep = null;
+
+// ---------------------------------------------------------------- configuration for this run
+// A game is started by storing a config in sessionStorage and reloading; no config = main menu.
+const stored = sessionStorage.getItem('ws_cfg');
+let cfg = stored ? JSON.parse(stored) : null;
+const menuMode = !cfg;
+if (params.has('auto') && !cfg) cfg = { mode: 'skirmish', map: params.get('map') || 'valley', faction: params.get('faction') || 'wally', difficulty: localStorage.getItem('ws_diff') || 'normal', daynight: params.has('daynight'), weather: params.get('weather') || null };
+if (cfg && cfg.mode !== 'mp') sessionStorage.removeItem('ws_cfg');
+if (cfg && cfg.mode === 'mp') sessionStorage.removeItem('ws_cfg');
+if (cfg) sessionStorage.setItem('ws_last', JSON.stringify(cfg));
+const run = cfg || { mode: 'title', map: 'valley', faction: 'wally', difficulty: 'normal', daynight: false };
+if (run.mode === 'campaign') {
+  mission = MISSIONS[run.mission] || MISSIONS[0];
+  run.map = mission.map; run.faction = 'wally'; run.difficulty = mission.difficulty; run.daynight = false;
+}
+G.cfg = run;
+G.player = run.faction === 'grim' ? 'grim' : 'wally';
+G.enemy = G.player === 'wally' ? 'grim' : 'wally';
+G.difficulty = DIFFICULTY[run.difficulty] ? run.difficulty : 'normal';
 
 async function boot() {
   await step(0.05);
+  const map = getMap(run.map);
+  const theme = THEMES[map.theme];
   // ---------- renderer ----------
   renderer = new THREE.WebGLRenderer({ canvas: $('gl'), antialias: false, powerPreference: 'high-performance' });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
@@ -37,18 +67,18 @@ async function boot() {
   renderer.outputColorSpace = THREE.SRGBColorSpace;
 
   scene = new THREE.Scene();
-  const horizon = new THREE.Color(0xa9c4d8);
-  scene.background = horizon;
-  scene.fog = new THREE.Fog(horizon, 160, 420);
+  const horizon = new THREE.Color(theme.horizon);
+  scene.background = horizon.clone();
+  scene.fog = new THREE.Fog(horizon.clone(), 160, 420);
   camera = new THREE.PerspectiveCamera(42, 1, 0.5, 900);
 
   // ---------- sky + environment reflections ----------
   const skyGeo = new THREE.SphereGeometry(600, 32, 16);
   const skyCol = new Float32Array(skyGeo.attributes.position.count * 3);
-  const top = new THREE.Color(0x3d78b8), mid = horizon, bot = new THREE.Color(0x5a5446), c = new THREE.Color();
+  const top = new THREE.Color(theme.skyTop), bot = new THREE.Color(theme.skyBottom), c = new THREE.Color();
   for (let i = 0; i < skyGeo.attributes.position.count; i++) {
     const y = skyGeo.attributes.position.getY(i) / 600;
-    if (y > 0) c.copy(mid).lerp(top, Math.pow(y, 0.6)); else c.copy(mid).lerp(bot, Math.min(1, -y * 4));
+    if (y > 0) c.copy(horizon).lerp(top, Math.pow(y, 0.6)); else c.copy(horizon).lerp(bot, Math.min(1, -y * 4));
     skyCol.set([c.r, c.g, c.b], i * 3);
   }
   skyGeo.setAttribute('color', new THREE.BufferAttribute(skyCol, 3));
@@ -56,7 +86,7 @@ async function boot() {
   scene.add(sky);
   G.three = { renderer, scene, camera, sun: null, sky };
   const envScene = new THREE.Scene();
-  envScene.add(sky.clone());
+  envScene.add(new THREE.Mesh(skyGeo.clone(), sky.material));
   const sunBall = new THREE.Mesh(new THREE.SphereGeometry(40, 16, 8), new THREE.MeshBasicMaterial({ color: new THREE.Color(12, 10, 8) }));
   sunBall.position.set(300, 380, 180); envScene.add(sunBall);
   const pmrem = new THREE.PMREMGenerator(renderer);
@@ -64,14 +94,15 @@ async function boot() {
   scene.environment = G.three.envMap;
 
   // ---------- lights ----------
-  scene.add(new THREE.HemisphereLight(0xbfd8ff, 0x4a3f2c, 0.75));
-  sun = new THREE.DirectionalLight(0xfff0d6, 3.0);
+  hemi = new THREE.HemisphereLight(theme.hemiSky, theme.hemiGround, theme.hemiI);
+  scene.add(hemi);
+  sun = new THREE.DirectionalLight(theme.sun, theme.sunI);
   sun.castShadow = true;
   sun.shadow.mapSize.set(2048, 2048);
   sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.04;
-  const sc = sun.shadow.camera; sc.near = 10; sc.far = 260; sc.left = -70; sc.right = 70; sc.top = 70; sc.bottom = -70;
+  const sc = sun.shadow.camera; sc.near = 10; sc.far = 300; sc.left = -70; sc.right = 70; sc.top = 70; sc.bottom = -70;
   scene.add(sun); scene.add(sun.target);
-  G.three.sun = sun;
+  G.three.sun = sun; G.three.hemi = hemi;
 
   // ---------- post processing ----------
   const rt = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: 4 });
@@ -79,6 +110,7 @@ async function boot() {
   composer.addPass(new RenderPass(scene, camera));
   bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.7, 0.55, 0.92);
   composer.addPass(bloom);
+  G.three.bloom = bloom;
   composer.addPass(new ShaderPass({
     uniforms: { tDiffuse: { value: null }, uVig: { value: 0.32 } },
     vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
@@ -96,21 +128,34 @@ async function boot() {
   await step(0.15);
 
   // ---------- world ----------
-  buildTerrain(scene);
+  const hostFaction = run.mode === 'mp' ? run.mp.hostFaction || (run.mp.role === 'host' ? G.player : G.enemy) : G.player;
+  const slotOrder = [hostFaction, hostFaction === 'wally' ? 'grim' : 'wally'];
+  setupMap(map, theme, slotOrder);
+  seedSim(run.mp ? run.mp.seed : (Math.random() * 1e9) | 0);
+  G.three.terrain = buildTerrain(scene);
   await step(0.55);
   initFX(scene);
+  initWeather(scene, map, theme);
   G.sfx = Audio.sfx;
   G.announce = Audio.announce;
+  Voices.initVoices();
   if (params.has('reveal')) { G.revealed = true; revealAll(true); }
 
-  // ---------- players ----------
-  G.difficulty = localStorage.getItem('ws_diff') || 'normal';
-  if (!DIFFICULTY[G.difficulty]) G.difficulty = 'normal';
+  // ---------- players and starting forces ----------
   initPlayer(G.player, false);
-  initPlayer(G.enemy, true);
-  setupBase(G.player, BASES.wally, -1);
-  setupBase(G.enemy, BASES.grim, 1);
-  revealCircle(BASES.wally.x + 8, BASES.wally.z - 8, 42);
+  initPlayer(G.enemy, run.mode !== 'mp');
+  if (mission) {
+    G.allowed = mission.allowed;
+    mctx = makeContext(mission, {
+      changed: renderObjectives,
+      end: (win, text) => endGame(win, text),
+      ai: opts => { ais = [new AI(G.enemy, opts)]; },
+    });
+    mission.setup(mctx);
+  } else {
+    for (const f of slotOrder) setupBase(f, BASES[f]);
+  }
+  revealCircle(BASES[G.player].x, BASES[G.player].z, 42);
   updatePower();
   await step(0.7);
 
@@ -118,9 +163,12 @@ async function boot() {
   UI.renderIcons(renderer);
   UI.buildGrid();
   await step(0.95);
-  UI.centerOn(BASES.wally.x + 6, BASES.wally.z - 4);
+  // face the camera toward the enemy
+  const pb = BASES[G.player], eb = BASES[G.enemy];
+  const yaw = Math.round(Math.atan2(-(eb.x - pb.x), -(eb.z - pb.z)) / (Math.PI / 2)) * (Math.PI / 2);
+  G.camera.yaw = yaw;
+  UI.centerOn(pb.x - Math.sin(yaw) * 4, pb.z - Math.cos(yaw) * 4);
   G.camera.dist = G.camera.targetDist = 62;
-  G.camera.yaw = 0;
   UI.resize();
 
   $('loading').style.display = 'none';
@@ -128,43 +176,130 @@ async function boot() {
   requestAnimationFrame(loop);
 }
 
-function setupBase(faction, pos, dir) {
-  const cx = cellOf(pos.x) - 2, cz = cellOf(pos.z) - 2;
-  new Building('conyard', faction, cx, cz, true);
-  // starting force: rolls out toward the middle of the map
-  const fx = -dir, fz = dir; // direction toward map centre
+function setupBase(faction, pos) {
+  new Building('conyard', faction, cellOf(pos.x) - 2, cellOf(pos.z) - 2, true);
+  // starting force rolls out toward the middle of the map
+  const l = Math.hypot(pos.x, pos.z) || 1;
+  const fx = -pos.x / l, fz = -pos.z / l;
   const start = [['tank', 6, 0], ['tank', 8, -3], ['buggy', 4, 6], ['rifle', 10, 3], ['rifle', 11, 4], ['rifle', 12, 2], ['rocket', 11, 6], ['rocket', 12, 5]];
   for (const [t, a, b] of start) {
-    const x = pos.x + fx * a + b * 0.7 * -fz, z = pos.z + fz * a + b * 0.7 * fx;
-    const u = new Unit(t, faction, x + fx * 6, z + fz * 6, Math.atan2(fx, fz));
+    const x = pos.x + fx * (a + 8) - fz * b, z = pos.z + fz * (a + 8) + fx * b;
+    const u = new Unit(t, faction, x, z, Math.atan2(fx, fz));
     u.turretYaw = u.heading;
   }
 }
 
+// ---------------------------------------------------------------- menus
+const panels = ['menuMain', 'menuCampaign', 'menuSkirmish', 'menuOnline', 'menuVoices'];
+function showPanel(id) { for (const p of panels) $(p).style.display = p === id ? 'block' : 'none'; if (id === 'menuVoices') Voices.buildStudio($('studio'), UI.icons); }
+function startWith(c) { sessionStorage.setItem('ws_cfg', JSON.stringify(c)); location.href = location.pathname + (params.has('loopnet') ? '?loopnet' : ''); }
+
+function optionCards(el, items, sel, onPick) {
+  el.innerHTML = '';
+  for (const it of items) {
+    const d = document.createElement('div');
+    d.className = 'opt' + (it.id === sel ? ' on' : '') + (it.locked ? ' locked' : '');
+    d.innerHTML = (it.swatch ? `<div class="swatch" style="background:${it.swatch}"></div>` : '') + `<b>${it.title}</b><span>${it.desc || ''}</span>`;
+    if (!it.locked) d.onclick = () => { [...el.children].forEach(c => c.classList.remove('on')); d.classList.add('on'); Audio.initAudio(); Audio.play('click'); onPick(it.id); };
+    el.appendChild(d);
+  }
+}
+const MAP_SWATCH = { valley: 'linear-gradient(135deg,#4f7a2a,#76913a 50%,#1d4b63)', frost: 'linear-gradient(135deg,#f4f7fa,#a7b0b8 60%,#6f9fb8)', dunes: 'linear-gradient(135deg,#e8d29c,#b48a58 60%,#2a7d86)', midnight: 'linear-gradient(135deg,#0a1124,#1d2b4a 60%,#ffd27a)' };
+const mapItems = () => Object.entries(MAPS).map(([id, m]) => ({ id, title: m.name, desc: m.desc, swatch: MAP_SWATCH[id] }));
+const facItems = [{ id: 'wally', title: 'Wally Squad', desc: 'Titan tanks, medics, Wally the hero, Sky Lance' }, { id: 'grim', title: 'Grimlock Legion', desc: 'Stealth tanks, Inferno tanks, Doom Missile' }];
+
 function setupMenus() {
-  const title = $('title');
+  for (const b of document.querySelectorAll('[data-panel]')) b.onclick = () => { Audio.initAudio(); Audio.play('click'); showPanel(b.dataset.panel); };
+  // skirmish
+  const sk = { mode: 'skirmish', map: 'valley', faction: 'wally', difficulty: localStorage.getItem('ws_diff') || 'normal', daynight: true, weather: null };
+  optionCards($('mapList'), mapItems(), sk.map, id => { sk.map = id; });
+  optionCards($('facRow'), facItems, sk.faction, id => { sk.faction = id; });
+  $('facRow').className = 'cardList';
   const row = $('diffRow');
   for (const k in DIFFICULTY) {
     const b = document.createElement('button');
-    b.className = 'btn' + (k === G.difficulty ? ' on' : ''); b.textContent = DIFFICULTY[k].label;
-    b.onclick = () => { G.difficulty = k; localStorage.setItem('ws_diff', k); [...row.children].forEach(x => x.classList.toggle('on', x === b)); Audio.initAudio(); Audio.play('click'); };
+    b.className = 'btn' + (k === sk.difficulty ? ' on' : ''); b.textContent = DIFFICULTY[k].label;
+    b.onclick = () => { sk.difficulty = k; localStorage.setItem('ws_diff', k); [...row.children].forEach(x => x.classList.toggle('on', x === b)); Audio.initAudio(); Audio.play('click'); };
     row.appendChild(b);
   }
-  $('bStart').onclick = start;
+  const opt = $('optRow');
+  const toggle = (label, get, set) => { const b = document.createElement('button'); b.className = 'btn' + (get() ? ' on' : ''); b.textContent = label; b.onclick = () => { set(!get()); b.classList.toggle('on', get()); }; opt.appendChild(b); };
+  toggle('Day–night cycle', () => sk.daynight, v => { sk.daynight = v; });
+  toggle('Dynamic weather', () => !sk.weather, v => { sk.weather = v ? null : 'clear'; });
+  $('bStart').onclick = () => startWith(sk);
+  // campaign
+  const prog = campaignProgress();
+  optionCards($('missionList'), MISSIONS.map((m, i) => ({ id: i, title: `${i + 1}. ${m.title}`, desc: i <= prog ? `${MAPS[m.map].name} · ${DIFFICULTY[m.difficulty].label}` : 'Locked - complete the previous mission', locked: i > prog, swatch: MAP_SWATCH[m.map] })), -1, i => startWith({ mode: 'campaign', mission: i }));
+  // online
+  const mp = { map: 'valley', faction: 'wally' };
+  optionCards($('mapListMp'), mapItems(), mp.map, id => { mp.map = id; });
+  optionCards($('facRowMp'), facItems, mp.faction, id => { mp.faction = id; });
+  $('facRowMp').className = 'cardList small';
+  $('bHost').onclick = () => startWith({ mode: 'mp', map: mp.map, faction: mp.faction, difficulty: 'normal', daynight: true, weather: null, mp: { role: 'host', room: randomRoomCode(), seed: (Math.random() * 1e9) | 0, hostFaction: mp.faction } });
+  let joinNet = null;
+  $('bJoin').onclick = () => {
+    const code = $('roomInput').value.trim().toUpperCase();
+    if (code.length < 4) { $('joinStatus').textContent = 'Enter the 5-letter room code.'; return; }
+    joinNet?.close();
+    $('joinStatus').textContent = 'Connecting…';
+    joinNet = joinRoom(code, t => { $('joinStatus').textContent = t; });
+  };
+  // voices
+  $('vOn').checked = Voices.settings.voices; $('vTts').checked = Voices.settings.tts;
+  $('vOn').onchange = () => { Voices.settings.voices = $('vOn').checked; Voices.saveSettings(); };
+  $('vTts').onchange = () => { Voices.settings.tts = $('vTts').checked; Voices.saveSettings(); };
+  $('bExport').onclick = () => Voices.exportPack(prompt('Name your voice pack:', 'my-squad-voices') || 'my-squad-voices');
+  $('importFile').onchange = async e => {
+    const f = e.target.files[0]; if (!f) return;
+    try { const n = await Voices.importPack(f); alert(`Imported ${n} voice clips.`); Voices.buildStudio($('studio'), UI.icons); } catch (err) { alert('Import failed: ' + err.message); }
+  };
+  // in-game buttons
   $('bHow').onclick = () => { $('help').style.display = 'flex'; };
   $('bHelp').onclick = () => { $('help').style.display = 'flex'; };
   $('bHelpClose').onclick = () => { $('help').style.display = 'none'; };
   $('bPause').onclick = () => togglePause();
   $('bResume').onclick = () => togglePause(false);
-  $('bRestart').onclick = () => { sessionStorage.setItem('ws_auto', '1'); location.reload(); };
-  $('bAgain').onclick = () => { sessionStorage.setItem('ws_auto', '1'); location.reload(); };
+  const again = () => { const last = sessionStorage.getItem('ws_last'); if (last && JSON.parse(last).mode !== 'mp') startWith(JSON.parse(last)); else location.href = location.pathname; };
+  $('bRestart').onclick = again;
+  $('bAgain').onclick = again;
+  $('bNext').onclick = () => startWith({ mode: 'campaign', mission: Math.min(MISSIONS.length - 1, run.mission + 1) });
   $('bWatch').onclick = () => { $('end').style.display = 'none'; G.paused = false; };
+  $('bSurrender').onclick = () => { if (lockstep) lockstep.surrender(); else G.surrendered = G.player; togglePause(false); };
   $('bMusic').onclick = () => { Audio.initAudio(); const on = Audio.toggleMusic(); $('bMusic').classList.toggle('on', !on); $('bMusic').textContent = on ? '♪ Music' : '♪ Off'; };
   const speeds = [1, 1.5, 2, 0.5];
-  $('bSpeed').onclick = () => { G.speed = speeds[(speeds.indexOf(G.speed) + 1) % speeds.length]; $('bSpeed').textContent = `Game speed: ${G.speed}x`; };
+  $('bSpeed').onclick = () => { if (lockstep) return; G.speed = speeds[(speeds.indexOf(G.speed) + 1) % speeds.length]; $('bSpeed').textContent = `Game speed: ${G.speed}x`; };
+  $('bSuper').onclick = () => { G.ui.setMode?.('super'); };
   G.togglePause = togglePause;
-  if (sessionStorage.getItem('ws_auto') || params.has('auto')) { sessionStorage.removeItem('ws_auto'); start(); }
-  else { title.style.display = 'flex'; revealAll(true); } // show the whole valley behind the title menu
+
+  if (run.mode === 'title') { $('title').style.display = 'flex'; showPanel('menuMain'); revealAll(true); G.cfg.daynight = false; }
+  else if (run.mode === 'campaign') showBriefing();
+  else if (run.mode === 'mp') {
+    $('bSpeed').style.display = 'none';
+    lockstep = new Lockstep(run, start);
+    G.net = lockstep;
+    lockstep.connect();
+  } else start();
+}
+
+function showBriefing() {
+  $('briefNum').textContent = `MISSION ${run.mission + 1} OF ${MISSIONS.length} · ${MAPS[mission.map].name.toUpperCase()}`;
+  $('briefTitle').textContent = mission.title.toUpperCase();
+  $('briefText').innerHTML = mission.story.map(p => `<p>${p}</p>`).join('');
+  $('briefObj').innerHTML = mission.objectives.map(o => `<li>${o.text}</li>`).join('');
+  $('briefing').style.display = 'flex';
+  $('bBegin').onclick = () => { $('briefing').style.display = 'none'; start(); };
+}
+
+function renderObjectives() {
+  if (!mission) return;
+  const el = $('objectives'); el.style.display = 'block';
+  el.innerHTML = '<div class="label" style="margin:0 0 3px">Objectives</div>' + mission.objectives.map(o => {
+    const st = mctx.status[o.id];
+    let extra = '';
+    if (o.timer && st === 'open') { const left = Math.max(0, o.timer - G.time); extra = ` <b style="color:var(--accent)">${Math.floor(left / 60)}:${String(Math.floor(left % 60)).padStart(2, '0')}</b>`; }
+    if (o.progress && st === 'open') extra = ` <b style="color:var(--accent)">${o.progress()}</b>`;
+    return `<div class="ob ${st}">${st === 'done' ? '✔' : st === 'failed' ? '✖' : '○'} ${o.text}${extra}</div>`;
+  }).join('');
 }
 
 function start() {
@@ -172,36 +307,64 @@ function start() {
   $('title').style.display = 'none';
   revealAll(!!G.revealed);
   G.started = true; G.paused = false;
-  UI.centerOn(BASES.wally.x + 6, BASES.wally.z - 4);
-  G.camera.targetDist = 62; G.camera.yaw = 0;
-  ai = new AI(G.enemy);
-  Audio.announce('Welcome, commander. Establish your base.');
-  setTimeout(() => UI.message('Build a Power Plant, then a Crystal Refinery to start earning credits.'), 2500);
+  if (run.mode === 'skirmish') ais = [new AI(G.enemy)];
+  if (mission) renderObjectives();
+  const fname = FACTIONS[G.player].name;
+  Audio.announce(mission ? `Mission start: ${mission.title}` : run.mode === 'mp' ? 'Battle control online' : `Welcome, commander of the ${fname}.`);
+  if (!mission) setTimeout(() => UI.message('Build a Power Plant, then a Crystal Refinery to start earning credits.'), 2500);
 }
 
 function togglePause(force) {
   if (!G.started || G.over) return;
-  G.paused = force !== undefined ? force : !G.paused;
-  $('pause').style.display = G.paused ? 'flex' : 'none';
+  const want = force !== undefined ? force : $('pause').style.display !== 'flex';
+  $('pause').style.display = want ? 'flex' : 'none';
+  if (!lockstep) G.paused = want; // online games keep running while the menu is open
+}
+
+function endGame(win, text) {
+  if (G.over) return;
+  G.over = true;
+  Audio.announce(win ? 'Mission accomplished' : 'Mission failed');
+  if (mission && win) unlockNext(run.mission);
+  setTimeout(() => {
+    $('endTitle').textContent = win ? 'VICTORY' : 'DEFEAT';
+    $('endTitle').style.color = win ? 'var(--accent)' : 'var(--red)';
+    $('endSub').textContent = text || (win ? (mission ? `${mission.title}: mission complete.` : `The ${FACTIONS[G.enemy].name} has been crushed!`) : 'Our forces have fallen. Regroup, commander.');
+    const t = Math.floor(G.time);
+    $('endStats').innerHTML = `<span>Mission time</span><span>${Math.floor(t / 60)}m ${t % 60}s</span>${run.mode === 'mp' ? '' : `<span>Difficulty</span><span>${DIFFICULTY[G.difficulty].label}</span>`}<span>Enemies destroyed</span><span>${G.stats.killed}</span><span>Units lost</span><span>${G.stats.lost}</span><span>Structures built</span><span>${G.stats.built}</span><span>Credits harvested</span><span>${Math.round(G.stats.harvested)}</span>`;
+    $('bNext').style.display = mission && win && run.mission < MISSIONS.length - 1 ? '' : 'none';
+    $('bAgain').style.display = run.mode === 'mp' ? 'none' : '';
+    $('end').style.display = 'flex';
+  }, 2500);
 }
 
 function checkEnd(dt) {
   winT -= dt; if (winT > 0 || G.over) return; winT = 1;
-  const has = f => G.buildings.some(b => !b.dead && b.faction === f) || G.units.some(u => !u.dead && u.faction === f && u.type !== 'harvester');
+  if (G.surrendered) { endGame(G.surrendered !== G.player, G.surrendered === G.player ? 'You surrendered.' : 'The enemy has surrendered!'); return; }
+  if (mission) return; // missions decide victory themselves
+  const has = f => G.buildings.some(b => !b.dead && b.faction === f && !b.def.isMine && !b.def.isWall) || G.units.some(u => !u.dead && u.faction === f && u.type !== 'harvester');
   const pAlive = has(G.player), eAlive = has(G.enemy);
-  if (!pAlive || !eAlive) {
-    G.over = true;
-    const win = pAlive;
-    Audio.announce(win ? 'Mission accomplished' : 'Mission failed');
-    setTimeout(() => {
-      $('endTitle').textContent = win ? 'VICTORY' : 'DEFEAT';
-      $('endTitle').style.color = win ? 'var(--accent)' : 'var(--red)';
-      $('endSub').textContent = win ? 'The Grimlock Legion has been crushed. Crystal Valley is ours!' : 'Our base has fallen. Regroup, commander.';
-      const t = Math.floor(G.time);
-      $('endStats').innerHTML = `<span>Mission time</span><span>${Math.floor(t / 60)}m ${t % 60}s</span><span>Difficulty</span><span>${DIFFICULTY[G.difficulty].label}</span><span>Enemies destroyed</span><span>${G.stats.killed}</span><span>Units lost</span><span>${G.stats.lost}</span><span>Structures built</span><span>${G.stats.built}</span><span>Credits harvested</span><span>${Math.round(G.stats.harvested)}</span>`;
-      $('end').style.display = 'flex';
-    }, 2500);
-  }
+  if (!pAlive || !eAlive) endGame(pAlive);
+}
+
+function simStep(dt) {
+  G.time += dt;
+  runTimers();
+  updateWeatherSim(dt);
+  updatePower();
+  updateProduction(dt);
+  updateSuper(dt);
+  for (const a of ais) a.update(dt);
+  if (G.extraAI) for (const a of G.extraAI) a.update(dt);
+  rebuildHash();
+  for (const b of G.buildings) b.update(dt);
+  for (const u of G.units) u.update(dt);
+  updateProjectiles(dt);
+  updateDecay(dt);
+  cleanupDead();
+  regrowOre(dt);
+  if (mission && !G.over) { missionT -= dt; if (missionT <= 0) { missionT = 0.5; mission.tick(mctx); renderObjectives(); } }
+  checkEnd(dt);
 }
 
 let last = performance.now();
@@ -215,18 +378,28 @@ function loop(now) {
     if (fps < 32 && quality > 0.6) { quality -= 0.2; applyQuality(); }
     else if (fps > 55 && quality < 1) { quality = Math.min(1, quality + 0.2); applyQuality(); }
   }
-  const dt = G.started && !G.paused ? real * G.speed : 0;
+  let dt = 0;
+  if (lockstep && lockstep.active) {
+    const t0 = G.time;
+    lockstep.update(real, simStep);
+    dt = G.time - t0;
+  } else {
+    dt = G.started && !G.paused ? real * G.speed : 0;
+    if (dt > 0) simStep(dt);
+  }
   G.dt = dt;
   if (!G.started) {
     // title screen: slow cinematic orbit over the valley
     G.camera.yaw += real * 0.05;
-    G.camera.x = BASES.wally.x * 0.5 + Math.sin(now / 9000) * 20; G.camera.z = BASES.wally.z * 0.5;
+    const b = BASES[G.player];
+    G.camera.x = b.x * 0.5 + Math.sin(now / 9000) * 20; G.camera.z = b.z * 0.5;
     G.camera.targetDist = 85;
+    updateWeatherSim(0);
   }
-  if (dt > 0) simStep(dt);
   updateOre();
   updateVision(Math.max(dt, real * 0.5));
   updateFX(dt);
+  updateWeatherFX(dt, real);
   UI.updateCamera(real);
   UI.updateHover(real);
   UI.updateMarkers(real);
@@ -236,27 +409,20 @@ function loop(now) {
   UI.drawOverlay();
 }
 
-function simStep(dt) {
-  G.time += dt;
-  runTimers();
-  updatePower();
-  updateProduction(dt);
-  ai?.update(dt);
-  if (G.extraAI) for (const a of G.extraAI) a.update(dt);
-  rebuildHash();
-  for (const b of G.buildings) b.update(dt);
-  for (const u of G.units) u.update(dt);
-  updateProjectiles(dt);
-  updateDecay(dt);
-  cleanupDead();
-  regrowOre(dt);
-  checkEnd(dt);
-}
+// Online games must keep ticking when the tab is in the background (rAF stops there).
+let lastBg = performance.now();
+setInterval(() => {
+  const now = performance.now();
+  if (document.hidden && lockstep && lockstep.active) lockstep.update(Math.min(0.5, (now - lastBg) / 1000), simStep);
+  lastBg = now;
+}, 100);
+
 // debug / testing hook: fast-forward the simulation without rendering
 window.WS = {
   G,
   fastForward(seconds, dt = 0.05) { for (let t = 0; t < seconds; t += dt) { simStep(dt); updateFX(dt); if (Math.floor(t / 0.2) !== Math.floor((t + dt) / 0.2)) updateVision(0.2); } updateOre(); },
-  get ai() { return ai; },
+  get ai() { return ais[0]; },
+  AI, issue,
 };
 
 function applyQuality() {
@@ -269,4 +435,4 @@ boot().catch(err => {
   console.error(err);
   $('loading').innerHTML = `<div style="color:#ff6a5a;max-width:600px;text-align:center">Failed to start: ${err.message}<br><small>Your browser needs WebGL 2 support.</small></div>`;
 });
-void UNITS; void WORLD; void rr;
+void menuMode;

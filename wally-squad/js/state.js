@@ -22,6 +22,8 @@ export const G = {
   camera: { x: 0, z: 0, dist: 70, yaw: 0, shake: 0 },
   mouse: { x: 0, y: 0, ground: null, inside: false },
   stats: { built: 0, lost: 0, killed: 0, harvested: 0 },
+  cfg: { mode: 'skirmish', map: 'valley', faction: 'wally', difficulty: 'normal' },
+  sightMult: 1, speedMult: 1,
 };
 
 // game-time timers (respect pause and game speed)
@@ -42,6 +44,11 @@ export function mulberry32(a) {
   };
 }
 export const rand = Math.random;
+// Simulation RNG: seeded so that multiplayer clients stay in lockstep. Use only for game logic.
+let simRng = mulberry32(12345);
+export function seedSim(seed) { simRng = mulberry32(seed >>> 0); }
+export const srand = () => simRng();
+export const srr = (a, b) => a + simRng() * (b - a);
 export const rr = (a, b) => a + Math.random() * (b - a);
 export const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 export const lerp = (a, b, t) => a + (b - a) * t;
