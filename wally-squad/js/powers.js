@@ -16,7 +16,7 @@ export const POWERS = {
 
 export function powerStates(f) {
   const P = G.players[f];
-  if (!P) return [];
+  if (!P || G.cfg.powers === false) return [];
   P.powers = P.powers || {};
   const out = [];
   for (const k in POWERS) {

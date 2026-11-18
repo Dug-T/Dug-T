@@ -193,14 +193,17 @@ function moveTip(e) { const tip = $('tooltip'), p = appPos(e), A = appSize(); ti
 function hideTip() { $('tooltip').style.display = 'none'; }
 
 let sideT = 0;
+const setText = (el, t) => { t = String(t); if (el.textContent !== t) el.textContent = t; };
+const setStyle = (el, k, v) => { if (el.style[k] !== v) el.style[k] = v; };
 export function updateSidebar(dt) {
   sideT -= dt; if (sideT > 0) return; sideT = 0.1;
+  { const n = idleUnits().length, b = $('bIdle'); setStyle(b, 'display', n ? '' : 'none'); setText(b, `💤 ${n}`); }
   const P = G.players[G.player];
-  $('credits').textContent = '$ ' + Math.floor(P.credits).toLocaleString();
+  setText($('credits'), '$ ' + Math.floor(P.credits).toLocaleString());
   const maxP = Math.max(P.powerProd, P.powerUse, 100) * 1.15;
-  $('powerFill').style.width = (P.powerProd / maxP * 100) + '%';
-  $('powerUse').style.left = (P.powerUse / maxP * 100) + '%';
-  $('powerTxt').textContent = `${Math.round(P.powerUse)}/${Math.round(P.powerProd)}`;
+  setStyle($('powerFill'), 'width', (P.powerProd / maxP * 100).toFixed(1) + '%');
+  setStyle($('powerUse'), 'left', (P.powerUse / maxP * 100).toFixed(1) + '%');
+  setText($('powerTxt'), `${Math.round(P.powerUse)}/${Math.round(P.powerProd)}`);
   const low = P.powerUse > P.powerProd;
   $('powerRow').classList.toggle('low', low);
   if (low && !G.lowPowerWarned) { Audio.announce('Low power'); G.lowPowerWarned = true; }
@@ -211,11 +214,15 @@ export function updateSidebar(dt) {
     const ok = hasReqs(G.player, it.type) || q.items.includes(it.type);
     it.el.classList.toggle('locked', !ok);
     const n = q.items.filter(i => i === it.type).length;
-    it.count.textContent = !isBuildingType(it.type) && n > 1 ? n : '';
+    setText(it.count, !isBuildingType(it.type) && n > 1 ? n : '');
     const active = q.items[0] === it.type;
     const ready = active && q.ready;
     it.el.classList.toggle('ready', ready);
-    it.state.textContent = ready ? 'READY' : active && q.hold ? 'ON HOLD' : (UPGRADES[it.type] && P.upgrades[it.type]) ? 'DONE' : '';
+    setText(it.state, ready ? 'READY' : active && q.hold ? 'ON HOLD' : (UPGRADES[it.type] && P.upgrades[it.type]) ? 'DONE' : '');
+    const dim = !active && n === 0 && isBuildingType(it.type) && q.items.length > 0;
+    const clockKey = active && !ready ? 'p' + Math.round(q.progress / d.time * 200) : dim ? 'dim' : '';
+    if (it.clockKey === clockKey) continue;
+    it.clockKey = clockKey;
     const c = it.clock.getContext('2d');
     c.clearRect(0, 0, 100, 80);
     if (active && !ready) {
@@ -223,7 +230,7 @@ export function updateSidebar(dt) {
       c.fillStyle = 'rgba(0,0,0,0.6)';
       c.beginPath(); c.moveTo(50, 40); c.arc(50, 40, 80, -Math.PI / 2 + k * Math.PI * 2, Math.PI * 1.5); c.closePath(); c.fill();
       c.fillStyle = '#ffc23a'; c.fillRect(0, 77, 100 * k, 3);
-    } else if (!active && n === 0 && q.items.includes(it.type) === false && isBuildingType(it.type) && q.items.length) {
+    } else if (dim) {
       c.fillStyle = 'rgba(0,0,0,0.35)'; c.fillRect(0, 0, 100, 80);
     }
   }
@@ -243,7 +250,7 @@ export function updateSidebar(dt) {
   } else { $('superName').textContent = ''; $('superFill').style.width = '0'; $('bSuper').style.display = 'none'; }
   if (es) { const left = Math.max(0, es.max - es.charge); $('enemySuper').textContent = es.ready ? `⚠ Enemy ${es.name} ARMED` : `⚠ Enemy ${es.name}: ${Math.floor(left / 60)}:${String(Math.floor(left % 60)).padStart(2, '0')}`; }
   else $('enemySuper').textContent = '';
-  $('wx').textContent = `${weatherLabel()} · ${clockString()}`;
+  setText($('wx'), `${weatherLabel()} · ${clockString()}`);
   // support power buttons
   const ps = powerStates(G.player), pb = $('powerBtns');
   const psig = ps.map(p => p.type).join();
@@ -259,8 +266,8 @@ export function updateSidebar(dt) {
   for (const b of pb.children) {
     const s = ps.find(p => p.type === b.dataset.type); if (!s) continue;
     b.classList.toggle('ready', s.ready);
-    b.querySelector('span').textContent = s.ready ? s.name.split(' ')[0].toUpperCase() : `${Math.ceil(POWERS[s.type].charge - s.charge)}s`;
-    b.querySelector('.fill').style.width = (s.charge / POWERS[s.type].charge * 100) + '%';
+    setText(b.querySelector('span'), s.ready ? s.name.split(' ')[0].toUpperCase() : `${Math.ceil(POWERS[s.type].charge - s.charge)}s`);
+    setStyle(b.querySelector('.fill'), 'width', (s.charge / POWERS[s.type].charge * 100).toFixed(1) + '%');
   }
   // clock
   const s = Math.floor(G.time); $('clock').textContent = `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
@@ -379,7 +386,7 @@ function pickAt(sx, sy) {
     if (p) { const d = p.distanceTo(ray.origin); if (d < bd) { bd = d; best = e; } }
   };
   for (const u of G.units) {
-    if (u.dead || (u.faction !== G.player && !u.mesh.visible)) continue;
+    if (u.dead || u.boarded || (u.faction !== G.player && !u.mesh.visible)) continue;
     const r = Math.max(0.75, u.def.radius * 1.1), h = u.isInf ? 2 : u.air ? 1.6 : 2.2;
     const y0 = u.air ? u.y - 1 : u.y;
     test(u, u.x - r, y0, u.z - r, u.x + r, y0 + h, u.z + r);
@@ -426,6 +433,10 @@ function commandAt(sx, sy, attackMove = false, queue = false) {
     Voices.say(units[0].type, 'attack');
     return;
   }
+  if (target && target.faction === G.player && (target.def.transport || target.def.garrison) && (target.kind === 'unit' || target.buildAnim >= 1)) {
+    const inf = units.filter(u => u.isInf && u !== target);
+    if (inf.length) { issue({ t: 'board', ids: inf.map(u => u.id), tid: target.id }); flashMarker(target.x, target.z, 0x55ff77); Audio.play('ack'); return; }
+  }
   if (target && target.faction === G.player && target.kind === 'building') {
     const eng = units.filter(u => u.type === 'engineer' && target.hp < target.maxHp);
     const harv = units.filter(u => u.type === 'harvester' && target.type === 'refinery');
@@ -459,7 +470,7 @@ export function updateMarkers(dt) {
 
 function boxSelect(x0, y0, x1, y1, add) {
   const minX = Math.min(x0, x1), maxX = Math.max(x0, x1), minY = Math.min(y0, y1), maxY = Math.max(y0, y1);
-  let list = G.units.filter(u => !u.dead && u.faction === G.player && (() => { const p = project(u.x, u.y + 0.8, u.z); return !p.behind && p.x >= minX && p.x <= maxX && p.y >= minY && p.y <= maxY; })());
+  let list = G.units.filter(u => !u.dead && !u.boarded && u.faction === G.player && (() => { const p = project(u.x, u.y + 0.8, u.z); return !p.behind && p.x >= minX && p.x <= maxX && p.y >= minY && p.y <= maxY; })());
   const combat = list.filter(u => u.type !== 'harvester');
   if (combat.length) list = combat; // prefer combat units over harvesters
   select(list, add);
@@ -572,6 +583,8 @@ function bindInput() {
     if (k === 'KeyA' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); selectArmy(); return; }
     if (k === 'KeyS' && !e.ctrlKey) { if (myUnits().length) issue({ t: 'stop', ids: myUnits().map(u => u.id) }); Audio.play('ack'); return; }
     if (k === 'KeyG') { const w = myUnits().filter(u => u.type === 'wallyman'); if (w.length) { issue({ t: 'ability', ids: w.map(u => u.id) }); Voices.say('wallyman', 'attack', true); } return; }
+    if (k === 'KeyU') { const a = G.selection.filter(e => alive(e) && e.faction === G.player && (e.def.transport || e.def.garrison) && (e.passengers || []).length); if (a.length) { issue({ t: 'unload', ids: a.map(u => u.id) }); Audio.play('ack'); } return; }
+    if (k === 'Period') { selectNextIdle(); return; }
     if (k === 'KeyH') { const b = G.buildings.find(b => b.faction === G.player && b.type === 'conyard') || G.buildings.find(b => b.faction === G.player); if (b) centerOn(b.x, b.z); return; }
     if (k === 'Space') { e.preventDefault(); if (G.alertAt) centerOn(G.alertAt.x, G.alertAt.z); return; }
     if (k === 'KeyR') { setMode(G.mode === 'repair' ? null : 'repair'); return; }
@@ -639,7 +652,8 @@ function tryPlace() {
     if (!ok.length) { Audio.play('error'); message('Cannot build there', true); return; }
     issue({ t: 'inst', type: G.placing, cells: ok });
     Audio.play('build');
-    if (G.players[G.player].credits < d.cost * (ok.length + 1)) cancelPlacing();
+    const keepGoing = (keys.ShiftLeft || keys.ShiftRight) && G.players[G.player].credits >= d.cost * (ok.length + 1);
+    if (!keepGoing) cancelPlacing();
     return;
   }
   if (!canPlace(G.player, G.placing, cx, cz)) { Audio.play('error'); message('Cannot build there', true); return; }
@@ -679,7 +693,25 @@ function setCursor() {
   gl.style.cursor = G.mode === 'sell' ? 'copy' : G.mode === 'repair' ? 'cell' : G.mode === 'super' || (G.mode && G.mode.startsWith('power:')) || attackMoveArmed ? 'crosshair' : 'default';
 }
 let hoverT = 0;
+let barSig = '';
+function updateModeBar() {
+  const what = G.placing ? `Placing ${BUILDINGS[G.placing].name}` + (BUILDINGS[G.placing].isWall ? ' · drag for a line' : '') + ' · tap a green spot'
+    : G.mode === 'sell' ? 'Sell mode · tap your building' : G.mode === 'repair' ? 'Repair mode · tap your building'
+    : G.mode === 'super' ? 'Superweapon · tap the target' : G.mode && G.mode.startsWith('power:') ? 'Support power · tap the target'
+    : attackMoveArmed ? 'Attack-move · tap the destination' : '';
+  if (what === barSig) return;
+  barSig = what;
+  const bar = $('modeBar');
+  bar.style.display = what ? 'flex' : 'none';
+  $('modeText').textContent = what;
+}
+export function cancelAllModes() {
+  if (G.placing) cancelPlacing();
+  if (G.mode) setMode(null);
+  if (attackMoveArmed) { attackMoveArmed = false; $('tAM').classList.remove('on'); setCursor(); }
+}
 export function updateHover(dt) {
+  updateModeBar();
   hoverT -= dt;
   G.mouse.ground = G.mouse.inside || isTouch ? screenToGround(G.mouse.x, G.mouse.y) : null;
   updateGhost();
@@ -705,6 +737,7 @@ function bindTouch(gl) {
       start = { ...p, cx: G.camera.x, cz: G.camera.z, moved: false, t: performance.now(), box: touchBoxMode };
       G.mouse.x = p.x; G.mouse.y = p.y;
       if (touchBoxMode) drag = { x0: p.x, y0: p.y, x1: p.x, y1: p.y, active: true };
+      if (G.placing && BUILDINGS[G.placing].isWall) { const g = screenToGround(p.x, p.y); if (g) wallStart = placementCell(g.x, g.z); }
     } else if (pts.size === 2) {
       const [a, b] = [...pts.values()];
       pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), dist: G.camera.dist, cx: G.camera.x, cz: G.camera.z, mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2 };
@@ -743,7 +776,7 @@ function bindTouch(gl) {
       const { x, y } = start;
       if (start.box && drag) { boxSelect(drag.x0, drag.y0, drag.x1, drag.y1, false); drag = null; touchBoxMode = false; $('tBox').classList.remove('on'); }
       else if (!start.moved) touchTap(x, y);
-      else if (G.placing) { G.mouse.ground = screenToGround(G.mouse.x, G.mouse.y); }
+      else if (G.placing) { G.mouse.ground = screenToGround(G.mouse.x, G.mouse.y); if (wallStart) tryPlace(); }
       start = null;
     }
   };
@@ -769,6 +802,7 @@ function touchTap(x, y) {
 }
 
 function bindButtons() {
+  $('modeCancel').onclick = () => { cancelAllModes(); Audio.play('click'); };
   $('sideToggle').onclick = () => {
     document.body.classList.toggle('sideHidden');
     $('sideToggle').textContent = document.body.classList.contains('sideHidden') ? '◀ BUILD' : '▶';
@@ -790,7 +824,7 @@ function refreshSelPanel(force) {
   const sel = G.selection.filter(alive);
   if (!sel.length) { panel.style.display = 'none'; selSig = ''; return; }
   panel.style.display = 'block';
-  const sig = sel.map(s => s.id).join(',') + '|' + sel.map(s => Math.ceil(s.frenzyCD || 0)).join(',') + (force ? Math.random() : '');
+  const sig = sel.map(s => s.id).join(',') + '|' + sel.map(s => Math.ceil(s.frenzyCD || 0) + ':' + (s.passengers ? s.passengers.length : 0)).join(',') + (force ? Math.random() : '');
   const first = sel[0];
   if (sel.length === 1) {
     const e = first; const d = e.def;
@@ -837,6 +871,11 @@ function refreshSelPanel(force) {
         const cd = Math.max(...wm.map(u => u.frenzyCD || 0));
         addBtn(cd > 0 ? `⚡ Frenzy (${Math.ceil(cd)}s)` : '⚡ Gatling Frenzy (G)', () => { issue({ t: 'ability', ids: wm.map(u => u.id) }); Voices.say('wallyman', 'attack', true); selSig = ''; }, '8 seconds of super-fast fire and +35% speed. 45 second cooldown.');
       }
+      const apcs = myUnits().filter(u => u.def.transport);
+      if (apcs.length) {
+        const n = apcs.reduce((a, u) => a + (u.passengers || []).length, 0), cap = apcs.reduce((a, u) => a + u.def.transport, 0);
+        addBtn(`⏏ Unload (${n}/${cap}) (U)`, () => { issue({ t: 'unload', ids: apcs.map(u => u.id) }); Audio.play('ack'); setTimeout(() => refreshSelPanel(true), 150); }, 'Drop off the infantry inside. To load: select infantry and right-click (or tap) the APC.');
+      }
       if (first.type === 'harvester') addBtn('⛏ Harvest', () => issue({ t: 'seek', ids: myUnits().map(u => u.id) }));
       addBtn('⌖ Focus (F)', () => centerOn(first.x, first.z));
       if (myUnits().some(u => u.weapon)) {
@@ -852,6 +891,11 @@ function refreshSelPanel(force) {
     } else {
       addBtn(first.repairing ? '🔧 Stop repair' : '🔧 Repair', () => { issue({ t: 'rep', id: first.id, on: !first.repairing }); selSig = ''; setTimeout(() => refreshSelPanel(true), 300); });
       addBtn('$ Sell', () => issue({ t: 'sell', id: first.id }));
+      if (first.def.garrison) {
+        const n = (first.passengers || []).length;
+        if (n) addBtn(`⏏ Evacuate (${n}/${first.def.garrison}) (U)`, () => { issue({ t: 'unload', ids: [first.id] }); Audio.play('ack'); setTimeout(() => refreshSelPanel(true), 150); }, 'Send the garrison back outside.');
+        const s = document.createElement('div'); s.className = 'sub'; s.style.width = '100%'; s.textContent = `Garrison ${n}/${first.def.garrison}: select infantry and right-click (or tap) the bunker to send them in.`; cmds.appendChild(s);
+      }
       if (['barracks', 'factory', 'helipad'].includes(first.type)) {
         addBtn(first.primary ? '★ Primary' : '☆ Set primary', () => { issue({ t: 'prim', id: first.id }); selSig = ''; refreshSelPanel(true); });
         const s = document.createElement('div'); s.className = 'sub'; s.style.width = '100%'; s.textContent = 'Right-click the map to set a rally point'; cmds.appendChild(s);
@@ -939,6 +983,7 @@ export function drawOverlay() {
     if (p.behind || p.x < -20 || p.x > W + 20 || p.y < -20 || p.y > H + 20) continue;
     const w = u.isInf ? 22 : clamp(u.def.radius * 26, 26, 52);
     if (show) bar(u, p.x, p.y, w);
+    if (u.def.transport && (u.passengers || []).length) { for (let i = 0; i < u.def.transport; i++) { octx.fillStyle = i < u.passengers.length ? '#7dff9a' : 'rgba(0,0,0,0.5)'; octx.fillRect(p.x - 14 + i * 6, p.y - 8, 4, 4); } }
     if (u.stance && u.selected) { octx.font = '11px sans-serif'; octx.textAlign = 'center'; octx.fillText(u.stance === 'hold' ? '🛡' : '✋', p.x + w / 2 + 8, p.y + 6); }
     if (u.rank) { octx.fillStyle = '#ffd34a'; octx.font = 'bold 11px Rajdhani'; octx.textAlign = 'center'; octx.fillText('★'.repeat(u.rank), p.x, p.y - 3); }
     if (show && u.type === 'harvester') {
@@ -954,7 +999,8 @@ export function drawOverlay() {
     const show = b.selected || b === hoverEnt || (b.lastHit && now - b.lastHit < 3) || b.repairing;
     const P = G.players[b.faction];
     const off = b.faction === G.player && P.powerUse > P.powerProd && b.type === 'plasma';
-    if (!show && !off && !b.primary) continue;
+    const gar = b.def.garrison && b.faction === G.player ? (b.passengers || []).length : 0;
+    if (!show && !off && !b.primary && !gar) continue;
     const p = project(b.x, b.baseY + (b.def.w === 1 ? 5.5 : 4.8), b.z);
     if (p.behind) continue;
     const w = clamp(b.def.w * 18, 30, 72);
@@ -963,6 +1009,7 @@ export function drawOverlay() {
     if (b.repairing) { octx.fillStyle = '#7fd0ff'; octx.fillText('🔧 REPAIRING', p.x, p.y - 4); }
     if (off) { octx.fillStyle = Math.sin(now * 8) > 0 ? '#ff4a3d' : '#ffc23a'; octx.fillText('⚡ NO POWER', p.x, p.y - 4); }
     if (b.primary && b.faction === G.player) { octx.fillStyle = '#ffc23a'; octx.fillText('PRIMARY', p.x, p.y + 16); }
+    if (b.def.garrison && b.faction === G.player) for (let i = 0; i < b.def.garrison; i++) { octx.fillStyle = i < gar ? '#7dff9a' : 'rgba(0,0,0,0.5)'; octx.fillRect(p.x - 12 + i * 6, p.y - 9, 4, 4); }
     if (b.selected && b.rally && b.faction === G.player) {
       const r = project(b.rally.x, heightAt(b.rally.x, b.rally.z) + 0.2, b.rally.z);
       const s = project(b.x, b.baseY + 0.5, b.z);
@@ -1015,3 +1062,23 @@ export function drawOverlay() {
   }
 }
 export { icons };
+
+// big "Triple kill!" style banner in the middle of the screen
+let streakTimer = 0;
+export function streakBanner(text) {
+  const el = document.getElementById('streak'); if (!el) return;
+  el.textContent = text; el.classList.add('show');
+  clearTimeout(streakTimer); streakTimer = setTimeout(() => el.classList.remove('show'), 1600);
+}
+
+// ---- idle units: fighting units that have nothing to do
+export function idleUnits() {
+  return G.units.filter(u => !u.dead && !u.boarded && u.faction === G.player && (u.weapon || u.def.repairs || u.def.heals || u.def.detector) && !u.order && !u.target && !u.path && !(u.dropH > 0));
+}
+let idleIdx = 0;
+export function selectNextIdle() {
+  const list = idleUnits();
+  if (!list.length) { message('No idle units'); return; }
+  const u = list[idleIdx++ % list.length];
+  select([u]); centerOn(u.x, u.z); Audio.play('click');
+}

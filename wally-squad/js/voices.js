@@ -8,7 +8,7 @@ const DEFAULT_LINES = {
   wallyman: { select: ['Wally Man is here!', 'Never fear, Wally Man is near!', 'Cape on, glasses on!'], move: ['Up, up and away!', 'To the rescue!'], attack: ['Spin it up!', 'Taste the Gatling!', 'Wally Man, open fire!'] },
   rifle: { select: ['Rifleman reporting.', 'Ready for action!'], move: ['Moving out.', 'On my way.'], attack: ['Opening fire!', 'Engaging!'] },
   rocket: { select: ['Rockets loaded.', 'Anti-armour ready.'], move: ['Relocating.'], attack: ['Rocket away!', 'Tank spotted!'] },
-  flamer: { select: ['Got a light?', 'Scorcher here.'], move: ['Moving.'], attack: ['Burn it down!', 'Toasty!'] },
+  flamer: { select: ['Wally Man to the rescue!'], move: ['Moving.'], attack: ['Burn it down!', 'Toasty!'] },
   engineer: { select: ['Engineer.', 'Tools ready.'], move: ['On my way.'], attack: ['I can fix that.', 'Taking it over.'] },
   medic: { select: ['Medic here.', 'Who needs patching up?'], move: ['Coming through.'], attack: ['I am a medic!'] },
   wally: { select: ['Wally here!', 'Where to, boss?', 'Glasses on, ready.'], move: ['Wally on the move!', 'Find me if you can.'], attack: ['Lining up the shot.', 'Time for a surprise!'] },
@@ -20,6 +20,9 @@ const DEFAULT_LINES = {
   gunship: { select: ['Hornet in the air.', 'Gunship ready.'], move: ['Flying there.'], attack: ['Rockets hot!', 'Strafing run!'] },
   stealth: { select: ['Shade, cloaked.', 'Unseen.'], move: ['Slipping through.'], attack: ['Decloaking.', 'Surprise.'] },
   inferno: { select: ['Inferno ready.', 'Fuel tanks full.'], move: ['Rolling.'], attack: ['Burn them all!'] },
+  apc: { select: ['Carrier ready.', 'Room for five!'], move: ['Moving the squad.', 'Hold on back there!'], attack: ['Covering fire!'] },
+  repair: { select: ['Repair crew here.', 'Who needs fixing?'], move: ['On my way with the wrench.'], attack: ['I fix things, not fight them!'] },
+  drone: { select: ['Drone online.', 'Eyes in the sky.'], move: ['Scouting ahead.'], attack: ['No weapons, just cameras!'] },
 };
 const VOICE_STYLE = {
   wally: { pitch: 1.4, rate: 1.15 }, wallyman: { pitch: 0.9, rate: 1.05 }, medic: { pitch: 1.3, rate: 1.05 }, engineer: { pitch: 1.2, rate: 1.1 },

@@ -14,6 +14,7 @@ export const WEATHER = {
   snow:      { label: '🌨 Snow', sight: 0.9, speed: 0.92, fog: 0.6, dark: 0.15, snow: 1 },
   blizzard:  { label: '❄ Blizzard', sight: 0.65, speed: 0.8, fog: 0.3, dark: 0.3, snow: 2.5 },
   sandstorm: { label: '🌪 Sandstorm', sight: 0.6, speed: 0.9, fog: 0.25, dark: 0.2, sand: 1, tint: 0xc9965a },
+  ashfall:   { label: '🌋 Ashfall', sight: 0.75, speed: 1, fog: 0.35, dark: 0.3, sand: 0.7, tint: 0x5a4038 },
 };
 
 let theme, map, sky, stars, rain, snow, sand, bolt;
@@ -52,7 +53,7 @@ export function initWeather(scene, mapDef, th) {
     m.frustumCulled = false; m.visible = false; scene.add(m); return m;
   };
   snow = mkPts(4000, 0xffffff, 0.45);
-  sand = mkPts(4000, 0xd8a868, 0.7);
+  sand = mkPts(4000, th.lava ? 0x9a8c86 : 0xd8a868, 0.7); // grey ash on volcanic maps
   bolt = new THREE.Line(new THREE.BufferGeometry().setFromPoints(Array.from({ length: 12 }, () => new THREE.Vector3())), new THREE.LineBasicMaterial({ color: new THREE.Color(4, 4, 6), transparent: true, opacity: 0 }));
   bolt.frustumCulled = false; scene.add(bolt);
 }

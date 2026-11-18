@@ -1,6 +1,6 @@
 // Economy: credits, power, build queues, tech tree and building placement.
 import { G, srr as rr, later } from './state.js';
-import { BUILDINGS, UNITS, UPGRADES, PRODUCERS, QUEUE_OF, CELL, START_CREDITS, GRID } from './config.js';
+import { BUILDINGS, UNITS, UPGRADES, PRODUCERS, QUEUE_OF, CELL, START_CREDITS, GRID, hasMut } from './config.js';
 import { T, idx, inGrid, cellOf, cellCenter, heightAt } from './terrain.js';
 import { Building, Unit, alive } from './entities.js';
 import * as FX from './particles.js';
@@ -37,8 +37,10 @@ export function hasReqs(faction, type) {
   const P = G.players[faction];
   const d = defOf(type);
   if (d.fac && d.fac !== faction) return false;
+  if (d.superweapon && G.cfg.supers === false) return false;
   if (d.research && (P.upgrades[type] || P.queues.research.items.includes(type))) return false;
   if (G.allowed && !d.research && !G.allowed.includes(type)) return false; // campaign tech restrictions
+  if (hasMut(G.cfg, 'infantry') && (d.tab === 'vehicle' || d.tab === 'air') && type !== 'harvester' && type !== 'apc') return false;
   if (!d.req.every(r => P.owned[r] > 0)) return false;
   const q = QUEUE_OF[d.tab];
   if (!PRODUCERS[d.tab].some(p => P.owned[p] > 0)) return false;
@@ -88,7 +90,7 @@ export function updateProduction(dt) {
       if (!hasReqsSoft(f, type)) continue;
       const producers = PRODUCERS[d.tab].reduce((n, p) => n + (P.owned[p] || 0), 0);
       if (!producers) continue;
-      const mult = (1 + (producers - 1) * 0.5) * pf * (P.buildMult || 1);
+      const mult = (1 + (producers - 1) * 0.5) * pf * (P.buildMult || 1) * (hasMut(G.cfg, 'turbo') ? 2 : 1);
       let dp = dt * mult;
       if (q.progress + dp > d.time) dp = d.time - q.progress;
       const cost = d.cost * dp / d.time;
@@ -132,6 +134,7 @@ function spawnFromProducer(faction, type) {
   if (b.rally) u.moveTo(b.rally.x + rr(-1.5, 1.5), b.rally.z + rr(-1.5, 1.5), { attackMove: false });
   else if (type !== 'harvester') { const e = b.exitPoint(); u.moveTo(e.x + rr(-2, 2), e.z + rr(1, 4)); }
   if (type === 'harvester') u.hState = 'seek';
+  if (type === 'rifle' && faction === G.player) G.tutorialTrained = (G.tutorialTrained || 0) + 1;
   G.onUnitBuilt?.(u);
   return true;
 }

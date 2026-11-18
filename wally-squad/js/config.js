@@ -66,6 +66,7 @@ export const BUILDINGS = {
   hospital: { name: 'Field Hospital', cost: 1000, time: 0, hp: 900, w: 2, h: 2, power: 0, sight: 8, req: ['none'], tab: 'none', tech: true, desc: 'Neutral tech. Capture it with an Engineer to heal nearby infantry.' },
   depot:    { name: 'Repair Depot', cost: 1000, time: 0, hp: 900, w: 2, h: 2, power: 0, sight: 8, req: ['none'], tab: 'none', tech: true, desc: 'Neutral tech. Capture it with an Engineer to repair nearby vehicles.' },
   turret:   { name: 'Gun Turret', cost: 600, time: 10, hp: 750, w: 1, h: 1, power: -20, sight: 16, req: ['barracks'], tab: 'defense', weapon: 'turretGun', desc: 'Anti-vehicle cannon emplacement.' },
+  bunker:   { name: 'Battle Bunker', cost: 500, time: 9, hp: 1600, w: 2, h: 2, power: 0, sight: 15, req: ['barracks'], tab: 'defense', garrison: 4, desc: 'Garrison up to 4 infantry: they shoot out with +25% range and can\'t be hurt until the bunker falls. Right-click it with infantry selected.' },
   sam:      { name: 'SAM Site', cost: 750, time: 12, hp: 650, w: 2, h: 2, power: -20, sight: 22, req: ['radar'], tab: 'defense', weapon: 'sam', desc: 'Anti-aircraft missile launcher.' },
   plasma:   { name: 'Plasma Tower', cost: 1500, time: 18, hp: 950, w: 1, h: 1, power: -75, sight: 21, req: ['tech'], tab: 'defense', weapon: 'plasma', desc: 'Devastating energy beam. Needs power.' },
 };
@@ -80,11 +81,14 @@ export const UNITS = {
   wally:    { name: 'Wally (Hero)', fac: 'wally', cost: 1500, time: 25, hp: 320, armor: 'infantry', speed: 4.2, sight: 19, radius: 0.5, weapon: 'sniper', tab: 'infantry', req: ['barracks', 'tech'], limit: 1, desc: 'Elite sniper. One-shots infantry and plants C4 on buildings.' },
   buggy:    { name: 'Scout Buggy', cost: 400, time: 8, hp: 260, armor: 'light', speed: 10, sight: 16, radius: 1.0, weapon: 'mg', tab: 'vehicle', req: ['factory'], desc: 'Fast raider with a heavy machine gun.' },
   tank:     { name: 'Battle Tank', cost: 800, time: 12, hp: 560, armor: 'heavy', speed: 5.6, sight: 14, radius: 1.35, weapon: 'cannon', turnRate: 2.6, tab: 'vehicle', req: ['factory'], desc: 'Main battle tank.' },
+  apc:      { name: 'Squad Carrier APC', cost: 700, time: 11, hp: 650, armor: 'heavy', speed: 7.2, sight: 13, radius: 1.35, weapon: 'mg', turnRate: 2.8, tab: 'vehicle', req: ['factory', 'barracks'], transport: 5, desc: 'Armoured carrier. Right-click it with infantry selected to load up to 5; Unload (U) drops them off.' },
+  repair:   { name: 'Repair Truck', cost: 600, time: 9, hp: 420, armor: 'light', speed: 6.8, sight: 12, radius: 1.15, weapon: null, repairs: true, turnRate: 2.8, tab: 'vehicle', req: ['factory'], desc: 'Fixes nearby vehicles in the field. Park it behind your tanks.' },
   harvester:{ name: 'Harvester', cost: 1200, time: 16, hp: 950, armor: 'heavy', speed: 4.6, sight: 9, radius: 1.5, weapon: null, turnRate: 2.0, tab: 'vehicle', req: ['factory', 'refinery'], desc: 'Gathers crystal for the refinery.' },
   arty:     { name: 'Thunder Artillery', cost: 900, time: 14, hp: 230, armor: 'light', speed: 4.3, sight: 12, radius: 1.3, weapon: 'arty', turnRate: 2.0, tab: 'vehicle', req: ['factory', 'radar'], desc: 'Long-range siege gun. Cannot hit close targets.' },
   titan:    { name: 'Titan Tank', fac: 'wally', cost: 1700, time: 24, hp: 1350, armor: 'heavy', speed: 3.5, sight: 15, radius: 1.8, weapon: 'twin', weapon2: 'titanMsl', turnRate: 1.5, tab: 'vehicle', req: ['factory', 'tech'], selfRepair: true, desc: 'Twin cannons + missiles. Self-repairs to half health.' },
   stealth:  { name: 'Shade Stealth Tank', fac: 'grim', cost: 1100, time: 16, hp: 430, armor: 'light', speed: 6.6, sight: 14, radius: 1.3, weapon: 'shadeRkt', turnRate: 2.8, tab: 'vehicle', req: ['factory', 'tech'], stealth: true, desc: 'Grimlock only. Invisible until it fires or enemies come close.' },
   inferno:  { name: 'Inferno Tank', fac: 'grim', cost: 1000, time: 15, hp: 820, armor: 'heavy', speed: 4.6, sight: 12, radius: 1.4, weapon: 'inferno', turnRate: 2.2, tab: 'vehicle', req: ['factory', 'radar'], desc: 'Grimlock only. Heavy flamethrower tank that roasts infantry and buildings.' },
+  drone:    { name: 'Recon Drone', cost: 350, time: 6, hp: 110, armor: 'air', speed: 14, sight: 22, radius: 0.8, weapon: null, air: true, detector: 14, tab: 'air', req: ['helipad'], desc: 'Fast unarmed scout with a huge sight range. Reveals cloaked Shade tanks within 14 m.' },
   gunship:  { name: 'Hornet Gunship', cost: 1200, time: 16, hp: 360, armor: 'air', speed: 10, sight: 18, radius: 1.6, weapon: 'heliRkt', tab: 'air', req: ['helipad'], air: true, desc: 'Fast attack helicopter. Hit it with rockets and SAMs.' },
 };
 
@@ -119,5 +123,16 @@ export const DIFFICULTY = {
 };
 
 export const START_CREDITS = 4000;
+
+// Skirmish mutators: optional rule changes (also used by the Daily Challenge)
+export const MUTATORS = {
+  turbo:    { name: 'Turbo Build', icon: '⏩', desc: 'Everything builds twice as fast.' },
+  rich:     { name: 'Crystal Rush', icon: '💎', desc: 'Harvested crystal is worth double.' },
+  glass:    { name: 'Glass Cannons', icon: '💥', desc: 'Everything takes 75% more damage.' },
+  infantry: { name: 'Boots Only', icon: '🥾', desc: 'No vehicles or aircraft (except Harvesters and APCs).' },
+  veterans: { name: 'Veteran Armies', icon: '★', desc: 'Every unit starts as a Veteran.' },
+  crates:   { name: 'Crate Rain', icon: '📦', desc: 'Supply crates drop four times as often.' },
+};
+export const hasMut = (cfg, k) => !!(cfg && cfg.mut && cfg.mut.includes(k));
 export const HARVEST_CAPACITY = 700;
 export const ORE_MAX = 500;

@@ -5,8 +5,8 @@ import { RenderPass } from '../lib/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from '../lib/postprocessing/UnrealBloomPass.js';
 import { ShaderPass } from '../lib/postprocessing/ShaderPass.js';
 import { OutputPass } from '../lib/postprocessing/OutputPass.js';
-import { G, runTimers, seedSim, emit } from './state.js';
-import { DIFFICULTY, FACTIONS } from './config.js';
+import { G, runTimers, seedSim, emit, on } from './state.js';
+import { DIFFICULTY, FACTIONS, MUTATORS, hasMut } from './config.js';
 import { MAPS, THEMES, getMap } from './maps.js';
 import { buildTerrain, setupMap, BASES, cellOf, updateVision, updateOre, regrowOre, animateWater, revealAll, revealCircle } from './terrain.js';
 import { initFX, updateFX, setParticleScale } from './particles.js';
@@ -18,18 +18,19 @@ import * as Audio from './audio.js';
 import * as Voices from './voices.js';
 import { initWeather, updateWeatherSim, updateWeatherFX } from './weather.js';
 import { updateSuper } from './superweapons.js';
-import { MISSIONS, makeContext, campaignProgress, unlockNext } from './missions.js';
+import { MISSIONS, TUTORIAL, makeContext, campaignProgress, unlockNext } from './missions.js';
 import { Lockstep, joinRoom } from './mp.js';
 import { randomRoomCode } from './net.js';
 import { issue } from './cmd.js';
 import { registerCustomUnits, loadDesigns, buildDesigner } from './customunits.js';
-import { gfx, initGraphics, pixelRatio, autoTune, buildGraphicsPanel, maxAnisotropy } from './graphics.js';
+import { gfx, initGraphics, pixelRatio, autoTune, buildGraphicsPanel, maxAnisotropy, isTouch, shadowInterval } from './graphics.js';
 import { allMaterials } from './materials.js';
 import { updateCrates, animateCrates, placeTechBuildings, recordHistory, drawHistory } from './features.js';
 import { updatePowers } from './powers.js';
 import { initAchievements, checkAchievements, buildMedals } from './achievements.js';
 import { registerCustomMaps, buildMapEditor } from './mapeditor.js';
 import { updateOrientation } from './orient.js';
+import { awardGame, profileCard } from './profile.js';
 updateOrientation();
 import { initSurvival, updateSurvival, survivalPanel, saveBest, bestScores, survival } from './survival.js';
 
@@ -54,8 +55,8 @@ if (cfg && cfg.mode !== 'mp') sessionStorage.removeItem('ws_cfg');
 if (cfg && cfg.mode === 'mp') sessionStorage.removeItem('ws_cfg');
 if (cfg) sessionStorage.setItem('ws_last', JSON.stringify(cfg));
 const run = cfg || { mode: 'title', map: 'valley', faction: 'wally', difficulty: 'normal', daynight: false };
-if (run.mode === 'campaign') {
-  mission = MISSIONS[run.mission] || MISSIONS[0];
+if (run.mode === 'campaign' || run.mode === 'tutorial') {
+  mission = run.mode === 'tutorial' ? TUTORIAL : MISSIONS[run.mission] || MISSIONS[0];
   run.map = mission.map; run.faction = 'wally'; run.difficulty = mission.difficulty; run.daynight = false;
 }
 G.cfg = run;
@@ -74,7 +75,8 @@ async function boot() {
   renderer = new THREE.WebGLRenderer({ canvas: $('gl'), antialias: false, powerPreference: 'high-performance' });
   renderer.setPixelRatio(pixelRatio());
   renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.shadowMap.type = isTouch ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap; // soft shadows cost ~4x the texture reads
+  renderer.shadowMap.autoUpdate = false; // redrawn every frame or two by the game loop (see shadowInterval)
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.05;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -135,6 +137,8 @@ async function boot() {
   G.onResize = (w, h) => {
     renderer.setSize(w, h, false);
     composer.setSize(w, h);
+    // on phones the glow is computed at quarter resolution - it is a blur anyway
+    if (isTouch) { const pr = renderer.getPixelRatio(); bloom.setSize(Math.round(w * pr / 2), Math.round(h * pr / 2)); }
     camera.aspect = w / h; camera.updateProjectionMatrix();
     setParticleScale(h * renderer.getPixelRatio());
   };
@@ -160,8 +164,10 @@ async function boot() {
 
   // ---------- players and starting forces ----------
   initPlayer(G.player, false);
+  if (run.credits) G.players[G.player].credits = run.credits;
   initPlayer(G.enemy, run.mode !== 'mp');
   initPlayer('neutral', false); G.players.neutral.credits = 0;
+  if (run.credits) G.players[G.enemy].credits = run.credits;
   if (mission) {
     G.allowed = mission.allowed ? [...mission.allowed, ...customTypes] : null;
     mctx = makeContext(mission, {
@@ -202,10 +208,12 @@ async function boot() {
 
 function setupBase(faction, pos) {
   new Building('conyard', faction, cellOf(pos.x) - 2, cellOf(pos.z) - 2, true);
+  if (run.army === false) return;
   // starting force rolls out toward the middle of the map
   const l = Math.hypot(pos.x, pos.z) || 1;
   const fx = -pos.x / l, fz = -pos.z / l;
-  const start = [['tank', 6, 0], ['tank', 8, -3], ['buggy', 4, 6], ['rifle', 10, 3], ['rifle', 11, 4], ['rifle', 12, 2], ['rocket', 11, 6], ['rocket', 12, 5]];
+  let start = [['tank', 6, 0], ['tank', 8, -3], ['buggy', 4, 6], ['rifle', 10, 3], ['rifle', 11, 4], ['rifle', 12, 2], ['rocket', 11, 6], ['rocket', 12, 5]];
+  if (hasMut(run, 'infantry')) start = start.map(([t, a, b]) => [t === 'tank' ? 'rocket' : t === 'buggy' ? 'apc' : t, a, b]);
   for (const [t, a, b] of start) {
     const x = pos.x + fx * (a + 8) - fz * b, z = pos.z + fz * (a + 8) + fx * b;
     const u = new Unit(t, faction, x, z, Math.atan2(fx, fz));
@@ -223,6 +231,20 @@ function showPanel(id) {
   if (id === 'menuMedals') buildMedals($('medals'));
   if (id === 'menuEditor') buildMapEditor($('editor'), (mode, map) => startWith({ mode, map, faction: 'wally', difficulty: localStorage.getItem('ws_diff') || 'normal', daynight: true, weather: null }));
 }
+// ---------------------------------------------------------------- daily challenge
+// Same map, faction and two mutators for everyone on a given day; beat it as fast as you can.
+function dailyChallenge() {
+  const d = new Date(), date = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  let h = 2166136261; for (const ch of date) h = Math.imul(h ^ ch.charCodeAt(0), 16777619) >>> 0;
+  const rnd = () => { h = Math.imul(h ^ (h >>> 15), 2246822519) >>> 0; h = (h + 0x6D2B79F5) >>> 0; return h / 4294967296; };
+  const maps = ['valley', 'frost', 'dunes', 'midnight', 'magma'].filter(m => MAPS[m]);
+  const muts = Object.keys(MUTATORS);
+  const a = muts.splice(Math.floor(rnd() * muts.length), 1)[0], b = muts[Math.floor(rnd() * muts.length)];
+  return { mode: 'skirmish', daily: date, map: maps[Math.floor(rnd() * maps.length)], faction: rnd() < 0.5 ? 'wally' : 'grim', difficulty: 'hard', daynight: true, weather: null, mut: [a, b] };
+}
+function dailyRecord() { try { return JSON.parse(localStorage.getItem('ws_daily') || 'null'); } catch { return null; } }
+const fmtTime = t => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
+
 function startWith(c) { sessionStorage.setItem('ws_cfg', JSON.stringify(c)); location.href = location.pathname + (params.has('loopnet') ? '?loopnet' : ''); }
 
 function optionCards(el, items, sel, onPick) {
@@ -235,7 +257,7 @@ function optionCards(el, items, sel, onPick) {
     el.appendChild(d);
   }
 }
-const MAP_SWATCH = { valley: 'linear-gradient(135deg,#4f7a2a,#76913a 50%,#1d4b63)', frost: 'linear-gradient(135deg,#f4f7fa,#a7b0b8 60%,#6f9fb8)', dunes: 'linear-gradient(135deg,#e8d29c,#b48a58 60%,#2a7d86)', midnight: 'linear-gradient(135deg,#0a1124,#1d2b4a 60%,#ffd27a)' };
+const MAP_SWATCH = { magma: 'linear-gradient(135deg,#2a2624,#5e3f2d 55%,#ff5a14)', valley: 'linear-gradient(135deg,#4f7a2a,#76913a 50%,#1d4b63)', frost: 'linear-gradient(135deg,#f4f7fa,#a7b0b8 60%,#6f9fb8)', dunes: 'linear-gradient(135deg,#e8d29c,#b48a58 60%,#2a7d86)', midnight: 'linear-gradient(135deg,#0a1124,#1d2b4a 60%,#ffd27a)' };
 const THEME_SWATCH = { temperate: MAP_SWATCH.valley, snow: MAP_SWATCH.frost, desert: MAP_SWATCH.dunes, night: MAP_SWATCH.midnight };
 const mapItems = () => Object.entries(MAPS).map(([id, m]) => ({ id, title: (m.custom ? '🗺 ' : '') + m.name, desc: m.desc, swatch: MAP_SWATCH[id] || THEME_SWATCH[m.theme] }));
 const facItems = [{ id: 'wally', title: 'Wally Squad', desc: 'Titan tanks, medics, Wally the hero, Sky Lance' }, { id: 'grim', title: 'Grimlock Legion', desc: 'Stealth tanks, Inferno tanks, Doom Missile' }];
@@ -258,7 +280,31 @@ function setupMenus() {
   const toggle = (label, get, set) => { const b = document.createElement('button'); b.className = 'btn' + (get() ? ' on' : ''); b.textContent = label; b.onclick = () => { set(!get()); b.classList.toggle('on', get()); }; opt.appendChild(b); };
   toggle('Day–night cycle', () => sk.daynight, v => { sk.daynight = v; });
   toggle('Dynamic weather', () => !sk.weather, v => { sk.weather = v ? null : 'clear'; });
+  toggle('Superweapons', () => sk.supers !== false, v => { sk.supers = v; });
+  toggle('Support powers', () => sk.powers !== false, v => { sk.powers = v; });
+  toggle('Supply crates', () => sk.crates !== false, v => { sk.crates = v; });
+  toggle('Tech buildings', () => sk.tech !== false, v => { sk.tech = v; });
+  toggle('Fog of war', () => sk.fog !== false, v => { sk.fog = v; });
+  toggle('Starting armies', () => sk.army !== false, v => { sk.army = v; });
+  // starting money cycles through a few amounts
+  const money = [2500, 4000, 7500, 15000];
+  const mb = document.createElement('button'); mb.className = 'btn on';
+  const showMoney = () => { mb.textContent = `💰 Start: $${(sk.credits || 4000).toLocaleString()}`; };
+  mb.onclick = () => { sk.credits = money[(money.indexOf(sk.credits || 4000) + 1) % money.length]; showMoney(); Audio.play('click'); };
+  showMoney(); opt.appendChild(mb);
+  const mrow = $('mutRow');
+  sk.mut = [];
+  for (const [k, m] of Object.entries(MUTATORS)) {
+    const b = document.createElement('button'); b.className = 'btn'; b.textContent = `${m.icon} ${m.name}`; b.title = m.desc;
+    b.onclick = () => { const i = sk.mut.indexOf(k); if (i >= 0) sk.mut.splice(i, 1); else sk.mut.push(k); b.classList.toggle('on', i < 0); Audio.play('click'); };
+    mrow.appendChild(b);
+  }
   $('bStart').onclick = () => startWith(sk);
+  $('profile').innerHTML = profileCard();
+  // daily challenge
+  const dc = dailyChallenge(), rec = dailyRecord();
+  $('bDaily').innerHTML = `📅 DAILY CHALLENGE<small>${MAPS[dc.map].name} · ${FACTIONS[dc.faction].short || FACTIONS[dc.faction].name} · ${dc.mut.map(k => MUTATORS[k].icon + ' ' + MUTATORS[k].name).join(' · ')}${rec && rec.date === dc.daily ? ` · ✔ Best ${fmtTime(rec.best)}` : ''}</small>`;
+  $('bDaily').onclick = () => startWith(dc);
   // survival
   const sv = { mode: 'survival', map: 'valley', faction: 'wally', difficulty: 'normal', daynight: true, weather: null };
   const best = bestScores();
@@ -309,7 +355,8 @@ function setupMenus() {
   const again = () => { const last = sessionStorage.getItem('ws_last'); if (last && JSON.parse(last).mode !== 'mp') startWith(JSON.parse(last)); else location.href = location.pathname; };
   $('bRestart').onclick = again;
   $('bAgain').onclick = again;
-  $('bNext').onclick = () => startWith({ mode: 'campaign', mission: Math.min(MISSIONS.length - 1, run.mission + 1) });
+  $('bNext').onclick = () => startWith({ mode: 'campaign', mission: mission && mission.tutorial ? 0 : Math.min(MISSIONS.length - 1, run.mission + 1) });
+  $('bTutorial').onclick = () => startWith({ mode: 'tutorial' });
   $('bWatch').onclick = () => { $('end').style.display = 'none'; G.paused = false; };
   // ---- photo mode: hide the interface, slow time, free camera, save pictures ----
   let photoPrevSpeed = 1;
@@ -353,13 +400,14 @@ function setupMenus() {
     window.addEventListener('pointerup', once, true);
   }
   $('bMusic').onclick = () => { Audio.initAudio(); const on = Audio.toggleMusic(); $('bMusic').classList.toggle('on', !on); $('bMusic').textContent = on ? '♪ Music' : '♪ Off'; };
+  $('bIdle').onclick = () => UI.selectNextIdle();
   const speeds = [1, 1.5, 2, 0.5];
   $('bSpeed').onclick = () => { if (lockstep) return; G.speed = speeds[(speeds.indexOf(G.speed) + 1) % speeds.length]; $('bSpeed').textContent = `Game speed: ${G.speed}x`; };
   $('bSuper').onclick = () => { G.ui.setMode?.('super'); };
   G.togglePause = togglePause;
 
   if (run.mode === 'title') { $('title').style.display = 'flex'; showPanel('menuMain'); revealAll(true); G.cfg.daynight = false; }
-  else if (run.mode === 'campaign') showBriefing();
+  else if (run.mode === 'campaign' || run.mode === 'tutorial') showBriefing();
   else if (run.mode === 'mp') {
     $('bSpeed').style.display = 'none';
     lockstep = new Lockstep(run, start);
@@ -369,7 +417,7 @@ function setupMenus() {
 }
 
 function showBriefing() {
-  $('briefNum').textContent = `MISSION ${run.mission + 1} OF ${MISSIONS.length} · ${MAPS[mission.map].name.toUpperCase()}`;
+  $('briefNum').textContent = mission.tutorial ? 'TRAINING · ' + MAPS[mission.map].name.toUpperCase() : `MISSION ${run.mission + 1} OF ${MISSIONS.length} · ${MAPS[mission.map].name.toUpperCase()}`;
   $('briefTitle').textContent = mission.title.toUpperCase();
   $('briefText').innerHTML = mission.story.map(p => `<p>${p}</p>`).join('');
   $('briefObj').innerHTML = mission.objectives.map(o => `<li>${o.text}</li>`).join('');
@@ -381,8 +429,10 @@ function renderObjectives() {
   if (run.mode === 'survival') { const el = $('objectives'); el.style.display = 'block'; el.innerHTML = survivalPanel(); return; }
   if (!mission) return;
   const el = $('objectives'); el.style.display = 'block';
-  el.innerHTML = '<div class="label" style="margin:0 0 3px">Objectives</div>' + mission.objectives.map(o => {
+  let seenOpen = false;
+  el.innerHTML = `<div class="label" style="margin:0 0 3px">${mission.tutorial ? 'Boot Camp' : 'Objectives'}</div>` + mission.objectives.map(o => {
     const st = mctx.status[o.id];
+    if (mission.tutorial && st === 'open') { if (seenOpen) return ''; seenOpen = true; const h = mission.hint(mctx); return `<div class="ob">▶ <b>${o.text}</b>${o.progress ? ` <b style="color:var(--accent)">${o.progress()}</b>` : ''}</div>${h ? `<div class="obHint">${h}</div>` : ''}`; }
     let extra = '';
     if (o.timer && st === 'open') { const left = Math.max(0, o.timer - G.time); extra = ` <b style="color:var(--accent)">${Math.floor(left / 60)}:${String(Math.floor(left % 60)).padStart(2, '0')}</b>`; }
     if (o.progress && st === 'open') extra = ` <b style="color:var(--accent)">${o.progress()}</b>`;
@@ -393,6 +443,7 @@ function renderObjectives() {
 function start() {
   Audio.initAudio();
   $('title').style.display = 'none';
+  if (run.fog === false) G.revealed = true;
   revealAll(!!G.revealed);
   G.started = true; G.paused = false;
   if (run.mode === 'skirmish') ais = [new AI(G.enemy)];
@@ -401,6 +452,18 @@ function start() {
   const fname = FACTIONS[G.player].name;
   Audio.announce(mission ? `Mission start: ${mission.title}` : run.mode === 'mp' ? 'Battle control online' : `Welcome, commander of the ${fname}.`);
   if (!mission) setTimeout(() => UI.message('Build a Power Plant, then a Crystal Refinery to start earning credits.'), 2500);
+  if (run.daily) setTimeout(() => UI.message(`Daily Challenge ${run.daily}: win as fast as you can!`, true), 1200);
+  if (run.mut && run.mut.length) setTimeout(() => UI.message(`Mutators: ${run.mut.map(k => MUTATORS[k].icon + ' ' + MUTATORS[k].name).join(', ')}`), 4000);
+  // kill streaks: kills by your forces close together get a shout-out
+  const streak = { n: 0, t: -99 };
+  const SHOUT = { 2: 'Double kill!', 3: 'Triple kill!', 5: 'Rampage!', 8: 'Unstoppable!', 12: 'Wally Squad is on fire!', 20: 'Legendary!' };
+  on('kill', (victim, killer) => {
+    if (!killer || killer.faction !== G.player || victim.faction === G.player || victim.faction === 'neutral') return;
+    streak.n = G.time - streak.t < 4 ? streak.n + 1 : 1; streak.t = G.time;
+    G.bestStreak = Math.max(G.bestStreak || 0, streak.n);
+    const s = SHOUT[streak.n];
+    if (s) { Audio.announce(s, G.player, 1); UI.streakBanner?.(s); }
+  });
 }
 
 function togglePause(force) {
@@ -415,35 +478,43 @@ function endGame(win, text) {
   G.over = true;
   emit('end', win);
   Audio.announce(win ? 'Mission accomplished' : 'Mission failed');
-  if (mission && win) unlockNext(run.mission);
+  Audio.sting(win);
+  if (mission && win && !mission.tutorial) unlockNext(run.mission);
+  const award = run.mode === 'title' ? null : awardGame({ win, kills: G.stats.killed, lost: G.stats.lost, built: G.stats.built, time: G.time, difficulty: G.difficulty, mode: mission && mission.tutorial ? 'tutorial' : run.mode, streak: G.bestStreak });
+  if (award && award.promoted) setTimeout(() => { Audio.announce(`Promoted to ${award.promoted.name}`); }, 3200);
+  let dailyNote = '';
+  if (run.daily && win) { const r = dailyRecord(); const best = r && r.date === run.daily ? r.best : Infinity; dailyNote = G.time < best ? `New best: ${fmtTime(G.time)}!` : `${fmtTime(G.time)} (best ${fmtTime(best)})`; if (G.time < best) { try { localStorage.setItem('ws_daily', JSON.stringify({ date: run.daily, best: G.time })); } catch { /* ignore */ } } }
   setTimeout(() => {
     $('endTitle').textContent = win ? 'VICTORY' : 'DEFEAT';
     $('endTitle').style.color = win ? 'var(--accent)' : 'var(--red)';
     $('endSub').textContent = text || (win ? (mission ? `${mission.title}: mission complete.` : `The ${FACTIONS[G.enemy].name} has been crushed!`) : 'Our forces have fallen. Regroup, commander.');
     const t = Math.floor(G.time);
-    $('endStats').innerHTML = `<span>Mission time</span><span>${Math.floor(t / 60)}m ${t % 60}s</span>${run.mode === 'mp' ? '' : `<span>Difficulty</span><span>${DIFFICULTY[G.difficulty].label}</span>`}<span>Enemies destroyed</span><span>${G.stats.killed}</span><span>Units lost</span><span>${G.stats.lost}</span><span>Structures built</span><span>${G.stats.built}</span><span>Credits harvested</span><span>${Math.round(G.stats.harvested)}</span>`;
+    $('endStats').innerHTML = `<span>Mission time</span><span>${Math.floor(t / 60)}m ${t % 60}s</span>${run.mode === 'mp' ? '' : `<span>Difficulty</span><span>${DIFFICULTY[G.difficulty].label}</span>`}<span>Enemies destroyed</span><span>${G.stats.killed}</span><span>Units lost</span><span>${G.stats.lost}</span><span>Structures built</span><span>${G.stats.built}</span><span>Credits harvested</span><span>${Math.round(G.stats.harvested)}</span>${G.mvp ? `<span>MVP</span><span>🏅 ${G.mvp.name} · ${G.mvp.kills} kills</span>` : ''}${G.bestStreak > 1 ? `<span>Best kill streak</span><span>${G.bestStreak}</span>` : ''}${run.daily && win ? `<span>Daily Challenge</span><span>${dailyNote}</span>` : ''}${award ? `<span>Experience</span><span>+${award.xp} XP · ${award.rank.icon} ${award.rank.name}${award.promoted ? ' · <b style="color:var(--accent)">PROMOTED!</b>' : ''}</span>` : ''}`;
     recordHistory(99); drawHistory($('endGraph'));
-    $('bNext').style.display = mission && win && run.mission < MISSIONS.length - 1 ? '' : 'none';
+    $('bNext').style.display = mission && win && (mission.tutorial || run.mission < MISSIONS.length - 1) ? '' : 'none';
     $('bAgain').style.display = run.mode === 'mp' ? 'none' : '';
     $('end').style.display = 'flex';
   }, 2500);
 }
 
+// A side is beaten when it has no buildings left (walls, gates and mines don't count)
+const hasStructures = f => G.buildings.some(b => !b.dead && b.faction === f && !b.def.isMine && !b.def.isWall && !b.def.isGate);
+
 function checkEnd(dt) {
   winT -= dt; if (winT > 0 || G.over) return; winT = 1;
   if (G.surrendered) { endGame(G.surrendered !== G.player, G.surrendered === G.player ? 'You surrendered.' : 'The enemy has surrendered!'); return; }
-  if (mission) return; // missions decide victory themselves
+  const pAlive = hasStructures(G.player);
+  if (mission) { if (!pAlive) mctx.fail('All our buildings have been destroyed. Mission failed.'); return; }
   if (run.mode === 'survival') {
-    const alive = G.buildings.some(b => !b.dead && b.faction === G.player && !b.def.isMine && !b.def.isWall) || G.units.some(u => !u.dead && u.faction === G.player && u.type !== 'harvester');
-    if (!alive) {
+    if (!pAlive) {
       const { prev, isNew } = saveBest(run.map);
-      endGame(false, `You survived ${Math.max(0, survival.wave - 1)} waves. Score ${survival.score.toLocaleString()}${isNew ? ' - NEW BEST!' : ` (best ${prev.score.toLocaleString()})`}`);
+      endGame(false, `All your buildings were destroyed after ${Math.max(0, survival.wave - 1)} waves. Score ${survival.score.toLocaleString()}${isNew ? ' - NEW BEST!' : ` (best ${prev.score.toLocaleString()})`}`);
     }
     return;
   }
-  const has = f => G.buildings.some(b => !b.dead && b.faction === f && !b.def.isMine && !b.def.isWall) || G.units.some(u => !u.dead && u.faction === f && u.type !== 'harvester');
-  const pAlive = has(G.player), eAlive = has(G.enemy);
-  if (!pAlive || !eAlive) endGame(pAlive);
+  const eAlive = hasStructures(G.enemy);
+  if (!pAlive) endGame(false, 'All your buildings have been destroyed.');
+  else if (!eAlive) endGame(true, `Every ${FACTIONS[G.enemy].name} building has been destroyed!`);
 }
 
 function simStep(dt) {
@@ -471,10 +542,13 @@ function simStep(dt) {
   checkEnd(dt);
 }
 
-let last = performance.now();
+let last = performance.now(), musicLabelT = 0, shadowFrame = 0;
 function loop(now) {
   requestAnimationFrame(loop);
   const real = Math.min(0.05, (now - last) / 1000); last = now;
+  G.combatHeat = (G.combatHeat || 0) * Math.exp(-real / 5);
+  Audio.setIntensity(G.over || !G.started ? 0.15 : Math.min(1, (G.combatHeat || 0) / 10));
+  if ((musicLabelT -= real) < 0) { musicLabelT = 1; const b = $('bMusic'); if (b && !b.classList.contains('on')) { const l = Audio.musicLevel(); b.textContent = l > 0.62 ? '♪ War' : l < 0.28 ? '♪ Calm' : '♪ Battle'; } }
   // adaptive quality: drop resolution if the frame rate is poor
   fpsAcc += (now - (loop.lastNow || now)) / 1000; loop.lastNow = now; fpsN++;
   if (fpsAcc > 1.5) { autoTune(fpsN / fpsAcc); fpsAcc = 0; fpsN = 0; }
@@ -508,6 +582,7 @@ function loop(now) {
   if (G.started) { UI.updateSidebar(real); UI.updateMinimap(real); }
   animateWater(now / 1000);
   animateCrates(now / 1000);
+  if (++shadowFrame >= shadowInterval()) { shadowFrame = 0; renderer.shadowMap.needsUpdate = true; }
   composer.render();
   UI.drawOverlay();
 }

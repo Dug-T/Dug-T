@@ -3,7 +3,8 @@
 import { G, later } from './state.js';
 import { BUILDINGS, CELL, GRID } from './config.js';
 import { Unit, Building, alive } from './entities.js';
-import { T, idx, inGrid, cellOf, heightAt, BASES, revealCircle } from './terrain.js';
+import { T, idx, inGrid, cellOf, heightAt, BASES, revealCircle, groundY } from './terrain.js';
+import * as THREE from 'three';
 
 const ALL_BASIC = ['power', 'refinery', 'barracks', 'factory', 'radar', 'turret', 'sam', 'wall', 'gate', 'mine', 'rifle', 'rocket', 'flamer', 'engineer', 'medic', 'buggy', 'tank', 'harvester', 'arty'];
 const FIELD_BASE = ['power', 'refinery', 'barracks', 'factory', 'turret', 'wall', 'gate', 'rifle', 'rocket', 'flamer', 'engineer', 'medic', 'buggy', 'tank', 'harvester'];
@@ -162,6 +163,103 @@ export const MISSIONS = [
     },
   },
 ];
+
+// ------------------------------------------------------------------ Boot Camp tutorial
+// One step at a time: only the current step is shown and checked. Each step has a hint for mouse
+// and one for touch screens.
+const touchy = () => document.body.classList.contains('touch');
+function beacon(x, z) {
+  const g = new THREE.Group();
+  const y = groundY(x, z);
+  const col = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 0.9, 30, 16, 1, true), new THREE.MeshBasicMaterial({ color: new THREE.Color(0.4, 2.2, 0.8), transparent: true, opacity: 0.35, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
+  col.position.y = 15; g.add(col);
+  const ring = new THREE.Mesh(new THREE.RingGeometry(3.2, 4, 40).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: new THREE.Color(0.5, 2.5, 1), transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false }));
+  ring.position.y = 0.3; g.add(ring);
+  g.position.set(x, y, z);
+  g.userData.ring = ring;
+  G.three.scene.add(g);
+  return g;
+}
+const STEP_HINTS = {
+  cam:   ['Use W A S D or the arrow keys (or push the mouse to the screen edge) to scroll around the map.', 'Drag one finger across the map to scroll the camera. Pinch to zoom.'],
+  sel:   ['Click a soldier to select it, or drag a box around the whole squad.', 'Tap a soldier to select it. Tap the "Box" button and drag to select a group.'],
+  move:  ['With the squad selected, right-click the green beacon to move there.', 'With the squad selected, tap the green beacon to move there.'],
+  power: ['Open the BASE tab on the right, click Power Plant, wait for it to build, then click the ground next to your HQ.', 'Open the BASE tab, tap Power Plant, wait for it to build, then tap the ground next to your HQ.'],
+  ref:   ['Crystal pays for everything. Build a Crystal Refinery - a free Harvester comes with it.', 'Crystal pays for everything. Build a Crystal Refinery - a free Harvester comes with it.'],
+  barr:  ['Build a Barracks so you can train infantry.', 'Build a Barracks so you can train infantry.'],
+  train: ['Open the INFANTRY tab and click Rifleman three times. Clicking queues more.', 'Open the INFANTRY tab and tap Rifleman three times. Each tap queues one more.'],
+  apc:   ['Select some infantry and right-click the Squad Carrier APC to load them. Then select the APC and press Unload (U) to drop them off.', 'Select some infantry and tap the Squad Carrier APC to load them. Then select the APC and tap Unload.'],
+  attack:['Select everyone (drag a big box, or press Ctrl+A) and right-click the red Grimlock buildings to attack. A-click attack-moves.', 'Select your army and tap the red Grimlock buildings to attack them.'],
+};
+export const TUTORIAL = {
+  id: 'boot', title: 'Boot Camp', map: 'valley', difficulty: 'easy', tutorial: true,
+  story: [
+    'Welcome to Boot Camp, recruit! Sergeant Wally will walk you through the basics of commanding a Wally Squad base.',
+    'Follow the instructions in the top-left corner. Each step unlocks the next one. There is no time limit - take it slow.',
+  ],
+  objectives: [
+    { id: 'cam', text: 'Scroll the camera around' },
+    { id: 'sel', text: 'Select your squad' },
+    { id: 'move', text: 'Move the squad to the green beacon' },
+    { id: 'power', text: 'Build a Power Plant' },
+    { id: 'ref', text: 'Build a Crystal Refinery' },
+    { id: 'barr', text: 'Build a Barracks' },
+    { id: 'train', text: 'Train 3 Riflemen', progress: () => `${Math.min(3, (G.tutorialTrained || 0))}/3` },
+    { id: 'apc', text: 'Load infantry into the APC and unload them' },
+    { id: 'attack', text: 'Destroy the Grimlock outpost' },
+  ],
+  allowed: ['power', 'refinery', 'barracks', 'harvester', 'rifle', 'rocket', 'medic'],
+  setup(ctx) {
+    const s = BASES[G.player], e = BASES[G.enemy];
+    ctx.base(G.player, s, ['conyard']);
+    ctx.credits(G.player, 6000);
+    const dx = e.x - s.x, dz = e.z - s.z, l = Math.hypot(dx, dz) || 1;
+    ctx.squad(G.player, s.x + dx / l * 14 + 4, s.z + dz / l * 14, [['rifle', 4], ['rocket', 2]]);
+    ctx.state.beaconAt = { x: s.x + dx / l * 30 - dz / l * 8, z: s.z + dz / l * 30 + dx / l * 8 };
+    const ox = s.x + dx / l * 62, oz = s.z + dz / l * 62;
+    for (const t of ['power', 'barracks']) ctx.place(G.enemy, t, ox, oz);
+    ctx.squad(G.enemy, ox, oz, [['rifle', 3]], true);
+    ctx.state.outpost = { x: ox, z: oz };
+    ctx.ai({ noBuild: true, noUnits: true, noAttack: true });
+    G.tutorialTrained = 0;
+    revealCircle(s.x, s.z, 34);
+  },
+  tick(ctx) {
+    const st = ctx.state, P = G.players[G.player];
+    const step = this.objectives.find(o => ctx.status[o.id] === 'open');
+    if (!step) return;
+    if (st.step !== step.id) {
+      st.step = step.id;
+      st.t0 = G.time;
+      G.ui?.message(`Boot Camp: ${STEP_HINTS[step.id][touchy() ? 1 : 0]}`);
+      G.sfx?.play('ready');
+      if (step.id === 'cam') st.cam = { x: G.camera.x, z: G.camera.z };
+      if (step.id === 'move') st.beacon = beacon(st.beaconAt.x, st.beaconAt.z);
+      if (step.id === 'apc') { const s = BASES[G.player]; st.apc = ctx.squad(G.player, s.x + 8, s.z + 8, [['apc', 1]])[0]; G.ui?.message('A Squad Carrier APC has arrived at your base.'); }
+      if (step.id === 'attack') { revealCircle(st.outpost.x, st.outpost.z, 14); G.alertAt = { x: st.outpost.x, z: st.outpost.z, t: G.time }; }
+    }
+    if (st.beacon) { const r = st.beacon.userData.ring; r.scale.setScalar(1 + 0.12 * Math.sin(G.time * 5)); }
+    const mine = G.units.filter(u => u.faction === G.player && !u.dead);
+    let ok = false;
+    switch (step.id) {
+      case 'cam': ok = Math.hypot(G.camera.x - st.cam.x, G.camera.z - st.cam.z) > 14; break;
+      case 'sel': ok = G.selection.filter(u => u.kind === 'unit' && u.faction === G.player).length >= 2; break;
+      case 'move': ok = mine.filter(u => !u.boarded && Math.hypot(u.x - st.beaconAt.x, u.z - st.beaconAt.z) < 7).length >= 3; break;
+      case 'power': ok = P.owned.power > 0; break;
+      case 'ref': ok = P.owned.refinery > 0; break;
+      case 'barr': ok = P.owned.barracks > 0; break;
+      case 'train': ok = (G.tutorialTrained || 0) >= 3; break;
+      case 'apc': if (st.apc && (st.apc.passengers || []).length) st.loaded = true; ok = st.loaded && st.apc && !(st.apc.passengers || []).length || (st.apc && st.apc.dead); break;
+      case 'attack': ok = !G.buildings.some(b => b.faction === G.enemy && !b.dead); break;
+    }
+    if (ok) {
+      if (st.beacon && step.id === 'move') { G.three.scene.remove(st.beacon); st.beacon = null; }
+      ctx.complete(step.id);
+      if (step.id === 'attack') { G.ui?.message('Outstanding, recruit! You are ready for the campaign.'); return ctx.win(); }
+    }
+  },
+  hint(ctx) { return ctx.state.step ? STEP_HINTS[ctx.state.step][touchy() ? 1 : 0] : ''; },
+};
 
 // ------------------------------------------------------------------ mission context helpers
 export function makeContext(mission, hooks) {

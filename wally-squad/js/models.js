@@ -27,7 +27,13 @@ class Builder {
     for (const [mat, geos] of this.parts) {
       const merged = mergeGeometries(geos, false);
       const mesh = new THREE.Mesh(merged, mat);
-      mesh.castShadow = shadow; mesh.receiveShadow = true;
+      // Tiny parts and glowing lamps don't get their own shadow draw call: their shadows would be
+      // a few pixels at most, and every shadow-casting mesh is drawn a second time each frame.
+      if (!merged.boundingSphere) merged.computeBoundingSphere();
+      const glow = mat.emissive && mat.emissiveIntensity > 0.5 && (mat.emissive.r + mat.emissive.g + mat.emissive.b) > 0.6;
+      mesh.castShadow = shadow && !mat.transparent && !glow && merged.boundingSphere.radius > 0.3;
+      mesh.userData.cs = mesh.castShadow;
+      mesh.receiveShadow = true;
       grp.add(mesh);
     }
     return grp;
@@ -329,6 +335,57 @@ export function makeArtillery(faction) {
     tur.name = 'barrel';
     root.add(pitch);
     root.userData.muzzle = new THREE.Vector3(0, 0.15, 4.2);
+    return root;
+  });
+}
+
+export function makeRepairTruck(faction) {
+  return cached(`repair-${faction}`, () => {
+    const t = mats(faction), m = M();
+    const root = new THREE.Group();
+    const b = new Builder();
+    for (const z of [1.0, -0.2, -1.0]) for (const x of [-0.8, 0.8]) wheel(b, m.metal, x, 0.42, z, 0.4, 0.3);
+    b.box(t.team, 1.5, 0.95, 1.0, 0, 1.05, 1.15);                     // cab
+    b.box(m.glass, 1.3, 0.4, 0.04, 0, 1.3, 1.66);                     // windscreen
+    b.box(m.darkMetal, 1.55, 0.3, 3.0, 0, 0.62, -0.2);                // chassis
+    b.box(t.teamDark, 1.55, 0.55, 1.9, 0, 1.0, -0.7);                 // tool bed
+    b.box(m.hazard, 1.6, 0.08, 1.95, 0, 1.3, -0.7);
+    for (const s of [-1, 1]) b.box(m.metal, 0.05, 0.4, 1.7, s * 0.79, 1.05, -0.7);  // tool lockers
+    b.box(m.lampWhite, 0.18, 0.1, 0.04, 0.5, 0.95, 1.66); b.box(m.lampWhite, 0.18, 0.1, 0.04, -0.5, 0.95, 1.66);
+    b.box(m.lampRed, 0.3, 0.1, 0.12, -0.35, 1.58, 1.15); b.box(m.lampWhite, 0.3, 0.1, 0.12, 0.35, 1.58, 1.15); // beacon bar
+    b.box(t.accent, 0.5, 0.5, 0.02, 0.77, 1.05, 1.15, 0, Math.PI / 2, 0);
+    root.add(b.build());
+    // crane arm with a wrench hook (turret so it swings toward what it repairs)
+    const c = new Builder();
+    c.cyl(m.darkMetal, 0.22, 0.26, 0.3, 10, 0, 0, 0);
+    c.box(m.hazard, 0.18, 0.18, 1.6, 0, 0.35, 0.6, -0.45, 0, 0);
+    c.cyl(m.gun, 0.03, 0.03, 0.7, 4, 0, 0.55, 1.35);
+    c.box(m.metal, 0.3, 0.12, 0.12, 0, 0.2, 1.35);
+    const crane = c.build(); crane.position.set(0, 1.45, -1.2); crane.name = 'turret';
+    root.add(crane);
+    return root;
+  });
+}
+
+export function makeDrone(faction) {
+  return cached(`drone-${faction}`, () => {
+    const t = mats(faction), m = M();
+    const root = new THREE.Group();
+    const b = new Builder();
+    b.sph(t.team, 0.45, 0, 0, 0, 1, 0.45, 1.3);                       // body
+    b.sph(m.glass, 0.2, 0, -0.12, 0.45, 1, 1, 1);                       // camera ball
+    b.box(t.teamDark, 2.0, 0.06, 0.14, 0, 0.04, 0, 0, Math.PI / 4, 0);  // X frame
+    b.box(t.teamDark, 2.0, 0.06, 0.14, 0, 0.04, 0, 0, -Math.PI / 4, 0);
+    for (const [x, z] of [[0.7, 0.7], [-0.7, 0.7], [0.7, -0.7], [-0.7, -0.7]]) b.cyl(m.darkMetal, 0.1, 0.1, 0.16, 8, x, 0.1, z);
+    b.box(m.lampRed, 0.08, 0.05, 0.08, 0, 0.22, -0.4);
+    b.cyl(m.gun, 0.015, 0.015, 0.5, 4, 0.15, 0.4, -0.3);
+    root.add(b.build());
+    // spinning prop discs (blurred)
+    const discMat = new THREE.MeshBasicMaterial({ color: 0x222222, transparent: true, opacity: 0.35, depthWrite: false });
+    const props = new THREE.Group(); props.name = 'props';
+    for (const [x, z] of [[0.7, 0.7], [-0.7, 0.7], [0.7, -0.7], [-0.7, -0.7]]) { const d = new THREE.Mesh(new THREE.CircleGeometry(0.42, 16).rotateX(-Math.PI / 2), discMat); d.position.set(x, 0.2, z); props.add(d); }
+    root.add(props);
+    root.scale.setScalar(1.2);
     return root;
   });
 }
@@ -690,14 +747,52 @@ function customVehicle(d, faction) {
   return root;
 }
 
+export function makeAPC(faction) {
+  return cached(`apc-${faction}`, () => {
+    const t = mats(faction), m = M();
+    const root = new THREE.Group();
+    const b = new Builder();
+    for (const z of [1.15, 0.38, -0.38, -1.15]) for (const x of [-0.92, 0.92]) wheel(b, m.metal, x, 0.45, z, 0.44, 0.32);
+    b.box(t.team, 1.6, 0.8, 3.4, 0, 1.05, 0);                        // armoured box
+    b.add(new THREE.BoxGeometry(1.6, 0.7, 0.9), t.team, 0, 1.0, 1.85, -0.75, 0, 0); // sloped nose
+    b.add(new THREE.BoxGeometry(1.5, 0.12, 3.2), t.teamDark, 0, 1.5, -0.05);
+    for (const s of [-1, 1]) {
+      b.add(new THREE.BoxGeometry(0.1, 0.55, 3.0), t.teamDark, s * 0.84, 1.1, 0, 0, 0, s * 0.18);   // sloped side armour
+      for (let i = 0; i < 3; i++) b.box(m.glass, 0.04, 0.16, 0.3, s * 0.86, 1.2, -0.9 + i * 0.7); // firing ports
+      b.box(m.darkMetal, 0.06, 0.12, 2.8, s * 0.95, 0.7, 0);                                       // fender
+    }
+    b.box(m.glass, 1.1, 0.25, 0.04, 0, 1.3, 2.18, -0.75, 0, 0);          // driver's visor
+    b.box(m.darkMetal, 1.3, 0.75, 0.08, 0, 0.95, -1.72);                  // rear ramp
+    b.box(m.hazard, 1.3, 0.08, 0.1, 0, 0.6, -1.76);
+    b.box(m.lampWhite, 0.16, 0.1, 0.05, 0.55, 0.95, 2.2); b.box(m.lampWhite, 0.16, 0.1, 0.05, -0.55, 0.95, 2.2);
+    b.box(m.lampRed, 0.12, 0.08, 0.04, 0.6, 1.2, -1.77); b.box(m.lampRed, 0.12, 0.08, 0.04, -0.6, 1.2, -1.77);
+    b.box(m.metal, 0.35, 0.18, 0.5, -0.45, 1.62, -0.9);                   // hatch
+    b.cyl(m.gun, 0.03, 0.03, 1.0, 5, 0.6, 2.0, -1.2);                     // antenna
+    b.box(t.accent, 0.5, 0.3, 0.02, 0.85, 1.1, 0.9, 0, Math.PI / 2, 0);   // faction plate
+    root.add(b.build());
+    const g = new Builder();
+    g.cyl(m.darkMetal, 0.3, 0.36, 0.25, 10, 0, 0, 0);
+    g.box(m.gun, 0.18, 0.18, 0.45, 0, 0.12, 0.2);
+    g.cyl(m.gun, 0.045, 0.045, 0.8, 8, 0, 0.14, 0.75, Math.PI / 2, 0, 0);
+    g.box(t.teamDark, 0.55, 0.3, 0.05, 0, 0.2, 0.05);
+    const tur = g.build(); tur.position.set(0.25, 1.7, 0.6); tur.name = 'turret';
+    root.add(tur);
+    root.userData.muzzle = new THREE.Vector3(0, 0.14, 1.15);
+    return root;
+  });
+}
+
 export function makeUnitModel(type, faction) {
   switch (type) {
     case 'tank': return makeTank(faction);
     case 'titan': return makeTitan(faction);
     case 'buggy': return makeBuggy(faction);
     case 'harvester': return makeHarvester(faction);
+    case 'apc': return makeAPC(faction);
     case 'arty': return makeArtillery(faction);
     case 'gunship': return makeGunship(faction);
+    case 'repair': return makeRepairTruck(faction);
+    case 'drone': return makeDrone(faction);
     case 'stealth': return makeStealth(faction);
     case 'inferno': return makeInferno(faction);
     case 'wallyman': return makeWallyMan(faction);
@@ -725,8 +820,8 @@ export function makeBuildingModel(type, faction) {
     const t = mats(faction), m = M();
     const root = new THREE.Group();
     const b = new Builder();
-    const W = { conyard: 4, power: 3, refinery: 4, barracks: 3, factory: 4, radar: 3, tech: 3, helipad: 3, turret: 1, sam: 2, plasma: 1, uplink: 3, silo: 3, wall: 1, gate: 2, mine: 1, derrick: 2, hospital: 2, depot: 2 };
-    const D = { conyard: 4, power: 3, refinery: 3, barracks: 3, factory: 4, radar: 3, tech: 3, helipad: 3, turret: 1, sam: 2, plasma: 1, uplink: 3, silo: 3, wall: 1, gate: 1, mine: 1, derrick: 2, hospital: 2, depot: 2 };
+    const W = { bunker: 2, conyard: 4, power: 3, refinery: 4, barracks: 3, factory: 4, radar: 3, tech: 3, helipad: 3, turret: 1, sam: 2, plasma: 1, uplink: 3, silo: 3, wall: 1, gate: 2, mine: 1, derrick: 2, hospital: 2, depot: 2 };
+    const D = { bunker: 2, conyard: 4, power: 3, refinery: 3, barracks: 3, factory: 4, radar: 3, tech: 3, helipad: 3, turret: 1, sam: 2, plasma: 1, uplink: 3, silo: 3, wall: 1, gate: 1, mine: 1, derrick: 2, hospital: 2, depot: 2 };
     const w = W[type] * CELL - 0.3, d = D[type] * CELL - 0.3;
     const parts = {};
     switch (type) {
@@ -1001,6 +1096,21 @@ export function makeBuildingModel(type, faction) {
         pb.cyl(m.gun, 0.03, 0.03, 1.4, 5, 1.4, -0.9, 0);
         const pump = pb.build(); pump.position.set(0, 2.1, 0.6); pump.name = 'pump';
         parts.pump = pump;
+        break;
+      }
+      case 'bunker': {
+        foundation(b, w, d, 0.3);
+        b.cyl(m.concreteDark, 1.75, 1.9, 0.5, 8, 0, 0.35, 0, 0, Math.PI / 8, 0);
+        b.cyl(m.concrete, 1.45, 1.7, 1.3, 8, 0, 1.2, 0, 0, Math.PI / 8, 0);
+        b.cyl(m.concreteDark, 1.6, 1.5, 0.35, 8, 0, 2.0, 0, 0, Math.PI / 8, 0);           // roof slab
+        for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2 + Math.PI / 8; b.box(m.black, 0.7, 0.16, 0.06, Math.sin(a) * 1.6, 1.45, Math.cos(a) * 1.6, 0, a, 0); } // firing slits
+        for (let i = 0; i < 14; i++) { const a = i / 14 * Math.PI * 2; b.add(new THREE.CapsuleGeometry(0.16, 0.36, 4, 6), m.sand, Math.cos(a) * 1.95, 0.32, Math.sin(a) * 1.95, 0, -a, Math.PI / 2); }
+        b.box(m.darkMetal, 0.7, 1.0, 0.1, 0, 0.9, 1.72);                                    // door
+        b.box(t.team, 1.2, 0.12, 1.2, 0, 2.22, 0);
+        b.cyl(m.gun, 0.03, 0.03, 1.5, 5, 0.9, 2.95, -0.6);                                  // flag pole
+        b.box(t.accent, 0.6, 0.38, 0.02, 1.2, 3.45, -0.6);
+        lamps(b, [[0, 2.4, 0]], m.lampWhite);
+        parts.muzzle = new THREE.Vector3(0, 1.45, 1.4);
         break;
       }
       case 'hospital': {

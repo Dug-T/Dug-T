@@ -68,7 +68,7 @@ function pickUp(c, u) {
 export function updateCrates(dt) {
   if (G.cfg.crates === false) return;
   crateT -= dt;
-  if (crateT <= 0) { crateT = srr(45, 80); if (crates.length < 3) spawnCrate(); }
+  if (crateT <= 0) { const rain = G.cfg.mut && G.cfg.mut.includes('crates'); crateT = srr(45, 80) / (rain ? 4 : 1); if (crates.length < (rain ? 8 : 3)) spawnCrate(); }
   for (let i = crates.length - 1; i >= 0; i--) {
     const c = crates[i];
     c.t += dt;

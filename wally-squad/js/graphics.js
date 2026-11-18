@@ -12,6 +12,7 @@ export const PRESETS = {
 const SHADOW = { off: 0, med: 1024, high: 2048, ultra: 4096 };
 
 const touch = matchMedia('(pointer: coarse)').matches;
+export const isTouch = touch;
 const defaults = () => ({ preset: touch ? 'medium' : 'high', ...PRESETS[touch ? 'medium' : 'high'], auto: true, fps: true });
 export const gfx = (() => {
   try { return { ...defaults(), ...JSON.parse(localStorage.getItem('ws_gfx') || '{}') }; } catch { return defaults(); }
@@ -20,6 +21,11 @@ const save = () => { try { localStorage.setItem('ws_gfx', JSON.stringify(gfx)); 
 
 let ctx = null;          // { renderer, sun, bloom, composer, resize }
 export let autoFactor = 1; // lowered automatically when the frame rate drops
+// Extra steps once the resolution is already as low as auto-adjust will take it:
+// 1 = bloom off, 2 = also no anti-aliasing and shadows redrawn less often.
+export let perfStep = 0;
+// how many frames between shadow map redraws (shadows of slow-moving units don't need 60 updates a second)
+export function shadowInterval() { return perfStep >= 2 ? 3 : touch || autoFactor < 0.8 ? 2 : 1; }
 
 export function pixelRatio() {
   return Math.min(window.devicePixelRatio || 1, gfx.maxDpr) * gfx.scale * autoFactor;
@@ -43,9 +49,10 @@ export function apply() {
     sun.shadow.mapSize.set(size, size);
     if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; }
   }
-  if (bloom) bloom.enabled = gfx.bloom;
+  if (bloom) bloom.enabled = gfx.bloom && perfStep < 1;
   if (composer && composer.renderTarget1) {
-    for (const rt of [composer.renderTarget1, composer.renderTarget2]) if (rt.samples !== gfx.samples) { rt.samples = gfx.samples; rt.dispose(); }
+    const samples = perfStep >= 2 ? 0 : gfx.samples;
+    for (const rt of [composer.renderTarget1, composer.renderTarget2]) if (rt.samples !== samples) { rt.samples = samples; rt.dispose(); }
   }
   ctx.resize?.();
   const f = document.getElementById('fps'); if (f) { f.style.display = gfx.fps ? 'block' : 'none'; if (!f.textContent) f.textContent = '-- FPS'; }
@@ -64,9 +71,13 @@ export function autoTune(fps) {
     el.title = `${f} frames per second, rendering at ${ctx.renderer.domElement.width}×${ctx.renderer.domElement.height}`;
     el.className = f >= 50 ? '' : f >= 30 ? 'mid' : 'low';
   }
-  if (!gfx.auto) { if (autoFactor !== 1) { autoFactor = 1; apply(); } return; }
-  if (fps < 30 && autoFactor > 0.55) { autoFactor = Math.max(0.55, autoFactor - 0.15); apply(); }
-  else if (fps > 56 && autoFactor < 1) { autoFactor = Math.min(1, autoFactor + 0.1); apply(); }
+  if (!gfx.auto) { if (autoFactor !== 1 || perfStep) { autoFactor = 1; perfStep = 0; apply(); } return; }
+  // Aim for 45+: first lower the resolution, then drop the costly effects. Recover in reverse order.
+  // (Phones are capped at 60 FPS, so "fast enough to go back up" is 57+.)
+  if (fps < 40 && autoFactor > 0.6) { autoFactor = Math.max(0.6, autoFactor - 0.12); apply(); }
+  else if (fps < 36 && perfStep < 2) { perfStep++; apply(); }
+  else if (fps > 57 && perfStep > 0) { perfStep--; apply(); }
+  else if (fps > 57 && autoFactor < 1) { autoFactor = Math.min(1, autoFactor + 0.08); apply(); }
 }
 
 export function maxAnisotropy() { return ctx ? ctx.renderer.capabilities.getMaxAnisotropy() : 8; }
