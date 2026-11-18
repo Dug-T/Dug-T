@@ -3,7 +3,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from '../lib/utils/BufferGeometryUtils.js';
 import { mats, M, fogify } from './materials.js';
-import { CELL } from './config.js';
+import { CELL, UNITS } from './config.js';
 
 const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _e = new THREE.Euler(), _s = new THREE.Vector3(), _p = new THREE.Vector3();
 
@@ -539,6 +539,157 @@ export function makeWallyMan(faction) {
   });
 }
 
+// ------------------------------------------------------------------ custom (player-designed) units
+const paintCache = new Map();
+function paint(hex, rough = 0.55, metal = 0.35) {
+  const k = hex + ':' + rough + ':' + metal;
+  if (!paintCache.has(k)) paintCache.set(k, fogify(new THREE.MeshStandardMaterial({ color: new THREE.Color(hex), roughness: rough, metalness: metal })));
+  return paintCache.get(k);
+}
+const teamOr = (hex, fallback) => (!hex || hex === 'team' ? fallback : paint(hex));
+
+export function makeCustomModel(d, faction, cache = true) {
+  const build = () => (d.kind === 'vehicle' ? customVehicle(d, faction) : customInfantry(d, faction));
+  if (!cache) return build();
+  return cached(`custom-${faction}-${JSON.stringify(d)}`, build);
+}
+
+function customInfantry(d, faction) {
+  const t = mats(faction), m = M();
+  const root = new THREE.Group();
+  const suit = teamOr(d.color, t.team), acc = teamOr(d.accent, t.teamDark);
+  const b = new Builder();
+  b.box(suit, 0.48, 0.56, 0.3, 0, 1.0, 0);
+  b.box(acc, 0.52, 0.16, 0.33, 0, 0.77, 0);
+  if (d.belly) b.sph(suit, 0.2, 0, 0.86, 0.05, 1.1, 0.75, 0.6);
+  b.box(acc, 0.2, 0.08, 0.2, 0, 1.3, 0);
+  b.sph(m.skin, 0.16, 0, 1.45, 0);
+  const hg = d.headgear || 'helmet';
+  if (hg === 'helmet') { b.add(new THREE.SphereGeometry(0.19, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2), acc, 0, 1.48, 0); b.cyl(acc, 0.2, 0.21, 0.04, 14, 0, 1.48, 0); }
+  else if (hg === 'cap') { b.add(new THREE.SphereGeometry(0.17, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2), acc, 0, 1.52, 0); b.box(acc, 0.22, 0.03, 0.16, 0, 1.53, 0.14); }
+  else if (hg === 'bandana') { b.add(new THREE.CylinderGeometry(0.168, 0.168, 0.07, 18, 1, true), acc, 0, 1.47, 0); b.box(acc, 0.05, 0.03, 0.3, 0.04, 1.42, -0.3, -0.6, 0.2, 0); }
+  else if (hg === 'bobble') { b.cyl(acc, 0.17, 0.17, 0.1, 14, 0, 1.56, 0); b.cyl(m.lampWhite, 0.165, 0.165, 0.05, 14, 0, 1.62, 0); b.add(new THREE.ConeGeometry(0.16, 0.22, 14), acc, 0, 1.74, 0); b.sph(m.lampWhite, 0.06, 0, 1.87, 0); }
+  else if (hg === 'beret') { b.sph(acc, 0.17, 0.03, 1.56, -0.01, 1.1, 0.35, 1.1); }
+  else if (hg === 'hair') { b.add(new THREE.SphereGeometry(0.172, 16, 8, Math.PI * 0.62, Math.PI * 1.76, Math.PI * 0.22, Math.PI * 0.3), paint('#c27236', 0.9, 0), 0, 1.45, 0); }
+  if (d.glasses) for (const s2 of [-1, 1]) { b.add(new THREE.TorusGeometry(0.05, 0.013, 6, 14), m.black, s2 * 0.064, 1.46, 0.165, 0, 0, 0, 1.15, 0.9, 1); }
+  if (d.backpack) { b.box(m.cloth, 0.36, 0.34, 0.14, 0, 1.03, -0.22); b.cyl(m.gun, 0.02, 0.02, 0.5, 4, 0.12, 1.35, -0.25); }
+  // arms
+  b.box(suit, 0.12, 0.42, 0.12, 0.29, 1.05, 0.1, -0.7, 0, 0.1);
+  b.box(suit, 0.12, 0.42, 0.12, -0.29, 1.05, 0.1, -0.9, 0, -0.1);
+  b.sph(m.skin, 0.06, 0.24, 0.92, 0.32); b.sph(m.skin, 0.06, -0.2, 0.98, 0.35);
+  const w = d.weapon || 'rifle';
+  if (w === 'bazooka') { b.cyl(acc, 0.09, 0.09, 1.1, 12, 0.18, 1.3, 0.05, Math.PI / 2, 0, 0); b.cyl(m.darkMetal, 0.11, 0.09, 0.15, 12, 0.18, 1.3, 0.6, Math.PI / 2, 0, 0); }
+  else if (w === 'flamer') { b.cyl(m.lampRed, 0.08, 0.08, 0.5, 10, 0.1, 1.05, -0.28); b.cyl(m.lampRed, 0.08, 0.08, 0.5, 10, -0.1, 1.05, -0.28); b.cyl(m.gun, 0.05, 0.06, 0.7, 10, 0.05, 0.98, 0.45, Math.PI / 2, 0, 0); }
+  else if (w !== 'gatling') { const L = w === 'sniper' ? 1.0 : 0.7; b.box(m.gun, 0.07, 0.12, L, 0.05, 1.0, 0.3 + L / 2 - 0.2); b.box(m.gun, 0.05, 0.16, 0.08, 0.05, 0.9, 0.3); if (w === 'sniper') b.cyl(m.gun, 0.05, 0.05, 0.3, 8, 0.05, 1.12, 0.4, Math.PI / 2, 0, 0); }
+  root.add(b.build());
+  if (w === 'gatling') {
+    const gb = new Builder();
+    gb.add(new THREE.CylinderGeometry(0.075, 0.085, 0.36, 12), m.gun, 0, 0, 0, Math.PI / 2, 0, 0);
+    gb.box(m.hazard, 0.16, 0.14, 0.16, 0.13, -0.08, -0.05);
+    const gun = gb.build(); gun.position.set(0.1, 0.95, 0.42); gun.name = 'gatling';
+    const bb = new Builder();
+    for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2; bb.cyl(m.gun, 0.016, 0.016, 0.62, 6, Math.cos(a) * 0.045, Math.sin(a) * 0.045, 0.31, Math.PI / 2, 0, 0); }
+    const barrels = bb.build(); barrels.position.set(0, 0, 0.12); barrels.name = 'barrels';
+    gun.add(barrels); root.add(gun);
+  }
+  if (d.cape) {
+    const g = new THREE.PlaneGeometry(0.46, 0.78, 6, 8); const cp = g.attributes.position;
+    for (let i = 0; i < cp.count; i++) { const px = cp.getX(i), py = cp.getY(i), tt = (0.39 - py) / 0.78; cp.setX(i, px * (1 + tt * 0.4)); cp.setZ(i, -Math.cos(px * 4) * 0.06 * (0.4 + tt) - tt * 0.08); }
+    g.translate(0, -0.39, 0); g.computeVertexNormals();
+    const capeMat = fogify(new THREE.MeshStandardMaterial({ color: new THREE.Color(d.capeColor || '#e0461c'), roughness: 0.75, side: THREE.DoubleSide }));
+    const cape = new THREE.Mesh(g, capeMat); cape.castShadow = true; cape.position.set(0, 1.32, -0.17); cape.rotation.x = 0.12; cape.name = 'cape';
+    root.add(cape);
+  }
+  for (const side of [-1, 1]) {
+    const lb = new Builder();
+    lb.box(acc, 0.16, 0.5, 0.18, 0, -0.25, 0);
+    lb.box(m.black, 0.18, 0.12, 0.26, 0, -0.52, 0.04);
+    const leg = lb.build(); leg.position.set(side * 0.12, 0.72, 0); leg.name = 'leg';
+    root.add(leg);
+  }
+  const sc = d.armor >= 4 ? 1.12 : 1.0;
+  root.scale.setScalar(sc);
+  root.userData.muzzle = w === 'gatling' ? new THREE.Vector3(0.1, 0.95, 1.18) : new THREE.Vector3(0.05, w === 'bazooka' ? 1.3 : 1.05, 1.0);
+  return root;
+}
+
+function customVehicle(d, faction) {
+  const t = mats(faction), m = M();
+  const root = new THREE.Group();
+  const body = teamOr(d.color, t.team), acc = teamOr(d.accent, t.teamDark);
+  const b = new Builder();
+  const ch = d.chassis || 'tracks';
+  let lift = 0;
+  if (ch === 'tracks') {
+    trackUnit(b, -1, 3.3, 0.7, 0.62, 0.38, faction); trackUnit(b, 1, 3.3, 0.7, 0.62, 0.38, faction);
+  } else if (ch === 'wheels') {
+    for (const z of [1.1, 0, -1.1]) for (const x of [-0.95, 0.95]) wheel(b, m.metal, x, 0.45, z, 0.45, 0.34);
+    b.box(acc, 2.1, 0.08, 3.3, 0, 0.98, 0);
+  } else { // hover
+    lift = 0.35;
+    for (const [x, z] of [[-0.85, 1.1], [0.85, 1.1], [-0.85, -1.1], [0.85, -1.1]]) { b.cyl(m.darkMetal, 0.42, 0.48, 0.25, 14, x, 0.42, z); b.cyl(m.energy, 0.32, 0.32, 0.04, 14, x, 0.29, z); }
+    b.box(acc, 1.9, 0.18, 3.2, 0, 0.7, 0);
+  }
+  b.box(body, 1.5, 0.45, 3.1, 0, 0.82 + lift, 0);
+  b.add(new THREE.BoxGeometry(1.5, 0.42, 0.7), body, 0, 0.74 + lift, 1.7, -0.6, 0, 0);
+  b.add(new THREE.BoxGeometry(1.5, 0.32, 0.5), acc, 0, 0.77 + lift, -1.68, 0.5, 0, 0);
+  b.box(acc, 1.52, 0.1, 0.5, 0, 1.06 + lift, 0.4);
+  b.box(m.darkMetal, 0.8, 0.12, 0.8, 0, 1.1 + lift, -1.0);
+  b.box(m.lampWhite, 0.18, 0.1, 0.05, 0.55, 0.92 + lift, 1.66); b.box(m.lampWhite, 0.18, 0.1, 0.05, -0.55, 0.92 + lift, 1.66);
+  b.cyl(m.darkMetal, 0.08, 0.08, 0.35, 8, 0.7, 1.15 + lift, -1.5);
+  if (d.weapon === 'inferno') for (const s2 of [-0.45, 0.45]) b.add(new THREE.CylinderGeometry(0.34, 0.34, 1.5, 14), m.lampRed, s2, 1.45 + lift, -0.8, Math.PI / 2, 0, 0);
+  root.add(b.build());
+  const tb = new Builder();
+  const w = d.weapon || 'cannon';
+  let muzzle = new THREE.Vector3(0, 0.05, 2.6), muzzle2 = null, barrelObj = null;
+  if (w === 'cannon' || w === 'twin') {
+    tb.add(new THREE.CylinderGeometry(0.7, 0.88, 0.48, 8), body, 0, 0, 0, 0, Math.PI / 8, 0);
+    tb.box(body, 1.2, 0.4, 1.0, 0, 0, -0.45); tb.box(m.darkMetal, 0.4, 0.35, 0.4, 0, 0, 0.7);
+    const xs = w === 'twin' ? [-0.22, 0.22] : [0];
+    for (const x of xs) { tb.cyl(m.gun, 0.11, 0.13, 2.2, 12, x, 0.02, 1.8, Math.PI / 2, 0, 0); tb.cyl(m.gun, 0.15, 0.15, 0.25, 12, x, 0.02, 2.85, Math.PI / 2, 0, 0); }
+    muzzle = new THREE.Vector3(xs[xs.length - 1], 0.02, 3.0); if (w === 'twin') muzzle2 = new THREE.Vector3(-0.22, 0.02, 3.0);
+  } else if (w === 'mg' || w === 'gatling') {
+    tb.cyl(m.darkMetal, 0.32, 0.4, 0.35, 10, 0, 0, 0);
+    tb.box(acc, 0.7, 0.4, 0.06, 0, 0.15, 0.25);
+    tb.box(m.gun, 0.2, 0.2, 0.6, 0, 0.12, 0.45);
+    if (w === 'mg') { tb.cyl(m.gun, 0.05, 0.05, 1.0, 8, 0, 0.14, 1.2, Math.PI / 2, 0, 0); muzzle = new THREE.Vector3(0, 0.14, 1.7); }
+    else muzzle = new THREE.Vector3(0, 0.12, 1.95);
+  } else if (w === 'rocketPod') {
+    tb.box(acc, 0.9, 0.3, 0.9, 0, 0, 0);
+    for (const x of [-0.5, 0.5]) { tb.box(body, 0.55, 0.55, 1.2, x, 0.3, 0.1, -0.25, 0, 0); for (let r = 0; r < 2; r++) for (let c = 0; c < 2; c++) tb.cyl(m.lampRed, 0.08, 0.08, 0.04, 8, x + (c - 0.5) * 0.22, 0.42 + (r - 0.5) * 0.22, 0.72, Math.PI / 2 - 0.25, 0, 0); }
+    muzzle = new THREE.Vector3(0.5, 0.45, 0.8); muzzle2 = new THREE.Vector3(-0.5, 0.45, 0.8);
+  } else if (w === 'inferno') {
+    tb.add(new THREE.CylinderGeometry(0.55, 0.7, 0.45, 8), acc, 0, 0, 0);
+    tb.cyl(m.gun, 0.12, 0.16, 1.5, 10, 0, 0.05, 1.2, Math.PI / 2, 0, 0); tb.sph(m.lampRed, 0.06, 0, 0.05, 1.98);
+    muzzle = new THREE.Vector3(0, 0.05, 2.0);
+  } else if (w === 'arty') {
+    tb.box(body, 1.1, 0.55, 1.2, 0, 0, 0);
+  }
+  const tur = tb.build(); tur.position.set(0, 1.35 + lift, -0.1); tur.name = 'turret';
+  if (w === 'gatling') {
+    const bb = new Builder();
+    for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2; bb.cyl(m.gun, 0.04, 0.04, 1.3, 6, Math.cos(a) * 0.1, Math.sin(a) * 0.1, 0.65, Math.PI / 2, 0, 0); }
+    bb.add(new THREE.TorusGeometry(0.12, 0.025, 5, 14), m.darkMetal, 0, 0, 1.05);
+    const barrels = bb.build(); barrels.position.set(0, 0.12, 0.6); barrels.name = 'barrels';
+    tur.add(barrels);
+  }
+  if (w === 'arty') {
+    const ab = new Builder();
+    ab.box(m.darkMetal, 0.5, 0.45, 0.6, 0, 0.1, 0.5);
+    ab.cyl(m.gun, 0.14, 0.18, 3.2, 12, 0, 0.15, 2.2, Math.PI / 2, 0, 0);
+    ab.cyl(m.gun, 0.22, 0.22, 0.4, 12, 0, 0.15, 3.7, Math.PI / 2, 0, 0);
+    barrelObj = ab.build(); barrelObj.name = 'barrel'; barrelObj.rotation.x = -0.45;
+    tur.add(barrelObj);
+    muzzle = new THREE.Vector3(0, 0.15, 3.9);
+  }
+  root.add(tur);
+  const sc = { light: 0.8, medium: 1, heavy: 1.28 }[d.size || 'medium'];
+  root.scale.setScalar(sc);
+  root.userData.muzzle = muzzle;
+  if (muzzle2) root.userData.muzzle2 = muzzle2;
+  return root;
+}
+
 export function makeUnitModel(type, faction) {
   switch (type) {
     case 'tank': return makeTank(faction);
@@ -550,7 +701,7 @@ export function makeUnitModel(type, faction) {
     case 'stealth': return makeStealth(faction);
     case 'inferno': return makeInferno(faction);
     case 'wallyman': return makeWallyMan(faction);
-    default: return makeInfantry(type, faction);
+    default: return type.startsWith('custom_') ? makeCustomModel(UNITS[type].design, faction) : makeInfantry(type, faction);
   }
 }
 

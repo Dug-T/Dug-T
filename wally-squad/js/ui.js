@@ -757,7 +757,7 @@ function refreshSelPanel(force) {
   const first = sel[0];
   if (sel.length === 1) {
     const e = first; const d = e.def;
-    $('selTitle').innerHTML = `${d.name}${e.rank ? ' ' + '★'.repeat(e.rank) : ''} <span style="font-size:13px;color:${FACTIONS[e.faction].css}">${FACTIONS[e.faction].name}</span>`;
+    $('selTitle').innerHTML = `${e.hero ? 'Wally Man (Hero)' : d.name}${e.rank ? ' ' + '★'.repeat(e.rank) : ''} <span style="font-size:13px;color:${FACTIONS[e.faction].css}">${FACTIONS[e.faction].name}</span>`;
     let sub = `HP ${Math.ceil(e.hp)}/${e.maxHp}`;
     if (e.kind === 'unit') {
       if (e.kills) sub += ` · Kills ${e.kills}`;

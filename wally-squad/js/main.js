@@ -22,6 +22,7 @@ import { MISSIONS, makeContext, campaignProgress, unlockNext } from './missions.
 import { Lockstep, joinRoom } from './mp.js';
 import { randomRoomCode } from './net.js';
 import { issue } from './cmd.js';
+import { registerCustomUnits, loadDesigns, buildDesigner } from './customunits.js';
 
 const $ = id => document.getElementById(id);
 const params = new URLSearchParams(location.search);
@@ -141,11 +142,14 @@ async function boot() {
   Voices.initVoices();
   if (params.has('reveal')) { G.revealed = true; revealAll(true); }
 
+  // ---------- player-designed units (online games use the host's designs so both sides match) ----------
+  const customTypes = registerCustomUnits(run.mode === 'mp' ? (run.customUnits || []) : loadDesigns());
+
   // ---------- players and starting forces ----------
   initPlayer(G.player, false);
   initPlayer(G.enemy, run.mode !== 'mp');
   if (mission) {
-    G.allowed = mission.allowed;
+    G.allowed = mission.allowed ? [...mission.allowed, ...customTypes] : null;
     mctx = makeContext(mission, {
       changed: renderObjectives,
       end: (win, text) => endGame(win, text),
@@ -190,8 +194,12 @@ function setupBase(faction, pos) {
 }
 
 // ---------------------------------------------------------------- menus
-const panels = ['menuMain', 'menuCampaign', 'menuSkirmish', 'menuOnline', 'menuVoices'];
-function showPanel(id) { for (const p of panels) $(p).style.display = p === id ? 'block' : 'none'; if (id === 'menuVoices') Voices.buildStudio($('studio'), UI.icons); }
+const panels = ['menuMain', 'menuCampaign', 'menuSkirmish', 'menuOnline', 'menuVoices', 'menuDesigner'];
+function showPanel(id) {
+  for (const p of panels) $(p).style.display = p === id ? 'block' : 'none';
+  if (id === 'menuVoices') Voices.buildStudio($('studio'), UI.icons);
+  if (id === 'menuDesigner') buildDesigner($('designer'), { faction: 'wally' });
+}
 function startWith(c) { sessionStorage.setItem('ws_cfg', JSON.stringify(c)); location.href = location.pathname + (params.has('loopnet') ? '?loopnet' : ''); }
 
 function optionCards(el, items, sel, onPick) {
@@ -235,7 +243,7 @@ function setupMenus() {
   optionCards($('mapListMp'), mapItems(), mp.map, id => { mp.map = id; });
   optionCards($('facRowMp'), facItems, mp.faction, id => { mp.faction = id; });
   $('facRowMp').className = 'cardList small';
-  $('bHost').onclick = () => startWith({ mode: 'mp', map: mp.map, faction: mp.faction, difficulty: 'normal', daynight: true, weather: null, mp: { role: 'host', room: randomRoomCode(), seed: (Math.random() * 1e9) | 0, hostFaction: mp.faction } });
+  $('bHost').onclick = () => startWith({ mode: 'mp', map: mp.map, faction: mp.faction, difficulty: 'normal', daynight: true, weather: null, mp: { role: 'host', room: randomRoomCode(), seed: (Math.random() * 1e9) | 0, hostFaction: mp.faction }, customUnits: loadDesigns() });
   let joinNet = null;
   $('bJoin').onclick = () => {
     const code = $('roomInput').value.trim().toUpperCase();
@@ -363,7 +371,7 @@ function simStep(dt) {
   updateDecay(dt);
   cleanupDead();
   regrowOre(dt);
-  if (mission && !G.over) { missionT -= dt; if (missionT <= 0) { missionT = 0.5; mission.tick(mctx); renderObjectives(); } }
+  if (mission && !G.over) { missionT -= dt; if (missionT <= 0) { missionT = 0.5; if (mctx.heroCheck()) mission.tick(mctx); renderObjectives(); } }
   checkEnd(dt);
 }
 

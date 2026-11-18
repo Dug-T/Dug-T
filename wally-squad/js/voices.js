@@ -90,7 +90,7 @@ export function say(type, ev, force = false) {
   if (playTake(type, ev)) return;
   if (!settings.tts || !('speechSynthesis' in window)) return;
   if (speechSynthesis.speaking && !force) return;
-  const lines = DEFAULT_LINES[type]?.[ev];
+  const lines = DEFAULT_LINES[type]?.[ev] || DEFAULT_LINES[UNITS[type]?.tab === 'vehicle' ? 'tank' : 'rifle'][ev];
   if (!lines) return;
   const u = new SpeechSynthesisUtterance(lines[Math.floor(Math.random() * lines.length)]);
   const st = VOICE_STYLE[type] || { pitch: 1, rate: 1.05 };

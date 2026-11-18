@@ -542,6 +542,11 @@ export class Unit {
       }
     }
     if (this.turret) this.turret.rotation.y = this.turretYaw - this.heading;
+    if (this.barrels && !this.isInf) {
+      const firing = G.time - (this.lastFire ?? -9) < 0.4;
+      this.spin = Math.max(0, Math.min(40, (this.spin || 0) + (firing ? 120 : -50) * dt));
+      this.barrels.rotation.z += this.spin * dt;
+    }
     if (this.barrel && this.target) {
       // artillery elevation
       const d = distTo(this.target, this.x, this.z);

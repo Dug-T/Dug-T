@@ -5,22 +5,25 @@ import { BUILDINGS, CELL, GRID } from './config.js';
 import { Unit, Building, alive } from './entities.js';
 import { T, idx, inGrid, cellOf, heightAt, BASES, revealCircle } from './terrain.js';
 
-const ALL_BASIC = ['power', 'refinery', 'barracks', 'factory', 'radar', 'turret', 'sam', 'wall', 'gate', 'mine', 'rifle', 'rocket', 'flamer', 'engineer', 'medic', 'wallyman', 'buggy', 'tank', 'harvester', 'arty'];
+const ALL_BASIC = ['power', 'refinery', 'barracks', 'factory', 'radar', 'turret', 'sam', 'wall', 'gate', 'mine', 'rifle', 'rocket', 'flamer', 'engineer', 'medic', 'buggy', 'tank', 'harvester', 'arty'];
+const FIELD_BASE = ['power', 'refinery', 'barracks', 'factory', 'turret', 'wall', 'gate', 'rifle', 'rocket', 'flamer', 'engineer', 'medic', 'buggy', 'tank', 'harvester'];
 
 export const MISSIONS = [
   {
     id: 'm1', title: 'First Contact', map: 'valley', difficulty: 'easy',
     story: [
       'Commander, the Wally Squad has touched down in Crystal Valley. Our scouts report a Grimlock outpost dug in near the valley floor, guarding a rich crystal seam.',
-      'We have no base yet - just a strike team led by Wally himself. Use your tanks to break the turrets, keep your infantry behind the armour, and do not let Wally get himself killed.',
-      'Tip: Wally can snipe infantry from long range and plants C4 on buildings. Engineers can capture enemy structures.',
+      'Our hero, WALLY MAN, leads the strike team. We have dropped a small field base with a Barracks and War Factory - train more infantry and tanks, then break the outpost. Whatever happens, do not let Wally Man fall.',
+      'Tip: Wally Man\'s Gatling gun shreds infantry - let your tanks deal with the turrets. Engineers can capture enemy structures.'
     ],
-    objectives: [{ id: 'outpost', text: 'Destroy the Grimlock outpost' }, { id: 'wally', text: 'Wally must survive' }],
-    allowed: [],
+    objectives: [{ id: 'outpost', text: 'Destroy the Grimlock outpost' }, { id: 'hero', text: 'Wally Man must survive' }],
+    allowed: FIELD_BASE,
     setup(ctx) {
       const s = BASES[G.player];
-      ctx.squad(G.player, s.x, s.z, [['wally', 1], ['tank', 3], ['rifle', 6], ['rocket', 3], ['medic', 1], ['engineer', 2]]);
-      ctx.credits(G.player, 0);
+      ctx.base(G.player, s, ['conyard', 'power', 'barracks', 'factory', 'refinery']);
+      ctx.hero(G.player, s.x + 12, s.z - 12);
+      ctx.squad(G.player, s.x + 14, s.z - 14, [['tank', 3], ['rifle', 6], ['rocket', 3], ['medic', 1], ['engineer', 2]]);
+      ctx.credits(G.player, 2500);
       const ox = 26, oz = -26;
       for (const t of ['barracks', 'power', 'power', 'refinery', 'turret', 'turret', 'turret', 'sam']) ctx.place(G.enemy, t, ox, oz);
       ctx.squad(G.enemy, ox, oz, [['rifle', 6], ['rocket', 2], ['tank', 2]], true);
@@ -29,8 +32,6 @@ export const MISSIONS = [
       revealCircle(s.x, s.z, 40);
     },
     tick(ctx) {
-      if (!G.units.some(u => u.faction === G.player && u.type === 'wally' && !u.dead)) return ctx.fail('Wally has fallen. Mission failed.');
-      ctx.check('wally', true);
       if (!G.buildings.some(b => b.faction === G.enemy && !b.dead && !b.def.isMine && !b.def.isWall)) { ctx.complete('outpost'); return ctx.win(); }
       if (!G.units.some(u => u.faction === G.player && !u.dead)) return ctx.fail('Our strike team has been wiped out.');
     },
@@ -42,11 +43,12 @@ export const MISSIONS = [
       'Reinforcements are seven minutes out. Build defences - walls, gates, turrets and mines - and hold the Command HQ until they arrive.',
       'Tip: drag with the Concrete Wall selected to build a whole line. Gates let your own units through.',
     ],
-    objectives: [{ id: 'hold', text: 'Survive until reinforcements arrive', timer: 420 }, { id: 'hq', text: 'Protect the Command HQ' }],
+    objectives: [{ id: 'hold', text: 'Survive until reinforcements arrive', timer: 420 }, { id: 'hq', text: 'Protect the Command HQ' }, { id: 'hero', text: 'Wally Man must survive' }],
     allowed: ALL_BASIC,
     setup(ctx) {
       const s = BASES[G.player];
       ctx.base(G.player, s, ['conyard', 'power', 'power', 'refinery', 'barracks', 'factory', 'turret', 'turret']);
+      ctx.hero(G.player, s.x + 12, s.z + 3);
       ctx.squad(G.player, s.x + 14, s.z, [['tank', 2], ['rifle', 4], ['rocket', 2]]);
       ctx.credits(G.player, 5000);
       ctx.ai({ noBuild: true, noUnits: true, noAttack: true });
@@ -85,11 +87,12 @@ export const MISSIONS = [
       'Build up your economy fast - harvest 8,000 credits of crystal - and burn down the Grimlock refineries so they cannot do the same.',
       'Tip: blue crystal is worth double. A second refinery and more harvesters will speed you up. Watch out for sandstorms - they cut your sight range.',
     ],
-    objectives: [{ id: 'harvest', text: 'Harvest 8,000 credits', progress: () => `${Math.floor(G.stats.harvested)}/8000` }, { id: 'refs', text: 'Destroy all Grimlock refineries' }],
+    objectives: [{ id: 'harvest', text: 'Harvest 8,000 credits', progress: () => `${Math.floor(G.stats.harvested)}/8000` }, { id: 'refs', text: 'Destroy all Grimlock refineries' }, { id: 'hero', text: 'Wally Man must survive' }],
     allowed: ALL_BASIC,
     setup(ctx) {
       const s = BASES[G.player], e = BASES[G.enemy];
       ctx.base(G.player, s, ['conyard']);
+      ctx.hero(G.player, s.x + 6, s.z + 10);
       ctx.squad(G.player, s.x + 8, s.z + 8, [['tank', 2], ['buggy', 2], ['rifle', 4]]);
       ctx.base(G.enemy, e, ['conyard', 'power', 'refinery', 'refinery', 'barracks', 'power', 'turret']);
       ctx.squad(G.enemy, e.x - 8, e.z - 8, [['tank', 2], ['rifle', 4]]);
@@ -109,14 +112,15 @@ export const MISSIONS = [
     story: [
       'Midnight Ridge. The Grimlock fortress is ringed by Plasma Towers - a frontal assault would be suicide.',
       'But Plasma Towers need power. Knock out every Grimlock Power Plant and their defences will go dark. Then finish the fortress.',
-      'Tip: Wally plants C4 on buildings and can slip in under the cover of night. Watch for Shade stealth tanks - they only appear when close.',
+      'Tip: Wally Man\'s Gatling gun clears the infantry guarding the power plants, and Engineers can capture them outright. Watch for Shade stealth tanks - they only appear when close.',
     ],
-    objectives: [{ id: 'power', text: 'Destroy every Grimlock Power Plant' }, { id: 'hq', text: 'Destroy the Grimlock Command HQ' }],
-    allowed: [...ALL_BASIC, 'wally'],
+    objectives: [{ id: 'power', text: 'Destroy every Grimlock Power Plant' }, { id: 'hq', text: 'Destroy the Grimlock Command HQ' }, { id: 'hero', text: 'Wally Man must survive' }],
+    allowed: ALL_BASIC,
     setup(ctx) {
       const s = BASES[G.player], e = BASES[G.enemy];
       ctx.base(G.player, s, ['conyard', 'power', 'power', 'refinery', 'barracks', 'factory']);
-      ctx.squad(G.player, s.x, s.z - 14, [['wally', 1], ['engineer', 2], ['tank', 3], ['rocket', 4], ['medic', 1]]);
+      ctx.hero(G.player, s.x - 3, s.z - 12);
+      ctx.squad(G.player, s.x, s.z - 14, [['engineer', 2], ['tank', 3], ['rocket', 4], ['medic', 1]]);
       ctx.base(G.enemy, e, ['conyard', 'power', 'power', 'power', 'refinery', 'barracks', 'factory', 'plasma', 'plasma', 'plasma', 'plasma', 'turret', 'turret', 'sam']);
       ctx.squad(G.enemy, e.x, e.z + 16, [['stealth', 2], ['tank', 3], ['rifle', 6]], true);
       ctx.credits(G.player, 3500);
@@ -135,15 +139,16 @@ export const MISSIONS = [
     id: 'm5', title: 'The Warlord', map: 'valley', difficulty: 'hard',
     story: [
       'This is it, commander. The Grimlock Warlord has dug in at the far end of Crystal Valley, and our spies confirm he has a Doom Missile silo.',
-      'Build your Sky Lance Uplink and fight fire with fire. Destroy every Grimlock structure and end this war.',
+      'Wally Man leads the final assault. Build your Sky Lance Uplink and fight fire with fire. Destroy every Grimlock structure and end this war.',
       'Tip: when the enemy silo is armed, spread your base out - and strike the silo first if you can.',
     ],
-    objectives: [{ id: 'silo', text: 'Destroy the Doom Missile Silo' }, { id: 'all', text: 'Destroy every Grimlock structure' }],
+    objectives: [{ id: 'silo', text: 'Destroy the Doom Missile Silo' }, { id: 'all', text: 'Destroy every Grimlock structure' }, { id: 'hero', text: 'Wally Man must survive' }],
     allowed: null,
     setup(ctx) {
       const s = BASES[G.player], e = BASES[G.enemy];
       ctx.base(G.player, s, ['conyard', 'power', 'power', 'refinery', 'barracks']);
-      ctx.squad(G.player, s.x + 10, s.z - 10, [['tank', 3], ['rifle', 6], ['rocket', 3], ['wally', 1]]);
+      ctx.hero(G.player, s.x + 8, s.z - 8);
+      ctx.squad(G.player, s.x + 10, s.z - 10, [['tank', 3], ['rifle', 6], ['rocket', 3]]);
       ctx.base(G.enemy, e, ['conyard', 'power', 'power', 'power', 'power', 'refinery', 'refinery', 'barracks', 'factory', 'radar', 'tech', 'silo', 'turret', 'turret', 'plasma', 'sam', 'sam']);
       ctx.squad(G.enemy, e.x - 12, e.z + 12, [['tank', 4], ['inferno', 2], ['rifle', 8], ['rocket', 4]], true);
       ctx.credits(G.player, 6000); ctx.credits(G.enemy, 6000);
@@ -167,7 +172,7 @@ export function makeContext(mission, hooks) {
     complete(id) { if (status[id] !== 'done') { status[id] = 'done'; G.ui?.message(`Objective complete: ${mission.objectives.find(o => o.id === id).text}`); G.sfx?.play('ready'); hooks.changed(); } },
     check(id, ok) { if (ok && status[id] === 'open') { /* ongoing */ } },
     done(id) { return status[id] === 'done'; },
-    win() { if (!G.over) hooks.end(true); },
+    win() { if (!G.over) { if (status.hero === 'open') status.hero = 'done'; hooks.changed(); hooks.end(true); } },
     fail(text) { if (!G.over) { for (const id in status) if (status[id] === 'open') status[id] = 'failed'; hooks.changed(); hooks.end(false, text); } },
     credits(f, n) { G.players[f].credits = n; },
     ai(opts) { hooks.ai(opts); },
@@ -185,6 +190,18 @@ export function makeContext(mission, hooks) {
       return out;
     },
     place(f, type, x, z) { return forcePlace(f, type, x, z); },
+    // Wally Man, campaign hero: much tougher than a normal trooper, starts as Elite, and must survive
+    hero(f, x, z) {
+      const [u] = this.squad(f, x, z, [['wallyman', 1]]);
+      u.hero = true; u.maxHp = u.hp = 1000; u.rank = 2; u.kills = 6;
+      ctx.heroUnit = u;
+      return u;
+    },
+    heroCheck() {
+      if (ctx.heroUnit && ctx.heroUnit.dead && !G.over) { status.hero = 'failed'; hooks.changed(); hooks.end(false, 'Wally Man has fallen. Mission failed.'); return false; }
+      if (ctx.heroUnit && status.hero === 'open' && G.over) status.hero = 'done';
+      return true;
+    },
     base(f, at, list) { for (const t of list) forcePlace(f, t, at.x, at.z); },
   };
   return ctx;

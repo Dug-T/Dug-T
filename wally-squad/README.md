@@ -6,15 +6,19 @@ Play it by opening `wally-squad/index.html` from any web server (GitHub Pages wo
 
 ## Game modes
 
-- **Campaign:** five story missions in which Wally's squad takes on the Grimlock Warlord. Each mission has a briefing, objectives and scripted events, and completing one unlocks the next.
-  1. **First Contact** – a strike team with no base. Destroy an outpost and keep Wally alive.
+- **Campaign:** five story missions in which the hero **Wally Man** leads the squad against the Grimlock Warlord. Every mission lets you train infantry and vehicles, and every mission is lost if Wally Man falls. Each mission has a briefing, objectives and scripted events, and completing one unlocks the next.
+  1. **First Contact** – a small field base and a strike team. Destroy an outpost and keep Wally Man alive.
   2. **Hold the Line** – fortify Frostbite Pass against seven waves until reinforcements arrive.
   3. **Crystal Rush** – out-harvest the enemy in the Dune Sea and burn down its refineries.
   4. **Lights Out** – at night, cut the enemy's power so its Plasma Towers go dark, then finish the fortress.
   5. **The Warlord** – a full base battle against a Doom Missile silo.
 - **Skirmish:** choose a map, your faction and the difficulty, and turn the day–night cycle and dynamic weather on or off.
 - **Online battle:** 1 v 1 against a friend. One player hosts and shares a 5-letter room code; the other joins with it.
-- **Voice Studio:** record your own voice lines for every unit.
+- **Unit Designer:** invent your own infantry and vehicles:
+  - Pick a weapon, chassis (tracks, wheels or hover), size, armour, speed, colours and looks (hats, glasses, capes and more).
+  - Watch a live 3D preview.
+  - Saved designs appear in the Barracks and War Factory build menus in every mode. Online games use the host's designs.
+- **Voice Studio:** record your own voice lines for every unit, including your own designs.
 
 ## Factions
 
