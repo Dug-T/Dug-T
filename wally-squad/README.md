@@ -75,6 +75,9 @@ Both factions share the basic army: riflemen, rocket troopers, Scorchers, engine
   - Long-Range Optics: +20% sight and range.
   - The computer opponent researches them too.
 - **👹 Warlord Grak** (Grimlock hero, Barracks + Comms Center, one at a time): a hulking brute with a rotary rocket cannon. **War Cry** (`G`) makes every Grimlock fighter within 13 m fire much faster for 6 seconds. The computer uses heroes' abilities too.
+- **Fighting back:** infantry and vehicles that come under fire turn on the attacker, even out-of-sight artillery, and chase it further than a normal target. Idle friends within 11 m join in. A unit busy shooting a building switches to the unit shooting it.
+  - Units on a direct move or attack order keep following it.
+  - Hold Fire units never shoot back; Hold Position units only shoot back if the attacker is in range.
 - **↔ Patrol** (`P` or the selection-panel button, then pick a point): units walk back and forth between where they are and that point, attacking anything they meet.
 - **Building info** closes by itself after 10 seconds. Touching the panel (or hovering over it with a mouse) restarts the countdown.
 - **New medals:** Graduate, Unstoppable, Fortified, Grak Smash, Trial by Fire, Mad Science, Daily Duty and Into the Fire.

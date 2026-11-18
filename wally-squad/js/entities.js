@@ -272,7 +272,7 @@ export class Unit {
     const useW = canTarget(w, t) ? w : this.weapon2;
     const range = useW.range * (this.rank ? 1.05 : 1) * (upg(this.faction, 'optics') ? 1.2 : 1);
     // leash for auto targets
-    if ((!this.order || this.order.type !== 'attack') && this.guardPos && Math.hypot(this.x - this.guardPos.x, this.z - this.guardPos.z) > this.def.sight * 1.6 && this.order?.type !== 'attackMove') {
+    if ((!this.order || this.order.type !== 'attack') && this.guardPos && Math.hypot(this.x - this.guardPos.x, this.z - this.guardPos.z) > this.def.sight * (this.target === this.retal ? 3 : 1.6) && this.order?.type !== 'attackMove') { // chase whoever shot us further
       this.target = null; this.path = null; return;
     }
     if ((d > range || (useW.minRange && d < useW.minRange)) && this.stance === 'hold' && (!this.order || this.order.type !== 'attack')) { this.target = null; return; } // hold position: never chase
@@ -1272,6 +1272,24 @@ function splash(src, w, x, z, r, faction, except) {
   }
 }
 
+const helpBuf = [];
+// should u switch to attacking `src`, which just shot it (or a friend)?
+function retaliate(u, src) {
+  if (u.dead || u.boarded || !u.weapon || u.stance === 'holdfire' || u.def.heals || u.def.repairs) return;
+  if (u.order && u.order.type !== 'attackMove') return; // a direct order (move, attack, board...) wins
+  const can = canTarget(u.weapon, src) || (u.weapon2 && canTarget(u.weapon2, src));
+  if (!can) return;
+  const cur = u.target;
+  if (cur && alive(cur) && cur !== src) {
+    // keep a unit target we can already hit; drop buildings and out-of-range targets for the shooter
+    const w = canTarget(u.weapon, cur) ? u.weapon : u.weapon2;
+    if (cur.kind === 'unit' && w && distTo(cur, u.x, u.z) <= w.range) return;
+  }
+  if (u.stance === 'hold') { const w = canTarget(u.weapon, src) ? u.weapon : u.weapon2; if (distTo(src, u.x, u.z) > w.range) return; }
+  u.target = src; u.retal = src;
+  u.guardPos = u.guardPos || { x: u.x, z: u.z };
+}
+
 export function damage(target, amount, src, kind) {
   if (!alive(target)) return;
   if (kind === 'c4') {
@@ -1288,9 +1306,13 @@ export function damage(target, amount, src, kind) {
     else G.announce?.('Unit under attack', G.player, 30);
     G.alertAt = { x: target.x, z: target.z, t: G.time };
   }
-  // retaliate
-  if (target.kind === 'unit' && src && alive(src) && !target.target && target.weapon && target.stance !== 'holdfire' && (!target.order || target.order.type === 'attackMove')) {
-    if (canTarget(target.weapon, src) || (target.weapon2 && canTarget(target.weapon2, src))) { target.target = src; target.guardPos = target.guardPos || { x: target.x, z: target.z }; }
+  // fight back: infantry and vehicles turn on whoever shoots them, and idle friends nearby join in
+  if (target.kind === 'unit' && src && alive(src) && src.faction !== target.faction && src.faction !== 'neutral') {
+    retaliate(target, src);
+    if (G.time - (target.helpT ?? -9) > 1) {
+      target.helpT = G.time;
+      for (const u of unitsNear(target.x, target.z, 11, helpBuf)) if (u !== target && u.faction === target.faction && !u.target && !u.order) retaliate(u, src);
+    }
   }
   if (target.kind === 'unit' && target.type === 'harvester' && src && alive(src) && target.hState !== 'unload') {
     // harvesters flee home when attacked
