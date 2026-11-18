@@ -171,6 +171,27 @@
   #objectives { position: absolute; left: 10px; top: 46px; z-index: 4; background: var(--panel); border: 1px solid var(--line2); border-radius: 6px; padding: 6px 10px; font-size: 14px; display: none; max-width: 320px; }
   #objectives .obHint { margin: 3px 0 2px 14px; font-size: 12px; color: var(--muted, #b9c6d6); line-height: 1.35; }
   #objectives .ob { margin: 2px 0; }
+  /* Ko-fi tip jar (like Goffichick's): pulsing pink pill with a gold rim, glow, shine sweep and a steaming cup */
+  .tipjar { position: relative; display: inline-flex; align-items: center; gap: 6px; padding: 5px 14px 5px 9px; border-radius: 12px; border: 2px solid #ffcf3a; cursor: pointer; overflow: hidden;
+    background: linear-gradient(#ff7cc4, #ff2d95 50%, #a8106a); color: #fff; font: 800 15px Rajdhani, sans-serif; letter-spacing: 1px; text-shadow: 1px 1px 0 #3a0020;
+    animation: tjPulse 2s ease-in-out infinite; z-index: 6; touch-action: manipulation; }
+  #title > .tipjar { position: absolute; left: 0; top: 0; }
+  .tipjar.still { position: relative; margin: 6px auto 0; }
+  .tipjar .tjCup { position: relative; font-size: 17px; filter: drop-shadow(0 0 2px #fff6); }
+  .tipjar .tjCup i { position: absolute; left: 4px; top: 5px; font-style: normal; font-size: 8px; color: #ff7cc4; }
+  .tipjar .tjCup::before, .tipjar .tjCup::after { content: ''; position: absolute; top: -6px; width: 2px; height: 6px; border-radius: 2px; background: #fffc; animation: tjSteam 1.6s ease-in-out infinite; }
+  .tipjar .tjCup::before { left: 5px; } .tipjar .tjCup::after { left: 10px; animation-delay: 0.6s; }
+  .tipjar .tjShine { position: absolute; top: 0; left: -40px; width: 18px; height: 100%; background: rgba(255,255,255,0.4); transform: skewX(-20deg); animation: tjShine 3.2s linear infinite; pointer-events: none; }
+  .tipjar.tired::before, .tipjar.tired::after { content: '💧'; position: absolute; font-size: 10px; animation: tjSweat 0.9s linear infinite; }
+  .tipjar.tired::before { left: -2px; top: -2px; } .tipjar.tired::after { right: -2px; top: -2px; animation-delay: 0.45s; }
+  .tjSay { position: absolute; left: 0; top: 0; z-index: 6; background: rgba(255,255,255,0.95); color: #1a0010; font: 700 13px Rajdhani, sans-serif; padding: 2px 8px; border-radius: 6px; pointer-events: none; white-space: nowrap; opacity: 0; transition: opacity 0.15s; }
+  @keyframes tjPulse { 0%, 100% { box-shadow: 0 0 8px rgba(255,79,184,0.55); } 50% { box-shadow: 0 0 20px rgba(255,79,184,0.95); } }
+  @keyframes tjShine { 0% { left: -40px; } 60%, 100% { left: 140%; } }
+  @keyframes tjSteam { 0% { transform: translateY(0); opacity: 0; } 30% { opacity: 1; } 100% { transform: translateY(-6px); opacity: 0; } }
+  @keyframes tjSweat { 0% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(14px); opacity: 0; } }
+  #tipBox { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 60; background: #1a0010; border: 3px solid #ffc94a; border-radius: 14px; padding: 16px 18px; color: #ffd0ec; font: 700 15px Rajdhani, sans-serif; text-align: center; box-shadow: 0 0 30px #ff2d95; max-width: 86%; user-select: text; -webkit-user-select: text; }
+  #tipBox #tipLink { display: inline-block; background: #ff2d95; color: #fff; padding: 10px 16px; border-radius: 10px; text-decoration: none; font-size: 16px; }
+  #tipBox #tipUrl { margin: 10px 0 12px; color: #fff; font-size: 13px; word-break: break-all; }
   .cheatRow input { background: #0d1520; color: #fff; border: 1px solid var(--line2); border-radius: 4px; font: 600 15px Rajdhani, sans-serif; padding: 6px 10px; width: 220px; text-transform: uppercase; letter-spacing: 1px; }
   #qOpts { display: none; padding: 0 6px 4px; } #qOpts .btn { width: 100%; padding: 3px 6px; font-size: 12px; }
   #qOpts .btn.on { background: rgba(255,194,58,0.2); border-color: var(--accent); color: var(--accent); }

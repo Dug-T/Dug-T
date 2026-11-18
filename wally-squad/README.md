@@ -141,6 +141,17 @@ Both factions share the basic army: riflemen, rocket troopers, Scorchers, engine
 - **End-of-game graphs** show army strength and crystal harvested over time for both sides.
 - **Effects:** layered explosions with a fireball, smoke, sparks, a shockwave, burning debris, dynamic light and scorch marks. Tank turrets get blown into the air and buildings collapse.
 
+## Tip jar (Ko-fi)
+
+The tip jar works like Goffichick's and Wallyman World's:
+- **On the title screen:** a pulsing pink **TIP JAR** button wanders around the top of the screen.
+  - It has a gold rim, a glow, a sweeping shine and a steaming coffee cup with a heart.
+  - It darts away when the mouse gets close, or when you click or tap it, shouting things like "Nope!" and "Too slow!".
+  - After your 3rd click it runs out of puff, sweats, says "Okay, okay... tip me!" and stays put. The 4th click always opens Ko-fi.
+- **In the pause menu:** it sits still under the options.
+- **Opening Ko-fi:** your page opens in a new tab. If a phone app's built-in browser blocks pop-ups, a box appears with a link to tap and a Copy link button.
+- **Your page name:** set it with `WALLY_KOFI` at the top of `js/tipjar.js` (currently `dugt574832`, the same as Goffichick and Wallyman World). Leave it empty to hide the tip jar.
+
 ## Online play: how it works
 
 Online battles use the same Supabase realtime project as Goffichick's online mode, so no extra server is needed. Both players run the same simulation in lockstep and only send their commands to each other, in 200 ms turns. The two machines compare checksums and show a warning if they get out of sync. Using the same browser on both sides gives the best results.
