@@ -245,4 +245,4 @@ function fits(d, cx, cz) {
 
 export function campaignProgress() { return +(localStorage.getItem('ws_campaign') || 0); }
 export function unlockNext(i) { if (i + 1 > campaignProgress()) localStorage.setItem('ws_campaign', String(Math.min(MISSIONS.length - 1, i + 1))); }
-void alive;
+

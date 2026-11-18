@@ -725,8 +725,8 @@ export function makeBuildingModel(type, faction) {
     const t = mats(faction), m = M();
     const root = new THREE.Group();
     const b = new Builder();
-    const W = { conyard: 4, power: 3, refinery: 4, barracks: 3, factory: 4, radar: 3, tech: 3, helipad: 3, turret: 1, sam: 2, plasma: 1, uplink: 3, silo: 3, wall: 1, gate: 2, mine: 1 };
-    const D = { conyard: 4, power: 3, refinery: 3, barracks: 3, factory: 4, radar: 3, tech: 3, helipad: 3, turret: 1, sam: 2, plasma: 1, uplink: 3, silo: 3, wall: 1, gate: 1, mine: 1 };
+    const W = { conyard: 4, power: 3, refinery: 4, barracks: 3, factory: 4, radar: 3, tech: 3, helipad: 3, turret: 1, sam: 2, plasma: 1, uplink: 3, silo: 3, wall: 1, gate: 2, mine: 1, derrick: 2, hospital: 2, depot: 2 };
+    const D = { conyard: 4, power: 3, refinery: 3, barracks: 3, factory: 4, radar: 3, tech: 3, helipad: 3, turret: 1, sam: 2, plasma: 1, uplink: 3, silo: 3, wall: 1, gate: 1, mine: 1, derrick: 2, hospital: 2, depot: 2 };
     const w = W[type] * CELL - 0.3, d = D[type] * CELL - 0.3;
     const parts = {};
     switch (type) {
@@ -985,6 +985,52 @@ export function makeBuildingModel(type, faction) {
         parts.gatedoor = door;
         break;
       }
+      case 'derrick': {
+        foundation(b, w, d, 0.3);
+        b.cyl(M().crystal, 0.55, 0.6, 1.1, 10, -0.9, 0.75, -0.8);           // crystal tank
+        b.add(new THREE.TorusGeometry(0.6, 0.06, 6, 16), t.team, -0.9, 0.95, -0.8, Math.PI / 2, 0, 0);
+        b.box(t.team, 0.9, 0.7, 0.9, 0.9, 0.55, -0.9); b.box(m.windows, 0.02, 0.25, 0.7, 1.36, 0.6, -0.9);
+        b.box(m.darkMetal, 0.25, 1.9, 0.25, 0.4, 1.1, 0.6); b.box(m.darkMetal, 0.25, 1.9, 0.25, -0.4, 1.1, 0.6); // pump frame
+        b.box(m.hazard, 1.1, 0.12, 0.3, 0, 0.3, 0.6);
+        pipes(b, -0.2, 0.4, -0.8, 1.2, 'x', 1);
+        lamps(b, [[0.9, 1.0, -0.9]], m.lampGreen);
+        const pb = new Builder();
+        pb.box(t.teamDark, 2.6, 0.22, 0.25, 0, 0, 0);                         // walking beam
+        pb.box(m.darkMetal, 0.5, 0.5, 0.3, -1.2, -0.1, 0);                    // counterweight
+        pb.add(new THREE.CylinderGeometry(0.35, 0.35, 0.2, 14), m.metal, 1.25, -0.25, 0, Math.PI / 2, 0, 0); // horse head
+        pb.cyl(m.gun, 0.03, 0.03, 1.4, 5, 1.4, -0.9, 0);
+        const pump = pb.build(); pump.position.set(0, 2.1, 0.6); pump.name = 'pump';
+        parts.pump = pump;
+        break;
+      }
+      case 'hospital': {
+        foundation(b, w, d, 0.3);
+        b.box(m.medic, 3.2, 1.6, 2.4, 0, 1.0, -0.4);
+        b.box(t.team, 3.3, 0.18, 2.5, 0, 1.85, -0.4);
+        b.box(m.lampRed, 0.9, 0.25, 0.04, 0, 1.25, 0.82); b.box(m.lampRed, 0.25, 0.9, 0.04, 0, 1.25, 0.83); // red cross
+        b.box(m.lampRed, 0.7, 0.04, 0.2, 0, 1.96, -0.4); b.box(m.lampRed, 0.2, 0.04, 0.7, 0, 1.96, -0.4);
+        b.box(m.windows, 0.8, 0.35, 0.02, -1.1, 1.3, 0.81); b.box(m.windows, 0.8, 0.35, 0.02, 1.1, 1.3, 0.81);
+        b.box(m.darkMetal, 0.8, 1.0, 0.1, 1.1, 0.7, 0.82);
+        for (let i = 0; i < 3; i++) b.box(m.medic, 0.8, 0.15, 0.4, -1.2 + i * 1.2, 0.35, 1.25); // stretchers
+        lamps(b, [[1.5, 1.95, 0.75], [-1.5, 1.95, 0.75]], m.lampRed);
+        break;
+      }
+      case 'depot': {
+        foundation(b, w, d, 0.25);
+        b.box(m.concreteDark, 3.4, 0.2, 3.4, 0, 0.22, 0);
+        b.box(m.hazard, 3.4, 0.05, 0.25, 0, 0.34, 1.55); b.box(m.hazard, 3.4, 0.05, 0.25, 0, 0.34, -1.55);
+        for (const s2 of [-1, 1]) {
+          b.box(t.team, 0.3, 2.4, 0.3, s2 * 1.55, 1.35, -1.4);
+          b.box(t.team, 0.3, 2.4, 0.3, s2 * 1.55, 1.35, 1.4);
+          b.box(t.teamDark, 0.3, 0.3, 3.1, s2 * 1.55, 2.55, 0);
+        }
+        b.box(m.hazard, 3.4, 0.3, 0.3, 0, 2.55, 0);                              // gantry
+        b.cyl(m.gun, 0.03, 0.03, 1.2, 4, 0.4, 1.9, 0); b.box(m.darkMetal, 0.3, 0.2, 0.3, 0.4, 1.25, 0); // hoist
+        b.box(m.lampGreen, 0.5, 0.5, 0.05, 1.7, 2.1, 1.56);                       // wrench sign
+        b.box(m.black, 0.3, 0.08, 0.06, 1.7, 2.1, 1.6, 0, 0, 0.7);
+        lamps(b, [[1.55, 2.75, 1.4], [-1.55, 2.75, 1.4], [1.55, 2.75, -1.4], [-1.55, 2.75, -1.4]], m.lampWhite);
+        break;
+      }
       case 'mine': {
         b.cyl(m.darkMetal, 0.45, 0.5, 0.18, 12, 0, 0.08, 0);
         b.cyl(t.teamDark, 0.3, 0.32, 0.08, 12, 0, 0.2, 0);
@@ -1005,7 +1051,7 @@ export function makeBuildingModel(type, faction) {
       }
     }
     root.add(b.build());
-    for (const k of ['crane', 'door', 'dish', 'core', 'turret', 'missile', 'siloL', 'siloR', 'gatedoor']) if (parts[k]) root.add(parts[k]);
+    for (const k of ['crane', 'door', 'dish', 'core', 'turret', 'missile', 'siloL', 'siloR', 'gatedoor', 'pump']) if (parts[k]) root.add(parts[k]);
     root.userData.parts = { steam: parts.steam, muzzle: parts.muzzle, muzzle2: parts.muzzle2, flag: parts.flag, coreY: parts.coreY };
     return root;
   });

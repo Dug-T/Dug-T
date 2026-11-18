@@ -3,6 +3,7 @@ import { G, srr as rr, srand } from './state.js';
 import { DIFFICULTY, BUILDINGS, UNITS, CELL, GRID } from './config.js';
 import { enqueue, hasReqs, canPlace, placeBuilding, defOf, placeInstant } from './production.js';
 import { superState, fireSuperweapon, aiSuperTarget } from './superweapons.js';
+import { aiGrabCrates, aiCaptureTech } from './features.js';
 import { alive, distTo } from './entities.js';
 import { cellOf, T, idx } from './terrain.js';
 
@@ -33,6 +34,8 @@ export class AI {
     if (!this.opts.noUnits && this.base) this.manageUnits(P);
     this.manageDefence();
     if (!this.opts.noAttack) this.manageAttack();
+    if (srand() < 0.2) aiGrabCrates(this.f);
+    if (!this.opts.noUnits) aiCaptureTech(this.f);
     const ss = superState(this.f);
     if (ss && ss.ready) { const tg = aiSuperTarget(this.f); if (tg) fireSuperweapon(this.f, tg.x + rr(-2, 2), tg.z + rr(-2, 2)); }
     if (!this.opts.noBuild && this.t > 400 && P.credits > 1500 && srand() < 0.08) this.layMines();
@@ -78,7 +81,7 @@ export class AI {
     const cx0 = cellOf(base.x), cz0 = cellOf(base.z);
     const defensive = !!d.weapon;
     // face the defences toward the enemy
-    const enemyBase = G.buildings.find(b => !b.dead && b.faction !== this.f);
+    const enemyBase = G.buildings.find(b => !b.dead && b.faction !== this.f && b.faction !== 'neutral');
     let dirx = 0, dirz = 0;
     if (enemyBase) { const l = Math.hypot(enemyBase.x - base.x, enemyBase.z - base.z); dirx = (enemyBase.x - base.x) / l; dirz = (enemyBase.z - base.z) / l; }
     let best = null, bs = 1e9;
@@ -132,7 +135,7 @@ export class AI {
 
   layMines() {
     const base = this.base; if (!base) return;
-    const e = G.buildings.find(b => !b.dead && b.faction !== this.f);
+    const e = G.buildings.find(b => !b.dead && b.faction !== this.f && b.faction !== 'neutral');
     if (!e) return;
     const l = Math.hypot(e.x - base.x, e.z - base.z);
     const dx = (e.x - base.x) / l, dz = (e.z - base.z) / l;
@@ -148,7 +151,7 @@ export class AI {
     // find enemies near our buildings
     let threat = null;
     for (const u of G.units) {
-      if (u.dead || u.faction === this.f) continue;
+      if (u.dead || u.faction === this.f || u.faction === 'neutral') continue;
       for (const b of G.buildings) {
         if (b.dead || b.faction !== this.f || b.def.isMine) continue;
         if (distTo(b, u.x, u.z) < 16) { threat = u; break; }
@@ -168,7 +171,7 @@ export class AI {
     const idle = G.units.filter(u => !u.dead && u.faction === this.f && u.weapon && u.type !== 'harvester' && !this.attackers.has(u));
     // gather idle army at a rally point in front of the base
     const base = this.base; if (!base) return;
-    const enemyB = G.buildings.filter(b => !b.dead && b.faction !== this.f && !b.def.isMine && !b.def.isWall);
+    const enemyB = G.buildings.filter(b => !b.dead && b.faction !== this.f && b.faction !== 'neutral' && !b.def.isMine && !b.def.isWall);
     if (!enemyB.length) return;
     const target0 = enemyB[0];
     const rx = base.x + (target0.x - base.x) * 0.15, rz = base.z + (target0.z - base.z) * 0.15;

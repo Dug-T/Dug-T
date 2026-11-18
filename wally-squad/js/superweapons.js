@@ -221,4 +221,4 @@ export function aiSuperTarget(f) {
   }
   return best && { x: best.x, z: best.z };
 }
-void FACTIONS; void heightAt; void alive;
+

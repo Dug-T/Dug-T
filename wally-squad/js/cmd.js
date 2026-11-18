@@ -21,7 +21,14 @@ export function execute(c) {
   if (!P) return;
   switch (c.t) {
     case 'move': {
-      const units = myUnits(c);
+      let units = myUnits(c);
+      if (c.q) {
+        // Shift-queued waypoint: busy units remember it, idle ones go straight there
+        const busy = units.filter(u => u.path || u.order);
+        for (const u of busy) { u.waypoints = u.waypoints || []; if (u.waypoints.length < 12) u.waypoints.push({ x: c.x + (u.x - u.x), z: c.z, am: !!c.am }); }
+        units = units.filter(u => !busy.includes(u));
+        if (!units.length) break;
+      }
       const ground = units.filter(u => !u.air), air = units.filter(u => u.air);
       const slots = formationSlots(c.x, c.z, ground.length, ground.some(u => !u.isInf) ? 2 : 1);
       ground.sort((a, b) => Math.hypot(a.x - c.x, a.z - c.z) - Math.hypot(b.x - c.x, b.z - c.z) || a.id - b.id);
@@ -30,7 +37,8 @@ export function execute(c) {
       break;
     }
     case 'atk': { const t = byId.get(c.tid); if (alive(t)) for (const u of myUnits(c)) if (u !== t) u.attack(t); break; }
-    case 'stop': for (const u of myUnits(c)) u.stop(); break;
+    case 'stop': for (const u of myUnits(c)) { u.stop(); u.waypoints = null; } break;
+    case 'ability': for (const u of myUnits(c)) u.frenzy(); break;
     case 'harv': for (const u of myUnits(c)) if (u.type === 'harvester') { u.oreCell = c.cell; u.hState = 'toOre'; u.requestPath(cellCenter(c.cell % 128), cellCenter((c.cell / 128) | 0)); } break;
     case 'seek': for (const u of myUnits(c)) if (u.type === 'harvester') { u.hState = 'seek'; u.path = null; u.hT = 0; } break;
     case 'dock': { const r = mine(c, c.rid); if (r) for (const u of myUnits(c)) if (u.type === 'harvester') { u.refinery = r; u.hState = 'return'; u.path = null; } break; }

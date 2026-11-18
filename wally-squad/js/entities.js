@@ -8,6 +8,7 @@ import { findPath, nearestFree } from './pathfind.js';
 import * as FX from './particles.js';
 import { M } from './materials.js';
 import { selectRingTexture } from './textures.js';
+import { techEffect } from './features.js';
 
 const UP = new THREE.Vector3(0, 1, 0);
 const _v = new THREE.Vector3(), _q1 = new THREE.Quaternion(), _q2 = new THREE.Quaternion(), _n = new THREE.Vector3();
@@ -111,6 +112,7 @@ export class Unit {
 
   // ---------------------------------------------------- orders
   moveTo(x, z, opts = {}) {
+    if (!opts.keepWaypoints) this.waypoints = null;
     this.order = { type: opts.attackMove ? 'attackMove' : 'move', x, z };
     if (!opts.keepTarget) this.target = null;
     this.requestPath(x, z);
@@ -124,6 +126,14 @@ export class Unit {
     this.order = { type: 'attack', target };
     this.target = target;
     this.path = null;
+  }
+  // Wally Man's special ability: Gatling Frenzy
+  frenzy() {
+    if (this.type !== 'wallyman' || this.frenzyCD > 0 || this.dead) return false;
+    this.frenzyT = 8; this.frenzyCD = 45;
+    FX.sparkBurst(this.x, this.y + 1.2, this.z, 30, [3.5, 1.5, 0.4, 1]);
+    if (this.faction === G.player) G.sfx?.play('promote', this.x, this.z);
+    return true;
   }
   stop() { this.order = null; this.target = null; this.path = null; if (this.type === 'harvester') this.hState = 'seek'; }
 
@@ -140,6 +150,11 @@ export class Unit {
     if (this.def.selfRepair && this.hp < this.maxHp * 0.5) this.hp = Math.min(this.maxHp * 0.5, this.hp + 6 * dt);
     if (this.rank >= 2 && this.hp < this.maxHp) this.hp = Math.min(this.maxHp, this.hp + 2 * dt);
     this.cool -= dt; this.cool2 -= dt;
+    if (this.frenzyCD > 0) this.frenzyCD -= dt;
+    if (this.frenzyT > 0) {
+      this.frenzyT -= dt;
+      if (Math.random() < dt * 20) FX.sparkBurst(this.x, this.y + 1.2, this.z, 2, [3.5, 1.2, 0.4, 1]);
+    }
 
     if (this.def.stealth) {
       this.cloakT = (this.cloakT || 0) - dt;
@@ -220,7 +235,7 @@ export class Unit {
     if (this.path) { this.path = null; }
     const aimed = this.aimTurret(dt, t);
     if (aimed && this.cool <= 0 && canTarget(w, t)) {
-      this.cool = w.rof * (0.9 + srand() * 0.2);
+      this.cool = w.rof * (0.9 + srand() * 0.2) * (this.frenzyT > 0 ? 0.4 : 1);
       fireWeapon(this, w, t, this.mesh.userData.muzzle, this.turret);
       if (w.twin) later(0.14, () => { if (alive(this) && alive(t)) fireWeapon(this, w, t, this.mesh.userData.muzzle2 || this.mesh.userData.muzzle, this.turret); });
     }
@@ -260,7 +275,7 @@ export class Unit {
     let best = null, bd = 1e9;
     const w = this.weapon, w2 = this.weapon2;
     for (const u of G.units) {
-      if (u.dead || u.faction === this.faction) continue;
+      if (u.dead || u.faction === this.faction || u.faction === 'neutral') continue;
       if (!canTarget(w, u) && !(w2 && canTarget(w2, u))) continue;
       const d = Math.hypot(u.x - this.x, u.z - this.z);
       if (d > range) continue;
@@ -271,7 +286,7 @@ export class Unit {
     }
     if (best || unitsOnly) return best;
     for (const b of G.buildings) {
-      if (b.dead || b.faction === this.faction || !w.ground || b.def.isMine || b.def.isWall) continue;
+      if (b.dead || b.faction === this.faction || b.faction === 'neutral' || !w.ground || b.def.isMine || b.def.isWall) continue;
       const d = distTo(b, this.x, this.z);
       if (d > range) continue;
       const score = d + (b.def.weapon ? -5 : 5);
@@ -402,7 +417,7 @@ export class Unit {
         this.load -= amt;
         const P = G.players[this.faction];
         const gain = amt * (P.incomeMult || 1);
-        P.credits += gain;
+        P.credits += gain; P.harvested = (P.harvested || 0) + gain;
         if (this.faction === G.player) G.stats.harvested += gain;
         FX.sparkBurst(r.x + 1.8, r.baseY + 1.5, r.z + 1.3, 3, [1, 4, 2, 1]);
         if (this.load <= 0) {
@@ -416,7 +431,7 @@ export class Unit {
 
   // ---------------------------------------------------- movement
   moveLogic(dt) {
-    const sp = this.def.speed * (this.rank >= 1 ? 1.05 : 1) * (this.isInf || this.air ? 1 : G.speedMult);
+    const sp = this.def.speed * (this.rank >= 1 ? 1.05 : 1) * (this.isInf || this.air ? 1 : G.speedMult) * (this.frenzyT > 0 ? 1.35 : 1);
     let moving = false;
     if (this.path && this.pi < this.path.length) {
       const wp = this.path[this.pi];
@@ -424,7 +439,14 @@ export class Unit {
       const last = this.pi === this.path.length - 1;
       if (dist < (last ? 0.4 : 1.2)) {
         this.pi++;
-        if (this.pi >= this.path.length) { this.path = null; if (this.order && (this.order.type === 'move' || this.order.type === 'attackMove')) this.order = null; }
+        if (this.pi >= this.path.length) {
+          this.path = null;
+          if (this.order && (this.order.type === 'move' || this.order.type === 'attackMove')) {
+            this.order = null;
+            const w = this.waypoints && this.waypoints.shift();
+            if (w) this.moveTo(w.x, w.z, { attackMove: w.am, keepWaypoints: true });
+          }
+        }
       } else {
         const want = Math.atan2(dx, dz);
         const diff = angleDiff(this.heading, want);
@@ -774,6 +796,7 @@ export class Building {
     this.core = m.getObjectByName('core');
     this.parts = m.userData.parts || {};
     this.gateDoor = m.getObjectByName('gatedoor');
+    this.pump = m.getObjectByName('pump');
     if (['conyard', 'turret', 'radar', 'plasma'].includes(this.type)) { this.search = makeSearchlight(this.type === 'conyard' ? 7 : this.type === 'radar' ? 4.2 : 3.2); this.mesh.add(this.search); }
     if (this.def.isMine) this.mesh.visible = this.faction === G.player;
     G.three.scene.add(this.mesh);
@@ -860,6 +883,7 @@ export class Building {
     }
     // defensive weapon
     if (this.def.weapon && this.buildAnim >= 1) this.defend(dt);
+    if (this.def.tech) techEffect(this, dt);
     if (this.faction !== G.player) this.mesh.visible = !!T.explored[idx(cellOf(this.x), cellOf(this.z))] || G.revealed;
   }
 

@@ -8,6 +8,7 @@ export const WATER_LEVEL = -1.2;
 export const FACTIONS = {
   wally: { id: 'wally', name: 'Wally Squad', color: 0x2f7fe0, dark: 0x163a66, accent: 0xffc23a, light: 0x8fd0ff, css: '#3d8bff' },
   grim:  { id: 'grim',  name: 'Grimlock Legion', color: 0xc8312b, dark: 0x3a1210, accent: 0x2a2a2a, light: 0xff6a3a, css: '#ff4a3d' },
+  neutral: { id: 'neutral', name: 'Neutral', color: 0x8f949a, dark: 0x45494e, accent: 0xffc23a, light: 0xfff2c0, css: '#b9bec4' },
 };
 
 // Damage multipliers: warhead -> armour class
@@ -61,6 +62,9 @@ export const BUILDINGS = {
   wall:     { name: 'Concrete Wall', cost: 60, time: 0, instant: true, hp: 900, w: 1, h: 1, power: 0, sight: 3, req: ['barracks'], tab: 'defense', isWall: true, desc: 'Cheap barrier. Drag to build a line of wall.' },
   gate:     { name: 'Gate', cost: 250, time: 0, instant: true, hp: 1300, w: 2, h: 1, power: -5, sight: 4, req: ['barracks'], tab: 'defense', isGate: true, desc: 'Opens for your units, blocks the enemy.' },
   mine:     { name: 'Land Mine', cost: 100, time: 0, instant: true, hp: 60, w: 1, h: 1, power: 0, sight: 1, req: ['factory'], tab: 'defense', isMine: true, noFootprint: true, placeRange: 22, desc: 'Hidden explosive. Detonates under enemy ground units.' },
+  derrick:  { name: 'Crystal Derrick', cost: 1000, time: 0, hp: 900, w: 2, h: 2, power: 0, sight: 8, req: ['none'], tab: 'none', tech: true, desc: 'Neutral tech. Capture it with an Engineer for a steady flow of credits.' },
+  hospital: { name: 'Field Hospital', cost: 1000, time: 0, hp: 900, w: 2, h: 2, power: 0, sight: 8, req: ['none'], tab: 'none', tech: true, desc: 'Neutral tech. Capture it with an Engineer to heal nearby infantry.' },
+  depot:    { name: 'Repair Depot', cost: 1000, time: 0, hp: 900, w: 2, h: 2, power: 0, sight: 8, req: ['none'], tab: 'none', tech: true, desc: 'Neutral tech. Capture it with an Engineer to repair nearby vehicles.' },
   turret:   { name: 'Gun Turret', cost: 600, time: 10, hp: 750, w: 1, h: 1, power: -20, sight: 16, req: ['barracks'], tab: 'defense', weapon: 'turretGun', desc: 'Anti-vehicle cannon emplacement.' },
   sam:      { name: 'SAM Site', cost: 750, time: 12, hp: 650, w: 2, h: 2, power: -20, sight: 22, req: ['radar'], tab: 'defense', weapon: 'sam', desc: 'Anti-aircraft missile launcher.' },
   plasma:   { name: 'Plasma Tower', cost: 1500, time: 18, hp: 950, w: 1, h: 1, power: -75, sight: 21, req: ['tech'], tab: 'defense', weapon: 'plasma', desc: 'Devastating energy beam. Needs power.' },

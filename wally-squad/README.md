@@ -46,6 +46,18 @@ Both factions share the basic army: riflemen, rocket troopers, Scorchers, engine
 - **Superweapons:** each one charges up with a countdown, shown in the sidebar for both sides. The computer opponent uses its superweapon too.
 - **Stealth:** Shade tanks are invisible until they fire or an enemy gets close.
 - **Unit voices:** record your own lines (up to 3 takes per line), or let the computer voice play. Voice packs can be exported and imported so you can swap them with friends.
+- **Graphics settings** (main menu and pause menu):
+  - Low/Medium/High/Ultra presets.
+  - A resolution scale from 50% to 150% (anything over 100% is supersampling).
+  - Shadows up to 4096, anti-aliasing up to 8×, bloom, an FPS counter, and auto-adjust, which keeps play smooth by lowering the resolution when needed.
+- **Supply crates** drop on the battlefield. Drive over one for money, repairs, promotions, free reinforcements or a map reveal. Some are booby-trapped!
+- **Neutral tech buildings** sit beside each lane, and an Engineer can capture them:
+  - Crystal Derrick: steady income.
+  - Field Hospital: heals nearby infantry.
+  - Repair Depot: repairs nearby vehicles.
+- **Waypoints:** Shift + right-click queues up a route.
+- **Gatling Frenzy:** Wally Man's special ability (key `G`). It gives 8 seconds of super-fast fire and extra speed, with a 45-second cooldown.
+- **End-of-game graphs** show army strength and crystal harvested over time for both sides.
 - **Effects:** layered explosions with a fireball, smoke, sparks, a shockwave, burning debris, dynamic light and scorch marks. Tank turrets get blown into the air and buildings collapse.
 
 ## Online play: how it works

@@ -23,6 +23,9 @@ import { Lockstep, joinRoom } from './mp.js';
 import { randomRoomCode } from './net.js';
 import { issue } from './cmd.js';
 import { registerCustomUnits, loadDesigns, buildDesigner } from './customunits.js';
+import { gfx, initGraphics, pixelRatio, autoTune, buildGraphicsPanel, maxAnisotropy } from './graphics.js';
+import { allMaterials } from './materials.js';
+import { updateCrates, animateCrates, placeTechBuildings, recordHistory, drawHistory } from './features.js';
 
 const $ = id => document.getElementById(id);
 const params = new URLSearchParams(location.search);
@@ -32,7 +35,7 @@ const step = async (p) => { loadBar.style.width = (p * 100) + '%'; await new Pro
 let renderer, scene, camera, composer, bloom, sun, hemi;
 let ais = [];
 let winT = 0, missionT = 0;
-let fpsAcc = 0, fpsN = 0, quality = 1;
+let fpsAcc = 0, fpsN = 0;
 let mission = null, mctx = null, lockstep = null;
 
 // ---------------------------------------------------------------- configuration for this run
@@ -60,7 +63,7 @@ async function boot() {
   const theme = THEMES[map.theme];
   // ---------- renderer ----------
   renderer = new THREE.WebGLRenderer({ canvas: $('gl'), antialias: false, powerPreference: 'high-performance' });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+  renderer.setPixelRatio(pixelRatio());
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -99,14 +102,14 @@ async function boot() {
   scene.add(hemi);
   sun = new THREE.DirectionalLight(theme.sun, theme.sunI);
   sun.castShadow = true;
-  sun.shadow.mapSize.set(2048, 2048);
+  sun.shadow.mapSize.set(2048, 2048); // replaced by the graphics settings below
   sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.04;
   const sc = sun.shadow.camera; sc.near = 10; sc.far = 300; sc.left = -70; sc.right = 70; sc.top = 70; sc.bottom = -70;
   scene.add(sun); scene.add(sun.target);
   G.three.sun = sun; G.three.hemi = hemi;
 
   // ---------- post processing ----------
-  const rt = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: 4 });
+  const rt = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: gfx.samples });
   composer = new EffectComposer(renderer, rt);
   composer.addPass(new RenderPass(scene, camera));
   bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.7, 0.55, 0.92);
@@ -148,6 +151,7 @@ async function boot() {
   // ---------- players and starting forces ----------
   initPlayer(G.player, false);
   initPlayer(G.enemy, run.mode !== 'mp');
+  initPlayer('neutral', false); G.players.neutral.credits = 0;
   if (mission) {
     G.allowed = mission.allowed ? [...mission.allowed, ...customTypes] : null;
     mctx = makeContext(mission, {
@@ -159,11 +163,16 @@ async function boot() {
   } else {
     for (const f of slotOrder) setupBase(f, BASES[f]);
   }
+  placeTechBuildings();
   revealCircle(BASES[G.player].x, BASES[G.player].z, 42);
   updatePower();
   await step(0.7);
 
   UI.initUI();
+  initGraphics({ renderer, sun, bloom, composer, scene, resize: () => UI.resize() });
+  // sharpest possible texture filtering at glancing angles
+  const aniso = maxAnisotropy();
+  for (const m of allMaterials) for (const k of ['map', 'normalMap', 'emissiveMap']) if (m[k]) { m[k].anisotropy = aniso; m[k].needsUpdate = true; }
   UI.renderIcons(renderer);
   UI.buildGrid();
   await step(0.95);
@@ -194,11 +203,12 @@ function setupBase(faction, pos) {
 }
 
 // ---------------------------------------------------------------- menus
-const panels = ['menuMain', 'menuCampaign', 'menuSkirmish', 'menuOnline', 'menuVoices', 'menuDesigner'];
+const panels = ['menuMain', 'menuCampaign', 'menuSkirmish', 'menuOnline', 'menuVoices', 'menuDesigner', 'menuGraphics'];
 function showPanel(id) {
   for (const p of panels) $(p).style.display = p === id ? 'block' : 'none';
   if (id === 'menuVoices') Voices.buildStudio($('studio'), UI.icons);
   if (id === 'menuDesigner') buildDesigner($('designer'), { faction: 'wally' });
+  if (id === 'menuGraphics') buildGraphicsPanel($('gfxPanel'));
 }
 function startWith(c) { sessionStorage.setItem('ws_cfg', JSON.stringify(c)); location.href = location.pathname + (params.has('loopnet') ? '?loopnet' : ''); }
 
@@ -267,6 +277,8 @@ function setupMenus() {
   $('bHelpClose').onclick = () => { $('help').style.display = 'none'; };
   $('bPause').onclick = () => togglePause();
   $('bResume').onclick = () => togglePause(false);
+  $('bGfx').onclick = () => { buildGraphicsPanel($('gfxPanel2')); $('gfxScreen').style.display = 'flex'; };
+  $('bGfxClose').onclick = () => { $('gfxScreen').style.display = 'none'; };
   const again = () => { const last = sessionStorage.getItem('ws_last'); if (last && JSON.parse(last).mode !== 'mp') startWith(JSON.parse(last)); else location.href = location.pathname; };
   $('bRestart').onclick = again;
   $('bAgain').onclick = again;
@@ -340,6 +352,7 @@ function endGame(win, text) {
     $('endSub').textContent = text || (win ? (mission ? `${mission.title}: mission complete.` : `The ${FACTIONS[G.enemy].name} has been crushed!`) : 'Our forces have fallen. Regroup, commander.');
     const t = Math.floor(G.time);
     $('endStats').innerHTML = `<span>Mission time</span><span>${Math.floor(t / 60)}m ${t % 60}s</span>${run.mode === 'mp' ? '' : `<span>Difficulty</span><span>${DIFFICULTY[G.difficulty].label}</span>`}<span>Enemies destroyed</span><span>${G.stats.killed}</span><span>Units lost</span><span>${G.stats.lost}</span><span>Structures built</span><span>${G.stats.built}</span><span>Credits harvested</span><span>${Math.round(G.stats.harvested)}</span>`;
+    recordHistory(99); drawHistory($('endGraph'));
     $('bNext').style.display = mission && win && run.mission < MISSIONS.length - 1 ? '' : 'none';
     $('bAgain').style.display = run.mode === 'mp' ? 'none' : '';
     $('end').style.display = 'flex';
@@ -371,6 +384,8 @@ function simStep(dt) {
   updateDecay(dt);
   cleanupDead();
   regrowOre(dt);
+  updateCrates(dt);
+  recordHistory(dt);
   if (mission && !G.over) { missionT -= dt; if (missionT <= 0) { missionT = 0.5; if (mctx.heroCheck()) mission.tick(mctx); renderObjectives(); } }
   checkEnd(dt);
 }
@@ -380,12 +395,8 @@ function loop(now) {
   requestAnimationFrame(loop);
   const real = Math.min(0.05, (now - last) / 1000); last = now;
   // adaptive quality: drop resolution if the frame rate is poor
-  fpsAcc += real; fpsN++;
-  if (fpsAcc > 3) {
-    const fps = fpsN / fpsAcc; fpsAcc = 0; fpsN = 0;
-    if (fps < 32 && quality > 0.6) { quality -= 0.2; applyQuality(); }
-    else if (fps > 55 && quality < 1) { quality = Math.min(1, quality + 0.2); applyQuality(); }
-  }
+  fpsAcc += (now - (loop.lastNow || now)) / 1000; loop.lastNow = now; fpsN++;
+  if (fpsAcc > 1.5) { autoTune(fpsN / fpsAcc); fpsAcc = 0; fpsN = 0; }
   let dt = 0;
   if (lockstep && lockstep.active) {
     const t0 = G.time;
@@ -414,6 +425,7 @@ function loop(now) {
   UI.updateMarkers(real);
   if (G.started) { UI.updateSidebar(real); UI.updateMinimap(real); }
   animateWater(now / 1000);
+  animateCrates(now / 1000);
   composer.render();
   UI.drawOverlay();
 }
@@ -434,11 +446,6 @@ window.WS = {
   AI, issue,
 };
 
-function applyQuality() {
-  const pr = Math.min(window.devicePixelRatio || 1, 1.5) * quality;
-  renderer.setPixelRatio(pr);
-  UI.resize();
-}
 
 boot().catch(err => {
   console.error(err);
