@@ -447,15 +447,15 @@ function wallyManMats() {
   x.fillStyle = '#2fa34a'; x.beginPath(); x.ellipse(128, 80, 124, 76, 0, 0, Math.PI * 2); x.fill();
   x.fillStyle = '#ee5a24'; x.beginPath(); x.ellipse(128, 80, 112, 66, 0, 0, Math.PI * 2); x.fill();
   x.strokeStyle = '#2459b8'; x.lineWidth = 9; x.beginPath(); x.arc(150, 70, 70, 0.55 * Math.PI, 0.95 * Math.PI); x.stroke();
-  x.fillStyle = '#1f8a3a'; x.font = 'bold 38px Impact, "Arial Black", sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle';
-  x.save(); x.translate(128, 66); x.rotate(-0.06); x.fillText('WALLY MAN', 0, 0); x.restore();
+  x.fillStyle = '#1f8a3a'; x.font = 'bold 42px Impact, "Arial Black", sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle';
+  x.save(); x.translate(128, 66); x.rotate(-0.06); x.lineWidth = 5; x.strokeStyle = '#fff2c0'; x.strokeText('WALLY MAN', 0, 0); x.fillText('WALLY MAN', 0, 0); x.restore();
   const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
   const std = o => fogify(new THREE.MeshStandardMaterial(o));
   wmMats = {
     blue: std({ color: 0x2b64cc, roughness: 0.7 }),
     red: std({ color: 0xe04a1e, roughness: 0.65 }),
     cape: std({ color: 0xe0461c, roughness: 0.75, side: THREE.DoubleSide }),
-    emblem: std({ map: tex, roughness: 0.6 }),
+    emblem: std({ map: tex, roughness: 0.6, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 }),
     hair: std({ color: 0xc27236, roughness: 0.9 }),
   };
   return wmMats;
@@ -467,9 +467,9 @@ export function makeWallyMan(faction) {
     const b = new Builder();
     // stocky torso, belly and belt
     b.box(w.blue, 0.52, 0.56, 0.3, 0, 1.02, 0);
-    b.sph(w.blue, 0.21, 0, 0.88, 0.04, 1.1, 0.75, 0.62);
+    b.sph(w.blue, 0.2, 0, 0.84, 0.04, 1.1, 0.7, 0.6);
     b.box(w.red, 0.56, 0.12, 0.34, 0, 0.76, 0.02);
-    b.add(new THREE.PlaneGeometry(0.4, 0.25), w.emblem, 0, 1.1, 0.157);
+    b.add(new THREE.PlaneGeometry(0.46, 0.29), w.emblem, 0, 1.08, 0.215); // stands proud of the chest so nothing hides the text
     b.box(w.blue, 0.2, 0.08, 0.2, 0, 1.31, 0.0); // collar
     // head: skin, ginger hair, ears, nose, moustache
     b.sph(m.skin, 0.165, 0, 1.47, 0.01, 1, 1.08, 1);
