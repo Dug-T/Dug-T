@@ -491,3 +491,37 @@ export function animateWater(t) {
   const w = G.three.water;
   if (w) { w.material.normalMap.offset.set(t * 0.01, t * 0.006); }
 }
+
+// ---- Map Editor preview: height + colour image of any map design (doesn't touch the live world) ----
+export function previewMap(def, theme, size = 128) {
+  const saved = { MAP, TH, SEED, LANES, LAKES, ORE_FIELDS, bases: { ...BASES } };
+  setupMap(def, theme, ['wally', 'grim']);
+  const img = new Uint8ClampedArray(size * size * 4);
+  const hs = new Float32Array(size * size);
+  const step = WORLD / size;
+  for (let j = 0; j < size; j++) for (let i = 0; i < size; i++) hs[j * size + i] = rawHeight(i * step - HALF + step / 2, j * step - HALF + step / 2);
+  const C = c => new THREE.Color(c);
+  const grass = C(theme.grass1), grass2 = C(theme.grass2), rock = C(theme.rock), sand = C(theme.sand), water = C(theme.water), dirt = C(theme.dirt), c = new THREE.Color();
+  for (let j = 0; j < size; j++) for (let i = 0; i < size; i++) {
+    const h = hs[j * size + i];
+    const x = i * step - HALF, z = j * step - HALF;
+    const hx = hs[j * size + Math.min(size - 1, i + 1)] - h, hz = hs[Math.min(size - 1, j + 1) * size + i] - h;
+    const slope = Math.hypot(hx, hz) / step;
+    c.copy(grass).lerp(grass2, clamp(fbm(x * 0.04, z * 0.04, 2) + 0.5, 0, 1));
+    if (laneDist(x, z) < 6) c.lerp(dirt, 0.45);
+    if (h < WATER_LEVEL + 0.5) c.lerp(sand, 0.7);
+    if (slope > 0.45 || h > 4.2) c.lerp(rock, Math.min(1, 0.4 + slope));
+    const f = fbm(x * 0.03 + 50 + SEED[0], z * 0.03 + 80 + SEED[1], 3);
+    let nearBase = 1e9; for (const k in BASES) nearBase = Math.min(nearBase, Math.hypot(x - BASES[k].x, z - BASES[k].z));
+    if (f > (MAP.forest ?? 0.12) && nearBase > 40 && laneDist(x, z) > 11 && h > WATER_LEVEL && h < 4.2 && slope < 0.45) c.multiplyScalar(0.62);
+    if (h < WATER_LEVEL) c.copy(water);
+    const shade = 0.85 + clamp(h / 25, -0.2, 0.35) + (hx - hz) * 0.06;
+    const k = (j * size + i) * 4;
+    img[k] = Math.min(255, Math.pow(c.r * shade, 1 / 2.2) * 255); img[k + 1] = Math.min(255, Math.pow(c.g * shade, 1 / 2.2) * 255); img[k + 2] = Math.min(255, Math.pow(c.b * shade, 1 / 2.2) * 255); img[k + 3] = 255;
+  }
+  // restore the live map
+  MAP = saved.MAP; TH = saved.TH; SEED = saved.SEED; LANES = saved.LANES; LAKES = saved.LAKES; ORE_FIELDS = saved.ORE_FIELDS;
+  for (const k in BASES) delete BASES[k];
+  Object.assign(BASES, saved.bases);
+  return img;
+}

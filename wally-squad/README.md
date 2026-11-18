@@ -19,6 +19,11 @@ Play it by opening `wally-squad/index.html` from any web server (GitHub Pages wo
   - Pick a weapon, chassis (tracks, wheels or hover), size, armour, speed, colours and looks (hats, glasses, capes and more).
   - Watch a live 3D preview.
   - Saved designs appear in the Barracks and War Factory build menus in every mode. Online games use the host's designs.
+- **Map Editor:** design your own battlefield.
+  - Place and drag the two bases, green and blue crystal fields, lakes and roads.
+  - Pick a theme (green, snow, desert or night) and adjust mountains and forests.
+  - Roll new terrain, or mirror one side so the map is fair.
+  - A live preview shows the result. Saved maps appear in the Skirmish, Survival and Online map lists, and online games send the host's map to the other player.
 - **Voice Studio:** record your own voice lines for every unit, including your own designs.
 
 ## Factions
@@ -54,6 +59,16 @@ Both factions share the basic army: riflemen, rocket troopers, Scorchers, engine
   - ✈ **Airstrike** (needs a Helipad) sends bombers to carpet-bomb a line.
   - The computer opponent uses them too.
 - **Medals:** 18 achievements, from First Blood to beating the Warlord or surviving 20 waves. They pop up as you earn them, and the **🎖 Medals** screen lists them all.
+- **Research (TECH tab):** one-off upgrades.
+  - Composite Armour: vehicles get +25% health.
+  - Body Armour: infantry get +25% health.
+  - Depleted Shells: all your units and defences do +20% damage.
+  - Crystal Refining: +25% income.
+  - Turbo Engines: vehicles are 15% faster.
+  - Long-Range Optics: +20% sight and range.
+  - The computer opponent researches them too.
+- **Unit stances:** in the selection panel, choose Aggressive (chase enemies), Hold Position (shoot only what's in range and never move) or Hold Fire (never shoot unless ordered, good for sneaking).
+- **📷 Photo mode** (pause menu or `F9`): hides the interface and slows or freezes time. You can zoom right in and tilt the camera (`Z`/`C` or Shift + wheel), then save a picture.
 - **Graphics settings** (main menu and pause menu):
   - Low/Medium/High/Ultra presets.
   - A resolution scale from 50% to 150% (anything over 100% is supersampling).

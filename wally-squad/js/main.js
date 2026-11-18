@@ -28,6 +28,7 @@ import { allMaterials } from './materials.js';
 import { updateCrates, animateCrates, placeTechBuildings, recordHistory, drawHistory } from './features.js';
 import { updatePowers } from './powers.js';
 import { initAchievements, checkAchievements, buildMedals } from './achievements.js';
+import { registerCustomMaps, buildMapEditor } from './mapeditor.js';
 import { initSurvival, updateSurvival, survivalPanel, saveBest, bestScores, survival } from './survival.js';
 
 const $ = id => document.getElementById(id);
@@ -63,6 +64,9 @@ G.difficulty = DIFFICULTY[run.difficulty] ? run.difficulty : 'normal';
 
 async function boot() {
   await step(0.05);
+  // custom maps: your own saved maps, or the host's map in an online game
+  registerCustomMaps();
+  if (run.customMap) MAPS[run.map] = run.customMap;
   const map = getMap(run.map);
   const theme = THEMES[map.theme];
   // ---------- renderer ----------
@@ -209,13 +213,14 @@ function setupBase(faction, pos) {
 }
 
 // ---------------------------------------------------------------- menus
-const panels = ['menuMain', 'menuCampaign', 'menuSkirmish', 'menuOnline', 'menuVoices', 'menuDesigner', 'menuGraphics', 'menuSurvival', 'menuMedals'];
+const panels = ['menuMain', 'menuCampaign', 'menuSkirmish', 'menuOnline', 'menuVoices', 'menuDesigner', 'menuGraphics', 'menuSurvival', 'menuMedals', 'menuEditor'];
 function showPanel(id) {
   for (const p of panels) $(p).style.display = p === id ? 'block' : 'none';
   if (id === 'menuVoices') Voices.buildStudio($('studio'), UI.icons);
   if (id === 'menuDesigner') buildDesigner($('designer'), { faction: 'wally' });
   if (id === 'menuGraphics') buildGraphicsPanel($('gfxPanel'));
   if (id === 'menuMedals') buildMedals($('medals'));
+  if (id === 'menuEditor') buildMapEditor($('editor'), (mode, map) => startWith({ mode, map, faction: 'wally', difficulty: localStorage.getItem('ws_diff') || 'normal', daynight: true, weather: null }));
 }
 function startWith(c) { sessionStorage.setItem('ws_cfg', JSON.stringify(c)); location.href = location.pathname + (params.has('loopnet') ? '?loopnet' : ''); }
 
@@ -230,7 +235,8 @@ function optionCards(el, items, sel, onPick) {
   }
 }
 const MAP_SWATCH = { valley: 'linear-gradient(135deg,#4f7a2a,#76913a 50%,#1d4b63)', frost: 'linear-gradient(135deg,#f4f7fa,#a7b0b8 60%,#6f9fb8)', dunes: 'linear-gradient(135deg,#e8d29c,#b48a58 60%,#2a7d86)', midnight: 'linear-gradient(135deg,#0a1124,#1d2b4a 60%,#ffd27a)' };
-const mapItems = () => Object.entries(MAPS).map(([id, m]) => ({ id, title: m.name, desc: m.desc, swatch: MAP_SWATCH[id] }));
+const THEME_SWATCH = { temperate: MAP_SWATCH.valley, snow: MAP_SWATCH.frost, desert: MAP_SWATCH.dunes, night: MAP_SWATCH.midnight };
+const mapItems = () => Object.entries(MAPS).map(([id, m]) => ({ id, title: (m.custom ? '🗺 ' : '') + m.name, desc: m.desc, swatch: MAP_SWATCH[id] || THEME_SWATCH[m.theme] }));
 const facItems = [{ id: 'wally', title: 'Wally Squad', desc: 'Titan tanks, medics, Wally the hero, Sky Lance' }, { id: 'grim', title: 'Grimlock Legion', desc: 'Stealth tanks, Inferno tanks, Doom Missile' }];
 
 function setupMenus() {
@@ -273,7 +279,7 @@ function setupMenus() {
   optionCards($('mapListMp'), mapItems(), mp.map, id => { mp.map = id; });
   optionCards($('facRowMp'), facItems, mp.faction, id => { mp.faction = id; });
   $('facRowMp').className = 'cardList small';
-  $('bHost').onclick = () => startWith({ mode: 'mp', map: mp.map, faction: mp.faction, difficulty: 'normal', daynight: true, weather: null, mp: { role: 'host', room: randomRoomCode(), seed: (Math.random() * 1e9) | 0, hostFaction: mp.faction }, customUnits: loadDesigns() });
+  $('bHost').onclick = () => startWith({ mode: 'mp', map: mp.map, faction: mp.faction, difficulty: 'normal', daynight: true, weather: null, mp: { role: 'host', room: randomRoomCode(), seed: (Math.random() * 1e9) | 0, hostFaction: mp.faction }, customUnits: loadDesigns(), customMap: MAPS[mp.map].custom ? MAPS[mp.map] : undefined });
   let joinNet = null;
   $('bJoin').onclick = () => {
     const code = $('roomInput').value.trim().toUpperCase();
@@ -304,6 +310,31 @@ function setupMenus() {
   $('bAgain').onclick = again;
   $('bNext').onclick = () => startWith({ mode: 'campaign', mission: Math.min(MISSIONS.length - 1, run.mission + 1) });
   $('bWatch').onclick = () => { $('end').style.display = 'none'; G.paused = false; };
+  // ---- photo mode: hide the interface, slow time, free camera, save pictures ----
+  let photoPrevSpeed = 1;
+  G.togglePhoto = () => {
+    if (!G.started) return;
+    G.photo = !G.photo;
+    document.body.classList.toggle('photo', G.photo);
+    if (G.photo) {
+      togglePause(false); photoPrevSpeed = G.speed;
+      if (!lockstep) G.speed = 0.25;
+      G.camera.tilt = 0;
+      $('photoSpeed').textContent = lockstep ? 'Time: live (online)' : 'Time: 25%';
+    } else { if (!lockstep) G.speed = photoPrevSpeed; G.camera.tilt = 0; G.camera.targetDist = Math.max(18, G.camera.targetDist); }
+    UI.resize();
+  };
+  $('bPhoto').onclick = () => G.togglePhoto();
+  $('bPhotoExit').onclick = () => G.togglePhoto();
+  const speeds2 = [0.25, 0.1, 0, 0.5, 1];
+  $('photoSpeed').onclick = () => { if (lockstep) return; G.speed = speeds2[(speeds2.indexOf(G.speed) + 1) % speeds2.length]; $('photoSpeed').textContent = G.speed === 0 ? 'Time: frozen' : `Time: ${G.speed * 100}%`; G.paused = false; };
+  $('bPhotoSave').onclick = () => {
+    composer.render();
+    const url = renderer.domElement.toDataURL('image/png');
+    const a = document.createElement('a'); a.href = url; a.download = `wally-squad-${Date.now()}.png`; a.click();
+    const fl = $('photoFlash'); fl.style.opacity = 1; setTimeout(() => { fl.style.opacity = 0; }, 120);
+    Audio.play('click');
+  };
   $('bSurrender').onclick = () => { if (lockstep) lockstep.surrender(); else G.surrendered = G.player; togglePause(false); };
   const goFull = async () => {
     try {

@@ -132,6 +132,10 @@ export class AI {
       const opts = ['tank', 'tank', 'buggy', 'arty', 'titan', 'titan', 'stealth', 'stealth', 'inferno', 'inferno'].filter(t => hasReqs(this.f, t));
       if (opts.length) enqueue(this.f, opts[Math.floor(srand() * opts.length)]);
     }
+    if (P.credits > 2200 && !P.queues.research.items.length) {
+      const opts = ['refining', 'armor', 'bodyarmor', 'shells', 'engines', 'optics'].filter(t => hasReqs(this.f, t));
+      if (opts.length) enqueue(this.f, opts[Math.floor(srand() * opts.length)]);
+    }
     if (P.queues.air.items.length < 1 && hasReqs(this.f, 'gunship') && this.count('gunship') < 4) enqueue(this.f, 'gunship');
   }
 

@@ -10,6 +10,7 @@ import { M } from './materials.js';
 import { selectRingTexture } from './textures.js';
 import { techEffect } from './features.js';
 import { paraFall } from './powers.js';
+import { upg } from './production.js';
 
 const UP = new THREE.Vector3(0, 1, 0);
 const _v = new THREE.Vector3(), _q1 = new THREE.Quaternion(), _q2 = new THREE.Quaternion(), _n = new THREE.Vector3();
@@ -74,6 +75,7 @@ export class Unit {
     this.id = nextId(); this.kind = 'unit'; this.type = type; this.def = UNITS[type]; this.faction = faction;
     this.x = x; this.z = z; this.y = groundY(x, z); this.heading = heading; this.turretYaw = heading;
     this.hp = this.def.hp; this.maxHp = this.def.hp;
+    if (upg(faction, this.def.armor === 'infantry' ? 'bodyarmor' : 'armor')) { this.hp *= 1.25; this.maxHp *= 1.25; }
     this.path = null; this.pi = 0; this.order = null; this.target = null; this.cool = 0; this.cool2 = 0;
     this.speedNow = 0; this.walkPhase = Math.random() * 6; this.scanT = srand() * 0.5; this.stuckT = 0; this.lastPos = { x, z };
     this.kills = 0; this.rank = 0; this.idleT = 0;
@@ -187,11 +189,11 @@ export class Unit {
     }
     // auto-acquire
     this.scanT -= dt;
-    const mayScan = !this.order || this.order.type === 'attackMove' || (this.order.type === 'move' && this.faction !== G.player && false);
+    const mayScan = (!this.order || this.order.type === 'attackMove') && this.stance !== 'holdfire';
     if (this.scanT <= 0) {
       this.scanT = 0.4 + srand() * 0.2;
       if (!this.target && mayScan) {
-        const t = this.findTarget(this.def.sight * G.sightMult);
+        const t = this.findTarget(this.stance === 'hold' ? w.range * (upg(this.faction, 'optics') ? 1.2 : 1) : this.def.sight * G.sightMult * (upg(this.faction, 'optics') ? 1.2 : 1));
         if (t) { this.target = t; this.guardPos = this.guardPos || { x: this.x, z: this.z }; }
       }
       if (this.target && this.target.kind === 'building' && mayScan && this.order?.type !== 'attack') {
@@ -212,11 +214,12 @@ export class Unit {
     const t = this.target;
     const d = distTo(t, this.x, this.z);
     const useW = canTarget(w, t) ? w : this.weapon2;
-    const range = useW.range * (this.rank ? 1.05 : 1);
+    const range = useW.range * (this.rank ? 1.05 : 1) * (upg(this.faction, 'optics') ? 1.2 : 1);
     // leash for auto targets
     if ((!this.order || this.order.type !== 'attack') && this.guardPos && Math.hypot(this.x - this.guardPos.x, this.z - this.guardPos.z) > this.def.sight * 1.6 && this.order?.type !== 'attackMove') {
       this.target = null; this.path = null; return;
     }
+    if ((d > range || (useW.minRange && d < useW.minRange)) && this.stance === 'hold' && (!this.order || this.order.type !== 'attack')) { this.target = null; return; } // hold position: never chase
     if (d > range || (useW.minRange && d < useW.minRange)) {
       // chase
       if (useW.minRange && d < useW.minRange) {
@@ -418,7 +421,7 @@ export class Unit {
         const amt = Math.min(this.load, 50);
         this.load -= amt;
         const P = G.players[this.faction];
-        const gain = amt * (P.incomeMult || 1);
+        const gain = amt * (P.incomeMult || 1) * (upg(this.faction, 'refining') ? 1.25 : 1);
         P.credits += gain; P.harvested = (P.harvested || 0) + gain;
         if (this.faction === G.player) G.stats.harvested += gain;
         FX.sparkBurst(r.x + 1.8, r.baseY + 1.5, r.z + 1.3, 3, [1, 4, 2, 1]);
@@ -433,7 +436,7 @@ export class Unit {
 
   // ---------------------------------------------------- movement
   moveLogic(dt) {
-    const sp = this.def.speed * (this.rank >= 1 ? 1.05 : 1) * (this.isInf || this.air ? 1 : G.speedMult) * (this.frenzyT > 0 ? 1.35 : 1);
+    const sp = this.def.speed * (this.rank >= 1 ? 1.05 : 1) * (this.isInf || this.air ? 1 : G.speedMult) * (this.frenzyT > 0 ? 1.35 : 1) * (!this.isInf && upg(this.faction, 'engines') ? 1.15 : 1);
     let moving = false;
     if (this.path && this.pi < this.path.length) {
       const wp = this.path[this.pi];
@@ -1145,7 +1148,7 @@ function impact(p) {
 }
 
 function hit(src, w, target, at) {
-  let dmg = w.damage * (src.rank === 2 ? 1.5 : src.rank === 1 ? 1.25 : 1);
+  let dmg = w.damage * (src.rank === 2 ? 1.5 : src.rank === 1 ? 1.25 : 1) * (upg(src.faction, 'shells') ? 1.2 : 1);
   damage(target, dmg * (WARHEADS[w.warhead][target.kind === 'building' ? 'building' : target.def.armor] ?? 1), src);
   if (w.splash) splash(src, w, at.x, at.z, w.splash, src.faction, target);
 }
@@ -1179,7 +1182,7 @@ export function damage(target, amount, src, kind) {
     G.alertAt = { x: target.x, z: target.z, t: G.time };
   }
   // retaliate
-  if (target.kind === 'unit' && src && alive(src) && !target.target && target.weapon && (!target.order || target.order.type === 'attackMove')) {
+  if (target.kind === 'unit' && src && alive(src) && !target.target && target.weapon && target.stance !== 'holdfire' && (!target.order || target.order.type === 'attackMove')) {
     if (canTarget(target.weapon, src) || (target.weapon2 && canTarget(target.weapon2, src))) { target.target = src; target.guardPos = target.guardPos || { x: target.x, z: target.z }; }
   }
   if (target.kind === 'unit' && target.type === 'harvester' && src && alive(src) && target.hState !== 'unload') {
