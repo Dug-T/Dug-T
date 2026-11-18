@@ -38,6 +38,14 @@ export function initUI() {
   bindButtons();
   resize();
   window.addEventListener('resize', resize);
+  window.addEventListener('orientationchange', () => { for (const t of [50, 250, 600, 1200]) setTimeout(resize, t); });
+  window.visualViewport?.addEventListener('resize', resize);
+}
+
+// Some phones report the old size during rotation, so also check every frame and resize if it changed.
+export function checkSize() {
+  const r = view.getBoundingClientRect();
+  if (Math.abs(r.width - W) > 1 || Math.abs(r.height - H) > 1) resize();
 }
 
 export function resize() {
@@ -724,6 +732,11 @@ function touchTap(x, y) {
 }
 
 function bindButtons() {
+  $('sideToggle').onclick = () => {
+    document.body.classList.toggle('sideHidden');
+    $('sideToggle').textContent = document.body.classList.contains('sideHidden') ? '◀ BUILD' : '▶';
+    requestAnimationFrame(resize);
+  };
   $('bSell').onclick = () => setMode(G.mode === 'sell' ? null : 'sell');
   $('bRepair').onclick = () => setMode(G.mode === 'repair' ? null : 'repair');
   $('bHome').onclick = () => { const b = G.buildings.find(b => b.faction === G.player && b.type === 'conyard') || G.buildings.find(b => b.faction === G.player); if (b) centerOn(b.x, b.z); };
