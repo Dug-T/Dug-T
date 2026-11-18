@@ -88,6 +88,7 @@ export class Unit {
     this.rotor = this.mesh.getObjectByName('rotor');
     this.tailrotor = this.mesh.getObjectByName('tailrotor');
     this.legs = []; this.mesh.traverse(o => { if (o.name === 'leg') this.legs.push(o); });
+    this.cape = this.mesh.getObjectByName('cape'); this.barrels = this.mesh.getObjectByName('barrels');
     this.loadMesh = this.mesh.getObjectByName('load');
     if (!this.isInf && !this.air) { this.lights = makeHeadlights(this.def.radius); this.mesh.add(this.lights); }
     G.three.scene.add(this.mesh);
@@ -520,6 +521,12 @@ export class Unit {
       if (walking) this.walkPhase += dt * this.speedNow * 3.2;
       const sw = walking ? Math.sin(this.walkPhase) * 0.6 : 0;
       if (this.legs[0]) { this.legs[0].rotation.x = sw; this.legs[1].rotation.x = -sw; }
+      if (this.cape) this.cape.rotation.x = 0.12 + Math.min(1, this.speedNow / 3) * 0.5 + Math.sin(G.time * 7 + this.id) * (walking ? 0.12 : 0.04);
+      if (this.barrels) {
+        const firing = G.time - (this.lastFire ?? -9) < 0.4;
+        this.spin = Math.max(0, Math.min(40, (this.spin || 0) + (firing ? 120 : -50) * dt));
+        this.barrels.rotation.z += this.spin * dt;
+      }
     } else {
       this.y = gy;
       m.position.set(this.x, gy, this.z);

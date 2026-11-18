@@ -20,7 +20,7 @@ Play it by opening `wally-squad/index.html` from any web server (GitHub Pages wo
 
 | | Wally Squad | Grimlock Legion |
 |---|---|---|
-| Exclusive units | Titan Tank, Field Medic, Wally (hero sniper) | Shade Stealth Tank, Inferno flame tank |
+| Exclusive units | Titan Tank, Field Medic, Wally Man (caped Gatling gunner), Wally (hero sniper) | Shade Stealth Tank, Inferno flame tank |
 | Superweapon | **Sky Lance** – an orbital energy lance | **Doom Missile** – a ballistic warhead with a mushroom cloud |
 
 Both factions share the basic army: riflemen, rocket troopers, Scorchers, engineers, buggies, tanks, artillery, harvesters and Hornet gunships.
