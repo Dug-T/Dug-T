@@ -12,7 +12,7 @@ export const PRESETS = {
 const SHADOW = { off: 0, med: 1024, high: 2048, ultra: 4096 };
 
 const touch = matchMedia('(pointer: coarse)').matches;
-const defaults = () => ({ preset: touch ? 'medium' : 'high', ...PRESETS[touch ? 'medium' : 'high'], auto: true, fps: false });
+const defaults = () => ({ preset: touch ? 'medium' : 'high', ...PRESETS[touch ? 'medium' : 'high'], auto: true, fps: true });
 export const gfx = (() => {
   try { return { ...defaults(), ...JSON.parse(localStorage.getItem('ws_gfx') || '{}') }; } catch { return defaults(); }
 })();
@@ -48,7 +48,7 @@ export function apply() {
     for (const rt of [composer.renderTarget1, composer.renderTarget2]) if (rt.samples !== gfx.samples) { rt.samples = gfx.samples; rt.dispose(); }
   }
   ctx.resize?.();
-  const f = document.getElementById('fps'); if (f) f.style.display = gfx.fps ? 'block' : 'none';
+  const f = document.getElementById('fps'); if (f) { f.style.display = gfx.fps ? 'block' : 'none'; if (!f.textContent) f.textContent = '-- FPS'; }
 }
 
 function recompileAll() {
@@ -58,7 +58,12 @@ function recompileAll() {
 // called once a second by the game loop with the measured frame rate
 export function autoTune(fps) {
   const el = document.getElementById('fps');
-  if (el && gfx.fps) el.textContent = `${Math.round(fps)} FPS · ${Math.round(ctx.renderer.domElement.width)}×${Math.round(ctx.renderer.domElement.height)}`;
+  if (el && gfx.fps) {
+    const f = Math.round(fps);
+    el.textContent = `${f} FPS`;
+    el.title = `${f} frames per second, rendering at ${ctx.renderer.domElement.width}×${ctx.renderer.domElement.height}`;
+    el.className = f >= 50 ? '' : f >= 30 ? 'mid' : 'low';
+  }
   if (!gfx.auto) { if (autoFactor !== 1) { autoFactor = 1; apply(); } return; }
   if (fps < 30 && autoFactor > 0.55) { autoFactor = Math.max(0.55, autoFactor - 0.15); apply(); }
   else if (fps > 56 && autoFactor < 1) { autoFactor = Math.min(1, autoFactor + 0.1); apply(); }

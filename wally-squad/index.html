@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <meta name="screen-orientation" content="landscape">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -223,12 +223,13 @@
   #rotate .screenbar { position: absolute; left: 8px; right: 8px; top: 10px; bottom: 16px; background: linear-gradient(135deg, #2f7fe0, #4cff7a); border-radius: 3px; opacity: 0.7; }
   @keyframes rot { 0%, 25% { transform: rotate(0deg); } 55%, 85% { transform: rotate(-90deg); } 100% { transform: rotate(0deg); } }
   /* the whole game lives in #app; on an upright phone it is turned 90 degrees so it stays landscape */
-  #app { position: fixed; left: 0; top: 0; width: 100vw; height: 100vh; overflow: hidden; }
+  #app { position: fixed; left: 0; top: 0; width: 100vw; height: 100vh; width: 100dvw; height: 100dvh; overflow: hidden; }
   body.rot #app { width: 100vh; height: 100vw; width: 100dvh; height: 100dvw; transform-origin: top left; transform: rotate(90deg) translateY(-100%); }
   body.rot .card { max-height: calc(100dvw - 16px); }
   body.rot .medalGrid, body.rot .vgrid { max-height: 55dvw; }
   body.rot #minimapWrap { max-height: none; }
-  #fps { position: absolute; left: 50%; bottom: 6px; transform: translateX(-50%); z-index: 8; font: 700 12px monospace; color: #9f9; background: #0008; padding: 2px 6px; border-radius: 4px; pointer-events: none; display: none; }
+  #fps { font: 700 12px monospace; padding: 2px 6px; border-radius: 4px; background: #0009; color: #7dff9a; white-space: nowrap; pointer-events: none; display: none; }
+  #fps.mid { color: #ffd34a; } #fps.low { color: #ff6a5a; }
   .gfxRow { display: flex; align-items: center; gap: 10px; justify-content: center; } .gfxRow b { color: var(--accent); min-width: 170px; }
   .dsg { display: grid; grid-template-columns: 300px 1fr; gap: 16px; }
   .dsgList { display: flex; flex-wrap: wrap; gap: 4px; min-height: 30px; }
@@ -282,6 +283,7 @@
   <div class="brand">WALLY SQUAD</div>
   <div id="clock" style="font-weight:700;color:var(--dim)">00:00</div>
   <div id="wx" style="font-weight:700;color:#bfe6ff"></div>
+  <div id="fps" title="Frames per second (turn off in Graphics)"></div>
   <div class="spacer"></div>
   <button class="btn" id="bFull" title="Fullscreen">⛶</button>
   <button class="btn" id="bMusic" title="Toggle music">♪ Music</button>
@@ -403,7 +405,6 @@
 <div id="gfxScreen" class="screen" style="display:none;z-index:22">
   <div class="card wide"><h2>GRAPHICS</h2><div id="gfxPanel2"></div><div class="row"><button class="btn big" id="bGfxClose">Done</button></div></div>
 </div>
-<div id="fps"></div>
 <div id="photoBar"><span>📷 PHOTO MODE · right-drag or arrows to move · wheel zoom · Q/E rotate · Z/C or Shift+wheel tilt</span><button class="btn" id="photoSpeed">Time: 25%</button><button class="btn big" id="bPhotoSave">📸 Save picture</button><button class="btn" id="bPhotoExit">✖ Exit</button></div>
 <div id="photoFlash"></div>
 <div id="briefing" class="screen" style="display:none">
