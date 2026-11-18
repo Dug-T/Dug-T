@@ -2,14 +2,14 @@
 // vehicles and buildings. Movement and damage use the seeded simulation RNG (online-safe); the
 // funnel mesh and dust are only visuals.
 import * as THREE from 'three';
-import { G, srand, srr } from './state.js';
+import { G, srand, srr, later } from './state.js';
 import { HALF } from './config.js';
 import { groundY, isVisibleAt } from './terrain.js';
 import { unitsNear, damage, distTo } from './entities.js';
 import * as FX from './particles.js';
 
 const tornadoes = [];
-let nextT = 70;
+let nextT = 70, nextM = 120;
 const buf = [];
 
 function funnelMesh() {
@@ -41,10 +41,49 @@ function spawn() {
   G.alertAt = { x, z, t: G.time };
 }
 
+// ---- meteor shower: a warning, then a dozen burning rocks slam into one area of the map
+function meteorShower() {
+  // aim at a random unit or building so the shower lands where the action is
+  const pool = [...G.units.filter(u => !u.dead && !u.air), ...G.buildings.filter(b => !b.dead && b.faction !== 'neutral')];
+  const tgt = pool.length ? pool[Math.floor(srand() * pool.length)] : { x: 0, z: 0 };
+  const cx = tgt.x + srr(-8, 8), cz = tgt.z + srr(-8, 8);
+  G.announce?.('Warning: meteor shower!', G.player, 8);
+  G.alertAt = { x: cx, z: cz, t: G.time };
+  for (let i = 0; i < 12; i++) {
+    const x = cx + srr(-14, 14), z = cz + srr(-14, 14), at = 2.5 + i * 0.45 + srr(0, 0.3);
+    later(at - 1.2, () => fallingRock(x, z));   // visual streak, lands 1.2 s later
+    later(at, () => {
+      const y = groundY(x, z);
+      FX.explosion(x, y + 0.5, z, 1.6, { sound: i % 3 === 0 });
+      for (const u of unitsNear(x, z, 4.5, buf)) if (!u.air && !u.dead) damage(u, (u.isInf ? 90 : 120) * (1 - Math.hypot(u.x - x, u.z - z) / 5), null);
+      for (const b of G.buildings) if (!b.dead && b.faction !== 'neutral' && distTo(b, x, z) < 3) damage(b, 110, null);
+    });
+  }
+}
+let rockGeo = null;
+function fallingRock(x, z) {
+  if (!(isVisibleAt(x, z) || G.revealed)) return;
+  if (!rockGeo) rockGeo = new THREE.DodecahedronGeometry(0.7, 0);
+  const m = new THREE.Mesh(rockGeo, new THREE.MeshStandardMaterial({ color: 0x3a2a20, emissive: 0xff6a20, emissiveIntensity: 1.6, roughness: 1 }));
+  const gy = groundY(x, z), sx = x - 18, sy = gy + 45, sz = z - 10;
+  m.position.set(sx, sy, sz); G.three.scene.add(m);
+  let t = 0;
+  const step = () => {
+    t += 1 / 60; const k = Math.min(1, t / 1.2);
+    m.position.set(sx + (x - sx) * k, sy + (gy - sy) * k, sz + (z - sz) * k);
+    m.rotation.x += 0.2; m.rotation.y += 0.15;
+    FX.trail?.(m.position.x, m.position.y, m.position.z, true);
+    if (k < 1) requestAnimationFrame(step); else G.three.scene.remove(m);
+  };
+  requestAnimationFrame(step);
+}
+
 export function updateHazards(dt) {
   if (!(G.cfg.mut && G.cfg.mut.includes('disasters')) || G.over) return;
   nextT -= dt;
   if (nextT <= 0) { nextT = srr(90, 150); spawn(); }
+  nextM -= dt;
+  if (nextM <= 0) { nextM = srr(80, 140); meteorShower(); }
   for (let i = tornadoes.length - 1; i >= 0; i--) {
     const t = tornadoes[i];
     t.age += dt;

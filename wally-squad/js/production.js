@@ -106,6 +106,7 @@ export function updateProduction(dt) {
         } else {
           if (spawnFromProducer(f, type)) {
             q.items.shift(); q.progress = 0; q.spent = 0;
+            if (q.repeat && q.items.length < 12 && hasReqs(f, type)) q.items.push(type); // repeat production loops the queue
             if (f === G.player) { G.announce?.(type === 'wally' ? 'Wally reporting for duty' : 'Unit ready', f, 2); }
           } else q.progress = d.time - 0.01;
         }

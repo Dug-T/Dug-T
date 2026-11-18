@@ -75,6 +75,10 @@ Both factions share the basic army: riflemen, rocket troopers, Scorchers, engine
   - Long-Range Optics: +20% sight and range.
   - The computer opponent researches them too.
 - **👹 Warlord Grak** (Grimlock hero, Barracks + Comms Center, one at a time): a hulking brute with a rotary rocket cannon. **War Cry** (`G`) makes every Grimlock fighter within 13 m fire much faster for 6 seconds. The computer uses heroes' abilities too.
+- **🎨 Army colours** (Skirmish, Survival and Sandbox menus): paint your side Blue, Red, Green, Purple, Gold, Orange, Teal, Pink or Steel. Your choice is remembered. If you pick a colour close to the enemy's, they switch to your faction's usual colour so the sides stay easy to tell apart.
+- **🔁 Repeat production:** a toggle above the Infantry, Vehicles and Air build menus. Each finished unit is queued again, so a factory keeps pumping out your army.
+- **🧙 Grimlock Shaman** (Grimlocks only): a hooded healer with a glowing skull staff who heals nearby infantry, like the Field Medic.
+- **☄ Meteor showers:** the Natural Disasters mutator now also rains burning meteors on the battlefield every couple of minutes, with a warning first.
 - **🧪 Sandbox** (main menu): unlimited money, five-times-faster building and no win or lose. A toolbar spawns any unit for either side wherever you tap (one or five at a time), switches the enemy AI on or off, reveals the map and clears all units.
 - **🚁 Sky Hauler** (Helipad): a twin-rotor transport helicopter that carries 6 infantry over cliffs, water and lava. Load it like the APC. Unload (`U`) drops the troops on the nearest flat, dry ground; it refuses over water.
 - **📰 Battle log:** a feed in the top-right shows what your forces destroy and lose ("Battle Tank destroyed Scout Buggy ×2"), plus Heroic promotions.

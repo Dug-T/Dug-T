@@ -133,7 +133,21 @@ function buildTabs() {
   }
 }
 let gridItems = [];
+function buildQueueOpts() {
+  const box = $('qOpts'); if (!box) return;
+  const qn = QUEUE_OF[curTab];
+  if (!['infantry', 'vehicle', 'air'].includes(qn) || !G.players[G.player]) { box.style.display = 'none'; return; }
+  const q = G.players[G.player].queues[qn];
+  box.style.display = 'block';
+  box.innerHTML = '';
+  const b = document.createElement('button'); b.className = 'btn' + (q.repeat ? ' on' : '');
+  b.textContent = q.repeat ? '🔁 Repeat: ON' : '🔁 Repeat: off';
+  b.title = 'Keep building the same units: each finished unit is queued again';
+  b.onclick = () => { issue({ t: 'repeat', q: qn, on: !q.repeat }); Audio.play('click'); setTimeout(buildQueueOpts, 60); };
+  box.appendChild(b);
+}
 export function buildGrid() {
+  buildQueueOpts();
   const grid = $('grid'); grid.innerHTML = ''; gridItems = [];
   const list = [...Object.entries(BUILDINGS), ...Object.entries(UNITS), ...Object.entries(UPGRADES)].filter(([, d]) => d.tab === curTab && (!d.fac || d.fac === G.player));
   for (const [type, d] of list) {
