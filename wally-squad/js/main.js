@@ -400,6 +400,7 @@ function loop(now) {
   updateVision(Math.max(dt, real * 0.5));
   updateFX(dt);
   updateWeatherFX(dt, real);
+  UI.checkSize();
   UI.updateCamera(real);
   UI.updateHover(real);
   UI.updateMarkers(real);
