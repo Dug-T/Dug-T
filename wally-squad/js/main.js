@@ -6,7 +6,7 @@ import { UnrealBloomPass } from '../lib/postprocessing/UnrealBloomPass.js';
 import { ShaderPass } from '../lib/postprocessing/ShaderPass.js';
 import { OutputPass } from '../lib/postprocessing/OutputPass.js';
 import { G, runTimers, seedSim, emit, on } from './state.js';
-import { DIFFICULTY, FACTIONS, MUTATORS, hasMut } from './config.js';
+import { DIFFICULTY, FACTIONS, MUTATORS, hasMut, UNITS } from './config.js';
 import { MAPS, THEMES, getMap } from './maps.js';
 import { buildTerrain, setupMap, BASES, cellOf, updateVision, updateOre, regrowOre, animateWater, revealAll, revealCircle } from './terrain.js';
 import { initFX, updateFX, setParticleScale } from './particles.js';
@@ -223,7 +223,7 @@ function setupBase(faction, pos) {
 }
 
 // ---------------------------------------------------------------- menus
-const panels = ['menuMain', 'menuCampaign', 'menuSkirmish', 'menuOnline', 'menuVoices', 'menuDesigner', 'menuGraphics', 'menuSurvival', 'menuMedals', 'menuEditor'];
+const panels = ['menuMain', 'menuCampaign', 'menuSkirmish', 'menuOnline', 'menuVoices', 'menuDesigner', 'menuGraphics', 'menuSurvival', 'menuMedals', 'menuEditor', 'menuSandbox'];
 function showPanel(id) {
   for (const p of panels) $(p).style.display = p === id ? 'block' : 'none';
   if (id === 'menuVoices') Voices.buildStudio($('studio'), UI.icons);
@@ -245,6 +245,55 @@ function dailyChallenge() {
 }
 function dailyRecord() { try { return JSON.parse(localStorage.getItem('ws_daily') || 'null'); } catch { return null; } }
 const fmtTime = t => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
+
+// ---------------------------------------------------------------- battle log (kill feed)
+const feedName = e => e.hero ? 'Wally Man' : e.def.name;
+function setupFeed() {
+  const el = $('feed');
+  on('kill', (victim, killer) => {
+    if (victim.kind === 'building' && victim.faction !== 'neutral' && !victim.def.isWall && !victim.def.isMine) G.lastFallen = { x: victim.x, y: victim.baseY || 0, z: victim.z };
+    if (victim.faction !== G.player && (!killer || killer.faction !== G.player)) return; // only fights involving you
+    if (victim.kind === 'building' && (victim.def.isWall || victim.def.isMine)) return;
+    const c = f => f === 'wally' ? 'w' : 'g';
+    const icon = victim.kind === 'building' ? '🏚' : victim.faction === G.player ? '☠' : '🎯';
+    const text = killer && killer.def ? `${icon} <b class="${c(killer.faction)}">${feedName(killer)}</b> destroyed <b class="${c(victim.faction)}">${feedName(victim)}</b>`
+      : `${icon} <b class="${c(victim.faction)}">${feedName(victim)}</b> was destroyed`;
+    const last = el.lastElementChild;
+    if (last && last.dataset.t === text) { last.dataset.n = +last.dataset.n + 1; last.innerHTML = `${text} <span class="n">×${last.dataset.n}</span>`; clearTimeout(last._t); last._t = setTimeout(() => fadeOut(last), 7000); return; }
+    const d = document.createElement('div'); d.className = 'fl'; d.dataset.t = text; d.dataset.n = 1; d.innerHTML = text;
+    el.appendChild(d);
+    while (el.children.length > 5) el.firstElementChild.remove();
+    d._t = setTimeout(() => fadeOut(d), 7000);
+  });
+  on('heroic', u => { if (u.faction === G.player) feedLine(`🌟 <b class="${u.faction === 'wally' ? 'w' : 'g'}">${feedName(u)}</b> is now Heroic`); });
+  function fadeOut(d) { d.style.opacity = '0'; setTimeout(() => d.remove(), 650); }
+  function feedLine(html) { const d = document.createElement('div'); d.className = 'fl'; d.innerHTML = html; el.appendChild(d); while (el.children.length > 5) el.firstElementChild.remove(); setTimeout(() => fadeOut(d), 7000); }
+}
+
+// ---------------------------------------------------------------- sandbox toolbar
+function setupSandbox() {
+  const bar = $('sandboxBar'); bar.style.display = 'flex';
+  G.revealed = false;
+  const st = { side: G.enemy, type: 'tank', n: 1, ai: false };
+  G.sandbox = st;
+  const btn = (label, fn, title) => { const b = document.createElement('button'); b.className = 'btn'; b.textContent = label; b.title = title || ''; b.onclick = () => { fn(b); Audio.play('click'); }; bar.appendChild(b); return b; };
+  const sideB = btn('', b => { st.side = st.side === 'wally' ? 'grim' : 'wally'; showSide(); }, 'Which side spawned units join');
+  const showSide = () => { sideB.textContent = st.side === 'wally' ? '🔵 Wally Squad' : '🔴 Grimlocks'; };
+  showSide();
+  const sel = document.createElement('select');
+  for (const [k, d] of Object.entries(UNITS_ALL())) { const o = document.createElement('option'); o.value = k; o.textContent = d.name; if (k === st.type) o.selected = true; sel.appendChild(o); }
+  sel.onchange = () => { st.type = sel.value; };
+  bar.appendChild(sel);
+  const spawnB = btn('✚ Spawn', () => { UI.setModePublic(G.mode === 'spawn' ? null : 'spawn'); spawnB.classList.toggle('on', G.mode === 'spawn'); }, 'Then tap the map to drop units there');
+  const nB = btn('×1', b => { st.n = st.n === 1 ? 5 : 1; b.textContent = '×' + st.n; }, 'How many to spawn per tap');
+  btn('🤖 Enemy AI: off', b => { st.ai = !st.ai; ais = st.ai ? [new AI(G.enemy)] : []; b.textContent = `🤖 Enemy AI: ${st.ai ? 'on' : 'off'}`; b.classList.toggle('on', st.ai); });
+  btn('👁 Reveal', b => { G.revealed = !G.revealed; revealAll(G.revealed); b.classList.toggle('on', G.revealed); });
+  btn('🧹 Clear units', () => { for (const u of G.units) if (!u.dead && u.type !== 'harvester') { u.hp = 0; u.die(null); } });
+  setInterval(() => spawnB.classList.toggle('on', G.mode === 'spawn'), 400);
+  G.sandboxSpawn = (x, z) => issue({ t: 'spawn', type: st.type, side: st.side, x, z, n: st.n });
+  void nB;
+}
+const UNITS_ALL = () => UNITS;
 
 function startWith(c) { sessionStorage.setItem('ws_cfg', JSON.stringify(c)); location.href = location.pathname + (params.has('loopnet') ? '?loopnet' : ''); }
 
@@ -319,6 +368,10 @@ function setupMenus() {
     rowSv.appendChild(b);
   }
   $('bStartSv').onclick = () => startWith(sv);
+  // sandbox
+  const sb = { mode: 'sandbox', map: 'valley', faction: 'wally', difficulty: 'normal', daynight: true, weather: null };
+  optionCards($('mapListSb'), mapItems(), sb.map, id => { sb.map = id; });
+  $('bStartSb').onclick = () => startWith(sb);
   // campaign
   const prog = campaignProgress();
   optionCards($('missionList'), MISSIONS.map((m, i) => ({ id: i, title: `${i + 1}. ${m.title}`, desc: i <= prog ? `${MAPS[m.map].name} · ${DIFFICULTY[m.difficulty].label}` : 'Locked - complete the previous mission', locked: i > prog, swatch: MAP_SWATCH[m.map] })), -1, i => startWith({ mode: 'campaign', mission: i }));
@@ -448,6 +501,8 @@ function start() {
   revealAll(!!G.revealed);
   G.started = true; G.paused = false;
   if (run.mode === 'skirmish') ais = [new AI(G.enemy)];
+  if (run.mode === 'sandbox') setupSandbox();
+  setupFeed();
   if (run.mode === 'survival') { renderObjectives(); UI.message('Survival: build defences fast - the first wave arrives in 75 seconds!'); }
   if (mission) renderObjectives();
   const fname = FACTIONS[G.player].name;
@@ -480,6 +535,12 @@ function endGame(win, text) {
   emit('end', win);
   Audio.announce(win ? 'Mission accomplished' : 'Mission failed');
   Audio.sting(win);
+  // finale: slow motion on the last building to fall
+  if (G.lastFallen && !G.surrendered) {
+    UI.centerOn(G.lastFallen.x, G.lastFallen.z); G.camera.targetDist = 34;
+    if (!lockstep) G.speed = 0.3;
+    if (G.lastFallen.y !== undefined) G.fx?.finale?.(G.lastFallen.x, G.lastFallen.y, G.lastFallen.z);
+  }
   if (mission && win && !mission.tutorial) unlockNext(run.mission);
   const award = run.mode === 'title' ? null : awardGame({ win, kills: G.stats.killed, lost: G.stats.lost, built: G.stats.built, time: G.time, difficulty: G.difficulty, mode: mission && mission.tutorial ? 'tutorial' : run.mode, streak: G.bestStreak });
   if (award && award.promoted) setTimeout(() => { Audio.announce(`Promoted to ${award.promoted.name}`); }, 3200);
@@ -495,7 +556,7 @@ function endGame(win, text) {
     $('bNext').style.display = mission && win && (mission.tutorial || run.mission < MISSIONS.length - 1) ? '' : 'none';
     $('bAgain').style.display = run.mode === 'mp' ? 'none' : '';
     $('end').style.display = 'flex';
-  }, 2500);
+  }, G.lastFallen && !G.surrendered ? 4200 : 2500); // give the finale time to play
 }
 
 // A side is beaten when it has no buildings left (walls, gates and mines don't count)
@@ -503,6 +564,7 @@ const hasStructures = f => G.buildings.some(b => !b.dead && b.faction === f && !
 
 function checkEnd(dt) {
   winT -= dt; if (winT > 0 || G.over) return; winT = 1;
+  if (run.mode === 'sandbox') { const P = G.players[G.player]; P.credits = 999999; P.buildMult = 5; return; } // sandbox never ends
   if (G.surrendered) { endGame(G.surrendered !== G.player, G.surrendered === G.player ? 'You surrendered.' : 'The enemy has surrendered!'); return; }
   const pAlive = hasStructures(G.player);
   if (mission) { if (!pAlive) mctx.fail('All our buildings have been destroyed. Mission failed.'); return; }

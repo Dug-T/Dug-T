@@ -1,7 +1,8 @@
 // Command layer: every player order goes through issue(). In single player it runs at once;
 // in multiplayer it is sent to the lockstep scheduler so both machines run it on the same tick.
 import { G } from './state.js';
-import { byId, alive, capacityOf, ejectPassengers } from './entities.js';
+import { byId, alive, capacityOf, ejectPassengers, Unit } from './entities.js';
+import { UNITS } from './config.js';
 import { enqueue, dequeue, placeBuilding, placeInstant } from './production.js';
 import { formationSlots } from './pathfind.js';
 import { T, cellOf, idx, cellCenter } from './terrain.js';
@@ -64,6 +65,7 @@ export function execute(c) {
     case 'super': fireSuperweapon(c.f, c.x, c.z); break;
     case 'power': usePower(c.f, c.type, c.x, c.z); break;
     case 'surrender': G.surrendered = c.f; break;
+    case 'spawn': if (G.cfg.mode === 'sandbox' && UNITS[c.type]) for (let i = 0; i < (c.n || 1); i++) { const a = i * 2.4, r = i ? 1.6 + i * 0.5 : 0; new Unit(c.type, c.side, c.x + Math.cos(a) * r, c.z + Math.sin(a) * r, Math.PI); } break;
   }
 }
 

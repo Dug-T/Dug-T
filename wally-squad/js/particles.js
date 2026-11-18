@@ -114,7 +114,7 @@ const DEBRIS_MAX = 400;
 
 export function initFX(sc) {
   scene = sc;
-  G.fx = { ember };
+  G.fx = { ember, finale };
   add = new PSys(scene, 9000, softSprite(), true);
   smoke = new PSys(scene, 7000, smokeSprite(), false);
   for (let i = 0; i < 6; i++) {
@@ -290,6 +290,11 @@ export function blackSmoke(x, y, z, intensity = 1) {
 }
 export function steam(x, y, z) {
   smoke.spawn(x, y, z, rr(-0.2, 0.2), rr(1.5, 2.5), rr(-0.2, 0.2), 2.2, 0.6, 3, [0.9, 0.9, 0.92, 0.35], [0.9, 0.9, 0.92, 0], 0.6, -0.1, rr(-1, 1));
+}
+// end-of-game finale: a towering fireball where the last building fell
+export function finale(x, y, z) {
+  explosion(x, y + 1, z, 3.2, { force: true });
+  for (let i = 0; i < 6; i++) setTimeout(() => explosion(x + rr(-4, 4), y + rr(0.5, 3), z + rr(-4, 4), rr(1.2, 2.2), { force: true, sound: i % 2 === 0 }), 250 + i * 260);
 }
 // lava embers: a few glowing sparks that pop out of a lava pool and fade
 export function ember(x, y, z) {

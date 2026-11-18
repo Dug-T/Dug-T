@@ -34,14 +34,21 @@ const buckets = Array.from({ length: HN * HN }, () => []);
 // Units riding in an APC or garrisoning a bunker get out around the host.
 export function ejectPassengers(host, hurt = 0, killer = null) {
   const list = (host.passengers || []).filter(u => !u.dead);
+  // aircraft drop their troops on the nearest flat, dry ground below them
+  let cx = host.x, cz = host.z;
+  if (host.air && list.length && !list[0].canStand(cx, cz)) {
+    let found = false;
+    for (let r = 2; r <= 8 && !found; r += 2) for (let k = 0; k < 12; k++) { const a = k / 12 * Math.PI * 2, x = host.x + Math.cos(a) * r, z = host.z + Math.sin(a) * r; if (list[0].canStand(x, z)) { cx = x; cz = z; found = true; break; } }
+    if (!found) { if (host.faction === G.player) G.ui?.message('Can\'t unload here - fly over flat, dry ground first'); return 0; }
+  }
   host.passengers = [];
   const base = host.kind === 'unit' ? host.heading + Math.PI : 0;
-  const R = host.kind === 'unit' ? 2.6 : Math.max(host.def.w, host.def.h) * CELL / 2 + 1.6;
+  const R = host.air ? 1.8 : host.kind === 'unit' ? 2.6 : Math.max(host.def.w, host.def.h) * CELL / 2 + 1.6;
   list.forEach((u, i) => {
     const a = base + (i - (list.length - 1) / 2) * 0.6;
     u.boarded = null;
-    u.x = host.x + Math.sin(a) * R; u.z = host.z + Math.cos(a) * R;
-    if (!u.canStand(u.x, u.z)) { for (let k = 1; k < 12; k++) { const b = a + k * 0.55; const x = host.x + Math.sin(b) * R, z = host.z + Math.cos(b) * R; if (u.canStand(x, z)) { u.x = x; u.z = z; break; } } }
+    u.x = cx + Math.sin(a) * R; u.z = cz + Math.cos(a) * R;
+    if (!u.canStand(u.x, u.z)) { let ok = false; for (let k = 1; k < 12; k++) { const b = a + k * 0.55; const x = cx + Math.sin(b) * R, z = cz + Math.cos(b) * R; if (u.canStand(x, z)) { u.x = x; u.z = z; ok = true; break; } } if (!ok) { u.x = cx; u.z = cz; } }
     u.y = groundY(u.x, u.z);
     u.heading = a; u.mesh.visible = true; u.order = null; u.path = null; u.target = null;
   });
@@ -116,6 +123,7 @@ export class Unit {
     this.cape = this.mesh.getObjectByName('cape'); this.barrels = this.mesh.getObjectByName('barrels');
     this.loadMesh = this.mesh.getObjectByName('load');
     this.fans = this.mesh.getObjectByName('fans');
+    this.rotor2 = this.mesh.getObjectByName('rotor2');
     if (!this.isInf && !this.air) { this.lights = makeHeadlights(this.def.radius); this.mesh.add(this.lights); }
     G.three.scene.add(this.mesh);
     this.ring = null;
@@ -603,6 +611,7 @@ export class Unit {
       this.bank = (this.bank || 0) + (bank - (this.bank || 0)) * Math.min(1, dt * 3);
       m.rotation.set(this.speedNow / this.def.speed * 0.18, this.heading, this.bank, 'YXZ');
       if (this.rotor) this.rotor.rotation.y += dt * 28;
+      if (this.rotor2) this.rotor2.rotation.y -= dt * 28;
       if (this.tailrotor) this.tailrotor.rotation.x += dt * 35;
       // rotor wash dust
       if (Math.random() < 0.3 && this.y - gy < 12) FX.dust(this.x + rr(-2, 2), this.z + rr(-2, 2), 1.2);

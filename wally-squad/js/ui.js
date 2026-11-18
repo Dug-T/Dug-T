@@ -675,6 +675,7 @@ function modeClick(x, y) {
     setMode(null);
     return;
   }
+  if (G.mode === 'spawn') { const g = screenToGround(x, y); if (g && G.sandboxSpawn) { G.sandboxSpawn(g.x, g.z); Audio.play('ack'); flashMarker(g.x, g.z, 0x7dff9a); } return; }
   if (G.mode === 'super') {
     const g = screenToGround(x, y);
     if (!g) return;
@@ -695,13 +696,14 @@ function setMode(m) {
 }
 function setCursor() {
   const gl = $('gl');
-  gl.style.cursor = G.mode === 'sell' ? 'copy' : G.mode === 'repair' ? 'cell' : G.mode === 'super' || (G.mode && G.mode.startsWith('power:')) || attackMoveArmed ? 'crosshair' : 'default';
+  gl.style.cursor = G.mode === 'sell' ? 'copy' : G.mode === 'repair' ? 'cell' : G.mode === 'spawn' || G.mode === 'super' || (G.mode && G.mode.startsWith('power:')) || attackMoveArmed ? 'crosshair' : 'default';
 }
 let hoverT = 0;
 let barSig = '';
 function updateModeBar() {
   const what = G.placing ? `Placing ${BUILDINGS[G.placing].name}` + (BUILDINGS[G.placing].isWall ? ' · drag for a line' : '') + ' · tap a green spot'
     : G.mode === 'sell' ? 'Sell mode · tap your building' : G.mode === 'repair' ? 'Repair mode · tap your building'
+    : G.mode === 'spawn' ? `Sandbox · tap the map to spawn ${G.sandbox.n > 1 ? G.sandbox.n + ' × ' : ''}${UNITS[G.sandbox.type].name} (${G.sandbox.side === 'wally' ? 'Wally Squad' : 'Grimlocks'})`
     : G.mode === 'super' ? 'Superweapon · tap the target' : G.mode && G.mode.startsWith('power:') ? 'Support power · tap the target'
     : attackMoveArmed === 'patrol' ? 'Patrol · tap the far end of the route' : attackMoveArmed ? 'Attack-move · tap the destination' : '';
   if (what === barSig) return;
@@ -1113,3 +1115,5 @@ function patrolAt(sx, sy) {
   flashMarker(g.x, g.z, 0x7fd0ff); Audio.play('ack');
   Voices.say(myUnits()[0].type, 'move');
 }
+
+export function setModePublic(m) { setMode(m); }
