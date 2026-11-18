@@ -5,7 +5,7 @@ import { BUILDINGS, CELL, GRID } from './config.js';
 import { Unit, Building, alive } from './entities.js';
 import { T, idx, inGrid, cellOf, heightAt, BASES, revealCircle } from './terrain.js';
 
-const ALL_BASIC = ['power', 'refinery', 'barracks', 'factory', 'radar', 'turret', 'sam', 'wall', 'gate', 'mine', 'rifle', 'rocket', 'flamer', 'engineer', 'medic', 'buggy', 'tank', 'harvester', 'arty'];
+const ALL_BASIC = ['power', 'refinery', 'barracks', 'factory', 'radar', 'turret', 'sam', 'wall', 'gate', 'mine', 'rifle', 'rocket', 'flamer', 'engineer', 'medic', 'wallyman', 'buggy', 'tank', 'harvester', 'arty'];
 
 export const MISSIONS = [
   {

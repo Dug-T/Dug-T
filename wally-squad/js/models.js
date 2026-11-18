@@ -2,7 +2,7 @@
 // Each model is assembled from many primitives, then merged per material so it renders cheaply.
 import * as THREE from 'three';
 import { mergeGeometries } from '../lib/utils/BufferGeometryUtils.js';
-import { mats, M } from './materials.js';
+import { mats, M, fogify } from './materials.js';
 import { CELL } from './config.js';
 
 const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _e = new THREE.Euler(), _s = new THREE.Vector3(), _p = new THREE.Vector3();
@@ -437,6 +437,108 @@ export function makeInferno(faction) {
   });
 }
 
+// ------------------------------------------------------------------ Wally Man
+let wmMats = null;
+function wallyManMats() {
+  if (wmMats) return wmMats;
+  const c = document.createElement('canvas'); c.width = 256; c.height = 160;
+  const x = c.getContext('2d');
+  x.fillStyle = '#2e6ad0'; x.fillRect(0, 0, 256, 160);
+  x.fillStyle = '#2fa34a'; x.beginPath(); x.ellipse(128, 80, 124, 76, 0, 0, Math.PI * 2); x.fill();
+  x.fillStyle = '#ee5a24'; x.beginPath(); x.ellipse(128, 80, 112, 66, 0, 0, Math.PI * 2); x.fill();
+  x.strokeStyle = '#2459b8'; x.lineWidth = 9; x.beginPath(); x.arc(150, 70, 70, 0.55 * Math.PI, 0.95 * Math.PI); x.stroke();
+  x.fillStyle = '#1f8a3a'; x.font = 'bold 38px Impact, "Arial Black", sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle';
+  x.save(); x.translate(128, 66); x.rotate(-0.06); x.fillText('WALLY MAN', 0, 0); x.restore();
+  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
+  const std = o => fogify(new THREE.MeshStandardMaterial(o));
+  wmMats = {
+    blue: std({ color: 0x2b64cc, roughness: 0.7 }),
+    red: std({ color: 0xe04a1e, roughness: 0.65 }),
+    cape: std({ color: 0xe0461c, roughness: 0.75, side: THREE.DoubleSide }),
+    emblem: std({ map: tex, roughness: 0.6 }),
+    hair: std({ color: 0xc27236, roughness: 0.9 }),
+  };
+  return wmMats;
+}
+export function makeWallyMan(faction) {
+  return cached(`wallyman-${faction}`, () => {
+    const m = M(), w = wallyManMats();
+    const root = new THREE.Group();
+    const b = new Builder();
+    // stocky torso, belly and belt
+    b.box(w.blue, 0.52, 0.56, 0.3, 0, 1.02, 0);
+    b.sph(w.blue, 0.21, 0, 0.88, 0.04, 1.1, 0.75, 0.62);
+    b.box(w.red, 0.56, 0.12, 0.34, 0, 0.76, 0.02);
+    b.add(new THREE.PlaneGeometry(0.4, 0.25), w.emblem, 0, 1.1, 0.157);
+    b.box(w.blue, 0.2, 0.08, 0.2, 0, 1.31, 0.0); // collar
+    // head: skin, ginger hair, ears, nose, moustache
+    b.sph(m.skin, 0.165, 0, 1.47, 0.01, 1, 1.08, 1);
+    b.add(new THREE.SphereGeometry(0.172, 16, 8, Math.PI * 0.62, Math.PI * 1.76, Math.PI * 0.22, Math.PI * 0.3), w.hair, 0, 1.47, 0.0); // ginger fringe round the back and sides
+    b.sph(m.skin, 0.035, 0.16, 1.47, 0, 0.6, 1, 1); b.sph(m.skin, 0.035, -0.16, 1.47, 0, 0.6, 1, 1);
+    b.sph(m.skin, 0.035, 0, 1.43, 0.165);
+    b.box(w.hair, 0.09, 0.025, 0.03, 0, 1.385, 0.155);
+    // blue bandana mask with trailing ties
+    b.add(new THREE.CylinderGeometry(0.172, 0.172, 0.075, 18, 1, true), w.blue, 0, 1.475, 0.005);
+    b.box(w.blue, 0.05, 0.05, 0.05, 0, 1.475, -0.18);
+    b.box(w.blue, 0.06, 0.03, 0.32, 0.05, 1.4, -0.32, -0.55, 0.25, 0);
+    b.box(w.blue, 0.06, 0.03, 0.28, -0.04, 1.38, -0.3, -0.8, -0.2, 0);
+    // big black glasses
+    for (const s of [-1, 1]) {
+      b.add(new THREE.TorusGeometry(0.052, 0.014, 6, 16), m.black, s * 0.065, 1.48, 0.172, 0, 0, 0, 1.15, 0.9, 1);
+      b.add(new THREE.CircleGeometry(0.05, 14), m.glass, s * 0.065, 1.48, 0.17, 0, 0, 0, 1.15, 0.9, 1);
+      b.box(m.black, 0.06, 0.012, 0.012, s * 0.15, 1.485, 0.14, 0, s * 0.6, 0);
+    }
+    b.box(m.black, 0.03, 0.012, 0.012, 0, 1.485, 0.175);
+    // arms: blue sleeves with red gauntlets, holding the gatling at the hip
+    b.box(w.blue, 0.13, 0.3, 0.13, 0.32, 1.13, 0.02, -0.35, 0, 0.15);
+    b.box(w.red, 0.14, 0.24, 0.14, 0.33, 0.93, 0.2, -1.25, 0, 0);
+    b.sph(m.skin, 0.065, 0.31, 0.9, 0.34);
+    b.box(w.blue, 0.13, 0.3, 0.13, -0.32, 1.13, 0.02, -0.5, 0, -0.15);
+    b.box(w.red, 0.14, 0.24, 0.14, -0.27, 0.98, 0.24, -1.3, 0, 0.5);
+    b.sph(m.skin, 0.065, -0.14, 0.97, 0.38);
+    const body = b.build(); body.name = 'body';
+    root.add(body);
+    // cape (animated)
+    const capeGeo = new THREE.PlaneGeometry(0.46, 0.78, 6, 8);
+    const cp = capeGeo.attributes.position;
+    for (let i = 0; i < cp.count; i++) {
+      const px = cp.getX(i), py = cp.getY(i), t = (0.39 - py) / 0.78;
+      cp.setX(i, px * (1 + t * 0.4)); cp.setZ(i, -Math.cos(px * 4) * 0.06 * (0.4 + t) - t * 0.08);
+    }
+    capeGeo.translate(0, -0.39, 0); capeGeo.computeVertexNormals();
+    const cape = new THREE.Mesh(capeGeo, w.cape); cape.castShadow = true;
+    cape.position.set(0, 1.32, -0.17); cape.rotation.x = 0.12; cape.name = 'cape';
+    root.add(cape);
+    // gatling gun with spinning barrels
+    const gb = new Builder();
+    gb.add(new THREE.CylinderGeometry(0.075, 0.085, 0.36, 12), m.gun, 0, 0, 0, Math.PI / 2, 0, 0);
+    gb.box(m.darkMetal, 0.08, 0.14, 0.2, 0, -0.1, -0.08);
+    gb.box(m.hazard, 0.16, 0.14, 0.16, 0.13, -0.08, -0.05); // ammo box
+    for (let i = 0; i < 6; i++) gb.box(m.gun, 0.02, 0.02, 0.06, 0.13 - 0.0, -0.01 + i * 0.012, 0.06 + i * 0.03, 0, 0, 0); // ammo belt
+    gb.box(m.darkMetal, 0.04, 0.12, 0.04, 0, 0.1, -0.05); // handle
+    const gun = gb.build(); gun.position.set(0.12, 0.92, 0.42); gun.name = 'gatling';
+    const bb = new Builder();
+    for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2; bb.cyl(m.gun, 0.016, 0.016, 0.62, 6, Math.cos(a) * 0.045, Math.sin(a) * 0.045, 0.31, Math.PI / 2, 0, 0); }
+    bb.add(new THREE.TorusGeometry(0.052, 0.012, 5, 14), m.darkMetal, 0, 0, 0.5);
+    bb.add(new THREE.TorusGeometry(0.052, 0.012, 5, 14), m.darkMetal, 0, 0, 0.18);
+    const barrels = bb.build(); barrels.position.set(0, 0, 0.12); barrels.name = 'barrels';
+    gun.add(barrels);
+    root.add(gun);
+    // legs (animated): blue tights and tall red boots
+    for (const side of [-1, 1]) {
+      const lb = new Builder();
+      lb.box(w.blue, 0.19, 0.3, 0.2, 0, -0.14, 0);
+      lb.box(w.red, 0.19, 0.27, 0.2, 0, -0.42, 0.0);
+      lb.box(w.red, 0.2, 0.1, 0.3, 0, -0.55, 0.05);
+      const leg = lb.build(); leg.position.set(side * 0.13, 0.72, 0); leg.name = 'leg';
+      root.add(leg);
+    }
+    root.scale.setScalar(1.12);
+    root.userData.muzzle = new THREE.Vector3(0.12, 0.92, 1.18);
+    return root;
+  });
+}
+
 export function makeUnitModel(type, faction) {
   switch (type) {
     case 'tank': return makeTank(faction);
@@ -447,6 +549,7 @@ export function makeUnitModel(type, faction) {
     case 'gunship': return makeGunship(faction);
     case 'stealth': return makeStealth(faction);
     case 'inferno': return makeInferno(faction);
+    case 'wallyman': return makeWallyMan(faction);
     default: return makeInfantry(type, faction);
   }
 }

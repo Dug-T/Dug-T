@@ -5,6 +5,7 @@ import { UNITS } from './config.js';
 
 export const EVENTS = { select: 'Selected', move: 'Move order', attack: 'Attack order' };
 const DEFAULT_LINES = {
+  wallyman: { select: ['Wally Man is here!', 'Never fear, Wally Man is near!', 'Cape on, glasses on!'], move: ['Up, up and away!', 'To the rescue!'], attack: ['Spin it up!', 'Taste the Gatling!', 'Wally Man, open fire!'] },
   rifle: { select: ['Rifleman reporting.', 'Ready for action!'], move: ['Moving out.', 'On my way.'], attack: ['Opening fire!', 'Engaging!'] },
   rocket: { select: ['Rockets loaded.', 'Anti-armour ready.'], move: ['Relocating.'], attack: ['Rocket away!', 'Tank spotted!'] },
   flamer: { select: ['Got a light?', 'Scorcher here.'], move: ['Moving.'], attack: ['Burn it down!', 'Toasty!'] },
@@ -21,7 +22,7 @@ const DEFAULT_LINES = {
   inferno: { select: ['Inferno ready.', 'Fuel tanks full.'], move: ['Rolling.'], attack: ['Burn them all!'] },
 };
 const VOICE_STYLE = {
-  wally: { pitch: 1.4, rate: 1.15 }, medic: { pitch: 1.3, rate: 1.05 }, engineer: { pitch: 1.2, rate: 1.1 },
+  wally: { pitch: 1.4, rate: 1.15 }, wallyman: { pitch: 0.9, rate: 1.05 }, medic: { pitch: 1.3, rate: 1.05 }, engineer: { pitch: 1.2, rate: 1.1 },
   titan: { pitch: 0.5, rate: 0.85 }, tank: { pitch: 0.7, rate: 0.95 }, harvester: { pitch: 0.8, rate: 0.9 },
   stealth: { pitch: 0.6, rate: 0.8 }, inferno: { pitch: 0.55, rate: 0.9 }, gunship: { pitch: 1.0, rate: 1.2 },
 };
