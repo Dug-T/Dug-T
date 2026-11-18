@@ -1,7 +1,7 @@
 // Units, buildings, projectiles, combat and death.
 import * as THREE from 'three';
 import { G, nextId, rr, clamp, angleDiff, later, srand, srr, emit } from './state.js';
-import { UNITS, BUILDINGS, WEAPONS, WARHEADS, CELL, HALF, GRID, HARVEST_CAPACITY, FACTIONS, WATER_LEVEL } from './config.js';
+import { UNITS, BUILDINGS, WEAPONS, WARHEADS, CELL, HALF, GRID, HARVEST_CAPACITY, FACTIONS, WATER_LEVEL, hasMut } from './config.js';
 import { T, heightAt, groundY, normalAt, cellOf, cellCenter, idx, isWalkable, isVisibleAt, inGrid } from './terrain.js';
 import { makeUnitModel, makeBuildingModel, makeRubble, charModel } from './models.js';
 import { findPath, nearestFree } from './pathfind.js';
@@ -31,6 +31,26 @@ function makeRing(r, color) {
 // ------------------------------------------------------------------ spatial hash
 const HS = 4, HN = Math.ceil(GRID * CELL / HS);
 const buckets = Array.from({ length: HN * HN }, () => []);
+// Units riding in an APC or garrisoning a bunker get out around the host.
+export function ejectPassengers(host, hurt = 0, killer = null) {
+  const list = (host.passengers || []).filter(u => !u.dead);
+  host.passengers = [];
+  const base = host.kind === 'unit' ? host.heading + Math.PI : 0;
+  const R = host.kind === 'unit' ? 2.6 : Math.max(host.def.w, host.def.h) * CELL / 2 + 1.6;
+  list.forEach((u, i) => {
+    const a = base + (i - (list.length - 1) / 2) * 0.6;
+    u.boarded = null;
+    u.x = host.x + Math.sin(a) * R; u.z = host.z + Math.cos(a) * R;
+    if (!u.canStand(u.x, u.z)) { for (let k = 1; k < 12; k++) { const b = a + k * 0.55; const x = host.x + Math.sin(b) * R, z = host.z + Math.cos(b) * R; if (u.canStand(x, z)) { u.x = x; u.z = z; break; } } }
+    u.y = groundY(u.x, u.z);
+    u.heading = a; u.mesh.visible = true; u.order = null; u.path = null; u.target = null;
+  });
+  if (hurt) for (const u of list) damage(u, u.maxHp * hurt, killer);
+  return list.length;
+}
+export const capacityOf = e => (e && e.def && (e.def.transport || e.def.garrison)) || 0;
+
+const _gm = new THREE.Vector3();
 export function rebuildHash() {
   for (const b of buckets) b.length = 0;
   for (const u of G.units) {
@@ -79,7 +99,7 @@ export class Unit {
     if (upg(faction, this.def.armor === 'infantry' ? 'bodyarmor' : 'armor')) { this.hp *= 1.25; this.maxHp *= 1.25; }
     this.path = null; this.pi = 0; this.order = null; this.target = null; this.cool = 0; this.cool2 = 0;
     this.speedNow = 0; this.walkPhase = Math.random() * 6; this.scanT = srand() * 0.5; this.stuckT = 0; this.lastPos = { x, z };
-    this.kills = 0; this.rank = 0; this.idleT = 0;
+    this.kills = 0; this.rank = hasMut(G.cfg, 'veterans') && faction !== 'neutral' ? 1 : 0; this.idleT = 0;
     this.weapon = this.def.weapon ? WEAPONS[this.def.weapon] : null;
     this.weapon2 = this.def.weapon2 ? WEAPONS[this.def.weapon2] : null;
     this.isInf = this.def.armor === 'infantry';
@@ -141,15 +161,15 @@ export class Unit {
   }
   // ---- APC transport ----
   board(apc) {
-    if (!this.isInf || !alive(apc) || !apc.def.transport) return;
+    if (!this.isInf || !alive(apc) || !capacityOf(apc)) return;
     this.order = { type: 'board', target: apc };
     this.target = null;
-    this.requestPath(apc.x, apc.z);
+    this.requestPath(apc.x, apc.z, apc.kind === 'building' ? apc.id : 0);
   }
   boardLogic() {
     const apc = this.order.target;
-    if (!alive(apc) || (apc.passengers || []).length >= apc.def.transport) { this.order = null; this.path = null; return; }
-    if (Math.hypot(apc.x - this.x, apc.z - this.z) < 2.8) {
+    if (!alive(apc) || apc.faction !== this.faction || (apc.passengers || []).length >= capacityOf(apc)) { this.order = null; this.path = null; return; }
+    if (apc.kind === 'building' ? distTo(apc, this.x, this.z) < 1.8 : Math.hypot(apc.x - this.x, apc.z - this.z) < 2.8) {
       apc.passengers = apc.passengers || [];
       apc.passengers.push(this);
       this.boarded = apc; this.order = null; this.path = null; this.target = null;
@@ -158,21 +178,9 @@ export class Unit {
       if (this.faction === G.player) G.sfx?.play('click', this.x, this.z);
       return;
     }
-    if (!this.path) this.requestPath(apc.x, apc.z);
+    if (!this.path) this.requestPath(apc.x, apc.z, apc.kind === 'building' ? apc.id : 0);
   }
-  unload() {
-    const list = this.passengers || [];
-    this.passengers = [];
-    list.forEach((u, i) => {
-      if (u.dead) return;
-      const a = this.heading + Math.PI + (i - (list.length - 1) / 2) * 0.55;
-      u.boarded = null;
-      u.x = this.x + Math.sin(a) * 2.6; u.z = this.z + Math.cos(a) * 2.6;
-      if (!u.canStand(u.x, u.z)) { u.x = this.x; u.z = this.z; }
-      u.heading = a; u.mesh.visible = true; u.order = null; u.path = null;
-    });
-    return list.length;
-  }
+  unload() { return ejectPassengers(this); }
   stop() { this.order = null; this.target = null; this.path = null; if (this.type === 'harvester') this.hState = 'seek'; }
 
   requestPath(x, z, ignoreId = 0) {
@@ -458,7 +466,7 @@ export class Unit {
         const amt = Math.min(this.load, 50);
         this.load -= amt;
         const P = G.players[this.faction];
-        const gain = amt * (P.incomeMult || 1) * (upg(this.faction, 'refining') ? 1.25 : 1);
+        const gain = amt * (P.incomeMult || 1) * (upg(this.faction, 'refining') ? 1.25 : 1) * (hasMut(G.cfg, 'rich') ? 2 : 1);
         P.credits += gain; P.harvested = (P.harvested || 0) + gain;
         if (this.faction === G.player) G.stats.harvested += gain;
         FX.sparkBurst(r.x + 1.8, r.baseY + 1.5, r.z + 1.3, 3, [1, 4, 2, 1]);
@@ -631,12 +639,13 @@ export class Unit {
   // ---------------------------------------------------- death
   die(killer) {
     if (this.dead) return;
-    if (this.passengers && this.passengers.length) { const ps = this.passengers.slice(); this.unload(); for (const p of ps) damage(p, p.maxHp * 0.5, killer); }
+    if (this.passengers && this.passengers.length) ejectPassengers(this, 0.5, killer);
     this.dead = true;
     this.setSelected(false);
     if (this.refinery && this.refinery.dockedBy === this) this.refinery.dockedBy = null;
     if (killer && killer.kind === 'unit' && !killer.dead) {
       killer.kills++;
+      if (killer.faction === G.player && killer.kills > (G.mvp?.kills || 0)) G.mvp = { kills: killer.kills, name: killer.hero ? 'Wally Man (Hero)' : killer.def.name, type: killer.type };
       const r = killer.kills >= 6 ? 2 : killer.kills >= 3 ? 1 : 0;
       if (r > killer.rank) { killer.rank = r; if (killer.faction === G.player) G.sfx?.play('promote', killer.x, killer.z); }
     }
@@ -928,6 +937,7 @@ export class Building {
     }
     // defensive weapon
     if (this.def.weapon && this.buildAnim >= 1) this.defend(dt);
+    if (this.passengers && this.passengers.length) this.garrisonFire(dt);
     if (this.def.tech) techEffect(this, dt);
     if (this.faction !== G.player) this.mesh.visible = !!T.explored[idx(cellOf(this.x), cellOf(this.z))] || G.revealed;
   }
@@ -967,6 +977,42 @@ export class Building {
     }
   }
 
+  // garrisoned infantry shoot out of the bunker's firing slits with extra range
+  garrisonFire(dt) {
+    this.passengers = this.passengers.filter(p => !p.dead);
+    for (const p of this.passengers) {
+      const w = p.weapon;
+      p.x = this.x; p.z = this.z;
+      if (!w) continue;
+      p.cool -= dt;
+      const range = w.range * 1.25 + Math.max(this.def.w, this.def.h);
+      if (p.target && (!alive(p.target) || p.target.faction === this.faction || distTo(p.target, this.x, this.z) > range || !canTarget(w, p.target))) p.target = null;
+      p.scanT -= dt;
+      if (!p.target && p.scanT <= 0) {
+        p.scanT = 0.35 + srand() * 0.2;
+        let best = null, bd = 1e9;
+        for (const u of G.units) {
+          if (u.dead || u.boarded || u.faction === this.faction || u.faction === 'neutral' || !canTarget(w, u)) continue;
+          if (u.cloaked && u.faction !== G.player) continue;
+          const d = Math.hypot(u.x - this.x, u.z - this.z);
+          if (d < range && d < bd) { bd = d; best = u; }
+        }
+        if (!best && w.building !== false) for (const b of G.buildings) {
+          if (b.dead || b.faction === this.faction || b.faction === 'neutral' || b.def.isMine) continue;
+          const d = distTo(b, this.x, this.z);
+          if (d < range && d < bd) { bd = d; best = b; }
+        }
+        p.target = best;
+      }
+      if (p.target && p.cool <= 0) {
+        p.cool = w.rof * (0.9 + srand() * 0.2);
+        const a = Math.atan2(p.target.x - this.x, p.target.z - this.z);
+        _gm.set(Math.sin(a) * 1.6, 1.45, Math.cos(a) * 1.6);
+        fireWeapon(p, w, p.target, _gm, this.model);
+      }
+    }
+  }
+
   mineLogic(dt) {
     this.mesh.visible = this.faction === G.player;
     this.scanT = (this.scanT || 0) - dt;
@@ -985,6 +1031,7 @@ export class Building {
 
   die(killer) {
     if (this.dead) return;
+    if (this.passengers && this.passengers.length) ejectPassengers(this, 0.3, killer);
     if (this.def.isMine || this.def.isWall || this.def.isGate) {
       this.dead = true; this.setSelected(false);
       for (let j = 0; j < this.def.h; j++) for (let i = 0; i < this.def.w; i++) if (T.bld[idx(this.cx + i, this.cz + j)] === this.id) { T.bld[idx(this.cx + i, this.cz + j)] = 0; T.gate[idx(this.cx + i, this.cz + j)] = 0; }
@@ -1032,6 +1079,7 @@ export class Building {
 
   sell() {
     if (this.dead) return;
+    if (this.passengers && this.passengers.length) ejectPassengers(this);
     const P = G.players[this.faction];
     P.credits += Math.round(this.def.cost * 0.5 * this.hp / this.maxHp);
     G.sfx?.play('sell', this.x, this.z);
@@ -1212,6 +1260,7 @@ export function damage(target, amount, src, kind) {
     FX.explosion(target.x, (target.baseY || 0) + 1, target.z, 2.5, {});
     amount = target.maxHp * 2;
   }
+  if (hasMut(G.cfg, 'glass')) amount *= 1.75;
   target.hp -= amount;
   target.lastHit = G.time;
   // how hot the fighting is for the player (drives the dynamic music; never read by the simulation)

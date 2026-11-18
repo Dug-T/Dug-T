@@ -5,8 +5,8 @@ import { RenderPass } from '../lib/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from '../lib/postprocessing/UnrealBloomPass.js';
 import { ShaderPass } from '../lib/postprocessing/ShaderPass.js';
 import { OutputPass } from '../lib/postprocessing/OutputPass.js';
-import { G, runTimers, seedSim, emit } from './state.js';
-import { DIFFICULTY, FACTIONS } from './config.js';
+import { G, runTimers, seedSim, emit, on } from './state.js';
+import { DIFFICULTY, FACTIONS, MUTATORS, hasMut } from './config.js';
 import { MAPS, THEMES, getMap } from './maps.js';
 import { buildTerrain, setupMap, BASES, cellOf, updateVision, updateOre, regrowOre, animateWater, revealAll, revealCircle } from './terrain.js';
 import { initFX, updateFX, setParticleScale } from './particles.js';
@@ -211,7 +211,8 @@ function setupBase(faction, pos) {
   // starting force rolls out toward the middle of the map
   const l = Math.hypot(pos.x, pos.z) || 1;
   const fx = -pos.x / l, fz = -pos.z / l;
-  const start = [['tank', 6, 0], ['tank', 8, -3], ['buggy', 4, 6], ['rifle', 10, 3], ['rifle', 11, 4], ['rifle', 12, 2], ['rocket', 11, 6], ['rocket', 12, 5]];
+  let start = [['tank', 6, 0], ['tank', 8, -3], ['buggy', 4, 6], ['rifle', 10, 3], ['rifle', 11, 4], ['rifle', 12, 2], ['rocket', 11, 6], ['rocket', 12, 5]];
+  if (hasMut(run, 'infantry')) start = start.map(([t, a, b]) => [t === 'tank' ? 'rocket' : t === 'buggy' ? 'apc' : t, a, b]);
   for (const [t, a, b] of start) {
     const x = pos.x + fx * (a + 8) - fz * b, z = pos.z + fz * (a + 8) + fx * b;
     const u = new Unit(t, faction, x, z, Math.atan2(fx, fz));
@@ -229,6 +230,20 @@ function showPanel(id) {
   if (id === 'menuMedals') buildMedals($('medals'));
   if (id === 'menuEditor') buildMapEditor($('editor'), (mode, map) => startWith({ mode, map, faction: 'wally', difficulty: localStorage.getItem('ws_diff') || 'normal', daynight: true, weather: null }));
 }
+// ---------------------------------------------------------------- daily challenge
+// Same map, faction and two mutators for everyone on a given day; beat it as fast as you can.
+function dailyChallenge() {
+  const d = new Date(), date = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  let h = 2166136261; for (const ch of date) h = Math.imul(h ^ ch.charCodeAt(0), 16777619) >>> 0;
+  const rnd = () => { h = Math.imul(h ^ (h >>> 15), 2246822519) >>> 0; h = (h + 0x6D2B79F5) >>> 0; return h / 4294967296; };
+  const maps = ['valley', 'frost', 'dunes', 'midnight'].filter(m => MAPS[m]);
+  const muts = Object.keys(MUTATORS);
+  const a = muts.splice(Math.floor(rnd() * muts.length), 1)[0], b = muts[Math.floor(rnd() * muts.length)];
+  return { mode: 'skirmish', daily: date, map: maps[Math.floor(rnd() * maps.length)], faction: rnd() < 0.5 ? 'wally' : 'grim', difficulty: 'hard', daynight: true, weather: null, mut: [a, b] };
+}
+function dailyRecord() { try { return JSON.parse(localStorage.getItem('ws_daily') || 'null'); } catch { return null; } }
+const fmtTime = t => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
+
 function startWith(c) { sessionStorage.setItem('ws_cfg', JSON.stringify(c)); location.href = location.pathname + (params.has('loopnet') ? '?loopnet' : ''); }
 
 function optionCards(el, items, sel, onPick) {
@@ -276,7 +291,18 @@ function setupMenus() {
   const showMoney = () => { mb.textContent = `💰 Start: $${(sk.credits || 4000).toLocaleString()}`; };
   mb.onclick = () => { sk.credits = money[(money.indexOf(sk.credits || 4000) + 1) % money.length]; showMoney(); Audio.play('click'); };
   showMoney(); opt.appendChild(mb);
+  const mrow = $('mutRow');
+  sk.mut = [];
+  for (const [k, m] of Object.entries(MUTATORS)) {
+    const b = document.createElement('button'); b.className = 'btn'; b.textContent = `${m.icon} ${m.name}`; b.title = m.desc;
+    b.onclick = () => { const i = sk.mut.indexOf(k); if (i >= 0) sk.mut.splice(i, 1); else sk.mut.push(k); b.classList.toggle('on', i < 0); Audio.play('click'); };
+    mrow.appendChild(b);
+  }
   $('bStart').onclick = () => startWith(sk);
+  // daily challenge
+  const dc = dailyChallenge(), rec = dailyRecord();
+  $('bDaily').innerHTML = `📅 DAILY CHALLENGE<small>${MAPS[dc.map].name} · ${FACTIONS[dc.faction].short || FACTIONS[dc.faction].name} · ${dc.mut.map(k => MUTATORS[k].icon + ' ' + MUTATORS[k].name).join(' · ')}${rec && rec.date === dc.daily ? ` · ✔ Best ${fmtTime(rec.best)}` : ''}</small>`;
+  $('bDaily').onclick = () => startWith(dc);
   // survival
   const sv = { mode: 'survival', map: 'valley', faction: 'wally', difficulty: 'normal', daynight: true, weather: null };
   const best = bestScores();
@@ -423,6 +449,18 @@ function start() {
   const fname = FACTIONS[G.player].name;
   Audio.announce(mission ? `Mission start: ${mission.title}` : run.mode === 'mp' ? 'Battle control online' : `Welcome, commander of the ${fname}.`);
   if (!mission) setTimeout(() => UI.message('Build a Power Plant, then a Crystal Refinery to start earning credits.'), 2500);
+  if (run.daily) setTimeout(() => UI.message(`Daily Challenge ${run.daily}: win as fast as you can!`, true), 1200);
+  if (run.mut && run.mut.length) setTimeout(() => UI.message(`Mutators: ${run.mut.map(k => MUTATORS[k].icon + ' ' + MUTATORS[k].name).join(', ')}`), 4000);
+  // kill streaks: kills by your forces close together get a shout-out
+  const streak = { n: 0, t: -99 };
+  const SHOUT = { 2: 'Double kill!', 3: 'Triple kill!', 5: 'Rampage!', 8: 'Unstoppable!', 12: 'Wally Squad is on fire!', 20: 'Legendary!' };
+  on('kill', (victim, killer) => {
+    if (!killer || killer.faction !== G.player || victim.faction === G.player || victim.faction === 'neutral') return;
+    streak.n = G.time - streak.t < 4 ? streak.n + 1 : 1; streak.t = G.time;
+    G.bestStreak = Math.max(G.bestStreak || 0, streak.n);
+    const s = SHOUT[streak.n];
+    if (s) { Audio.announce(s, G.player, 1); UI.streakBanner?.(s); }
+  });
 }
 
 function togglePause(force) {
@@ -439,12 +477,14 @@ function endGame(win, text) {
   Audio.announce(win ? 'Mission accomplished' : 'Mission failed');
   Audio.sting(win);
   if (mission && win && !mission.tutorial) unlockNext(run.mission);
+  let dailyNote = '';
+  if (run.daily && win) { const r = dailyRecord(); const best = r && r.date === run.daily ? r.best : Infinity; dailyNote = G.time < best ? `New best: ${fmtTime(G.time)}!` : `${fmtTime(G.time)} (best ${fmtTime(best)})`; if (G.time < best) { try { localStorage.setItem('ws_daily', JSON.stringify({ date: run.daily, best: G.time })); } catch { /* ignore */ } } }
   setTimeout(() => {
     $('endTitle').textContent = win ? 'VICTORY' : 'DEFEAT';
     $('endTitle').style.color = win ? 'var(--accent)' : 'var(--red)';
     $('endSub').textContent = text || (win ? (mission ? `${mission.title}: mission complete.` : `The ${FACTIONS[G.enemy].name} has been crushed!`) : 'Our forces have fallen. Regroup, commander.');
     const t = Math.floor(G.time);
-    $('endStats').innerHTML = `<span>Mission time</span><span>${Math.floor(t / 60)}m ${t % 60}s</span>${run.mode === 'mp' ? '' : `<span>Difficulty</span><span>${DIFFICULTY[G.difficulty].label}</span>`}<span>Enemies destroyed</span><span>${G.stats.killed}</span><span>Units lost</span><span>${G.stats.lost}</span><span>Structures built</span><span>${G.stats.built}</span><span>Credits harvested</span><span>${Math.round(G.stats.harvested)}</span>`;
+    $('endStats').innerHTML = `<span>Mission time</span><span>${Math.floor(t / 60)}m ${t % 60}s</span>${run.mode === 'mp' ? '' : `<span>Difficulty</span><span>${DIFFICULTY[G.difficulty].label}</span>`}<span>Enemies destroyed</span><span>${G.stats.killed}</span><span>Units lost</span><span>${G.stats.lost}</span><span>Structures built</span><span>${G.stats.built}</span><span>Credits harvested</span><span>${Math.round(G.stats.harvested)}</span>${G.mvp ? `<span>MVP</span><span>🏅 ${G.mvp.name} · ${G.mvp.kills} kills</span>` : ''}${G.bestStreak > 1 ? `<span>Best kill streak</span><span>${G.bestStreak}</span>` : ''}${run.daily && win ? `<span>Daily Challenge</span><span>${dailyNote}</span>` : ''}`;
     recordHistory(99); drawHistory($('endGraph'));
     $('bNext').style.display = mission && win && (mission.tutorial || run.mission < MISSIONS.length - 1) ? '' : 'none';
     $('bAgain').style.display = run.mode === 'mp' ? 'none' : '';

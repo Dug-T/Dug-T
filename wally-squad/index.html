@@ -170,7 +170,11 @@
   #mpOverlay { position: absolute; inset: 0; z-index: 25; display: none; align-items: center; justify-content: center; background: #000a; }
   #objectives { position: absolute; left: 10px; top: 46px; z-index: 4; background: var(--panel); border: 1px solid var(--line2); border-radius: 6px; padding: 6px 10px; font-size: 14px; display: none; max-width: 320px; }
   #objectives .obHint { margin: 3px 0 2px 14px; font-size: 12px; color: var(--muted, #b9c6d6); line-height: 1.35; }
-  #objectives .ob { margin: 2px 0; } #objectives .done { color: var(--green); } #objectives .failed { color: var(--red); }
+  #objectives .ob { margin: 2px 0; }
+  .btn.daily small { display: block; font-size: 11px; font-weight: 500; letter-spacing: 0; opacity: 0.8; margin-top: 2px; text-transform: none; }
+  #streak { position: absolute; left: 50%; top: 22%; transform: translate(-50%, -50%) scale(0.6); z-index: 6; pointer-events: none; font: 900 40px/1 'Black Ops One', Rajdhani, sans-serif; color: #ffc23a; text-shadow: 0 0 18px rgba(255, 120, 30, 0.9), 0 3px 0 #6b2a00; opacity: 0; transition: opacity 0.25s, transform 0.25s; white-space: nowrap; }
+  #streak.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  body.touch #streak { font-size: 28px; } #objectives .done { color: var(--green); } #objectives .failed { color: var(--red); }
   body.touch #objectives { top: 230px; }
   #superRow { margin: 6px 8px 0; padding: 6px; border: 1px solid var(--line2); border-radius: 5px; background: #1a1210; display: grid; grid-template-columns: 1fr auto; gap: 4px; align-items: center; font: 700 12px 'Rajdhani'; }
   #superBar { grid-column: 1; height: 6px; background: #2b1d18; border-radius: 3px; overflow: hidden; }
@@ -282,7 +286,7 @@
 <div id="app">
 <div id="view">
   <canvas id="gl"></canvas>
-  <canvas id="overlay"></canvas>
+  <canvas id="overlay"></canvas><div id="streak"></div>
 </div>
 <div id="topbar">
   <div class="brand">WALLY SQUAD</div>
@@ -328,6 +332,7 @@
     <p style="text-align:center">The <b style="color:var(--blue)">Wally Squad</b> has landed in the Crystal Valley. The <b style="color:var(--red)">Grimlock Legion</b> wants every last crystal. Build your base, harvest crystal, raise an army and wipe them off the map.</p>
     <div class="menuCol">
       <button class="btn big" id="bTutorial">🎓 BOOT CAMP</button>
+      <button class="btn big daily" id="bDaily">📅 DAILY CHALLENGE</button>
       <button class="btn big" data-panel="menuCampaign">★ CAMPAIGN</button>
       <button class="btn big" data-panel="menuSkirmish">⚔ SKIRMISH</button>
       <button class="btn big" data-panel="menuSurvival">☠ SURVIVAL</button>
@@ -352,6 +357,8 @@
     <div class="label">Your faction</div><div class="row" id="facRow"></div>
     <div class="label">Enemy difficulty</div><div class="row" id="diffRow"></div>
     <div class="label">Battlefield</div><div class="row" id="optRow"></div>
+      <div class="label">Mutators (optional rule changes)</div>
+      <div class="row" id="mutRow"></div>
     <div class="row"><button class="btn" data-panel="menuMain">◀ Back</button><button class="btn big" id="bStart">▶ DEPLOY</button></div>
   </div>
   <div class="card wide" id="menuSurvival" style="display:none">
@@ -446,6 +453,8 @@
       <li><b>Research</b> (TECH tab): one-off upgrades for armour, damage, income, speed and range.</li>
       <li><b>Stances</b> (selection panel): Aggressive, Hold position or Hold fire.</li>
       <li><b>Game over</b> when all your buildings are destroyed. Destroy every enemy building to win.</li>
+      <li><b>Battle Bunker</b> (Defence tab): right-click it with infantry to garrison up to 4. They shoot out safely; <kbd>U</kbd> evacuates.</li>
+      <li><b>Daily Challenge &amp; Mutators:</b> a new challenge every day, plus optional rule changes in Skirmish.</li>
       <li><b>APC:</b> select infantry and right-click the Squad Carrier APC to load up to 5. <kbd>U</kbd> unloads them.</li>
       <li><b>New to RTS?</b> Play <b>Boot Camp</b> from the main menu for a step-by-step tutorial.</li>
       <li><b>Map Editor</b> (main menu): build your own maps. <b>Photo mode</b>: <kbd>F9</kbd>.</li>

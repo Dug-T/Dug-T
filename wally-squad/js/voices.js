@@ -8,7 +8,7 @@ const DEFAULT_LINES = {
   wallyman: { select: ['Wally Man is here!', 'Never fear, Wally Man is near!', 'Cape on, glasses on!'], move: ['Up, up and away!', 'To the rescue!'], attack: ['Spin it up!', 'Taste the Gatling!', 'Wally Man, open fire!'] },
   rifle: { select: ['Rifleman reporting.', 'Ready for action!'], move: ['Moving out.', 'On my way.'], attack: ['Opening fire!', 'Engaging!'] },
   rocket: { select: ['Rockets loaded.', 'Anti-armour ready.'], move: ['Relocating.'], attack: ['Rocket away!', 'Tank spotted!'] },
-  flamer: { select: ['Got a light?', 'Scorcher here.'], move: ['Moving.'], attack: ['Burn it down!', 'Toasty!'] },
+  flamer: { select: ['Wally Man to the rescue!'], move: ['Moving.'], attack: ['Burn it down!', 'Toasty!'] },
   engineer: { select: ['Engineer.', 'Tools ready.'], move: ['On my way.'], attack: ['I can fix that.', 'Taking it over.'] },
   medic: { select: ['Medic here.', 'Who needs patching up?'], move: ['Coming through.'], attack: ['I am a medic!'] },
   wally: { select: ['Wally here!', 'Where to, boss?', 'Glasses on, ready.'], move: ['Wally on the move!', 'Find me if you can.'], attack: ['Lining up the shot.', 'Time for a surprise!'] },

@@ -66,6 +66,7 @@ export const BUILDINGS = {
   hospital: { name: 'Field Hospital', cost: 1000, time: 0, hp: 900, w: 2, h: 2, power: 0, sight: 8, req: ['none'], tab: 'none', tech: true, desc: 'Neutral tech. Capture it with an Engineer to heal nearby infantry.' },
   depot:    { name: 'Repair Depot', cost: 1000, time: 0, hp: 900, w: 2, h: 2, power: 0, sight: 8, req: ['none'], tab: 'none', tech: true, desc: 'Neutral tech. Capture it with an Engineer to repair nearby vehicles.' },
   turret:   { name: 'Gun Turret', cost: 600, time: 10, hp: 750, w: 1, h: 1, power: -20, sight: 16, req: ['barracks'], tab: 'defense', weapon: 'turretGun', desc: 'Anti-vehicle cannon emplacement.' },
+  bunker:   { name: 'Battle Bunker', cost: 500, time: 9, hp: 1600, w: 2, h: 2, power: 0, sight: 15, req: ['barracks'], tab: 'defense', garrison: 4, desc: 'Garrison up to 4 infantry: they shoot out with +25% range and can\'t be hurt until the bunker falls. Right-click it with infantry selected.' },
   sam:      { name: 'SAM Site', cost: 750, time: 12, hp: 650, w: 2, h: 2, power: -20, sight: 22, req: ['radar'], tab: 'defense', weapon: 'sam', desc: 'Anti-aircraft missile launcher.' },
   plasma:   { name: 'Plasma Tower', cost: 1500, time: 18, hp: 950, w: 1, h: 1, power: -75, sight: 21, req: ['tech'], tab: 'defense', weapon: 'plasma', desc: 'Devastating energy beam. Needs power.' },
 };
@@ -120,5 +121,16 @@ export const DIFFICULTY = {
 };
 
 export const START_CREDITS = 4000;
+
+// Skirmish mutators: optional rule changes (also used by the Daily Challenge)
+export const MUTATORS = {
+  turbo:    { name: 'Turbo Build', icon: '⏩', desc: 'Everything builds twice as fast.' },
+  rich:     { name: 'Crystal Rush', icon: '💎', desc: 'Harvested crystal is worth double.' },
+  glass:    { name: 'Glass Cannons', icon: '💥', desc: 'Everything takes 75% more damage.' },
+  infantry: { name: 'Boots Only', icon: '🥾', desc: 'No vehicles or aircraft (except Harvesters and APCs).' },
+  veterans: { name: 'Veteran Armies', icon: '★', desc: 'Every unit starts as a Veteran.' },
+  crates:   { name: 'Crate Rain', icon: '📦', desc: 'Supply crates drop four times as often.' },
+};
+export const hasMut = (cfg, k) => !!(cfg && cfg.mut && cfg.mut.includes(k));
 export const HARVEST_CAPACITY = 700;
 export const ORE_MAX = 500;

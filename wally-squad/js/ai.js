@@ -8,7 +8,7 @@ import { aiUsePowers } from './powers.js';
 import { alive, distTo } from './entities.js';
 import { cellOf, T, idx } from './terrain.js';
 
-const BUILD_ORDER = ['power', 'refinery', 'barracks', 'power', 'factory', 'turret', 'refinery', 'radar', 'power', 'turret', 'sam', 'power', 'tech', 'helipad', 'power', 'plasma', 'turret', 'power', 'uplink', 'silo', 'sam', 'power', 'plasma', 'factory', 'barracks', 'power'];
+const BUILD_ORDER = ['power', 'refinery', 'barracks', 'power', 'factory', 'turret', 'refinery', 'radar', 'power', 'turret', 'bunker', 'sam', 'power', 'tech', 'helipad', 'power', 'plasma', 'turret', 'power', 'uplink', 'silo', 'sam', 'power', 'plasma', 'factory', 'barracks', 'power'];
 const available = (f, t) => { const d = defOf(t); return !(d.fac && d.fac !== f) && !(G.allowed && !G.allowed.includes(t)); };
 
 export class AI {
@@ -35,6 +35,7 @@ export class AI {
     if (!this.opts.noUnits && this.base) this.manageUnits(P);
     this.manageDefence();
     if (!this.opts.noAttack) this.manageAttack();
+    if (srand() < 0.25) this.manageGarrison();
     if (srand() < 0.2) aiGrabCrates(this.f);
     if (this.t > 240 && !this.opts.noAttack && srand() < 0.3) aiUsePowers(this.f, aiSuperTarget(this.f));
     if (!this.opts.noUnits) aiCaptureTech(this.f);
@@ -45,7 +46,18 @@ export class AI {
     for (const b of G.buildings) if (b.faction === this.f && !b.dead && b.hp < b.maxHp * 0.7 && P.credits > 800) b.repairing = true;
   }
 
-  ownCombat() { let n = 0; for (const u of G.units) if (!u.dead && u.faction === this.f && u.weapon) n++; return n; }
+  ownCombat() { let n = 0; for (const u of G.units) if (!u.dead && !u.boarded && u.faction === this.f && u.weapon) n++; return n; }
+
+  // fill bunkers with idle infantry that are hanging around the base
+  manageGarrison() {
+    for (const b of G.buildings) {
+      if (b.dead || b.faction !== this.f || !b.def.garrison || b.buildAnim < 1) continue;
+      const room = b.def.garrison - (b.passengers || []).length;
+      if (room <= 0) continue;
+      const pick = G.units.filter(u => !u.dead && !u.boarded && u.faction === this.f && u.isInf && u.weapon && !u.hero && !u.order && !u.target && !this.attackers.has(u) && distTo(b, u.x, u.z) < 30);
+      pick.slice(0, room).forEach(u => u.board(b));
+    }
+  }
 
   count(type) {
     return (this.P.owned[type] || 0);
@@ -166,7 +178,7 @@ export class AI {
     }
     if (!threat) return;
     for (const u of G.units) {
-      if (u.dead || u.faction !== this.f || !u.weapon || u.type === 'harvester' || this.attackers.has(u)) continue;
+      if (u.dead || u.boarded || u.faction !== this.f || !u.weapon || u.type === 'harvester' || this.attackers.has(u)) continue;
       if (Math.hypot(u.x - threat.x, u.z - threat.z) > 60) continue;
       if (!u.target || !alive(u.target)) u.moveTo(threat.x + rr(-3, 3), threat.z + rr(-3, 3), { attackMove: true });
     }
@@ -174,7 +186,7 @@ export class AI {
 
   manageAttack() {
     for (const u of [...this.attackers]) if (!alive(u)) this.attackers.delete(u);
-    const idle = G.units.filter(u => !u.dead && u.faction === this.f && u.weapon && u.type !== 'harvester' && !this.attackers.has(u));
+    const idle = G.units.filter(u => !u.dead && !u.boarded && !(u.order && u.order.type === 'board') && u.faction === this.f && u.weapon && u.type !== 'harvester' && !this.attackers.has(u));
     // gather idle army at a rally point in front of the base
     const base = this.base; if (!base) return;
     const enemyB = G.buildings.filter(b => !b.dead && b.faction !== this.f && b.faction !== 'neutral' && !b.def.isMine && !b.def.isWall);

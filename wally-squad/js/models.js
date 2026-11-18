@@ -767,8 +767,8 @@ export function makeBuildingModel(type, faction) {
     const t = mats(faction), m = M();
     const root = new THREE.Group();
     const b = new Builder();
-    const W = { conyard: 4, power: 3, refinery: 4, barracks: 3, factory: 4, radar: 3, tech: 3, helipad: 3, turret: 1, sam: 2, plasma: 1, uplink: 3, silo: 3, wall: 1, gate: 2, mine: 1, derrick: 2, hospital: 2, depot: 2 };
-    const D = { conyard: 4, power: 3, refinery: 3, barracks: 3, factory: 4, radar: 3, tech: 3, helipad: 3, turret: 1, sam: 2, plasma: 1, uplink: 3, silo: 3, wall: 1, gate: 1, mine: 1, derrick: 2, hospital: 2, depot: 2 };
+    const W = { bunker: 2, conyard: 4, power: 3, refinery: 4, barracks: 3, factory: 4, radar: 3, tech: 3, helipad: 3, turret: 1, sam: 2, plasma: 1, uplink: 3, silo: 3, wall: 1, gate: 2, mine: 1, derrick: 2, hospital: 2, depot: 2 };
+    const D = { bunker: 2, conyard: 4, power: 3, refinery: 3, barracks: 3, factory: 4, radar: 3, tech: 3, helipad: 3, turret: 1, sam: 2, plasma: 1, uplink: 3, silo: 3, wall: 1, gate: 1, mine: 1, derrick: 2, hospital: 2, depot: 2 };
     const w = W[type] * CELL - 0.3, d = D[type] * CELL - 0.3;
     const parts = {};
     switch (type) {
@@ -1043,6 +1043,21 @@ export function makeBuildingModel(type, faction) {
         pb.cyl(m.gun, 0.03, 0.03, 1.4, 5, 1.4, -0.9, 0);
         const pump = pb.build(); pump.position.set(0, 2.1, 0.6); pump.name = 'pump';
         parts.pump = pump;
+        break;
+      }
+      case 'bunker': {
+        foundation(b, w, d, 0.3);
+        b.cyl(m.concreteDark, 1.75, 1.9, 0.5, 8, 0, 0.35, 0, 0, Math.PI / 8, 0);
+        b.cyl(m.concrete, 1.45, 1.7, 1.3, 8, 0, 1.2, 0, 0, Math.PI / 8, 0);
+        b.cyl(m.concreteDark, 1.6, 1.5, 0.35, 8, 0, 2.0, 0, 0, Math.PI / 8, 0);           // roof slab
+        for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2 + Math.PI / 8; b.box(m.black, 0.7, 0.16, 0.06, Math.sin(a) * 1.6, 1.45, Math.cos(a) * 1.6, 0, a, 0); } // firing slits
+        for (let i = 0; i < 14; i++) { const a = i / 14 * Math.PI * 2; b.add(new THREE.CapsuleGeometry(0.16, 0.36, 4, 6), m.sand, Math.cos(a) * 1.95, 0.32, Math.sin(a) * 1.95, 0, -a, Math.PI / 2); }
+        b.box(m.darkMetal, 0.7, 1.0, 0.1, 0, 0.9, 1.72);                                    // door
+        b.box(t.team, 1.2, 0.12, 1.2, 0, 2.22, 0);
+        b.cyl(m.gun, 0.03, 0.03, 1.5, 5, 0.9, 2.95, -0.6);                                  // flag pole
+        b.box(t.accent, 0.6, 0.38, 0.02, 1.2, 3.45, -0.6);
+        lamps(b, [[0, 2.4, 0]], m.lampWhite);
+        parts.muzzle = new THREE.Vector3(0, 1.45, 1.4);
         break;
       }
       case 'hospital': {

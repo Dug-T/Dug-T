@@ -16,6 +16,8 @@ Play it by opening `wally-squad/index.html` from any web server (GitHub Pages wo
 - **Survival:** endless enemy waves that grow stronger each time, with a boss every 5th wave. The game keeps your best score and wave for each map.
 - **Skirmish:** choose a map, your faction and the difficulty, and turn the day–night cycle and dynamic weather on or off.
   - Skirmish options: switch superweapons, support powers, supply crates, tech buildings, fog of war and starting armies on or off, and choose the starting money ($2,500–$15,000).
+- **📅 Daily Challenge** (main menu): everyone gets the same map, faction and two mutators for the day, on Commander difficulty. Win as fast as you can; the game keeps your best time for the day.
+- **🎲 Mutators** (skirmish menu): Turbo Build, Crystal Rush (double crystal value), Glass Cannons (+75% damage), Boots Only (no vehicles except Harvesters and APCs), Veteran Armies and Crate Rain.
 - **Game over:** in every mode you lose as soon as **all your buildings are destroyed** (walls, gates and mines don't count). Destroy every enemy building to win.
 - **Online battle:** 1 v 1 against a friend. One player hosts and shares a 5-letter room code; the other joins with it.
 - **Unit Designer:** invent your own infantry and vehicles:
@@ -70,6 +72,11 @@ Both factions share the basic army: riflemen, rocket troopers, Scorchers, engine
   - Turbo Engines: vehicles are 15% faster.
   - Long-Range Optics: +20% sight and range.
   - The computer opponent researches them too.
+- **🏰 Battle Bunker** (Defence tab, needs a Barracks): a sandbagged pillbox for up to 4 infantry. Select infantry and right-click (or tap) it to garrison.
+  - Troops inside shoot out with +25% range and can't be hurt until the bunker falls; then they bail out wounded.
+  - Evacuate (`U`) sends them back out. The computer builds and garrisons bunkers too.
+- **🔥 Kill streaks:** quick kills in a row get a banner and a shout (Double kill, Triple kill, Rampage, Unstoppable and more). The end screen shows your **MVP** unit and your best streak.
+- **Unit voices:** select the Scorcher and he shouts "Wally Man to the rescue!"
 - **🚚 Squad Carrier APC** (War Factory, needs a Barracks): an armoured troop carrier with a machine gun. To load up to 5 infantry, select them and right-click (or tap) the APC. Press Unload (`U`) to drop them off. Green pips show how many are inside. If the APC is destroyed, its passengers bail out wounded.
 - **🎵 Dynamic music:** the soundtrack follows the fighting. It is calm and sparse in quiet moments, becomes the full battle loop in a skirmish, and goes to all-out war (double hats, drum fills and a lead arpeggio) in big fights. The Music button shows the current mood. Victory and defeat each play a short phrase.
 - **Unit stances:** in the selection panel, choose Aggressive (chase enemies), Hold Position (shoot only what's in range and never move) or Hold Fire (never shoot unless ordered, good for sneaking).

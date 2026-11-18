@@ -432,7 +432,7 @@ function commandAt(sx, sy, attackMove = false, queue = false) {
     Voices.say(units[0].type, 'attack');
     return;
   }
-  if (target && target.faction === G.player && target.kind === 'unit' && target.def.transport) {
+  if (target && target.faction === G.player && (target.def.transport || target.def.garrison) && (target.kind === 'unit' || target.buildAnim >= 1)) {
     const inf = units.filter(u => u.isInf && u !== target);
     if (inf.length) { issue({ t: 'board', ids: inf.map(u => u.id), tid: target.id }); flashMarker(target.x, target.z, 0x55ff77); Audio.play('ack'); return; }
   }
@@ -582,7 +582,7 @@ function bindInput() {
     if (k === 'KeyA' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); selectArmy(); return; }
     if (k === 'KeyS' && !e.ctrlKey) { if (myUnits().length) issue({ t: 'stop', ids: myUnits().map(u => u.id) }); Audio.play('ack'); return; }
     if (k === 'KeyG') { const w = myUnits().filter(u => u.type === 'wallyman'); if (w.length) { issue({ t: 'ability', ids: w.map(u => u.id) }); Voices.say('wallyman', 'attack', true); } return; }
-    if (k === 'KeyU') { const a = myUnits().filter(u => u.def.transport && (u.passengers || []).length); if (a.length) { issue({ t: 'unload', ids: a.map(u => u.id) }); Audio.play('ack'); } return; }
+    if (k === 'KeyU') { const a = G.selection.filter(e => alive(e) && e.faction === G.player && (e.def.transport || e.def.garrison) && (e.passengers || []).length); if (a.length) { issue({ t: 'unload', ids: a.map(u => u.id) }); Audio.play('ack'); } return; }
     if (k === 'KeyH') { const b = G.buildings.find(b => b.faction === G.player && b.type === 'conyard') || G.buildings.find(b => b.faction === G.player); if (b) centerOn(b.x, b.z); return; }
     if (k === 'Space') { e.preventDefault(); if (G.alertAt) centerOn(G.alertAt.x, G.alertAt.z); return; }
     if (k === 'KeyR') { setMode(G.mode === 'repair' ? null : 'repair'); return; }
@@ -889,6 +889,11 @@ function refreshSelPanel(force) {
     } else {
       addBtn(first.repairing ? '🔧 Stop repair' : '🔧 Repair', () => { issue({ t: 'rep', id: first.id, on: !first.repairing }); selSig = ''; setTimeout(() => refreshSelPanel(true), 300); });
       addBtn('$ Sell', () => issue({ t: 'sell', id: first.id }));
+      if (first.def.garrison) {
+        const n = (first.passengers || []).length;
+        if (n) addBtn(`⏏ Evacuate (${n}/${first.def.garrison}) (U)`, () => { issue({ t: 'unload', ids: [first.id] }); Audio.play('ack'); setTimeout(() => refreshSelPanel(true), 150); }, 'Send the garrison back outside.');
+        const s = document.createElement('div'); s.className = 'sub'; s.style.width = '100%'; s.textContent = `Garrison ${n}/${first.def.garrison}: select infantry and right-click (or tap) the bunker to send them in.`; cmds.appendChild(s);
+      }
       if (['barracks', 'factory', 'helipad'].includes(first.type)) {
         addBtn(first.primary ? '★ Primary' : '☆ Set primary', () => { issue({ t: 'prim', id: first.id }); selSig = ''; refreshSelPanel(true); });
         const s = document.createElement('div'); s.className = 'sub'; s.style.width = '100%'; s.textContent = 'Right-click the map to set a rally point'; cmds.appendChild(s);
@@ -992,7 +997,8 @@ export function drawOverlay() {
     const show = b.selected || b === hoverEnt || (b.lastHit && now - b.lastHit < 3) || b.repairing;
     const P = G.players[b.faction];
     const off = b.faction === G.player && P.powerUse > P.powerProd && b.type === 'plasma';
-    if (!show && !off && !b.primary) continue;
+    const gar = b.def.garrison && b.faction === G.player ? (b.passengers || []).length : 0;
+    if (!show && !off && !b.primary && !gar) continue;
     const p = project(b.x, b.baseY + (b.def.w === 1 ? 5.5 : 4.8), b.z);
     if (p.behind) continue;
     const w = clamp(b.def.w * 18, 30, 72);
@@ -1001,6 +1007,7 @@ export function drawOverlay() {
     if (b.repairing) { octx.fillStyle = '#7fd0ff'; octx.fillText('🔧 REPAIRING', p.x, p.y - 4); }
     if (off) { octx.fillStyle = Math.sin(now * 8) > 0 ? '#ff4a3d' : '#ffc23a'; octx.fillText('⚡ NO POWER', p.x, p.y - 4); }
     if (b.primary && b.faction === G.player) { octx.fillStyle = '#ffc23a'; octx.fillText('PRIMARY', p.x, p.y + 16); }
+    if (b.def.garrison && b.faction === G.player) for (let i = 0; i < b.def.garrison; i++) { octx.fillStyle = i < gar ? '#7dff9a' : 'rgba(0,0,0,0.5)'; octx.fillRect(p.x - 12 + i * 6, p.y - 9, 4, 4); }
     if (b.selected && b.rally && b.faction === G.player) {
       const r = project(b.rally.x, heightAt(b.rally.x, b.rally.z) + 0.2, b.rally.z);
       const s = project(b.x, b.baseY + 0.5, b.z);
@@ -1053,3 +1060,11 @@ export function drawOverlay() {
   }
 }
 export { icons };
+
+// big "Triple kill!" style banner in the middle of the screen
+let streakTimer = 0;
+export function streakBanner(text) {
+  const el = document.getElementById('streak'); if (!el) return;
+  el.textContent = text; el.classList.add('show');
+  clearTimeout(streakTimer); streakTimer = setTimeout(() => el.classList.remove('show'), 1600);
+}
