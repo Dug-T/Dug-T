@@ -75,6 +75,10 @@ Both factions share the basic army: riflemen, rocket troopers, Scorchers, engine
   - Long-Range Optics: +20% sight and range.
   - The computer opponent researches them too.
 - **👹 Warlord Grak** (Grimlock hero, Barracks + Comms Center, one at a time): a hulking brute with a rotary rocket cannon. **War Cry** (`G`) makes every Grimlock fighter within 13 m fire much faster for 6 seconds. The computer uses heroes' abilities too.
+- **🧪 Sandbox** (main menu): unlimited money, five-times-faster building and no win or lose. A toolbar spawns any unit for either side wherever you tap (one or five at a time), switches the enemy AI on or off, reveals the map and clears all units.
+- **🚁 Sky Hauler** (Helipad): a twin-rotor transport helicopter that carries 6 infantry over cliffs, water and lava. Load it like the APC. Unload (`U`) drops the troops on the nearest flat, dry ground; it refuses over water.
+- **📰 Battle log:** a feed in the top-right shows what your forces destroy and lose ("Battle Tank destroyed Scout Buggy ×2"), plus Heroic promotions.
+- **🎬 Finale cam:** when a battle is won or lost, the camera swoops to the last building to fall, in slow motion, with a final chain of explosions before the end screen.
 - **🛶 Skimmer Hovercraft** (War Factory + Comms Center): a fast amphibious raider with twin rockets that skims over water and even lava, so it can flank across lakes and the Magma Rift.
 - **⚡ EMP Strike** (support power, needs a Tech Lab): a blue pulse that knocks out enemy vehicles, aircraft and defences within 15 m for 12 seconds. Infantry are unaffected.
 - **🌟 Heroic rank:** a unit with 10 kills becomes Heroic (★★★). It deals +75% damage, heals faster and has a golden glint.

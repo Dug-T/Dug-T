@@ -171,6 +171,13 @@
   #objectives { position: absolute; left: 10px; top: 46px; z-index: 4; background: var(--panel); border: 1px solid var(--line2); border-radius: 6px; padding: 6px 10px; font-size: 14px; display: none; max-width: 320px; }
   #objectives .obHint { margin: 3px 0 2px 14px; font-size: 12px; color: var(--muted, #b9c6d6); line-height: 1.35; }
   #objectives .ob { margin: 2px 0; }
+  #feed { position: absolute; right: calc(var(--side, 260px) + 10px); top: 46px; z-index: 4; pointer-events: none; display: flex; flex-direction: column; align-items: flex-end; gap: 3px; max-width: 360px; }
+  #feed .fl { background: rgba(8,12,18,0.72); border: 1px solid rgba(255,255,255,0.08); border-radius: 4px; padding: 2px 8px; font-size: 13px; color: #dfe8f2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 360px; transition: opacity 0.6s; }
+  #feed .fl b.w { color: #7fb8ff; } #feed .fl b.g { color: #ff7a6a; } #feed .fl .n { color: var(--accent); }
+  body.touch #feed { top: 36px; } body.touch #feed .fl { font-size: 11px; padding: 1px 6px; max-width: 260px; }
+  #sandboxBar { position: absolute; right: calc(var(--side, 260px) + 10px); bottom: 10px; z-index: 5; display: none; flex-wrap: wrap; gap: 4px; justify-content: flex-end; max-width: 420px; background: var(--panel); border: 1px solid var(--line2); border-radius: 6px; padding: 6px; }
+  #sandboxBar .btn { padding: 4px 8px; font-size: 12px; } #sandboxBar select { background: #0d1520; color: #fff; border: 1px solid var(--line2); border-radius: 4px; font: 600 13px Rajdhani, sans-serif; padding: 3px; }
+  body.touch #sandboxBar { max-width: 300px; padding: 4px; } body.touch #sandboxBar .btn { font-size: 11px; padding: 3px 6px; }
   #profile { margin: 6px auto 10px; max-width: 420px; padding: 8px 12px; border: 1px solid var(--line2); border-radius: 8px; background: rgba(0,0,0,0.25); font-size: 14px; }
   #profile .profRank { font-size: 16px; } #profile .profIcon { color: var(--accent); font-weight: 900; }
   #profile .profBar { height: 6px; background: rgba(255,255,255,0.12); border-radius: 3px; margin: 5px 0 4px; overflow: hidden; }
@@ -312,6 +319,8 @@
   <button class="btn" id="tBox">Box select</button>
 </div>
 <div id="msgs"></div>
+<div id="feed"></div>
+<div id="sandboxBar"></div>
 <div id="modeBar"><span id="modeText"></span><button class="btn" id="modeCancel">✖ Cancel</button></div>
 <div id="selPanel"><div id="selTitle" class="title"></div><div id="selSub" class="sub"></div><div class="hp"><div id="selHp"></div></div><div id="selIcons"></div><div id="selCmds"></div></div>
 <div id="side">
@@ -343,6 +352,7 @@
       <button class="btn big" data-panel="menuCampaign">★ CAMPAIGN</button>
       <button class="btn big" data-panel="menuSkirmish">⚔ SKIRMISH</button>
       <button class="btn big" data-panel="menuSurvival">☠ SURVIVAL</button>
+      <button class="btn big" data-panel="menuSandbox">🧪 SANDBOX</button>
       <button class="btn big" data-panel="menuOnline">🌐 ONLINE BATTLE</button>
       <button class="btn big" data-panel="menuDesigner">🛠 UNIT DESIGNER</button>
       <button class="btn big" data-panel="menuEditor">🗺 MAP EDITOR</button>
@@ -375,6 +385,12 @@
     <div class="label">Your faction</div><div class="row" id="facRowSv"></div>
     <div class="label">Wave strength</div><div class="row" id="diffRowSv"></div>
     <div class="row"><button class="btn" data-panel="menuMain">◀ Back</button><button class="btn big" id="bStartSv">▶ START SURVIVAL</button></div>
+  </div>
+  <div class="card wide" id="menuSandbox" style="display:none">
+    <h2>SANDBOX</h2>
+    <p style="text-align:center">No rules, unlimited money and super-fast building. Spawn any unit for either side anywhere on the map and stage your own battles. The enemy AI starts switched off.</p>
+    <div class="label">Map</div><div id="mapListSb" class="cardList maps"></div>
+    <div class="row"><button class="btn" data-panel="menuMain">◀ Back</button><button class="btn big" id="bStartSb">▶ START SANDBOX</button></div>
   </div>
   <div class="card wide" id="menuOnline" style="display:none">
     <h2>ONLINE BATTLE</h2>
@@ -460,6 +476,7 @@
       <li><b>Research</b> (TECH tab): one-off upgrades for armour, damage, income, speed and range.</li>
       <li><b>Stances</b> (selection panel): Aggressive, Hold position or Hold fire.</li>
       <li><b>Game over</b> when all your buildings are destroyed. Destroy every enemy building to win.</li>
+      <li><b>Sandbox</b> (main menu): spawn anything, anywhere. The <b>Sky Hauler</b> flies 6 infantry over any terrain.</li>
       <li><b>Hovercraft</b> cross water and lava. <b>EMP Strike</b> (Tech Lab) disables enemy machines for 12 s. Units with 10 kills become <b>Heroic</b>.</li>
       <li><b>Fighting back:</b> units under fire attack the shooter automatically and nearby idle friends help (unless set to Hold fire or given a move order).</li>
       <li><b>Patrol:</b> press <kbd>P</kbd> (or the Patrol button) and pick a point - units walk back and forth, fighting on the way.</li>

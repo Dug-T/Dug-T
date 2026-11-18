@@ -397,6 +397,33 @@ export function makeRepairTruck(faction) {
   });
 }
 
+export function makeHauler(faction) {
+  return cached(`hauler-${faction}`, () => {
+    const t = mats(faction), m = M();
+    const root = new THREE.Group();
+    const b = new Builder();
+    b.add(new THREE.CapsuleGeometry(0.75, 3.6, 6, 14), t.team, 0, 0, 0, Math.PI / 2, 0, 0);   // long fuselage
+    b.box(t.teamDark, 1.3, 0.2, 4.2, 0, -0.55, 0);                                              // belly
+    b.sph(m.glass, 0.55, 0, 0.2, 2.3, 1.1, 0.8, 0.9);                                           // cockpit glass
+    b.box(t.teamDark, 0.5, 0.9, 0.9, 0, 0.75, -1.95);                                           // rear pylon
+    b.box(t.teamDark, 0.45, 0.55, 0.7, 0, 0.6, 1.7);                                            // front pylon
+    for (let i = 0; i < 5; i++) for (const s of [-1, 1]) b.box(m.glass, 0.04, 0.22, 0.3, s * 0.76, 0.15, -1.2 + i * 0.55); // windows
+    b.box(m.darkMetal, 1.1, 0.7, 0.08, 0, -0.1, -2.55);                                         // rear ramp
+    for (const s of [-1, 1]) { b.box(m.darkMetal, 0.25, 0.25, 1.1, s * 0.7, -0.75, 0.4); b.cyl(m.black, 0.18, 0.18, 0.14, 10, s * 0.7, -0.95, 1.2, 0, 0, Math.PI / 2); b.cyl(m.black, 0.18, 0.18, 0.14, 10, s * 0.7, -0.95, -0.6, 0, 0, Math.PI / 2); }
+    b.box(t.accent, 0.02, 0.4, 0.6, 0.77, 0.1, 0.9);
+    b.box(m.lampRed, 0.1, 0.06, 0.1, 0, 1.25, -1.95);
+    root.add(b.build());
+    const rotor = (name, y, z) => {
+      const rb = new Builder();
+      rb.cyl(m.darkMetal, 0.14, 0.14, 0.2, 8, 0, 0, 0);
+      for (let i = 0; i < 3; i++) rb.box(m.darkMetal, 0.22, 0.04, 3.6, 0, 0.08, 0, 0, i * Math.PI * 2 / 3, 0);
+      const r = rb.build(); r.position.set(0, y, z); r.name = name; root.add(r);
+    };
+    rotor('rotor', 1.08, 1.7); rotor('rotor2', 1.28, -1.95);
+    return root;
+  });
+}
+
 export function makeDrone(faction) {
   return cached(`drone-${faction}`, () => {
     const t = mats(faction), m = M();
@@ -885,6 +912,7 @@ export function makeUnitModel(type, faction) {
     case 'repair': return makeRepairTruck(faction);
     case 'hover': return makeHovercraft(faction);
     case 'drone': return makeDrone(faction);
+    case 'hauler': return makeHauler(faction);
     case 'stealth': return makeStealth(faction);
     case 'inferno': return makeInferno(faction);
     case 'wallyman': return makeWallyMan(faction);
