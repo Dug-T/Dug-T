@@ -97,7 +97,7 @@
   #loading .bar { width: 240px; height: 6px; background: #1a232c; margin-top: 12px; border-radius: 3px; overflow: hidden; }
   #loading .bar div { height: 100%; width: 0; background: var(--accent); transition: width 0.2s; }
   /* touch helpers */
-  #touchBar { position: absolute; left: 10px; top: 46px; display: none; flex-direction: column; gap: 6px; z-index: 5; }
+  #touchBar { position: absolute; left: 58px; top: 46px; display: none; flex-direction: column; gap: 6px; z-index: 5; }
   #touchBar .btn { padding: 8px 10px; font-size: 13px; }
   @media (max-width: 820px), (max-height: 520px) {
     :root { --side: 190px; }
@@ -142,11 +142,11 @@
     #topbar .btn { font-size: 12px; padding: 3px 7px; white-space: nowrap; }
     #clock, #wx { font-size: 12px; white-space: nowrap; }
     #selPanel { bottom: 6px; left: 6px; }
-    #touchBar { top: 36px; left: 6px; gap: 3px; } #touchBar .btn { padding: 4px 6px; font-size: 11px; }
+    #touchBar { top: 36px; left: 54px; gap: 3px; } /* clear of the iPhone camera notch in landscape */ #touchBar .btn { padding: 4px 6px; font-size: 11px; }
     #selPanel { min-width: 0; max-width: 46vw; padding: 4px 6px; } #selPanel .title { font-size: 14px; } #selPanel .sub { font-size: 11px; }
     .sicon { width: 36px; height: 30px; } #selCmds .btn { padding: 2px 5px; font-size: 11px; }
     #msgs { top: 34px; } .msg { font-size: 13px; }
-    body.touch #objectives { top: 40px; left: 120px; font-size: 12px; max-width: 220px; }
+    body.touch #objectives { top: 40px; left: 168px; font-size: 12px; max-width: 220px; }
     .card { padding: 14px 18px; }
   }
   .menuCol { display: flex; flex-direction: column; gap: 8px; align-items: center; margin-top: 12px; }
