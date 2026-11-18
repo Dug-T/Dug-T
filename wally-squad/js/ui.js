@@ -1,7 +1,7 @@
 // Interface: camera, mouse/keyboard/touch input, sidebar, minimap, selection panel, health bars, icons.
 import * as THREE from 'three';
 import { G, clamp, lerp } from './state.js';
-import { BUILDINGS, UNITS, TABS, CELL, HALF, WORLD, GRID, FACTIONS, QUEUE_OF, HARVEST_CAPACITY } from './config.js';
+import { BUILDINGS, UNITS, UPGRADES, TABS, CELL, HALF, WORLD, GRID, FACTIONS, QUEUE_OF, HARVEST_CAPACITY } from './config.js';
 import { T, heightAt, cellOf, cellCenter, idx, isVisibleAt, isExploredAt, BASES } from './terrain.js';
 import { Unit, Building, alive, byId } from './entities.js';
 import { hasReqs, canPlace, defOf, isBuildingType, powerFactor, lineCells } from './production.js';
@@ -14,6 +14,7 @@ import { makeUnitModel, makeBuildingModel, makeGhost } from './models.js';
 import { formationSlots } from './pathfind.js';
 import { fogUniforms } from './materials.js';
 import * as Audio from './audio.js';
+import { elemPos, appPos, appSize } from './orient.js';
 
 const $ = id => document.getElementById(id);
 const raycaster = new THREE.Raycaster();
@@ -45,13 +46,11 @@ export function initUI() {
 
 // Some phones report the old size during rotation, so also check every frame and resize if it changed.
 export function checkSize() {
-  const r = view.getBoundingClientRect();
-  if (Math.abs(r.width - W) > 1 || Math.abs(r.height - H) > 1) resize();
+  if (Math.abs(view.clientWidth - W) > 1 || Math.abs(view.clientHeight - H) > 1) resize();
 }
 
 export function resize() {
-  const r = view.getBoundingClientRect();
-  W = Math.max(1, r.width); H = Math.max(1, r.height);
+  W = Math.max(1, view.clientWidth); H = Math.max(1, view.clientHeight);
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
   overlay.width = W * dpr; overlay.height = H * dpr; octx.setTransform(dpr, 0, 0, dpr, 0, 0);
   G.onResize?.(W, H);
@@ -132,9 +131,10 @@ function buildTabs() {
 let gridItems = [];
 export function buildGrid() {
   const grid = $('grid'); grid.innerHTML = ''; gridItems = [];
-  const list = [...Object.entries(BUILDINGS), ...Object.entries(UNITS)].filter(([, d]) => d.tab === curTab && (!d.fac || d.fac === G.player));
+  const list = [...Object.entries(BUILDINGS), ...Object.entries(UNITS), ...Object.entries(UPGRADES)].filter(([, d]) => d.tab === curTab && (!d.fac || d.fac === G.player));
   for (const [type, d] of list) {
     const el = document.createElement('div'); el.className = 'item';
+    if (!icons[type] && d.icon) icons[type] = emojiIcon(d.icon);
     el.innerHTML = `<img src="${icons[type] || ''}" alt=""><canvas class="clock" width="100" height="80"></canvas><div class="cost">$${d.cost}</div>${d.key ? `<div class="key">${d.key}</div>` : ''}<div class="count"></div><div class="state"></div><div class="nm">${d.name}</div>`;
     el.onclick = e => { e.preventDefault(); clickItem(type); };
     el.oncontextmenu = e => { e.preventDefault(); rightClickItem(type); };
@@ -142,6 +142,14 @@ export function buildGrid() {
     grid.appendChild(el);
     gridItems.push({ type, el, clock: el.querySelector('.clock'), count: el.querySelector('.count'), state: el.querySelector('.state') });
   }
+}
+function emojiIcon(e) {
+  const c = document.createElement('canvas'); c.width = 160; c.height = 128;
+  const x = c.getContext('2d');
+  const g = x.createRadialGradient(80, 60, 10, 80, 64, 90); g.addColorStop(0, '#2a3f52'); g.addColorStop(1, '#0b131a');
+  x.fillStyle = g; x.fillRect(0, 0, 160, 128);
+  x.font = '64px serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(e, 80, 62);
+  return c.toDataURL();
 }
 function clickItem(type) {
   const P = G.players[G.player];
@@ -181,7 +189,7 @@ function showTip(type, e) {
   tip.innerHTML = `<b>${d.name}</b> — $${d.cost}<br>${d.desc}${pw}${d.hp ? `<br>Armour: ${d.hp}` : ''}${ok ? '' : `<br><span class="req">Requires: ${reqText(type)}</span>`}<br><span style="color:var(--dim)">Left-click build · Right-click hold/cancel</span>`;
   tip.style.display = 'block'; moveTip(e);
 }
-function moveTip(e) { const tip = $('tooltip'); tip.style.left = Math.min(innerWidth - 250, e.clientX - 250) + 'px'; tip.style.top = Math.min(innerHeight - 120, e.clientY + 10) + 'px'; }
+function moveTip(e) { const tip = $('tooltip'), p = appPos(e), A = appSize(); tip.style.left = Math.max(4, Math.min(A.w - 250, p.x - 250)) + 'px'; tip.style.top = Math.min(A.h - 120, p.y + 10) + 'px'; }
 function hideTip() { $('tooltip').style.display = 'none'; }
 
 let sideT = 0;
@@ -207,7 +215,7 @@ export function updateSidebar(dt) {
     const active = q.items[0] === it.type;
     const ready = active && q.ready;
     it.el.classList.toggle('ready', ready);
-    it.state.textContent = ready ? 'READY' : active && q.hold ? 'ON HOLD' : '';
+    it.state.textContent = ready ? 'READY' : active && q.hold ? 'ON HOLD' : (UPGRADES[it.type] && P.upgrades[it.type]) ? 'DONE' : '';
     const c = it.clock.getContext('2d');
     c.clearRect(0, 0, 100, 80);
     if (active && !ready) {
@@ -320,7 +328,7 @@ export function updateCamera(dt) {
   C.dist = lerp(C.dist, C.targetDist ?? C.dist, Math.min(1, dt * 8));
   C.x = clamp(C.x, -HALF + 10, HALF - 10); C.z = clamp(C.z, -HALF + 10, HALF - 10);
   const cam = G.three.camera;
-  const pitch = lerp(0.62, 1.02, clamp((C.dist - 22) / 100, 0, 1));
+  const pitch = clamp(lerp(0.62, 1.02, clamp((C.dist - 22) / 100, 0, 1)) + (G.photo ? C.tilt || 0 : 0), 0.12, 1.45);
   C.ty = lerp(C.ty ?? 0, Math.max(0, heightAt(C.x, C.z)), Math.min(1, dt * 3));
   const sh = C.shake; C.shake = Math.max(0, C.shake - dt * 2.5);
   const jx = (Math.random() - 0.5) * sh, jy = (Math.random() - 0.5) * sh, jz = (Math.random() - 0.5) * sh;
@@ -477,7 +485,7 @@ function bindInput() {
   gl.addEventListener('pointerdown', e => {
     if (e.pointerType === 'touch') return;
     Audio.initAudio();
-    const r = view.getBoundingClientRect(); const x = e.clientX - r.left, y = e.clientY - r.top;
+    const { x, y } = elemPos(view, e);
     if (e.button === 0) {
       if (G.placing) {
         if (BUILDINGS[G.placing].isWall && G.mouse.ground) { wallStart = placementCell(G.mouse.ground.x, G.mouse.ground.z); return; }
@@ -494,7 +502,7 @@ function bindInput() {
   });
   window.addEventListener('pointermove', e => {
     if (e.pointerType === 'touch') return;
-    const r = view.getBoundingClientRect(); const x = e.clientX - r.left, y = e.clientY - r.top;
+    const { x, y } = elemPos(view, e);
     if (G.mouse.x !== x || G.mouse.y !== y) G.mouse.moved = true;
     G.mouse.x = x; G.mouse.y = y;
     if (drag) { drag.x1 = x; drag.y1 = y; if (Math.hypot(x - drag.x0, y - drag.y0) > 6) drag.active = true; }
@@ -513,7 +521,7 @@ function bindInput() {
   });
   window.addEventListener('pointerup', e => {
     if (e.pointerType === 'touch') return;
-    const r = view.getBoundingClientRect(); const x = e.clientX - r.left, y = e.clientY - r.top;
+    const { x, y } = elemPos(view, e);
     if (e.button === 0 && G.placing && wallStart) { tryPlace(); return; }
     if (e.button === 0 && drag) {
       if (drag.active) boxSelect(drag.x0, drag.y0, drag.x1, drag.y1, e.shiftKey);
@@ -532,7 +540,8 @@ function bindInput() {
   gl.addEventListener('wheel', e => {
     e.preventDefault();
     const C = G.camera;
-    C.targetDist = clamp((C.targetDist ?? C.dist) * (e.deltaY > 0 ? 1.12 : 0.89), 18, 130);
+    if (G.photo && e.shiftKey) { C.tilt = clamp((C.tilt || 0) + (e.deltaY > 0 ? 0.04 : -0.04), -0.5, 0.45); return; }
+    C.targetDist = clamp((C.targetDist ?? C.dist) * (e.deltaY > 0 ? 1.12 : 0.89), G.photo ? 5 : 18, 130);
   }, { passive: false });
 
   window.addEventListener('keydown', e => {
@@ -540,6 +549,9 @@ function bindInput() {
     keys[e.code] = true; keys.ctrl = e.ctrlKey || e.metaKey;
     Audio.initAudio();
     const k = e.code;
+    if (k === 'F9') { e.preventDefault(); G.togglePhoto?.(); return; }
+    if (G.photo && (k === 'KeyZ' || k === 'KeyC')) { G.camera.tilt = clamp((G.camera.tilt || 0) + (k === 'KeyZ' ? -0.05 : 0.05), -0.5, 0.45); return; }
+    if (k === 'Escape' && G.photo) { G.togglePhoto?.(); return; }
     if (k === 'Escape') { if (G.placing) cancelPlacing(); else if (G.mode) setMode(null); else if (attackMoveArmed) { attackMoveArmed = false; setCursor(); } else if (G.started && !G.over) G.togglePause?.(); return; }
     if (!G.started || G.paused) { if (k === 'KeyP') G.togglePause?.(); return; }
     if (/^Digit[0-9]$/.test(k)) {
@@ -579,7 +591,7 @@ function bindInput() {
   // minimap
   const mm = $('minimap');
   let mmDown = false;
-  const mmPos = e => { const r = mm.getBoundingClientRect(); return { x: (e.clientX - r.left) / r.width * WORLD - HALF, z: (e.clientY - r.top) / r.height * WORLD - HALF }; };
+  const mmPos = e => { const p = elemPos(mm, e); return { x: p.x / p.w * WORLD - HALF, z: p.y / p.h * WORLD - HALF }; };
   mm.addEventListener('contextmenu', e => e.preventDefault());
   mm.addEventListener('pointerdown', e => {
     e.preventDefault(); Audio.initAudio();
@@ -687,8 +699,7 @@ function bindTouch(gl) {
   let start = null, pinch = null, longT = null;
   gl.addEventListener('touchstart', e => {
     e.preventDefault(); Audio.initAudio();
-    const r = view.getBoundingClientRect();
-    for (const t of e.changedTouches) pts.set(t.identifier, { x: t.clientX - r.left, y: t.clientY - r.top });
+    for (const t of e.changedTouches) { const p = elemPos(view, t); pts.set(t.identifier, { x: p.x, y: p.y }); }
     if (pts.size === 1) {
       const p = [...pts.values()][0];
       start = { ...p, cx: G.camera.x, cz: G.camera.z, moved: false, t: performance.now(), box: touchBoxMode };
@@ -703,8 +714,7 @@ function bindTouch(gl) {
   }, { passive: false });
   gl.addEventListener('touchmove', e => {
     e.preventDefault();
-    const r = view.getBoundingClientRect();
-    for (const t of e.changedTouches) pts.set(t.identifier, { x: t.clientX - r.left, y: t.clientY - r.top });
+    for (const t of e.changedTouches) { const p = elemPos(view, t); pts.set(t.identifier, { x: p.x, y: p.y }); }
     if (pinch && pts.size >= 2) {
       const [a, b] = [...pts.values()];
       const d = Math.hypot(a.x - b.x, a.y - b.y);
@@ -829,6 +839,16 @@ function refreshSelPanel(force) {
       }
       if (first.type === 'harvester') addBtn('⛏ Harvest', () => issue({ t: 'seek', ids: myUnits().map(u => u.id) }));
       addBtn('⌖ Focus (F)', () => centerOn(first.x, first.z));
+      if (myUnits().some(u => u.weapon)) {
+        const cur = myUnits().every(u => (u.stance || 'aggressive') === (first.stance || 'aggressive')) ? (first.stance || 'aggressive') : '';
+        const row = document.createElement('div'); row.className = 'stanceRow';
+        for (const [s, label, tip] of [['aggressive', '⚔ Aggressive', 'Chase and attack enemies in sight'], ['hold', '🛡 Hold position', 'Only shoot what is in range, never move'], ['holdfire', '✋ Hold fire', 'Never shoot unless ordered (good for sneaking)']]) {
+          const b = document.createElement('button'); b.className = 'btn' + (cur === s ? ' on' : ''); b.textContent = label; b.title = tip;
+          b.onclick = () => { issue({ t: 'stance', ids: myUnits().map(u => u.id), s }); Audio.play('click'); setTimeout(() => refreshSelPanel(true), 120); };
+          row.appendChild(b);
+        }
+        cmds.appendChild(row);
+      }
     } else {
       addBtn(first.repairing ? '🔧 Stop repair' : '🔧 Repair', () => { issue({ t: 'rep', id: first.id, on: !first.repairing }); selSig = ''; setTimeout(() => refreshSelPanel(true), 300); });
       addBtn('$ Sell', () => issue({ t: 'sell', id: first.id }));
@@ -919,6 +939,7 @@ export function drawOverlay() {
     if (p.behind || p.x < -20 || p.x > W + 20 || p.y < -20 || p.y > H + 20) continue;
     const w = u.isInf ? 22 : clamp(u.def.radius * 26, 26, 52);
     if (show) bar(u, p.x, p.y, w);
+    if (u.stance && u.selected) { octx.font = '11px sans-serif'; octx.textAlign = 'center'; octx.fillText(u.stance === 'hold' ? '🛡' : '✋', p.x + w / 2 + 8, p.y + 6); }
     if (u.rank) { octx.fillStyle = '#ffd34a'; octx.font = 'bold 11px Rajdhani'; octx.textAlign = 'center'; octx.fillText('★'.repeat(u.rank), p.x, p.y - 3); }
     if (show && u.type === 'harvester') {
       octx.fillStyle = 'rgba(0,0,0,0.7)'; octx.fillRect(p.x - w / 2 - 1, p.y + 5, w + 2, 4);

@@ -94,12 +94,23 @@ export const TABS = [
   { id: 'infantry', label: 'INFANTRY' },
   { id: 'vehicle', label: 'VEHICLES' },
   { id: 'air', label: 'AIR' },
+  { id: 'research', label: 'TECH' },
 ];
 
+// One-off research upgrades (TECH tab)
+export const UPGRADES = {
+  armor:     { name: 'Composite Armour', icon: '🛡', cost: 1500, time: 40, req: ['factory'], tab: 'research', research: true, desc: '+25% health for all your vehicles and aircraft.' },
+  bodyarmor: { name: 'Body Armour', icon: '🦺', cost: 800, time: 30, req: ['barracks'], tab: 'research', research: true, desc: '+25% health for all your infantry.' },
+  shells:    { name: 'Depleted Shells', icon: '💥', cost: 2000, time: 45, req: ['tech'], tab: 'research', research: true, desc: '+20% damage for all your units and defences.' },
+  refining:  { name: 'Crystal Refining', icon: '💎', cost: 1200, time: 35, req: ['refinery', 'radar'], tab: 'research', research: true, desc: '+25% credits from every harvester load.' },
+  engines:   { name: 'Turbo Engines', icon: '⚙', cost: 1000, time: 30, req: ['factory', 'radar'], tab: 'research', research: true, desc: '+15% speed for all your vehicles.' },
+  optics:    { name: 'Long-Range Optics', icon: '🔭', cost: 800, time: 25, req: ['radar'], tab: 'research', research: true, desc: '+20% sight and weapon range for your units.' },
+};
+
 // Which building types act as producers for which queue
-export const PRODUCERS = { build: ['conyard'], defense: ['conyard'], infantry: ['barracks'], vehicle: ['factory'], air: ['helipad'] };
+export const PRODUCERS = { build: ['conyard'], defense: ['conyard'], infantry: ['barracks'], vehicle: ['factory'], air: ['helipad'], research: ['conyard', 'barracks', 'factory', 'refinery', 'radar', 'tech'] };
 // Structures + defences share a single queue, like the classics
-export const QUEUE_OF = { build: 'build', defense: 'build', infantry: 'infantry', vehicle: 'vehicle', air: 'air' };
+export const QUEUE_OF = { build: 'build', defense: 'build', infantry: 'infantry', vehicle: 'vehicle', air: 'air', research: 'research' };
 
 export const DIFFICULTY = {
   easy:   { label: 'Recruit', aiIncome: 0.75, aiBuild: 0.7, firstWave: 260, waveBase: 4, waveGrow: 1, waveGap: 150 },

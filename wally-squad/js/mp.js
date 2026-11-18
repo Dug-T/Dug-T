@@ -23,7 +23,7 @@ export class Lockstep {
     for (let n = 0; n < DELAY; n++) { this.inbox[this.me].set(n, []); this.inbox[this.them].set(n, []); }
     this.overlay = document.createElement('div');
     this.overlay.id = 'mpOverlay';
-    document.body.appendChild(this.overlay);
+    (document.getElementById('app') || document.body).appendChild(this.overlay);
   }
 
   show(html) { this.overlay.innerHTML = html; this.overlay.style.display = html ? 'flex' : 'none'; }

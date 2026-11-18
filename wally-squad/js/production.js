@@ -1,6 +1,6 @@
 // Economy: credits, power, build queues, tech tree and building placement.
 import { G, srr as rr, later } from './state.js';
-import { BUILDINGS, UNITS, PRODUCERS, QUEUE_OF, CELL, START_CREDITS, GRID } from './config.js';
+import { BUILDINGS, UNITS, UPGRADES, PRODUCERS, QUEUE_OF, CELL, START_CREDITS, GRID } from './config.js';
 import { T, idx, inGrid, cellOf, cellCenter, heightAt } from './terrain.js';
 import { Building, Unit, alive } from './entities.js';
 import * as FX from './particles.js';
@@ -8,13 +8,16 @@ import * as FX from './particles.js';
 export function initPlayer(faction, isAI) {
   G.players[faction] = {
     faction, isAI, credits: START_CREDITS, powerProd: 0, powerUse: 0,
-    queues: { build: newQueue(), infantry: newQueue(), vehicle: newQueue(), air: newQueue() },
+    queues: { build: newQueue(), infantry: newQueue(), vehicle: newQueue(), air: newQueue(), research: newQueue() },
+    upgrades: {},
     incomeMult: 1, buildMult: 1, owned: {},
   };
 }
 function newQueue() { return { items: [], progress: 0, spent: 0, ready: false, hold: false }; }
 
-export const defOf = type => BUILDINGS[type] || UNITS[type];
+export const defOf = type => BUILDINGS[type] || UNITS[type] || UPGRADES[type];
+// has faction f finished upgrade k?
+export const upg = (f, k) => !!(G.players[f] && G.players[f].upgrades && G.players[f].upgrades[k]);
 export const isBuildingType = type => !!BUILDINGS[type];
 
 export function updatePower() {
@@ -34,7 +37,8 @@ export function hasReqs(faction, type) {
   const P = G.players[faction];
   const d = defOf(type);
   if (d.fac && d.fac !== faction) return false;
-  if (G.allowed && !G.allowed.includes(type)) return false; // campaign tech restrictions
+  if (d.research && (P.upgrades[type] || P.queues.research.items.includes(type))) return false;
+  if (G.allowed && !d.research && !G.allowed.includes(type)) return false; // campaign tech restrictions
   if (!d.req.every(r => P.owned[r] > 0)) return false;
   const q = QUEUE_OF[d.tab];
   if (!PRODUCERS[d.tab].some(p => P.owned[p] > 0)) return false;
@@ -91,7 +95,10 @@ export function updateProduction(dt) {
       if (P.credits < cost) { if (f === G.player) G.announce?.('Insufficient funds', f, 15); continue; }
       P.credits -= cost; q.spent += cost; q.progress += dp;
       if (q.progress >= d.time - 1e-6) {
-        if (isBuildingType(type)) {
+        if (UPGRADES[type]) {
+          q.items.shift(); q.progress = 0; q.spent = 0;
+          completeUpgrade(f, type);
+        } else if (isBuildingType(type)) {
           q.ready = true;
           if (f === G.player) { G.announce?.('Construction complete', f); G.sfx?.play('ready'); }
         } else {
@@ -214,4 +221,17 @@ export function lineCells(c0, c1) {
     if (!out.some(([a, b]) => a === cx && b === cz)) out.push([cx, cz]);
   }
   return out.slice(0, 40);
+}
+
+// apply a finished research upgrade
+export function completeUpgrade(f, k) {
+  const P = G.players[f];
+  P.upgrades[k] = true;
+  if (k === 'armor' || k === 'bodyarmor') {
+    for (const u of G.units) {
+      if (u.dead || u.faction !== f || (k === 'armor') === u.isInf) continue;
+      u.maxHp *= 1.25; u.hp *= 1.25;
+    }
+  }
+  if (f === G.player) { G.announce?.(`Research complete: ${UPGRADES[k].name}`, f); G.sfx?.play('promote'); }
 }
