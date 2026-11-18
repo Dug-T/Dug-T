@@ -101,7 +101,7 @@ Both factions share the basic army: riflemen, rocket troopers, Scorchers, engine
   - Troops inside shoot out with +25% range and can't be hurt until the bunker falls; then they bail out wounded.
   - Evacuate (`U`) sends them back out. The computer builds and garrisons bunkers too.
 - **🔥 Kill streaks:** quick kills in a row get a banner and a shout (Double kill, Triple kill, Rampage, Unstoppable and more). The end screen shows your **MVP** unit and your best streak.
-- **Unit voices:** select the Scorcher and he shouts "Wally Man to the rescue!"
+- **Unit voices:** select the Scorcher for one of 12 "Wally Man" introductions ("Never fear, Wally Man is here!", "Did somebody say barbecue?"...), spoken in a female voice and never the same one twice in a row.
 - **🚚 Squad Carrier APC** (War Factory, needs a Barracks): an armoured troop carrier with a machine gun. To load up to 5 infantry, select them and right-click (or tap) the APC. Press Unload (`U`) to drop them off. Green pips show how many are inside. If the APC is destroyed, its passengers bail out wounded.
 - **🎵 Soundtrack:** six original tunes, shuffled at random. A new one starts every minute and a half or so, and **⏭** in the top bar skips to another.
   - **Wally Squad Assemble:** a heroic rock march.

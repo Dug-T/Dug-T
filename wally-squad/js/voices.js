@@ -9,7 +9,20 @@ const DEFAULT_LINES = {
   wallyman: { select: ['Wally Man is here!', 'Never fear, Wally Man is near!', 'Cape on, glasses on!'], move: ['Up, up and away!', 'To the rescue!'], attack: ['Spin it up!', 'Taste the Gatling!', 'Wally Man, open fire!'] },
   rifle: { select: ['Rifleman reporting.', 'Ready for action!'], move: ['Moving out.', 'On my way.'], attack: ['Opening fire!', 'Engaging!'] },
   rocket: { select: ['Rockets loaded.', 'Anti-armour ready.'], move: ['Relocating.'], attack: ['Rocket away!', 'Tank spotted!'] },
-  flamer: { select: ['Wally Man to the rescue!'], move: ['Moving.'], attack: ['Burn it down!', 'Toasty!'] },
+  flamer: { select: [
+    'Wally Man to the rescue!',
+    'Never fear, Wally Man is here!',
+    'Wally Man, reporting for flame duty!',
+    'Who called for Wally Man?',
+    'Stand back, Wally Man is on the job!',
+    'Wally Man is fired up and ready!',
+    'Did somebody say barbecue? Wally Man is here!',
+    'Wally Man, hot and ready to roll!',
+    'Feel the heat, it is Wally Man!',
+    'Up, up and away with Wally Man!',
+    'Wally Man has arrived, let us light it up!',
+    'Have no fear, Wally Man brings the fire!',
+  ], move: ['Moving.'], attack: ['Burn it down!', 'Toasty!'] },
   engineer: { select: ['Engineer.', 'Tools ready.'], move: ['On my way.'], attack: ['I can fix that.', 'Taking it over.'] },
   shaman: { select: ['The spirits listen.', 'Who bleeds?'], move: ['I walk with the ancestors.'], attack: ['I heal, I do not fight!'] },
   medic: { select: ['Medic here.', 'Who needs patching up?'], move: ['Coming through.'], attack: ['I am a medic!'] },
@@ -28,7 +41,11 @@ const DEFAULT_LINES = {
   hauler: { select: ['Sky Hauler, rotors turning.', 'Need a lift?'], move: ['Airborne!', 'Hold on to something!'], attack: ['We are a taxi, not a gunship!'] },
   drone: { select: ['Drone online.', 'Eyes in the sky.'], move: ['Scouting ahead.'], attack: ['No weapons, just cameras!'] },
 };
+// names of common female text-to-speech voices (iPhone/iPad, Mac, Windows, Android/Chrome)
+const FEMALE = /female|samantha|karen|moira|tessa|victoria|fiona|serena|kate|zira|susan|hazel|libby|sonia|catherine|allison|ava|nicky|siri.*(voice 2|voice 4)|google uk english female|google us english|jenny|aria|emma|amy|joanna|salli/i;
+const lastLine = {};
 const VOICE_STYLE = {
+  flamer: { pitch: 1.15, rate: 1.08, female: true },
   wally: { pitch: 1.4, rate: 1.15 }, wallyman: { pitch: 0.9, rate: 1.05 }, medic: { pitch: 1.3, rate: 1.05 }, engineer: { pitch: 1.2, rate: 1.1 },
   titan: { pitch: 0.5, rate: 0.85 }, tank: { pitch: 0.7, rate: 0.95 }, harvester: { pitch: 0.8, rate: 0.9 },
   stealth: { pitch: 0.6, rate: 0.8 }, inferno: { pitch: 0.55, rate: 0.9 }, gunship: { pitch: 1.0, rate: 1.2 },
@@ -99,11 +116,18 @@ export function say(type, ev, force = false) {
   if (speechSynthesis.speaking && !force) return;
   const lines = DEFAULT_LINES[type]?.[ev] || DEFAULT_LINES[UNITS[type]?.tab === 'vehicle' ? 'tank' : 'rifle'][ev];
   if (!lines) return;
-  const u = new SpeechSynthesisUtterance(lines[Math.floor(Math.random() * lines.length)]);
+  // pick a line, never the same one twice in a row for this unit
+  const key = type + ':' + ev;
+  let i = Math.floor(Math.random() * lines.length);
+  if (lines.length > 1 && i === lastLine[key]) i = (i + 1 + Math.floor(Math.random() * (lines.length - 1))) % lines.length;
+  lastLine[key] = i;
+  const u = new SpeechSynthesisUtterance(lines[i]);
   const st = VOICE_STYLE[type] || { pitch: 1, rate: 1.05 };
   u.pitch = st.pitch; u.rate = st.rate; u.volume = 0.85;
   const vs = speechSynthesis.getVoices().filter(v => /^en/i.test(v.lang));
-  if (vs.length) u.voice = vs[(type.length * 7) % vs.length];
+  const fem = st.female ? vs.find(v => FEMALE.test(v.name)) : null;
+  if (fem) u.voice = fem;
+  else if (vs.length) u.voice = vs[(type.length * 7) % vs.length];
   speechSynthesis.speak(u);
 }
 
