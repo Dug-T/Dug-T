@@ -23,7 +23,7 @@ import { Lockstep, joinRoom } from './mp.js';
 import { randomRoomCode } from './net.js';
 import { issue } from './cmd.js';
 import { registerCustomUnits, loadDesigns, buildDesigner } from './customunits.js';
-import { gfx, initGraphics, pixelRatio, autoTune, buildGraphicsPanel, maxAnisotropy } from './graphics.js';
+import { gfx, initGraphics, pixelRatio, autoTune, buildGraphicsPanel, maxAnisotropy, isTouch, shadowInterval } from './graphics.js';
 import { allMaterials } from './materials.js';
 import { updateCrates, animateCrates, placeTechBuildings, recordHistory, drawHistory } from './features.js';
 import { updatePowers } from './powers.js';
@@ -74,7 +74,8 @@ async function boot() {
   renderer = new THREE.WebGLRenderer({ canvas: $('gl'), antialias: false, powerPreference: 'high-performance' });
   renderer.setPixelRatio(pixelRatio());
   renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.shadowMap.type = isTouch ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap; // soft shadows cost ~4x the texture reads
+  renderer.shadowMap.autoUpdate = false; // redrawn every frame or two by the game loop (see shadowInterval)
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.05;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -135,6 +136,8 @@ async function boot() {
   G.onResize = (w, h) => {
     renderer.setSize(w, h, false);
     composer.setSize(w, h);
+    // on phones the glow is computed at quarter resolution - it is a blur anyway
+    if (isTouch) { const pr = renderer.getPixelRatio(); bloom.setSize(Math.round(w * pr / 2), Math.round(h * pr / 2)); }
     camera.aspect = w / h; camera.updateProjectionMatrix();
     setParticleScale(h * renderer.getPixelRatio());
   };
@@ -494,7 +497,7 @@ function simStep(dt) {
   checkEnd(dt);
 }
 
-let last = performance.now(), musicLabelT = 0;
+let last = performance.now(), musicLabelT = 0, shadowFrame = 0;
 function loop(now) {
   requestAnimationFrame(loop);
   const real = Math.min(0.05, (now - last) / 1000); last = now;
@@ -534,6 +537,7 @@ function loop(now) {
   if (G.started) { UI.updateSidebar(real); UI.updateMinimap(real); }
   animateWater(now / 1000);
   animateCrates(now / 1000);
+  if (++shadowFrame >= shadowInterval()) { shadowFrame = 0; renderer.shadowMap.needsUpdate = true; }
   composer.render();
   UI.drawOverlay();
 }

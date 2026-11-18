@@ -193,14 +193,16 @@ function moveTip(e) { const tip = $('tooltip'), p = appPos(e), A = appSize(); ti
 function hideTip() { $('tooltip').style.display = 'none'; }
 
 let sideT = 0;
+const setText = (el, t) => { t = String(t); if (el.textContent !== t) el.textContent = t; };
+const setStyle = (el, k, v) => { if (el.style[k] !== v) el.style[k] = v; };
 export function updateSidebar(dt) {
   sideT -= dt; if (sideT > 0) return; sideT = 0.1;
   const P = G.players[G.player];
-  $('credits').textContent = '$ ' + Math.floor(P.credits).toLocaleString();
+  setText($('credits'), '$ ' + Math.floor(P.credits).toLocaleString());
   const maxP = Math.max(P.powerProd, P.powerUse, 100) * 1.15;
-  $('powerFill').style.width = (P.powerProd / maxP * 100) + '%';
-  $('powerUse').style.left = (P.powerUse / maxP * 100) + '%';
-  $('powerTxt').textContent = `${Math.round(P.powerUse)}/${Math.round(P.powerProd)}`;
+  setStyle($('powerFill'), 'width', (P.powerProd / maxP * 100).toFixed(1) + '%');
+  setStyle($('powerUse'), 'left', (P.powerUse / maxP * 100).toFixed(1) + '%');
+  setText($('powerTxt'), `${Math.round(P.powerUse)}/${Math.round(P.powerProd)}`);
   const low = P.powerUse > P.powerProd;
   $('powerRow').classList.toggle('low', low);
   if (low && !G.lowPowerWarned) { Audio.announce('Low power'); G.lowPowerWarned = true; }
@@ -211,11 +213,15 @@ export function updateSidebar(dt) {
     const ok = hasReqs(G.player, it.type) || q.items.includes(it.type);
     it.el.classList.toggle('locked', !ok);
     const n = q.items.filter(i => i === it.type).length;
-    it.count.textContent = !isBuildingType(it.type) && n > 1 ? n : '';
+    setText(it.count, !isBuildingType(it.type) && n > 1 ? n : '');
     const active = q.items[0] === it.type;
     const ready = active && q.ready;
     it.el.classList.toggle('ready', ready);
-    it.state.textContent = ready ? 'READY' : active && q.hold ? 'ON HOLD' : (UPGRADES[it.type] && P.upgrades[it.type]) ? 'DONE' : '';
+    setText(it.state, ready ? 'READY' : active && q.hold ? 'ON HOLD' : (UPGRADES[it.type] && P.upgrades[it.type]) ? 'DONE' : '');
+    const dim = !active && n === 0 && isBuildingType(it.type) && q.items.length > 0;
+    const clockKey = active && !ready ? 'p' + Math.round(q.progress / d.time * 200) : dim ? 'dim' : '';
+    if (it.clockKey === clockKey) continue;
+    it.clockKey = clockKey;
     const c = it.clock.getContext('2d');
     c.clearRect(0, 0, 100, 80);
     if (active && !ready) {
@@ -223,7 +229,7 @@ export function updateSidebar(dt) {
       c.fillStyle = 'rgba(0,0,0,0.6)';
       c.beginPath(); c.moveTo(50, 40); c.arc(50, 40, 80, -Math.PI / 2 + k * Math.PI * 2, Math.PI * 1.5); c.closePath(); c.fill();
       c.fillStyle = '#ffc23a'; c.fillRect(0, 77, 100 * k, 3);
-    } else if (!active && n === 0 && q.items.includes(it.type) === false && isBuildingType(it.type) && q.items.length) {
+    } else if (dim) {
       c.fillStyle = 'rgba(0,0,0,0.35)'; c.fillRect(0, 0, 100, 80);
     }
   }
@@ -243,7 +249,7 @@ export function updateSidebar(dt) {
   } else { $('superName').textContent = ''; $('superFill').style.width = '0'; $('bSuper').style.display = 'none'; }
   if (es) { const left = Math.max(0, es.max - es.charge); $('enemySuper').textContent = es.ready ? `⚠ Enemy ${es.name} ARMED` : `⚠ Enemy ${es.name}: ${Math.floor(left / 60)}:${String(Math.floor(left % 60)).padStart(2, '0')}`; }
   else $('enemySuper').textContent = '';
-  $('wx').textContent = `${weatherLabel()} · ${clockString()}`;
+  setText($('wx'), `${weatherLabel()} · ${clockString()}`);
   // support power buttons
   const ps = powerStates(G.player), pb = $('powerBtns');
   const psig = ps.map(p => p.type).join();
@@ -259,8 +265,8 @@ export function updateSidebar(dt) {
   for (const b of pb.children) {
     const s = ps.find(p => p.type === b.dataset.type); if (!s) continue;
     b.classList.toggle('ready', s.ready);
-    b.querySelector('span').textContent = s.ready ? s.name.split(' ')[0].toUpperCase() : `${Math.ceil(POWERS[s.type].charge - s.charge)}s`;
-    b.querySelector('.fill').style.width = (s.charge / POWERS[s.type].charge * 100) + '%';
+    setText(b.querySelector('span'), s.ready ? s.name.split(' ')[0].toUpperCase() : `${Math.ceil(POWERS[s.type].charge - s.charge)}s`);
+    setStyle(b.querySelector('.fill'), 'width', (s.charge / POWERS[s.type].charge * 100).toFixed(1) + '%');
   }
   // clock
   const s = Math.floor(G.time); $('clock').textContent = `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;

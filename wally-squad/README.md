@@ -78,6 +78,11 @@ Both factions share the basic army: riflemen, rocket troopers, Scorchers, engine
   - Low/Medium/High/Ultra presets.
   - A resolution scale from 50% to 150% (anything over 100% is supersampling).
   - Shadows up to 4096, anti-aliasing up to 8×, bloom, an FPS counter, and auto-adjust, which keeps play smooth by lowering the resolution when needed.
+  - Auto-adjust aims for 45+ FPS. It first lowers the resolution, then turns off bloom, then anti-aliasing, and redraws shadows less often. As the frame rate recovers, it restores them in reverse order.
+- **Performance:**
+  - Trees, rocks, crystal fields and the ground are split into map tiles, so anything off-screen isn't drawn, in the main pass or the shadow pass. That cuts the triangles drawn each frame by 60–70%.
+  - On phones, shadows are redrawn every other frame with a cheaper filter, and bloom is computed at quarter resolution.
+  - Small parts such as lamps and glass don't cast shadows.
 - **Supply crates** drop on the battlefield. Drive over one for money, repairs, promotions, free reinforcements or a map reveal. Some are booby-trapped!
 - **Neutral tech buildings** sit beside each lane, and an Engineer can capture them:
   - Crystal Derrick: steady income.

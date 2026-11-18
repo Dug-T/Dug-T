@@ -174,10 +174,8 @@ export function buildTerrain(scene) {
     vertexColors: true, map: groundDetailTexture(), normalMap: groundNormalTexture(), normalScale: new THREE.Vector2(0.9, 0.9),
     roughness: 0.95, metalness: 0.0,
   }));
-  const terrain = new THREE.Mesh(geo, mat);
-  terrain.receiveShadow = true;
-  terrain.name = 'terrain';
-  scene.add(terrain);
+  // Split the ground into 4x4 tiles that share the vertex data, so tiles outside the view are skipped.
+  const terrain = chunkTerrain(scene, geo, mat);
 
   // ---- water ----
   const wn = waterNormalTexture();
@@ -195,6 +193,52 @@ export function buildTerrain(scene) {
   initFog();
   buildMinimapImage(col, geo);
   return terrain;
+}
+
+const TERRAIN_TILES = 4;
+function chunkTerrain(scene, geo, mat) {
+  const full = geo.index.array, per = RES / TERRAIN_TILES;
+  const pos = geo.attributes.position;
+  let first = null;
+  for (let tz = 0; tz < TERRAIN_TILES; tz++) for (let tx = 0; tx < TERRAIN_TILES; tx++) {
+    const idxs = new Uint32Array(per * per * 6);
+    let k = 0;
+    const box = new THREE.Box3(), v = new THREE.Vector3();
+    for (let iy = tz * per; iy < (tz + 1) * per; iy++) for (let ix = tx * per; ix < (tx + 1) * per; ix++) {
+      const q = (iy * RES + ix) * 6;
+      for (let j = 0; j < 6; j++) { const vi = full[q + j]; idxs[k++] = vi; v.fromBufferAttribute(pos, vi); box.expandByPoint(v); }
+    }
+    const g = new THREE.BufferGeometry();
+    for (const name in geo.attributes) g.setAttribute(name, geo.attributes[name]); // shared, uploaded once
+    g.setIndex(new THREE.BufferAttribute(idxs, 1));
+    g.boundingBox = box; g.boundingSphere = box.getBoundingSphere(new THREE.Sphere());
+    const m = new THREE.Mesh(g, mat);
+    m.receiveShadow = true; m.name = 'terrain';
+    scene.add(m);
+    if (!first) first = m;
+  }
+  return first;
+}
+
+// Instanced scenery (trees, rocks) is split into map tiles. One InstancedMesh covering the whole map
+// is always drawn in full - in the main pass and again in the shadow pass - even when off-screen.
+const SCENERY_TILE = 64;
+function addTiled(scene, geo, mat, items, { tint = false, shadow = true } = {}) {
+  const tiles = new Map();
+  const p = new THREE.Vector3();
+  for (const it of items) {
+    p.setFromMatrixPosition(it.m);
+    const key = Math.floor((p.x + HALF) / SCENERY_TILE) + ',' + Math.floor((p.z + HALF) / SCENERY_TILE);
+    if (!tiles.has(key)) tiles.set(key, []);
+    tiles.get(key).push(it);
+  }
+  for (const list of tiles.values()) {
+    const im = new THREE.InstancedMesh(geo, mat, list.length);
+    list.forEach((t, i) => { im.setMatrixAt(i, t.m); if (tint && t.c) im.setColorAt(i, t.c); });
+    im.computeBoundingSphere();
+    im.castShadow = shadow; im.receiveShadow = true;
+    scene.add(im);
+  }
 }
 
 function treeKinds() {
@@ -248,11 +292,7 @@ function buildTrees(scene, spots) {
   }
   for (const kind in groups) {
     const list = groups[kind];
-    for (const [geo, mat, tint] of K[kind]) {
-      const im = new THREE.InstancedMesh(geo, mat, list.length);
-      list.forEach((t, i) => { im.setMatrixAt(i, t.m); if (tint) im.setColorAt(i, t.c); });
-      im.castShadow = true; im.receiveShadow = true; scene.add(im);
-    }
+    for (const [geo, mat, tint] of K[kind]) addTiled(scene, geo, mat, list, { tint: !!tint });
   }
 }
 
@@ -275,8 +315,8 @@ function mergeSimple(geos) {
   return out;
 }
 
-function rockGeometry(seed) {
-  const g = new THREE.IcosahedronGeometry(1, 2);
+function rockGeometry(seed, detail = 2) {
+  const g = new THREE.IcosahedronGeometry(1, detail);
   const p = g.attributes.position;
   for (let i = 0; i < p.count; i++) {
     const x = p.getX(i), y = p.getY(i), z = p.getZ(i);
@@ -297,18 +337,22 @@ function buildRocks(scene) {
   }
   const mat = fogify(new THREE.MeshStandardMaterial({ color: 0x8a847a, roughness: 0.95, flatShading: true }));
   const geos = [rockGeometry(1), rockGeometry(7), rockGeometry(13)];
+  const geosLo = [rockGeometry(1, 1), rockGeometry(7, 1), rockGeometry(13, 1)]; // 80 instead of 180 triangles
   const per = Math.ceil(spots.length / 3);
   const m = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), p = new THREE.Vector3(), s = new THREE.Vector3(), c = new THREE.Color();
   geos.forEach((g, gi) => {
     const list = spots.slice(gi * per, (gi + 1) * per);
-    const im = new THREE.InstancedMesh(g, mat, Math.max(1, list.length));
-    list.forEach(([x, z, sc], k) => {
+    const big = [], mid = [], small = [];
+    list.forEach(([x, z, sc]) => {
       x += (R() - 0.5); z += (R() - 0.5);
       p.set(x, heightAt(x, z) + sc * 0.1, z); e.set(R(), R() * 6, R() * 0.4); q.setFromEuler(e); s.set(sc, sc * (0.7 + R() * 0.5), sc);
-      m.compose(p, q, s); im.setMatrixAt(k, m);
-      c.setHSL(TH.rockTint[0], TH.rockTint[1] * (0.5 + R()), 0.33 + R() * 0.17); im.setColorAt(k, c);
+      m.compose(p, q, s);
+      c.setHSL(TH.rockTint[0], TH.rockTint[1] * (0.5 + R()), 0.33 + R() * 0.17);
+      (sc > 1.2 ? big : sc > 0.55 ? mid : small).push({ m: m.clone(), c: c.clone() });
     });
-    im.count = list.length; im.castShadow = true; im.receiveShadow = true; scene.add(im);
+    if (big.length) addTiled(scene, g, mat, big, { tint: true });
+    if (mid.length) addTiled(scene, geosLo[gi], mat, mid, { tint: true });
+    if (small.length) addTiled(scene, geosLo[gi], mat, small, { tint: true, shadow: false }); // pebbles: shadows too small to see
   });
 }
 
@@ -320,29 +364,39 @@ function crystalGeometry() {
   const b = new THREE.CylinderGeometry(0.32, 0.22, 0.4, 6, 1).translate(0, -0.2, 0);
   return mergeSimple([g, b]);
 }
+let oreMeshes = [];
 function buildOre(scene) {
+  // one InstancedMesh per map tile and colour, so crystal fields that are off-screen are skipped
   const geo = crystalGeometry();
-  let n = 0;
-  for (let i = 0; i < T.ore.length; i++) if (T.ore[i] > 0) n++;
-  oreMeshG = new THREE.InstancedMesh(geo, M().crystal, n * ORE_PER_CELL);
-  oreMeshB = new THREE.InstancedMesh(geo, M().crystalBlue, n * ORE_PER_CELL);
-  oreMeshG.castShadow = oreMeshB.castShadow = true;
+  const tiles = new Map();
+  const tileOf = (rich, x, z) => {
+    const key = (rich ? 'b' : 'g') + Math.floor((x + HALF) / SCENERY_TILE) + ',' + Math.floor((z + HALF) / SCENERY_TILE);
+    if (!tiles.has(key)) tiles.set(key, { rich, n: 0, list: [] });
+    return tiles.get(key);
+  };
   const R = mulberry32(3);
-  let kg = 0, kb = 0;
   for (let i = 0; i < T.ore.length; i++) {
     if (!(T.ore[i] > 0)) continue;
     const cx = i % GRID, cz = (i / GRID) | 0;
+    const t = tileOf(T.oreRich[i], cellCenter(cx), cellCenter(cz));
     const list = [];
     for (let k = 0; k < ORE_PER_CELL; k++) {
       const x = cellCenter(cx) + (R() - 0.5) * 1.6, z = cellCenter(cz) + (R() - 0.5) * 1.6;
-      const inst = { mesh: T.oreRich[i] ? oreMeshB : oreMeshG, k: T.oreRich[i] ? kb++ : kg++, x, z, y: heightAt(x, z), rx: (R() - 0.5) * 0.7, ry: R() * 6, rz: (R() - 0.5) * 0.7, s: 0.7 + R() * 0.9 };
+      const inst = { tile: t, k: t.n++, x, z, y: heightAt(x, z), rx: (R() - 0.5) * 0.7, ry: R() * 6, rz: (R() - 0.5) * 0.7, s: 0.7 + R() * 0.9 };
       list.push(inst);
     }
     oreInst[i] = list;
   }
-  oreMeshG.count = kg; oreMeshB.count = kb;
-  scene.add(oreMeshG, oreMeshB);
+  oreMeshes = [];
+  for (const t of tiles.values()) {
+    t.mesh = new THREE.InstancedMesh(geo, t.rich ? M().crystalBlue : M().crystal, t.n);
+    t.mesh.castShadow = true;
+    oreMeshes.push(t.mesh); scene.add(t.mesh);
+  }
+  for (const list of oreInst) if (list) for (const o of list) o.mesh = o.tile.mesh;
+  oreMeshG = oreMeshes[0]; oreMeshB = oreMeshes[1] || oreMeshes[0];
   updateOre(true);
+  for (const m of oreMeshes) m.computeBoundingSphere(); // crystals only ever shrink, so this stays valid
 }
 const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _e = new THREE.Euler(), _p = new THREE.Vector3(), _s = new THREE.Vector3();
 export function updateOre(force) {
@@ -357,7 +411,7 @@ export function updateOre(force) {
       _m.compose(_p, _q, _s); o.mesh.setMatrixAt(o.k, _m);
     });
   }
-  oreMeshG.instanceMatrix.needsUpdate = true; oreMeshB.instanceMatrix.needsUpdate = true;
+  for (const m of oreMeshes) m.instanceMatrix.needsUpdate = true;
 }
 // Slowly regrow crystal next to existing crystal
 let regrowT = 0;
@@ -422,6 +476,7 @@ function stamp(arr, x, z, r) {
   }
 }
 let fogTimer = 0;
+let fogEaseAcc = 0;
 export function updateVision(dt) {
   fogTimer -= dt;
   if (fogTimer <= 0) {
@@ -449,8 +504,12 @@ export function updateVision(dt) {
       fogTarget[z * GRID + x] = s / n;
     }
   }
-  // ease the fog texture toward its target for soft transitions
-  const k = Math.min(1, dt * 6);
+  // ease the fog texture toward its target for soft transitions (30 times a second is plenty, and
+  // each change re-uploads the texture to the GPU)
+  fogEaseAcc += dt;
+  if (fogEaseAcc < 1 / 30) return;
+  const k = Math.min(1, fogEaseAcc * 6);
+  fogEaseAcc = 0;
   let changed = false;
   for (let i = 0; i < GRID * GRID; i++) {
     const cur = T.fogData[i * 4];

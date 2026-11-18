@@ -719,7 +719,7 @@ function setCloakLook(u, on) {
   u.mesh.traverse(o => {
     if (!o.isMesh || o === u.ring) return;
     if (on) { o.userData.realMat = o.userData.realMat || o.material; o.material = cloakMats[u.faction]; o.castShadow = false; }
-    else if (o.userData.realMat) { o.material = o.userData.realMat; o.castShadow = true; }
+    else if (o.userData.realMat) { o.material = o.userData.realMat; o.castShadow = o.userData.cs ?? true; }
   });
 }
 

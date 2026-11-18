@@ -27,7 +27,13 @@ class Builder {
     for (const [mat, geos] of this.parts) {
       const merged = mergeGeometries(geos, false);
       const mesh = new THREE.Mesh(merged, mat);
-      mesh.castShadow = shadow; mesh.receiveShadow = true;
+      // Tiny parts and glowing lamps don't get their own shadow draw call: their shadows would be
+      // a few pixels at most, and every shadow-casting mesh is drawn a second time each frame.
+      if (!merged.boundingSphere) merged.computeBoundingSphere();
+      const glow = mat.emissive && mat.emissiveIntensity > 0.5 && (mat.emissive.r + mat.emissive.g + mat.emissive.b) > 0.6;
+      mesh.castShadow = shadow && !mat.transparent && !glow && merged.boundingSphere.radius > 0.3;
+      mesh.userData.cs = mesh.castShadow;
+      mesh.receiveShadow = true;
       grp.add(mesh);
     }
     return grp;
