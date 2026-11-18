@@ -75,6 +75,10 @@ Both factions share the basic army: riflemen, rocket troopers, Scorchers, engine
   - Long-Range Optics: +20% sight and range.
   - The computer opponent researches them too.
 - **👹 Warlord Grak** (Grimlock hero, Barracks + Comms Center, one at a time): a hulking brute with a rotary rocket cannon. **War Cry** (`G`) makes every Grimlock fighter within 13 m fire much faster for 6 seconds. The computer uses heroes' abilities too.
+- **🛶 Skimmer Hovercraft** (War Factory + Comms Center): a fast amphibious raider with twin rockets that skims over water and even lava, so it can flank across lakes and the Magma Rift.
+- **⚡ EMP Strike** (support power, needs a Tech Lab): a blue pulse that knocks out enemy vehicles, aircraft and defences within 15 m for 12 seconds. Infantry are unaffected.
+- **🌟 Heroic rank:** a unit with 10 kills becomes Heroic (★★★). It deals +75% damage, heals faster and has a golden glint.
+- **🌪 Natural Disasters** mutator: tornadoes roam the battlefield every couple of minutes, throwing infantry around and battering vehicles and buildings.
 - **Fighting back:** infantry and vehicles that come under fire turn on the attacker, even out-of-sight artillery, and chase it further than a normal target. Idle friends within 11 m join in. A unit busy shooting a building switches to the unit shooting it.
   - Units on a direct move or attack order keep following it.
   - Hold Fire units never shoot back; Hold Position units only shoot back if the attacker is in range.

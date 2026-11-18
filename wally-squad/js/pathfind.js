@@ -32,7 +32,7 @@ export function findPath(sx, sz, tx, tz, opts = {}) {
   const walk = (cx, cz) => {
     if (!inGrid(cx, cz)) return false;
     const i = idx(cx, cz);
-    if (T.blocked[i]) return false;
+    if (T.blocked[i] && !(opts.hover && T.water[i] && !T.tree[i])) return false;
     if (T.bld[i] && T.bld[i] !== opts.ignoreId && !(opts.gate && T.gate[i] === opts.gate)) return false;
     return true;
   };

@@ -29,6 +29,7 @@ export const MEDALS = {
   magma:        { icon: '🌋', name: 'Trial by Fire', desc: 'Win a battle on Magma Rift.' },
   mutant:       { icon: '🎲', name: 'Mad Science', desc: 'Win a skirmish with 2 or more mutators.' },
   daily:        { icon: '📅', name: 'Daily Duty', desc: 'Win a Daily Challenge.' },
+  heroic:       { icon: '🌟', name: 'Heroic', desc: 'Promote a unit to Heroic rank (10 kills).' },
   epilogue:     { icon: '🗡', name: 'Into the Fire', desc: 'Defeat Warlord Grak in the final campaign mission.' },
 };
 
@@ -66,6 +67,7 @@ export function initAchievements(run) {
       if (killer.type === 'warlord' && killer.kills >= 10) unlock('grak');
     }
   });
+  on('heroic', u => { if (u.faction === G.player) unlock('heroic'); });
   on('crate', f => { if (f === G.player && ++session.crates >= 5) unlock('crates'); });
   on('capture', (b, f) => { if (f === G.player) unlock('capture'); });
   on('super', f => { if (f === G.player) unlock('superweapon'); });

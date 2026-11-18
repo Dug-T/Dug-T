@@ -115,6 +115,7 @@ export class Unit {
     this.legs = []; this.mesh.traverse(o => { if (o.name === 'leg') this.legs.push(o); });
     this.cape = this.mesh.getObjectByName('cape'); this.barrels = this.mesh.getObjectByName('barrels');
     this.loadMesh = this.mesh.getObjectByName('load');
+    this.fans = this.mesh.getObjectByName('fans');
     if (!this.isInf && !this.air) { this.lights = makeHeadlights(this.def.radius); this.mesh.add(this.lights); }
     G.three.scene.add(this.mesh);
     this.ring = null;
@@ -194,7 +195,7 @@ export class Unit {
 
   requestPath(x, z, ignoreId = 0) {
     if (this.air) { this.path = [{ x, z }]; this.pi = 0; return; }
-    this.path = findPath(this.x, this.z, x, z, { ignoreId, gate: FACIDX[this.faction] });
+    this.path = findPath(this.x, this.z, x, z, { ignoreId, gate: FACIDX[this.faction], hover: !!this.def.hover });
     this.pi = 0; this.stuckT = 0;
     this.pathGoal = { x, z, ignoreId };
   }
@@ -206,7 +207,9 @@ export class Unit {
     if (this.boarded) { this.x = this.boarded.x; this.z = this.boarded.z; this.y = this.boarded.y; return; } // riding inside an APC
     if (this.order && this.order.type === 'board') { this.boardLogic(); }
     if (this.def.selfRepair && this.hp < this.maxHp * 0.5) this.hp = Math.min(this.maxHp * 0.5, this.hp + 6 * dt);
-    if (this.rank >= 2 && this.hp < this.maxHp) this.hp = Math.min(this.maxHp, this.hp + 2 * dt);
+    if (this.rank >= 2 && this.hp < this.maxHp) this.hp = Math.min(this.maxHp, this.hp + (this.rank >= 3 ? 6 : 2) * dt);
+    if (this.rank >= 3 && Math.random() < dt * 3 && this.mesh.visible) FX.sparkBurst(this.x, this.y + (this.isInf ? 1.9 : 2.4), this.z, 1, [4, 3.2, 0.8, 1]); // golden glint
+    if (this.empT > 0) { this.empT -= dt; if (Math.random() < dt * 10 && this.mesh.visible) FX.sparkBurst(this.x, this.y + 1.2, this.z, 2, [1.2, 2.5, 5, 1]); this.path = null; this.syncMesh(dt); return; } // knocked out by an EMP
     this.cool -= dt; this.cool2 -= dt;
     if (this.frenzyCD > 0) this.frenzyCD -= dt;
     if (this.frenzyT > 0) {
@@ -576,7 +579,7 @@ export class Unit {
     const cx = cellOf(x), cz = cellOf(z);
     if (!inGrid(cx, cz)) return false;
     const i = idx(cx, cz);
-    if (T.blocked[i]) return false;
+    if (T.blocked[i] && !(this.def.hover && T.water[i] && !T.tree[i])) return false;
     const b = T.bld[i];
     if (b) {
       if (this.type === 'harvester' && this.refinery && b === this.refinery.id) return true;
@@ -618,8 +621,10 @@ export class Unit {
         this.barrels.rotation.z += this.spin * dt;
       }
     } else {
-      this.y = gy;
-      m.position.set(this.x, gy, this.z);
+      this.y = this.def.hover ? Math.max(gy, WATER_LEVEL) + 0.15 + Math.sin(G.time * 3 + this.id) * 0.06 : gy; // hovercraft float over water and lava
+      if (this.fans) for (const f of this.fans.children) f.rotation.z += dt * 30;
+      if (this.def.hover && this.speedNow > 1 && Math.random() < dt * 8 && this.mesh.visible) FX.dust(this.x - Math.sin(this.heading) * 1.5, this.z - Math.cos(this.heading) * 1.5, 0.6);
+      m.position.set(this.x, this.y, this.z);
       normalAt(this.x, this.z, _n);
       if (!this.sn) this.sn = _n.clone();
       this.sn.lerp(_n, Math.min(1, dt * 6)).normalize();
@@ -664,7 +669,8 @@ export class Unit {
     if (killer && killer.kind === 'unit' && !killer.dead) {
       killer.kills++;
       if (killer.faction === G.player && killer.kills > (G.mvp?.kills || 0)) G.mvp = { kills: killer.kills, name: killer.hero ? 'Wally Man (Hero)' : killer.def.name, type: killer.type };
-      const r = killer.kills >= 6 ? 2 : killer.kills >= 3 ? 1 : 0;
+      const r = killer.kills >= 10 ? 3 : killer.kills >= 6 ? 2 : killer.kills >= 3 ? 1 : 0;
+      if (r === 3 && killer.rank < 3) { FX.sparkBurst(killer.x, killer.y + 1.5, killer.z, 40, [4, 3.2, 0.8, 1]); if (killer.faction === G.player) G.announce?.(`${killer.hero ? 'Wally Man' : killer.def.name} is now HEROIC!`, G.player, 2); emit('heroic', killer); }
       if (r > killer.rank) { killer.rank = r; if (killer.faction === G.player) G.sfx?.play('promote', killer.x, killer.z); }
     }
     if (this.faction === G.player) { G.stats.lost++; G.announce?.('Unit lost', G.player, 6); }
@@ -953,8 +959,9 @@ export class Building {
       const px = this.x + rr(-0.4, 0.4) * this.def.w * CELL, pz = this.z + rr(-0.4, 0.4) * this.def.h * CELL;
       if (frac < 0.3) FX.fireSmoke(px, this.baseY + 2, pz, 1.2); else FX.blackSmoke(px, this.baseY + 2.2, pz, 1.2);
     }
+    if (this.empT > 0) { this.empT -= dt; if (Math.random() < dt * 8 && this.mesh.visible) FX.sparkBurst(this.x + rr(-1, 1) * this.def.w, this.baseY + 2, this.z + rr(-1, 1) * this.def.h, 2, [1.2, 2.5, 5, 1]); }
     // defensive weapon
-    if (this.def.weapon && this.buildAnim >= 1) this.defend(dt);
+    if (this.def.weapon && this.buildAnim >= 1 && !(this.empT > 0)) this.defend(dt);
     if (this.passengers && this.passengers.length) this.garrisonFire(dt);
     if (this.def.tech) techEffect(this, dt);
     if (this.faction !== G.player) this.mesh.visible = !!T.explored[idx(cellOf(this.x), cellOf(this.z))] || G.revealed;
@@ -1252,7 +1259,7 @@ function impact(p) {
 }
 
 function hit(src, w, target, at) {
-  let dmg = w.damage * (src.rank === 2 ? 1.5 : src.rank === 1 ? 1.25 : 1) * (upg(src.faction, 'shells') ? 1.2 : 1);
+  let dmg = w.damage * (src.rank === 3 ? 1.75 : src.rank === 2 ? 1.5 : src.rank === 1 ? 1.25 : 1) * (upg(src.faction, 'shells') ? 1.2 : 1);
   damage(target, dmg * (WARHEADS[w.warhead][target.kind === 'building' ? 'building' : target.def.armor] ?? 1), src);
   if (w.splash) splash(src, w, at.x, at.z, w.splash, src.faction, target);
 }

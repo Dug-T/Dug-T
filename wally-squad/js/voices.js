@@ -22,6 +22,7 @@ const DEFAULT_LINES = {
   stealth: { select: ['Shade, cloaked.', 'Unseen.'], move: ['Slipping through.'], attack: ['Decloaking.', 'Surprise.'] },
   inferno: { select: ['Inferno ready.', 'Fuel tanks full.'], move: ['Rolling.'], attack: ['Burn them all!'] },
   apc: { select: ['Carrier ready.', 'Room for five!'], move: ['Moving the squad.', 'Hold on back there!'], attack: ['Covering fire!'] },
+  hover: { select: ['Skimmer ready.', 'Water, lava, whatever!'], move: ['Skimming!', 'Full throttle over the top!'], attack: ['Rockets away!', 'Hit and run!'] },
   repair: { select: ['Repair crew here.', 'Who needs fixing?'], move: ['On my way with the wrench.'], attack: ['I fix things, not fight them!'] },
   drone: { select: ['Drone online.', 'Eyes in the sky.'], move: ['Scouting ahead.'], attack: ['No weapons, just cameras!'] },
 };

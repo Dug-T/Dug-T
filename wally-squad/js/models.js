@@ -339,6 +339,36 @@ export function makeArtillery(faction) {
   });
 }
 
+export function makeHovercraft(faction) {
+  return cached(`hover-${faction}`, () => {
+    const t = mats(faction), m = M();
+    const root = new THREE.Group();
+    const b = new Builder();
+    b.add(new THREE.CylinderGeometry(1.05, 1.15, 0.45, 18), m.black, 0, 0.35, 0, 0, 0, 0, 1, 1, 1.55);   // rubber skirt
+    b.add(new THREE.CylinderGeometry(0.95, 1.0, 0.3, 18), t.team, 0, 0.7, 0, 0, 0, 0, 1, 1, 1.5);         // hull
+    b.box(t.teamDark, 1.1, 0.4, 1.2, 0, 1.0, 0.25);                                                        // cockpit block
+    b.box(m.glass, 0.9, 0.25, 0.05, 0, 1.08, 0.86, -0.4, 0, 0);
+    b.box(t.accent, 0.4, 0.05, 1.0, 0, 0.87, -0.9);
+    for (const s of [-1, 1]) {
+      b.add(new THREE.TorusGeometry(0.42, 0.06, 6, 18), m.darkMetal, s * 0.5, 1.15, -1.25, 0, 0, 0);       // fan ducts
+      b.box(m.darkMetal, 0.06, 0.6, 0.06, s * 0.5, 1.15, -1.25);
+      b.box(m.gun, 0.16, 0.16, 0.7, s * 0.7, 0.95, 0.5);                                                    // rocket pods
+      b.box(m.lampWhite, 0.12, 0.06, 0.04, s * 0.45, 0.75, 1.5);
+    }
+    b.box(t.teamDark, 0.06, 0.55, 0.4, 0, 1.35, -1.25);                                                    // rudder
+    root.add(b.build());
+    // fan blades spin (named 'tailrotor' so the unit animator turns them)
+    const fb = new Builder();
+    for (let i = 0; i < 4; i++) fb.box(m.metal, 0.07, 0.75, 0.04, 0, 0, 0, 0, 0, i * Math.PI / 4);
+    const fans = new THREE.Group(); fans.name = 'fans';
+    for (const s of [-1, 1]) { const f = fb.build(); f.position.set(s * 0.5, 1.15, -1.25); fans.add(f); }
+    root.add(fans);
+    root.userData.muzzle = new THREE.Vector3(0.7, 0.95, 0.9);
+    root.userData.muzzle2 = new THREE.Vector3(-0.7, 0.95, 0.9);
+    return root;
+  });
+}
+
 export function makeRepairTruck(faction) {
   return cached(`repair-${faction}`, () => {
     const t = mats(faction), m = M();
@@ -853,6 +883,7 @@ export function makeUnitModel(type, faction) {
     case 'arty': return makeArtillery(faction);
     case 'gunship': return makeGunship(faction);
     case 'repair': return makeRepairTruck(faction);
+    case 'hover': return makeHovercraft(faction);
     case 'drone': return makeDrone(faction);
     case 'stealth': return makeStealth(faction);
     case 'inferno': return makeInferno(faction);
