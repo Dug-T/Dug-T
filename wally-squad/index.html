@@ -171,6 +171,9 @@
   #objectives { position: absolute; left: 10px; top: 46px; z-index: 4; background: var(--panel); border: 1px solid var(--line2); border-radius: 6px; padding: 6px 10px; font-size: 14px; display: none; max-width: 320px; }
   #objectives .obHint { margin: 3px 0 2px 14px; font-size: 12px; color: var(--muted, #b9c6d6); line-height: 1.35; }
   #objectives .ob { margin: 2px 0; }
+  #qOpts { display: none; padding: 0 6px 4px; } #qOpts .btn { width: 100%; padding: 3px 6px; font-size: 12px; }
+  #qOpts .btn.on { background: rgba(255,194,58,0.2); border-color: var(--accent); color: var(--accent); }
+  .swatch { width: 30px; height: 30px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.25); cursor: pointer; padding: 0; } .swatch.on { border-color: #fff; box-shadow: 0 0 0 2px var(--accent); }
   #feed { position: absolute; right: calc(var(--side, 260px) + 10px); top: 46px; z-index: 4; pointer-events: none; display: flex; flex-direction: column; align-items: flex-end; gap: 3px; max-width: 360px; }
   #feed .fl { background: rgba(8,12,18,0.72); border: 1px solid rgba(255,255,255,0.08); border-radius: 4px; padding: 2px 8px; font-size: 13px; color: #dfe8f2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 360px; transition: opacity 0.6s; }
   #feed .fl b.w { color: #7fb8ff; } #feed .fl b.g { color: #ff7a6a; } #feed .fl .n { color: var(--accent); }
@@ -331,6 +334,7 @@
   <div id="superRow" style="display:none"><div id="superName"></div><div id="superBar"><div id="superFill"></div></div><button class="btn" id="bSuper">LAUNCH</button><div id="enemySuper"></div></div>
   <div id="powerBtns"></div>
   <div id="tabs"></div>
+  <div id="qOpts"></div>
   <div id="grid"></div>
   <div id="modeRow">
     <button class="btn" id="bRepair" title="Repair mode (R): click your buildings">🔧 Repair</button>
@@ -373,6 +377,7 @@
     <h2>SKIRMISH</h2>
     <div class="label">Map</div><div id="mapList" class="cardList maps"></div>
     <div class="label">Your faction</div><div class="row" id="facRow"></div>
+    <div class="label">Army colour</div><div class="row colRow"></div>
     <div class="label">Enemy difficulty</div><div class="row" id="diffRow"></div>
     <div class="label">Battlefield</div><div class="row" id="optRow"></div>
       <div class="label">Mutators (optional rule changes)</div>
@@ -384,6 +389,7 @@
     <p style="text-align:center">Endless enemy waves that grow stronger every time, with a boss every 5th wave. How long can you hold out?</p>
     <div class="label">Map</div><div id="mapListSv" class="cardList maps"></div>
     <div class="label">Your faction</div><div class="row" id="facRowSv"></div>
+    <div class="label">Army colour</div><div class="row colRow"></div>
     <div class="label">Wave strength</div><div class="row" id="diffRowSv"></div>
     <div class="row"><button class="btn" data-panel="menuMain">◀ Back</button><button class="btn big" id="bStartSv">▶ START SURVIVAL</button></div>
   </div>
@@ -391,6 +397,7 @@
     <h2>SANDBOX</h2>
     <p style="text-align:center">No rules, unlimited money and super-fast building. Spawn any unit for either side anywhere on the map and stage your own battles. The enemy AI starts switched off.</p>
     <div class="label">Map</div><div id="mapListSb" class="cardList maps"></div>
+    <div class="label">Army colour</div><div class="row colRow"></div>
     <div class="row"><button class="btn" data-panel="menuMain">◀ Back</button><button class="btn big" id="bStartSb">▶ START SANDBOX</button></div>
   </div>
   <div class="card wide" id="menuOnline" style="display:none">

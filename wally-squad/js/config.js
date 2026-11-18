@@ -11,6 +11,29 @@ export const FACTIONS = {
   neutral: { id: 'neutral', name: 'Neutral', color: 0x8f949a, dark: 0x45494e, accent: 0xffc23a, light: 0xfff2c0, css: '#b9bec4' },
 };
 
+// Army colours you can pick for your own side (skirmish, survival, sandbox)
+export const TEAM_COLORS = {
+  blue:   { name: 'Blue', color: 0x2f7fe0, dark: 0x163a66, light: 0x8fd0ff, css: '#3d8bff', hue: 215 },
+  red:    { name: 'Red', color: 0xc8312b, dark: 0x3a1210, light: 0xff6a3a, css: '#ff4a3d', hue: 3 },
+  green:  { name: 'Green', color: 0x2fa84a, dark: 0x124a20, light: 0x8cffa0, css: '#3ccf5c', hue: 133 },
+  purple: { name: 'Purple', color: 0x8446d8, dark: 0x2e1550, light: 0xd2a8ff, css: '#a56bff', hue: 268 },
+  gold:   { name: 'Gold', color: 0xd8a020, dark: 0x5a3e08, light: 0xffe08a, css: '#f2b830', hue: 42 },
+  orange: { name: 'Orange', color: 0xe8701c, dark: 0x5a2606, light: 0xffb070, css: '#ff8a3a', hue: 25 },
+  teal:   { name: 'Teal', color: 0x18a8a8, dark: 0x0a3e40, light: 0x8ff4f0, css: '#2fd0cc', hue: 180 },
+  pink:   { name: 'Pink', color: 0xe0509a, dark: 0x561238, light: 0xffa8d6, css: '#ff6ab4', hue: 330 },
+  steel:  { name: 'Steel', color: 0x5d6670, dark: 0x22272c, light: 0xc8d4e0, css: '#9aa6b4', hue: -1 },
+};
+// Recolour your side; if your pick is close to the enemy's colour, the enemy swaps to your side's usual colours
+export function applyTeamColor(player, key) {
+  const c = TEAM_COLORS[key]; if (!c) return;
+  const enemy = player === 'wally' ? 'grim' : 'wally';
+  const orig = { color: FACTIONS[player].color, dark: FACTIONS[player].dark, light: FACTIONS[player].light, css: FACTIONS[player].css };
+  Object.assign(FACTIONS[player], { color: c.color, dark: c.dark, light: c.light, css: c.css });
+  const eh = enemy === 'grim' ? 3 : 215;
+  const close = c.hue >= 0 && Math.min(Math.abs(c.hue - eh), 360 - Math.abs(c.hue - eh)) < 35;
+  if (close) Object.assign(FACTIONS[enemy], orig);
+}
+
 // Damage multipliers: warhead -> armour class
 export const WARHEADS = {
   bullet:    { infantry: 1.0, light: 0.55, heavy: 0.22, building: 0.2, air: 0.6 },
@@ -74,6 +97,7 @@ export const BUILDINGS = {
 };
 
 export const UNITS = {
+  shaman:   { name: 'Grimlock Shaman', fac: 'grim', cost: 320, time: 6, hp: 110, armor: 'infantry', speed: 3.4, sight: 12, radius: 0.45, weapon: null, heals: true, tab: 'infantry', req: ['barracks'], desc: 'Grimlock only. Chants over wounded infantry to heal them.' },
   medic:    { name: 'Field Medic', fac: 'wally', cost: 300, time: 6, hp: 90, armor: 'infantry', speed: 3.5, sight: 12, radius: 0.45, weapon: null, heals: true, tab: 'infantry', req: ['barracks'], desc: 'Wally Squad only. Heals nearby infantry.' },
   rifle:    { name: 'Rifle Trooper', cost: 100, time: 4, hp: 100, armor: 'infantry', speed: 3.4, sight: 13, radius: 0.45, weapon: 'rifle', tab: 'infantry', req: ['barracks'], desc: 'Cheap all-round infantry.' },
   rocket:   { name: 'Rocket Trooper', cost: 300, time: 7, hp: 90, armor: 'infantry', speed: 3.0, sight: 14, radius: 0.45, weapon: 'bazooka', tab: 'infantry', req: ['barracks'], desc: 'Anti-tank and anti-air.' },

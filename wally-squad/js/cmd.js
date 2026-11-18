@@ -65,6 +65,7 @@ export function execute(c) {
     case 'super': fireSuperweapon(c.f, c.x, c.z); break;
     case 'power': usePower(c.f, c.type, c.x, c.z); break;
     case 'surrender': G.surrendered = c.f; break;
+    case 'repeat': { const q = P.queues[c.q]; if (q && ['infantry', 'vehicle', 'air'].includes(c.q)) q.repeat = !!c.on; break; }
     case 'spawn': if (G.cfg.mode === 'sandbox' && UNITS[c.type]) for (let i = 0; i < (c.n || 1); i++) { const a = i * 2.4, r = i ? 1.6 + i * 0.5 : 0; new Unit(c.type, c.side, c.x + Math.cos(a) * r, c.z + Math.sin(a) * r, Math.PI); } break;
   }
 }

@@ -11,6 +11,7 @@ const DEFAULT_LINES = {
   rocket: { select: ['Rockets loaded.', 'Anti-armour ready.'], move: ['Relocating.'], attack: ['Rocket away!', 'Tank spotted!'] },
   flamer: { select: ['Wally Man to the rescue!'], move: ['Moving.'], attack: ['Burn it down!', 'Toasty!'] },
   engineer: { select: ['Engineer.', 'Tools ready.'], move: ['On my way.'], attack: ['I can fix that.', 'Taking it over.'] },
+  shaman: { select: ['The spirits listen.', 'Who bleeds?'], move: ['I walk with the ancestors.'], attack: ['I heal, I do not fight!'] },
   medic: { select: ['Medic here.', 'Who needs patching up?'], move: ['Coming through.'], attack: ['I am a medic!'] },
   wally: { select: ['Wally here!', 'Where to, boss?', 'Glasses on, ready.'], move: ['Wally on the move!', 'Find me if you can.'], attack: ['Lining up the shot.', 'Time for a surprise!'] },
   buggy: { select: ['Buggy ready.', 'Let us roll.'], move: ['Full throttle!'], attack: ['Light them up!'] },

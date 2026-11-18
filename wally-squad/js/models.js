@@ -76,6 +76,8 @@ function trackUnit(b, side, len, h, w, y, faction) {
 }
 
 // ------------------------------------------------------------------ infantry
+let _shamanGlow = null;
+const shamanGlow = () => _shamanGlow || (_shamanGlow = new THREE.MeshStandardMaterial({ color: 0x6aff7a, emissive: 0x4aff60, emissiveIntensity: 2.4 }));
 export function makeInfantry(type, faction) {
   return cached(`inf-${type}-${faction}`, () => {
     const t = mats(faction), m = M();
@@ -83,7 +85,7 @@ export function makeInfantry(type, faction) {
     const S = type === 'wally' ? 1.15 : 1.0;
     // body (torso + head + gear)
     const b = new Builder();
-    const uniform = type === 'engineer' ? m.hazard : type === 'medic' ? M().medic : t.team;
+    const uniform = type === 'engineer' ? m.hazard : type === 'medic' ? M().medic : type === 'shaman' ? t.teamDark : t.team;
     b.box(uniform, 0.46, 0.55, 0.28, 0, 1.0, 0);               // torso
     b.box(t.teamDark, 0.5, 0.18, 0.32, 0, 0.78, 0);           // belt / hips
     b.box(m.cloth, 0.36, 0.3, 0.12, 0, 1.05, -0.2);           // backpack
@@ -112,6 +114,15 @@ export function makeInfantry(type, faction) {
       b.box(m.lampRed, 0.06, 0.2, 0.02, 0, 1.08, 0.15); b.box(m.lampRed, 0.2, 0.06, 0.02, 0, 1.08, 0.15);
       b.box(M().medic, 0.3, 0.25, 0.14, 0, 1.0, -0.24); b.box(m.lampRed, 0.06, 0.16, 0.02, 0, 1.0, -0.32); b.box(m.lampRed, 0.16, 0.06, 0.02, 0, 1.0, -0.32);
     }
+    if (type === 'shaman') {
+      // hooded robe, bone necklace, skull staff with a glowing green orb
+      b.add(new THREE.ConeGeometry(0.36, 0.7, 10, 1, true), t.teamDark, 0, 0.62, 0);
+      b.add(new THREE.SphereGeometry(0.21, 12, 8, 0, Math.PI * 2, 0, Math.PI * 0.62), t.teamDark, 0, 1.47, -0.02);
+      for (let i = 0; i < 5; i++) b.sph(m.concrete, 0.035, -0.12 + i * 0.06, 1.25 - Math.abs(i - 2) * 0.025, 0.15);
+      b.cyl(m.wood || m.darkMetal, 0.025, 0.03, 1.7, 6, 0.3, 1.05, 0.25);
+      b.sph(m.concrete, 0.09, 0.3, 1.95, 0.25, 1, 1.1, 1);
+      b.sph(shamanGlow(), 0.07, 0.3, 2.1, 0.25);
+    }
     if (type === 'flamer') { b.cyl(m.lampRed, 0.08, 0.08, 0.5, 10, 0.1, 1.05, -0.28); b.cyl(m.lampRed, 0.08, 0.08, 0.5, 10, -0.1, 1.05, -0.28); }
     // arms holding weapon
     b.box(uniform, 0.12, 0.42, 0.12, 0.29, 1.05, 0.1, -0.7, 0, 0.1);
@@ -127,6 +138,8 @@ export function makeInfantry(type, faction) {
       b.cyl(m.darkMetal, 0.07, 0.07, 0.1, 10, 0.05, 0.98, 0.8, Math.PI / 2, 0, 0);
     } else if (type === 'engineer') {
       b.box(m.metal, 0.06, 0.06, 0.4, 0.05, 0.98, 0.42);
+    } else if (type === 'shaman') {
+      b.sph(shamanGlow(), 0.05, -0.2, 1.0, 0.36);
     } else if (type === 'medic') {
       b.box(M().medic, 0.18, 0.14, 0.1, 0.1, 0.95, 0.4); b.box(m.lampRed, 0.1, 0.03, 0.02, 0.1, 0.95, 0.46);
     } else {

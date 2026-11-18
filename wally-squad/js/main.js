@@ -6,7 +6,7 @@ import { UnrealBloomPass } from '../lib/postprocessing/UnrealBloomPass.js';
 import { ShaderPass } from '../lib/postprocessing/ShaderPass.js';
 import { OutputPass } from '../lib/postprocessing/OutputPass.js';
 import { G, runTimers, seedSim, emit, on } from './state.js';
-import { DIFFICULTY, FACTIONS, MUTATORS, hasMut, UNITS } from './config.js';
+import { DIFFICULTY, FACTIONS, MUTATORS, hasMut, UNITS, TEAM_COLORS, applyTeamColor } from './config.js';
 import { MAPS, THEMES, getMap } from './maps.js';
 import { buildTerrain, setupMap, BASES, cellOf, updateVision, updateOre, regrowOre, animateWater, revealAll, revealCircle } from './terrain.js';
 import { initFX, updateFX, setParticleScale } from './particles.js';
@@ -63,6 +63,8 @@ if (run.mode === 'campaign' || run.mode === 'tutorial') {
 G.cfg = run;
 G.player = run.faction === 'grim' ? 'grim' : 'wally';
 G.enemy = G.player === 'wally' ? 'grim' : 'wally';
+// your army colour (not in online games, where both players must agree on colours)
+{ let col = run.color; try { col = col || localStorage.getItem('ws_color'); } catch { /* ignore */ } if (col && run.mode !== 'mp' && run.mode !== 'title') applyTeamColor(G.player, col); }
 G.difficulty = DIFFICULTY[run.difficulty] ? run.difficulty : 'normal';
 
 async function boot() {
@@ -348,6 +350,15 @@ function setupMenus() {
     const b = document.createElement('button'); b.className = 'btn'; b.textContent = `${m.icon} ${m.name}`; b.title = m.desc;
     b.onclick = () => { const i = sk.mut.indexOf(k); if (i >= 0) sk.mut.splice(i, 1); else sk.mut.push(k); b.classList.toggle('on', i < 0); Audio.play('click'); };
     mrow.appendChild(b);
+  }
+  // army colour swatches (shared by skirmish, survival and sandbox; remembered)
+  let savedCol = 'default'; try { savedCol = localStorage.getItem('ws_color') || 'default'; } catch { /* ignore */ }
+  for (const row of document.querySelectorAll('.colRow')) {
+    const mk = (key, css, name) => { const b = document.createElement('button'); b.className = 'swatch' + (savedCol === key ? ' on' : ''); b.style.background = css; b.title = name; b.dataset.k = key;
+      b.onclick = () => { savedCol = key; try { if (key === 'default') localStorage.removeItem('ws_color'); else localStorage.setItem('ws_color', key); } catch { /* ignore */ } for (const s of document.querySelectorAll('.colRow .swatch')) s.classList.toggle('on', s.dataset.k === key); Audio.play('click'); };
+      row.appendChild(b); };
+    mk('default', 'linear-gradient(135deg,#3d8bff 50%,#ff4a3d 50%)', 'Faction colour (blue Wally Squad, red Grimlocks)');
+    for (const [k, c] of Object.entries(TEAM_COLORS)) mk(k, c.css, c.name);
   }
   $('bStart').onclick = () => startWith(sk);
   $('profile').innerHTML = profileCard();
