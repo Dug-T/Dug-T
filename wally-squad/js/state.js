@@ -32,6 +32,10 @@ export function later(sec, fn) { timers.push({ t: G.time + sec, fn }); }
 export function runTimers() {
   for (let i = timers.length - 1; i >= 0; i--) if (timers[i].t <= G.time) { const f = timers[i].fn; timers.splice(i, 1); f(); }
 }
+// tiny event bus (kills, pickups, ...) used by survival scoring and achievements
+const listeners = {};
+export function on(ev, fn) { (listeners[ev] = listeners[ev] || []).push(fn); }
+export function emit(ev, ...a) { for (const fn of listeners[ev] || []) fn(...a); }
 export function nextId() { return G.nextId++; }
 
 // ---------- deterministic random + noise ----------

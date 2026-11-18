@@ -4,6 +4,7 @@ import { DIFFICULTY, BUILDINGS, UNITS, CELL, GRID } from './config.js';
 import { enqueue, hasReqs, canPlace, placeBuilding, defOf, placeInstant } from './production.js';
 import { superState, fireSuperweapon, aiSuperTarget } from './superweapons.js';
 import { aiGrabCrates, aiCaptureTech } from './features.js';
+import { aiUsePowers } from './powers.js';
 import { alive, distTo } from './entities.js';
 import { cellOf, T, idx } from './terrain.js';
 
@@ -35,6 +36,7 @@ export class AI {
     this.manageDefence();
     if (!this.opts.noAttack) this.manageAttack();
     if (srand() < 0.2) aiGrabCrates(this.f);
+    if (this.t > 240 && !this.opts.noAttack && srand() < 0.3) aiUsePowers(this.f, aiSuperTarget(this.f));
     if (!this.opts.noUnits) aiCaptureTech(this.f);
     const ss = superState(this.f);
     if (ss && ss.ready) { const tg = aiSuperTarget(this.f); if (tg) fireSuperweapon(this.f, tg.x + rr(-2, 2), tg.z + rr(-2, 2)); }

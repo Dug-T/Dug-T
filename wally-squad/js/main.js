@@ -5,7 +5,7 @@ import { RenderPass } from '../lib/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from '../lib/postprocessing/UnrealBloomPass.js';
 import { ShaderPass } from '../lib/postprocessing/ShaderPass.js';
 import { OutputPass } from '../lib/postprocessing/OutputPass.js';
-import { G, runTimers, seedSim } from './state.js';
+import { G, runTimers, seedSim, emit } from './state.js';
 import { DIFFICULTY, FACTIONS } from './config.js';
 import { MAPS, THEMES, getMap } from './maps.js';
 import { buildTerrain, setupMap, BASES, cellOf, updateVision, updateOre, regrowOre, animateWater, revealAll, revealCircle } from './terrain.js';
@@ -26,6 +26,9 @@ import { registerCustomUnits, loadDesigns, buildDesigner } from './customunits.j
 import { gfx, initGraphics, pixelRatio, autoTune, buildGraphicsPanel, maxAnisotropy } from './graphics.js';
 import { allMaterials } from './materials.js';
 import { updateCrates, animateCrates, placeTechBuildings, recordHistory, drawHistory } from './features.js';
+import { updatePowers } from './powers.js';
+import { initAchievements, checkAchievements, buildMedals } from './achievements.js';
+import { initSurvival, updateSurvival, survivalPanel, saveBest, bestScores, survival } from './survival.js';
 
 const $ = id => document.getElementById(id);
 const params = new URLSearchParams(location.search);
@@ -37,6 +40,7 @@ let ais = [];
 let winT = 0, missionT = 0;
 let fpsAcc = 0, fpsN = 0;
 let mission = null, mctx = null, lockstep = null;
+const portraitBlock = matchMedia('(orientation: portrait) and (pointer: coarse)');
 
 // ---------------------------------------------------------------- configuration for this run
 // A game is started by storing a config in sessionStorage and reloading; no config = main menu.
@@ -141,6 +145,7 @@ async function boot() {
   initFX(scene);
   initWeather(scene, map, theme);
   G.sfx = Audio.sfx;
+  initAchievements(run);
   G.announce = Audio.announce;
   Voices.initVoices();
   if (params.has('reveal')) { G.revealed = true; revealAll(true); }
@@ -161,7 +166,8 @@ async function boot() {
     });
     mission.setup(mctx);
   } else {
-    for (const f of slotOrder) setupBase(f, BASES[f]);
+    for (const f of slotOrder) if (run.mode !== 'survival' || f === G.player) setupBase(f, BASES[f]);
+    if (run.mode === 'survival') { initSurvival(); G.players[G.player].credits = 6000; }
   }
   placeTechBuildings();
   revealCircle(BASES[G.player].x, BASES[G.player].z, 42);
@@ -203,12 +209,13 @@ function setupBase(faction, pos) {
 }
 
 // ---------------------------------------------------------------- menus
-const panels = ['menuMain', 'menuCampaign', 'menuSkirmish', 'menuOnline', 'menuVoices', 'menuDesigner', 'menuGraphics'];
+const panels = ['menuMain', 'menuCampaign', 'menuSkirmish', 'menuOnline', 'menuVoices', 'menuDesigner', 'menuGraphics', 'menuSurvival', 'menuMedals'];
 function showPanel(id) {
   for (const p of panels) $(p).style.display = p === id ? 'block' : 'none';
   if (id === 'menuVoices') Voices.buildStudio($('studio'), UI.icons);
   if (id === 'menuDesigner') buildDesigner($('designer'), { faction: 'wally' });
   if (id === 'menuGraphics') buildGraphicsPanel($('gfxPanel'));
+  if (id === 'menuMedals') buildMedals($('medals'));
 }
 function startWith(c) { sessionStorage.setItem('ws_cfg', JSON.stringify(c)); location.href = location.pathname + (params.has('loopnet') ? '?loopnet' : ''); }
 
@@ -245,6 +252,19 @@ function setupMenus() {
   toggle('Day–night cycle', () => sk.daynight, v => { sk.daynight = v; });
   toggle('Dynamic weather', () => !sk.weather, v => { sk.weather = v ? null : 'clear'; });
   $('bStart').onclick = () => startWith(sk);
+  // survival
+  const sv = { mode: 'survival', map: 'valley', faction: 'wally', difficulty: 'normal', daynight: true, weather: null };
+  const best = bestScores();
+  optionCards($('mapListSv'), mapItems().map(m => ({ ...m, desc: best[m.id] ? `Best: ${best[m.id].score.toLocaleString()} pts · wave ${best[m.id].wave}` : 'No record yet' })), sv.map, id => { sv.map = id; });
+  optionCards($('facRowSv'), facItems, sv.faction, id => { sv.faction = id; });
+  $('facRowSv').className = 'cardList';
+  const rowSv = $('diffRowSv');
+  for (const k in DIFFICULTY) {
+    const b = document.createElement('button'); b.className = 'btn' + (k === sv.difficulty ? ' on' : ''); b.textContent = DIFFICULTY[k].label;
+    b.onclick = () => { sv.difficulty = k; [...rowSv.children].forEach(x => x.classList.toggle('on', x === b)); };
+    rowSv.appendChild(b);
+  }
+  $('bStartSv').onclick = () => startWith(sv);
   // campaign
   const prog = campaignProgress();
   optionCards($('missionList'), MISSIONS.map((m, i) => ({ id: i, title: `${i + 1}. ${m.title}`, desc: i <= prog ? `${MAPS[m.map].name} · ${DIFFICULTY[m.difficulty].label}` : 'Locked - complete the previous mission', locked: i > prog, swatch: MAP_SWATCH[m.map] })), -1, i => startWith({ mode: 'campaign', mission: i }));
@@ -285,6 +305,21 @@ function setupMenus() {
   $('bNext').onclick = () => startWith({ mode: 'campaign', mission: Math.min(MISSIONS.length - 1, run.mission + 1) });
   $('bWatch').onclick = () => { $('end').style.display = 'none'; G.paused = false; };
   $('bSurrender').onclick = () => { if (lockstep) lockstep.surrender(); else G.surrendered = G.player; togglePause(false); };
+  const goFull = async () => {
+    try {
+      const el = document.documentElement;
+      if (!document.fullscreenElement) await (el.requestFullscreen?.({ navigationUI: 'hide' }) || el.webkitRequestFullscreen?.());
+      await screen.orientation?.lock?.('landscape');
+    } catch { /* not supported (e.g. iPhone Safari): the rotate screen still asks for landscape */ }
+    setTimeout(() => UI.resize(), 300);
+  };
+  $('bFull').onclick = () => { if (document.fullscreenElement) document.exitFullscreen?.(); else goFull(); };
+  $('bFullRotate').onclick = goFull;
+  // phones: go fullscreen + landscape on the first tap (starting a game reloads the page, which leaves fullscreen)
+  if (matchMedia('(pointer: coarse)').matches && localStorage.getItem('ws_nofull') !== '1') {
+    const once = () => { window.removeEventListener('pointerup', once, true); if (!document.fullscreenElement) goFull(); };
+    window.addEventListener('pointerup', once, true);
+  }
   $('bMusic').onclick = () => { Audio.initAudio(); const on = Audio.toggleMusic(); $('bMusic').classList.toggle('on', !on); $('bMusic').textContent = on ? '♪ Music' : '♪ Off'; };
   const speeds = [1, 1.5, 2, 0.5];
   $('bSpeed').onclick = () => { if (lockstep) return; G.speed = speeds[(speeds.indexOf(G.speed) + 1) % speeds.length]; $('bSpeed').textContent = `Game speed: ${G.speed}x`; };
@@ -311,6 +346,7 @@ function showBriefing() {
 }
 
 function renderObjectives() {
+  if (run.mode === 'survival') { const el = $('objectives'); el.style.display = 'block'; el.innerHTML = survivalPanel(); return; }
   if (!mission) return;
   const el = $('objectives'); el.style.display = 'block';
   el.innerHTML = '<div class="label" style="margin:0 0 3px">Objectives</div>' + mission.objectives.map(o => {
@@ -328,6 +364,7 @@ function start() {
   revealAll(!!G.revealed);
   G.started = true; G.paused = false;
   if (run.mode === 'skirmish') ais = [new AI(G.enemy)];
+  if (run.mode === 'survival') { renderObjectives(); UI.message('Survival: build defences fast - the first wave arrives in 75 seconds!'); }
   if (mission) renderObjectives();
   const fname = FACTIONS[G.player].name;
   Audio.announce(mission ? `Mission start: ${mission.title}` : run.mode === 'mp' ? 'Battle control online' : `Welcome, commander of the ${fname}.`);
@@ -344,6 +381,7 @@ function togglePause(force) {
 function endGame(win, text) {
   if (G.over) return;
   G.over = true;
+  emit('end', win);
   Audio.announce(win ? 'Mission accomplished' : 'Mission failed');
   if (mission && win) unlockNext(run.mission);
   setTimeout(() => {
@@ -363,6 +401,14 @@ function checkEnd(dt) {
   winT -= dt; if (winT > 0 || G.over) return; winT = 1;
   if (G.surrendered) { endGame(G.surrendered !== G.player, G.surrendered === G.player ? 'You surrendered.' : 'The enemy has surrendered!'); return; }
   if (mission) return; // missions decide victory themselves
+  if (run.mode === 'survival') {
+    const alive = G.buildings.some(b => !b.dead && b.faction === G.player && !b.def.isMine && !b.def.isWall) || G.units.some(u => !u.dead && u.faction === G.player && u.type !== 'harvester');
+    if (!alive) {
+      const { prev, isNew } = saveBest(run.map);
+      endGame(false, `You survived ${Math.max(0, survival.wave - 1)} waves. Score ${survival.score.toLocaleString()}${isNew ? ' - NEW BEST!' : ` (best ${prev.score.toLocaleString()})`}`);
+    }
+    return;
+  }
   const has = f => G.buildings.some(b => !b.dead && b.faction === f && !b.def.isMine && !b.def.isWall) || G.units.some(u => !u.dead && u.faction === f && u.type !== 'harvester');
   const pAlive = has(G.player), eAlive = has(G.enemy);
   if (!pAlive || !eAlive) endGame(pAlive);
@@ -375,6 +421,8 @@ function simStep(dt) {
   updatePower();
   updateProduction(dt);
   updateSuper(dt);
+  updatePowers(dt);
+  checkAchievements(dt);
   for (const a of ais) a.update(dt);
   if (G.extraAI) for (const a of G.extraAI) a.update(dt);
   rebuildHash();
@@ -386,6 +434,7 @@ function simStep(dt) {
   regrowOre(dt);
   updateCrates(dt);
   recordHistory(dt);
+  if (run.mode === 'survival' && !G.over) { updateSurvival(dt); missionT -= dt; if (missionT <= 0) { missionT = 0.5; renderObjectives(); } }
   if (mission && !G.over) { missionT -= dt; if (missionT <= 0) { missionT = 0.5; if (mctx.heroCheck()) mission.tick(mctx); renderObjectives(); } }
   checkEnd(dt);
 }
@@ -403,7 +452,7 @@ function loop(now) {
     lockstep.update(real, simStep);
     dt = G.time - t0;
   } else {
-    dt = G.started && !G.paused ? real * G.speed : 0;
+    dt = G.started && !G.paused && !portraitBlock.matches ? real * G.speed : 0;
     if (dt > 0) simStep(dt);
   }
   G.dt = dt;

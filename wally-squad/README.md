@@ -12,6 +12,7 @@ Play it by opening `wally-squad/index.html` from any web server (GitHub Pages wo
   3. **Crystal Rush** – out-harvest the enemy in the Dune Sea and burn down its refineries.
   4. **Lights Out** – at night, cut the enemy's power so its Plasma Towers go dark, then finish the fortress.
   5. **The Warlord** – a full base battle against a Doom Missile silo.
+- **Survival:** endless enemy waves that grow stronger each time, with a boss every 5th wave. The game keeps your best score and wave for each map.
 - **Skirmish:** choose a map, your faction and the difficulty, and turn the day–night cycle and dynamic weather on or off.
 - **Online battle:** 1 v 1 against a friend. One player hosts and shares a 5-letter room code; the other joins with it.
 - **Unit Designer:** invent your own infantry and vehicles:
@@ -46,6 +47,13 @@ Both factions share the basic army: riflemen, rocket troopers, Scorchers, engine
 - **Superweapons:** each one charges up with a countdown, shown in the sidebar for both sides. The computer opponent uses its superweapon too.
 - **Stealth:** Shade tanks are invisible until they fire or an enemy gets close.
 - **Unit voices:** record your own lines (up to 3 takes per line), or let the computer voice play. Voice packs can be exported and imported so you can swap them with friends.
+- **Landscape only on phones and tablets:** held upright, the game pauses and asks you to rotate. **⛶ Fullscreen** (top bar) hides the browser bars and, where the phone allows it, locks the screen to landscape.
+- **Support powers:** once you have the right buildings, they recharge and appear above the build tabs.
+  - 📡 **Recon Sweep** (needs a Comms Center) reveals an area for 20 seconds.
+  - 🪂 **Paradrop** (needs a Barracks and Comms Center) drops 7 troopers by parachute.
+  - ✈ **Airstrike** (needs a Helipad) sends bombers to carpet-bomb a line.
+  - The computer opponent uses them too.
+- **Medals:** 18 achievements, from First Blood to beating the Warlord or surviving 20 waves. They pop up as you earn them, and the **🎖 Medals** screen lists them all.
 - **Graphics settings** (main menu and pause menu):
   - Low/Medium/High/Ultra presets.
   - A resolution scale from 50% to 150% (anything over 100% is supersampling).

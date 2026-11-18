@@ -1,6 +1,6 @@
 // Units, buildings, projectiles, combat and death.
 import * as THREE from 'three';
-import { G, nextId, rr, clamp, angleDiff, later, srand, srr } from './state.js';
+import { G, nextId, rr, clamp, angleDiff, later, srand, srr, emit } from './state.js';
 import { UNITS, BUILDINGS, WEAPONS, WARHEADS, CELL, HALF, GRID, HARVEST_CAPACITY, FACTIONS, WATER_LEVEL } from './config.js';
 import { T, heightAt, groundY, normalAt, cellOf, cellCenter, idx, isWalkable, isVisibleAt, inGrid } from './terrain.js';
 import { makeUnitModel, makeBuildingModel, makeRubble, charModel } from './models.js';
@@ -9,6 +9,7 @@ import * as FX from './particles.js';
 import { M } from './materials.js';
 import { selectRingTexture } from './textures.js';
 import { techEffect } from './features.js';
+import { paraFall } from './powers.js';
 
 const UP = new THREE.Vector3(0, 1, 0);
 const _v = new THREE.Vector3(), _q1 = new THREE.Quaternion(), _q2 = new THREE.Quaternion(), _n = new THREE.Vector3();
@@ -147,6 +148,7 @@ export class Unit {
   // ---------------------------------------------------- update
   update(dt) {
     if (this.dead) return;
+    if (this.dropH > 0) { paraFall(this, dt); return; } // still floating down under a parachute
     if (this.def.selfRepair && this.hp < this.maxHp * 0.5) this.hp = Math.min(this.maxHp * 0.5, this.hp + 6 * dt);
     if (this.rank >= 2 && this.hp < this.maxHp) this.hp = Math.min(this.maxHp, this.hp + 2 * dt);
     this.cool -= dt; this.cool2 -= dt;
@@ -599,6 +601,7 @@ export class Unit {
     }
     if (this.faction === G.player) { G.stats.lost++; G.announce?.('Unit lost', G.player, 6); }
     else if (killer && killer.faction === G.player) G.stats.killed++;
+    emit('kill', this, killer);
     const m = this.mesh;
     if (this.isInf) {
       FX.smallHit(this.x, this.y + 1, this.z, 'bullet');
@@ -828,6 +831,7 @@ export class Building {
     if (this.def.isGate) for (let j = 0; j < this.def.h; j++) for (let i = 0; i < this.def.w; i++) T.gate[idx(this.cx + i, this.cz + j)] = FACIDX[faction];
     this.makeMesh();
     if (faction === G.player) G.announce?.('Building captured', G.player);
+    emit('capture', this, faction);
     if (old === G.player) G.announce?.('Building lost', G.player);
     if (this.selected && faction !== G.player) { G.selection = G.selection.filter(s => s !== this); this.setSelected(false); }
   }
@@ -954,6 +958,7 @@ export class Building {
     if (killer && killer.kind === 'unit' && !killer.dead) killer.kills++;
     if (this.faction === G.player) { G.announce?.('Structure lost', G.player); }
     else if (killer && killer.faction === G.player) G.stats.killed++;
+    emit('kill', this, killer);
     for (let j = 0; j < this.def.h; j++) for (let i = 0; i < this.def.w; i++) if (T.bld[idx(this.cx + i, this.cz + j)] === this.id) { T.bld[idx(this.cx + i, this.cz + j)] = 0; T.gate[idx(this.cx + i, this.cz + j)] = 0; }
     // chain of explosions then a big one
     const W = this.def.w * CELL, D = this.def.h * CELL;

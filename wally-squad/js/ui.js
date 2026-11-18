@@ -9,6 +9,7 @@ import { issue, oreCellAt } from './cmd.js';
 import * as Voices from './voices.js';
 import { superState } from './superweapons.js';
 import { weatherLabel, clockString } from './weather.js';
+import { powerStates, POWERS } from './powers.js';
 import { makeUnitModel, makeBuildingModel, makeGhost } from './models.js';
 import { formationSlots } from './pathfind.js';
 import { fogUniforms } from './materials.js';
@@ -235,6 +236,24 @@ export function updateSidebar(dt) {
   if (es) { const left = Math.max(0, es.max - es.charge); $('enemySuper').textContent = es.ready ? `⚠ Enemy ${es.name} ARMED` : `⚠ Enemy ${es.name}: ${Math.floor(left / 60)}:${String(Math.floor(left % 60)).padStart(2, '0')}`; }
   else $('enemySuper').textContent = '';
   $('wx').textContent = `${weatherLabel()} · ${clockString()}`;
+  // support power buttons
+  const ps = powerStates(G.player), pb = $('powerBtns');
+  const psig = ps.map(p => p.type).join();
+  if (pb.dataset.sig !== psig) {
+    pb.dataset.sig = psig; pb.innerHTML = '';
+    for (const p of ps) {
+      const b = document.createElement('button'); b.className = 'pwr'; b.dataset.type = p.type; b.title = `${p.name}: ${p.desc}`;
+      b.innerHTML = `${p.icon} <span></span><div class="fill"></div>`;
+      b.onclick = () => { const s = powerStates(G.player).find(x => x.type === p.type); if (s && s.ready) { setMode('power:' + p.type); Audio.announce(`${p.name}: select target`); } else Audio.play('error'); };
+      pb.appendChild(b);
+    }
+  }
+  for (const b of pb.children) {
+    const s = ps.find(p => p.type === b.dataset.type); if (!s) continue;
+    b.classList.toggle('ready', s.ready);
+    b.querySelector('span').textContent = s.ready ? s.name.split(' ')[0].toUpperCase() : `${Math.ceil(POWERS[s.type].charge - s.charge)}s`;
+    b.querySelector('.fill').style.width = (s.charge / POWERS[s.type].charge * 100) + '%';
+  }
   // clock
   const s = Math.floor(G.time); $('clock').textContent = `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
   refreshSelPanel();
@@ -618,6 +637,13 @@ function tryPlace() {
 let wallStart = null;
 
 function modeClick(x, y) {
+  if (G.mode && G.mode.startsWith('power:')) {
+    const g = screenToGround(x, y);
+    if (!g) return;
+    issue({ t: 'power', type: G.mode.slice(6), x: g.x, z: g.z });
+    setMode(null);
+    return;
+  }
   if (G.mode === 'super') {
     const g = screenToGround(x, y);
     if (!g) return;
@@ -638,7 +664,7 @@ function setMode(m) {
 }
 function setCursor() {
   const gl = $('gl');
-  gl.style.cursor = G.mode === 'sell' ? 'copy' : G.mode === 'repair' ? 'cell' : G.mode === 'super' || attackMoveArmed ? 'crosshair' : 'default';
+  gl.style.cursor = G.mode === 'sell' ? 'copy' : G.mode === 'repair' ? 'cell' : G.mode === 'super' || (G.mode && G.mode.startsWith('power:')) || attackMoveArmed ? 'crosshair' : 'default';
 }
 let hoverT = 0;
 export function updateHover(dt) {
@@ -953,6 +979,10 @@ export function drawOverlay() {
     const n = lineCells(wallStart, placementCell(G.mouse.ground.x, G.mouse.ground.z)).length;
     octx.fillStyle = '#fff'; octx.font = 'bold 13px Rajdhani'; octx.textAlign = 'left';
     octx.fillText(n + ' x wall  $' + n * BUILDINGS.wall.cost, G.mouse.x + 14, G.mouse.y + 4);
+  }
+  if (G.mode && G.mode.startsWith('power:') && G.mouse.inside) {
+    octx.fillStyle = '#7dff9a'; octx.font = 'bold 14px Rajdhani'; octx.textAlign = 'left';
+    octx.fillText(POWERS[G.mode.slice(6)].name.toUpperCase() + ': CLICK TARGET', G.mouse.x + 16, G.mouse.y + 4);
   }
   if (G.mode === 'super' && G.mouse.inside) {
     octx.fillStyle = '#ff5a3a'; octx.font = 'bold 14px Rajdhani'; octx.textAlign = 'left';

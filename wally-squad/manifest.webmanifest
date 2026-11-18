@@ -1,0 +1,11 @@
+{
+  "name": "Wally Squad",
+  "short_name": "Wally Squad",
+  "description": "3D real-time strategy: build, harvest, conquer.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#07090c",
+  "theme_color": "#07090c"
+}

@@ -2,7 +2,11 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="screen-orientation" content="landscape">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.webmanifest">
 <title>Wally Squad</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
@@ -183,6 +187,29 @@
   .vcount { font-size: 11px; color: var(--dim); margin-left: auto; }
   .vcount.has { color: var(--green); }
   #briefText p { font-size: 16px; }
+  .medalToast { position: fixed; top: 54px; left: 50%; transform: translate(-50%, -30px); opacity: 0; z-index: 90; display: flex; gap: 12px; align-items: center; background: linear-gradient(135deg, #2a2410f2, #0c1218f2); border: 2px solid var(--accent); border-radius: 10px; padding: 10px 16px; box-shadow: 0 8px 30px #000a, 0 0 20px #ffc23a44; transition: all 0.4s; pointer-events: none; }
+  .medalToast.show { opacity: 1; transform: translate(-50%, 0); }
+  .medalToast .mi, .medal .mi { font-size: 32px; }
+  .medalToast .mt { font: 700 11px 'Rajdhani'; color: var(--accent); letter-spacing: 2px; }
+  .mn { font: 700 17px 'Rajdhani'; color: #fff; } .md { font-size: 13px; color: #b9cad6; } .mdate { font-size: 11px; color: var(--accent); }
+  .medalGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 8px; max-height: 58vh; overflow-y: auto; }
+  .medal { display: flex; gap: 10px; align-items: center; background: #111b24; border: 1px solid var(--line); border-radius: 6px; padding: 8px; opacity: 0.5; }
+  .medal.on { opacity: 1; border-color: var(--accent); background: #2a2410; }
+  #powerBtns { display: flex; gap: 4px; margin: 6px 8px 0; }
+  #powerBtns:empty { display: none; }
+  .pwr { flex: 1; position: relative; overflow: hidden; background: #16212b; border: 1px solid var(--line2); color: #fff; border-radius: 4px; font: 700 11px 'Rajdhani'; padding: 4px 2px; cursor: pointer; }
+  .pwr .fill { position: absolute; left: 0; bottom: 0; height: 3px; background: var(--accent); }
+  .pwr.ready { border-color: var(--green); box-shadow: inset 0 0 10px #4cff7a55; }
+  .pwr:disabled { opacity: 0.55; cursor: default; }
+  @media (max-height: 520px) and (orientation: landscape) { #powerBtns { grid-area: super; margin: 2px 6px 2px 0; } .pwr { font-size: 9px; padding: 2px 1px; } }
+  /* landscape only on phones and tablets */
+  #rotate { position: fixed; inset: 0; z-index: 100; display: none; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 24px; background: radial-gradient(ellipse at center, #13202b, #050709); }
+  #rotate h2 { font-family: 'Black Ops One'; color: var(--accent); margin: 26px 0 6px; font-size: 26px; }
+  #rotate p { color: #b9cad6; max-width: 300px; margin: 0 0 18px; }
+  #rotate .phone { width: 64px; height: 110px; border: 4px solid var(--accent); border-radius: 12px; position: relative; animation: rot 2.4s ease-in-out infinite; }
+  #rotate .screenbar { position: absolute; left: 8px; right: 8px; top: 10px; bottom: 16px; background: linear-gradient(135deg, #2f7fe0, #4cff7a); border-radius: 3px; opacity: 0.7; }
+  @keyframes rot { 0%, 25% { transform: rotate(0deg); } 55%, 85% { transform: rotate(-90deg); } 100% { transform: rotate(0deg); } }
+  @media (orientation: portrait) and (pointer: coarse) { #rotate { display: flex; } }
   #fps { position: absolute; left: 50%; bottom: 6px; transform: translateX(-50%); z-index: 8; font: 700 12px monospace; color: #9f9; background: #0008; padding: 2px 6px; border-radius: 4px; pointer-events: none; display: none; }
   .gfxRow { display: flex; align-items: center; gap: 10px; justify-content: center; } .gfxRow b { color: var(--accent); min-width: 170px; }
   .dsg { display: grid; grid-template-columns: 300px 1fr; gap: 16px; }
@@ -237,6 +264,7 @@
   <div id="clock" style="font-weight:700;color:var(--dim)">00:00</div>
   <div id="wx" style="font-weight:700;color:#bfe6ff"></div>
   <div class="spacer"></div>
+  <button class="btn" id="bFull" title="Fullscreen">⛶</button>
   <button class="btn" id="bMusic" title="Toggle music">♪ Music</button>
   <button class="btn" id="bHelp" title="Controls (F1)">? Help</button>
   <button class="btn" id="bPause" title="Pause (P / Esc)">❚❚ Menu</button>
@@ -254,6 +282,7 @@
   <div id="powerRow"><span>⚡</span><div id="powerBar"><div id="powerFill"></div><div id="powerUse"></div></div><span id="powerTxt">0/0</span></div>
   <div id="minimapWrap"><canvas id="minimap" width="256" height="256"></canvas><div id="radarOff"></div></div>
   <div id="superRow" style="display:none"><div id="superName"></div><div id="superBar"><div id="superFill"></div></div><button class="btn" id="bSuper">LAUNCH</button><div id="enemySuper"></div></div>
+  <div id="powerBtns"></div>
   <div id="tabs"></div>
   <div id="grid"></div>
   <div id="modeRow">
@@ -273,9 +302,11 @@
     <div class="menuCol">
       <button class="btn big" data-panel="menuCampaign">★ CAMPAIGN</button>
       <button class="btn big" data-panel="menuSkirmish">⚔ SKIRMISH</button>
+      <button class="btn big" data-panel="menuSurvival">☠ SURVIVAL</button>
       <button class="btn big" data-panel="menuOnline">🌐 ONLINE BATTLE</button>
       <button class="btn big" data-panel="menuDesigner">🛠 UNIT DESIGNER</button>
       <button class="btn big" data-panel="menuVoices">🎙 VOICE STUDIO</button>
+      <button class="btn big" data-panel="menuMedals">🎖 MEDALS</button>
       <button class="btn big" data-panel="menuGraphics">⚙ GRAPHICS</button>
       <button class="btn" id="bHow">How to play</button>
     </div>
@@ -293,6 +324,14 @@
     <div class="label">Enemy difficulty</div><div class="row" id="diffRow"></div>
     <div class="label">Battlefield</div><div class="row" id="optRow"></div>
     <div class="row"><button class="btn" data-panel="menuMain">◀ Back</button><button class="btn big" id="bStart">▶ DEPLOY</button></div>
+  </div>
+  <div class="card wide" id="menuSurvival" style="display:none">
+    <h2>SURVIVAL</h2>
+    <p style="text-align:center">Endless enemy waves that grow stronger every time, with a boss every 5th wave. How long can you hold out?</p>
+    <div class="label">Map</div><div id="mapListSv" class="cardList maps"></div>
+    <div class="label">Your faction</div><div class="row" id="facRowSv"></div>
+    <div class="label">Wave strength</div><div class="row" id="diffRowSv"></div>
+    <div class="row"><button class="btn" data-panel="menuMain">◀ Back</button><button class="btn big" id="bStartSv">▶ START SURVIVAL</button></div>
   </div>
   <div class="card wide" id="menuOnline" style="display:none">
     <h2>ONLINE BATTLE</h2>
@@ -314,6 +353,11 @@
     <h2>UNIT DESIGNER</h2>
     <p style="text-align:center">Invent your own infantry and vehicles. Saved designs appear in the Barracks and War Factory build menus in every game mode for both factions (online, everyone uses the host's designs).</p>
     <div id="designer"></div>
+    <div class="row"><button class="btn" data-panel="menuMain">◀ Back</button></div>
+  </div>
+  <div class="card wide" id="menuMedals" style="display:none">
+    <h2>MEDALS</h2>
+    <div id="medals"></div>
     <div class="row"><button class="btn" data-panel="menuMain">◀ Back</button></div>
   </div>
   <div class="card wide" id="menuGraphics" style="display:none">
@@ -363,6 +407,8 @@
       <li><b>Veterancy:</b> units with 3 kills become Veterans (★), 6 kills Elite (★★) and self-repair.</li>
       <li><b>Factions:</b> the Wally Squad has Titan tanks, Field Medics, Wally Man (Gatling gun), Wally and the Sky Lance. The Grimlock Legion has Shade stealth tanks, Inferno flame tanks and the Doom Missile.</li>
       <li><b>Unit Designer</b> (main menu): invent your own infantry and vehicles. They appear in the Barracks and War Factory build menus.</li>
+      <li><b>Support powers</b> (buttons above the build tabs): Recon Sweep, Paradrop and Airstrike recharge over time. Click one, then click the map.</li>
+      <li><b>Survival</b> (main menu): hold out against endless waves for a high score.</li>
       <li><b>Waypoints:</b> hold <kbd>Shift</kbd> and right-click to queue up a route.</li>
       <li><b>Wally Man's Gatling Frenzy:</b> select Wally Man and press <kbd>G</kbd> (or the button) for 8 seconds of super-fast fire and speed.</li>
       <li><b>Supply crates</b> drop on the battlefield: drive over them for money, repairs, promotions, reinforcements... or a trap!</li>
@@ -396,6 +442,12 @@
   </div>
 </div>
 
+<div id="rotate">
+  <div class="phone"><div class="screenbar"></div></div>
+  <h2>ROTATE YOUR DEVICE</h2>
+  <p>Wally Squad is played in landscape. Turn your phone sideways to continue.</p>
+  <button class="btn big" id="bFullRotate">⛶ Play fullscreen</button>
+</div>
 <div id="loading">LOADING CRYSTAL VALLEY…<div class="bar"><div id="loadBar"></div></div></div>
 
 <script type="module" src="./js/main.js"></script>

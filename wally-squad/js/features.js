@@ -1,7 +1,7 @@
 // Extra battlefield features: supply crates, neutral tech buildings and the match history graphs.
 // Everything that affects the game uses the seeded RNG so online games stay in sync.
 import * as THREE from 'three';
-import { G, srand, srr } from './state.js';
+import { G, srand, srr, emit } from './state.js';
 import { CELL, GRID, UNITS } from './config.js';
 import { T, idx, inGrid, cellOf, cellCenter, heightAt, BASES, revealAll, currentMap } from './terrain.js';
 import { Unit, unitsNear, alive, damage, decay } from './entities.js';
@@ -43,6 +43,7 @@ function spawnCrate() {
 const BONUSES = ['money', 'money', 'bigmoney', 'heal', 'veteran', 'reinforce', 'reveal', 'trap'];
 function pickUp(c, u) {
   const kind = BONUSES[Math.floor(srand() * BONUSES.length)];
+  emit('crate', u.faction, kind);
   const P = G.players[u.faction];
   const mine = u.faction === G.player;
   let msg = '';
