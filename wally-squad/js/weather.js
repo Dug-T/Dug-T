@@ -94,7 +94,8 @@ export function updateWeatherSim(dt) {
 
 // ---- visuals (local) ----
 const cTop = new THREE.Color(), cHor = new THREE.Color(), cBot = new THREE.Color(), tmp = new THREE.Color(), tmp2 = new THREE.Color();
-const NIGHT_TOP = new THREE.Color(0x050a1a), NIGHT_HOR = new THREE.Color(0x141c30), NIGHT_BOT = new THREE.Color(0x0a0c12);
+const NIGHT_TOP = new THREE.Color(0x0a1430), NIGHT_HOR = new THREE.Color(0x22304e), NIGHT_BOT = new THREE.Color(0x10141c);
+const NIGHT_AMB = new THREE.Color(0x6a7cae); // soft moonlit blue for the ambient light at night (brighter than the sky colour)
 const DUSK = new THREE.Color(0xff9a5a);
 let skyT = 0, flashT = 0, nextBolt = 5, lastEnvK = -1;
 
@@ -116,10 +117,10 @@ export function updateWeatherFX(dt, real) {
   if (day > 0.02) {
     sun.color.set(theme.sun).lerp(DUSK, dusk * 0.6);
     sun.intensity = theme.sunI * sunMul + 0.15;
-  } else { sun.color.set(0x8fa8ff); sun.intensity = 0.55 * (1 - dark * 0.5); }
+  } else { sun.color.set(0x9fb6ff); sun.intensity = 1.0 * (1 - dark * 0.5); } // moonlight
   sun.userData.angle = (tod - 0.25) * Math.PI * 2;
-  T3.hemi.intensity = theme.hemiI * (0.25 + 0.75 * day) * (1 - dark * 0.4);
-  T3.hemi.color.set(theme.hemiSky).lerp(NIGHT_HOR, 1 - day);
+  T3.hemi.intensity = theme.hemiI * (0.45 + 0.55 * day) * (1 - dark * 0.4);
+  T3.hemi.color.set(theme.hemiSky).lerp(NIGHT_AMB, 1 - day);
 
   // flash of lightning
   if (wb.lightning && W.k > 0.5) {
@@ -154,11 +155,11 @@ export function updateWeatherFX(dt, real) {
     T3.scene.fog.color.copy(cHor);
     stars.material.opacity = clamp((1 - day) * (1 - dark * 1.5), 0, 1);
     // reflections dim at night
-    const envK = Math.round((0.15 + 0.85 * day * (1 - dark * 0.5)) * 20) / 20;
+    const envK = Math.round((0.3 + 0.7 * day * (1 - dark * 0.5)) * 20) / 20;
     if (envK !== lastEnvK) { lastEnvK = envK; for (const m of allMaterials) m.envMapIntensity = envK; }
     if (T3.terrain) T3.terrain.material.roughness = 0.95 - 0.35 * clamp((wa.rain || 0) * (1 - W.k) + (wb.rain || 0) * W.k, 0, 1);
     if (T3.bloom) T3.bloom.strength = 0.7 + 0.35 * (1 - day);
-    T3.renderer.toneMappingExposure = 1.05 + 0.25 * (1 - day);
+    T3.renderer.toneMappingExposure = 1.05 + 0.4 * (1 - day);
   }
   const near = 160 * fogK, far = 420 * Math.max(0.35, fogK);
   T3.scene.fog.near = lerp(T3.scene.fog.near, near, Math.min(1, real * 2));
