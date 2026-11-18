@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Wally Squad</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #07090c; --panel: rgba(12, 18, 24, 0.92); --panel2: rgba(22, 32, 42, 0.95); --line: #2c4255; --line2: #3f6a88;
+    --text: #d7e6f2; --dim: #7e93a4; --accent: #ffc23a; --blue: #3d8bff; --red: #ff4a3d; --green: #4cff7a;
+    --side: 248px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); overflow: hidden; font-family: 'Rajdhani', system-ui, sans-serif; user-select: none; -webkit-user-select: none; touch-action: none; overscroll-behavior: none; -webkit-tap-highlight-color: transparent; }
+  body { position: fixed; inset: 0; }
+  canvas { display: block; }
+  #view { position: absolute; left: 0; top: 0; right: var(--side); bottom: 0; }
+  #gl, #overlay { position: absolute; inset: 0; width: 100%; height: 100%; }
+  #overlay { pointer-events: none; }
+  /* top bar */
+  #topbar { position: absolute; left: 0; right: var(--side); top: 0; height: 38px; display: flex; align-items: center; gap: 14px; padding: 0 12px; background: linear-gradient(#0c1117ee, #0c111700); pointer-events: none; z-index: 5; }
+  #topbar .btn { pointer-events: auto; }
+  .brand { font-family: 'Black Ops One', sans-serif; letter-spacing: 1px; color: var(--accent); font-size: 18px; text-shadow: 0 0 8px #ffb30066; }
+  #topbar .spacer { flex: 1; }
+  .btn { background: var(--panel2); border: 1px solid var(--line2); color: var(--text); font: 600 14px 'Rajdhani', sans-serif; padding: 4px 10px; border-radius: 4px; cursor: pointer; letter-spacing: 0.5px; }
+  .btn:hover { border-color: var(--accent); color: #fff; }
+  .btn.on { background: #3a2d0b; border-color: var(--accent); color: var(--accent); }
+  /* sidebar */
+  #side { position: absolute; right: 0; top: 0; bottom: 0; width: var(--side); background: linear-gradient(180deg, #111a22, #0a0f14); border-left: 2px solid var(--line); display: flex; flex-direction: column; z-index: 6; }
+  #credits { font-family: 'Black Ops One', sans-serif; font-size: 24px; color: var(--accent); text-align: center; padding: 6px 0 2px; text-shadow: 0 0 10px #ffb30055; }
+  #powerRow { display: flex; align-items: center; gap: 6px; padding: 0 10px 6px; font-size: 13px; color: var(--dim); }
+  #powerBar { flex: 1; height: 8px; background: #1b252e; border: 1px solid var(--line); border-radius: 4px; position: relative; overflow: hidden; }
+  #powerFill { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(90deg, #2ee36b, #9bff66); }
+  #powerUse { position: absolute; top: -2px; bottom: -2px; width: 2px; background: #fff; }
+  #powerRow.low #powerFill { background: linear-gradient(90deg, #ff3b2f, #ff8a3d); }
+  #powerRow.low { color: var(--red); animation: blink 0.8s infinite; }
+  @keyframes blink { 50% { opacity: 0.55; } }
+  #minimapWrap { margin: 0 8px; position: relative; border: 2px solid var(--line2); background: #000; aspect-ratio: 1; }
+  #minimap { width: 100%; height: 100%; image-rendering: pixelated; cursor: pointer; }
+  #radarOff { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 12px; color: var(--dim); pointer-events: none; padding: 10px; }
+  #tabs { display: grid; grid-template-columns: repeat(5, 1fr); gap: 2px; margin: 8px 8px 4px; }
+  .tab { font: 700 10.5px 'Rajdhani'; padding: 5px 0; text-align: center; background: #16212b; border: 1px solid var(--line); color: var(--dim); cursor: pointer; border-radius: 3px; letter-spacing: 0.3px; position: relative; }
+  .tab.active { color: #fff; border-color: var(--accent); background: #2a2410; }
+  .tab.ready::after { content: ''; position: absolute; top: 2px; right: 2px; width: 6px; height: 6px; border-radius: 50%; background: var(--green); box-shadow: 0 0 6px var(--green); }
+  #grid { flex: 1; overflow-y: auto; display: grid; grid-template-columns: 1fr 1fr; gap: 5px; padding: 4px 8px; align-content: start; }
+  .item { position: relative; aspect-ratio: 1.25; background: #0f171e; border: 1px solid var(--line); border-radius: 4px; cursor: pointer; overflow: hidden; }
+  .item img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .item .nm { position: absolute; left: 0; right: 0; bottom: 0; font: 700 11px 'Rajdhani'; background: linear-gradient(transparent, #000c); padding: 8px 4px 2px; line-height: 1; }
+  .item .cost { position: absolute; top: 2px; left: 4px; font: 700 11px 'Rajdhani'; color: var(--accent); text-shadow: 0 1px 2px #000; }
+  .item .key { position: absolute; top: 2px; right: 4px; font: 700 10px 'Rajdhani'; color: var(--dim); }
+  .item .count { position: absolute; top: 18px; right: 4px; font: 700 18px 'Black Ops One'; color: #fff; text-shadow: 0 0 4px #000; }
+  .item .clock { position: absolute; inset: 0; pointer-events: none; }
+  .item .state { position: absolute; top: 40%; left: 0; right: 0; text-align: center; font: 700 15px 'Black Ops One'; color: var(--green); text-shadow: 0 0 6px #000, 0 0 10px #4cff7a88; }
+  .item.locked { filter: grayscale(1) brightness(0.4); cursor: not-allowed; }
+  .item:not(.locked):hover { border-color: var(--accent); }
+  .item.ready { border-color: var(--green); box-shadow: inset 0 0 12px #4cff7a55; }
+  #modeRow { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px; padding: 6px 8px 8px; }
+  /* selection panel */
+  #selPanel { position: absolute; left: 10px; bottom: 10px; min-width: 260px; max-width: min(560px, 60vw); background: var(--panel); border: 1px solid var(--line2); border-radius: 6px; padding: 8px 10px; display: none; z-index: 5; }
+  #selPanel .title { font: 700 17px 'Rajdhani'; color: #fff; }
+  #selPanel .sub { font-size: 13px; color: var(--dim); }
+  #selPanel .hp { height: 6px; background: #222; border-radius: 3px; overflow: hidden; margin: 5px 0; }
+  #selPanel .hp > div { height: 100%; background: var(--green); }
+  #selIcons { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+  .sicon { width: 46px; height: 38px; position: relative; border: 1px solid var(--line); border-radius: 3px; overflow: hidden; cursor: pointer; background: #0f171e; }
+  .sicon img { width: 100%; height: 100%; object-fit: cover; }
+  .sicon span { position: absolute; right: 2px; bottom: 0; font: 700 13px 'Rajdhani'; text-shadow: 0 0 3px #000; }
+  #selCmds { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+  /* messages */
+  #msgs { position: absolute; left: 50%; top: 46px; transform: translateX(-50%); text-align: center; pointer-events: none; z-index: 4; }
+  .msg { font: 700 17px 'Rajdhani'; color: #bfe6ff; text-shadow: 0 0 6px #000, 0 0 2px #000; margin: 2px 0; transition: opacity 0.6s; letter-spacing: 0.5px; }
+  .msg.warn { color: #ff9a8a; }
+  #tooltip { position: fixed; z-index: 30; background: #0b1218f2; border: 1px solid var(--line2); padding: 6px 9px; border-radius: 5px; font-size: 13px; max-width: 240px; pointer-events: none; display: none; }
+  #tooltip b { color: var(--accent); }
+  #tooltip .req { color: var(--red); }
+  /* menus */
+  .screen { position: absolute; inset: 0; z-index: 20; display: flex; align-items: center; justify-content: center; background: radial-gradient(ellipse at center, #0a0f1488, #000c); }
+  .card { background: #0c1218f0; border: 1px solid var(--line2); border-radius: 10px; padding: 26px 30px; width: min(560px, 92vw); max-height: 92vh; overflow-y: auto; box-shadow: 0 10px 50px #000a; }
+  h1.logo { font-family: 'Black Ops One', sans-serif; font-size: clamp(42px, 8vw, 74px); margin: 0; text-align: center; line-height: 0.95; color: var(--accent); text-shadow: 0 0 22px #ffb30066, 0 4px 0 #6a4a00; letter-spacing: 2px; }
+  .tag { text-align: center; color: var(--dim); margin: 6px 0 18px; font-size: 16px; letter-spacing: 2px; }
+  .row { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin: 10px 0; }
+  .big { font: 700 20px 'Rajdhani'; padding: 10px 26px; }
+  .card h2 { font-family: 'Black Ops One'; color: var(--accent); margin: 4px 0 10px; text-align: center; }
+  .card p, .card li { color: #b9cad6; font-size: 15px; line-height: 1.35; }
+  .card ul { padding-left: 18px; }
+  kbd { background: #1c2a36; border: 1px solid var(--line2); border-radius: 3px; padding: 0 5px; font: 600 13px monospace; color: #fff; }
+  .stats { display: grid; grid-template-columns: 1fr auto; gap: 4px 20px; max-width: 280px; margin: 10px auto; font-size: 17px; }
+  .stats span:nth-child(even) { color: var(--accent); text-align: right; }
+  #loading { position: absolute; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; flex-direction: column; background: #050709; font: 700 22px 'Rajdhani'; color: var(--accent); }
+  #loading .bar { width: 240px; height: 6px; background: #1a232c; margin-top: 12px; border-radius: 3px; overflow: hidden; }
+  #loading .bar div { height: 100%; width: 0; background: var(--accent); transition: width 0.2s; }
+  /* touch helpers */
+  #touchBar { position: absolute; left: 10px; top: 46px; display: none; flex-direction: column; gap: 6px; z-index: 5; }
+  #touchBar .btn { padding: 8px 10px; font-size: 13px; }
+  @media (max-width: 820px), (max-height: 520px) {
+    :root { --side: 190px; }
+    #credits { font-size: 18px; } .brand { display: none; }
+    #selPanel { min-width: 0; max-width: calc(100vw - var(--side) - 20px); padding: 6px; }
+    .item .nm { font-size: 10px; }
+    #minimapWrap { max-height: 32vh; align-self: center; width: auto; }
+    .tab { font-size: 8.5px; letter-spacing: 0; }
+    #grid { grid-template-columns: 1fr 1fr; gap: 3px; }
+    .item { aspect-ratio: 1.5; }
+    .item .nm { display: none; }
+  }
+  body.touch #touchBar { display: flex; }
+  .menuCol { display: flex; flex-direction: column; gap: 8px; align-items: center; margin-top: 12px; }
+  .menuCol .big { width: 280px; }
+  .card.wide { width: min(860px, 94vw); }
+  .label { color: var(--accent); font: 700 13px 'Rajdhani'; letter-spacing: 1px; margin: 12px 0 4px; text-transform: uppercase; }
+  .label.small { font-size: 11px; margin: 6px 0 3px; }
+  .cardList { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; }
+  .cardList.small { grid-template-columns: 1fr 1fr; }
+  .opt { background: #111b24; border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; cursor: pointer; }
+  .opt:hover { border-color: var(--accent); }
+  .opt.on { border-color: var(--accent); background: #2a2410; }
+  .opt.locked { opacity: 0.4; cursor: not-allowed; }
+  .opt b { color: #fff; font-size: 16px; display: block; }
+  .opt span { color: var(--dim); font-size: 13px; }
+  .opt .swatch { height: 46px; border-radius: 4px; margin-bottom: 6px; }
+  .twoCol { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  @media (max-width: 700px) { .twoCol { grid-template-columns: 1fr; } }
+  #roomInput { font: 700 28px 'Black Ops One'; width: 170px; text-align: center; text-transform: uppercase; background: #0d151c; color: var(--accent); border: 1px solid var(--line2); border-radius: 6px; padding: 6px; letter-spacing: 4px; }
+  .roomcode { font: 46px 'Black Ops One'; color: var(--accent); text-align: center; letter-spacing: 8px; margin: 10px 0; }
+  #mpOverlay { position: absolute; inset: 0; z-index: 25; display: none; align-items: center; justify-content: center; background: #000a; }
+  #objectives { position: absolute; left: 10px; top: 46px; z-index: 4; background: var(--panel); border: 1px solid var(--line2); border-radius: 6px; padding: 6px 10px; font-size: 14px; display: none; max-width: 320px; }
+  #objectives .ob { margin: 2px 0; } #objectives .done { color: var(--green); } #objectives .failed { color: var(--red); }
+  body.touch #objectives { top: 230px; }
+  #superRow { margin: 6px 8px 0; padding: 6px; border: 1px solid var(--line2); border-radius: 5px; background: #1a1210; display: grid; grid-template-columns: 1fr auto; gap: 4px; align-items: center; font: 700 12px 'Rajdhani'; }
+  #superBar { grid-column: 1; height: 6px; background: #2b1d18; border-radius: 3px; overflow: hidden; }
+  #superFill { height: 100%; width: 0; background: linear-gradient(90deg, #ff6a3a, #ffd34a); }
+  #bSuper { grid-row: 1 / span 2; grid-column: 2; padding: 4px 8px; font-size: 12px; }
+  #bSuper:disabled { opacity: 0.4; }
+  #bSuper.ready { animation: blink 0.7s infinite; border-color: #ff6a3a; color: #ffd34a; }
+  #enemySuper { grid-column: 1 / span 2; color: var(--red); font-size: 11px; }
+  .vgrid { display: grid; grid-template-columns: 170px repeat(3, 1fr); gap: 4px; max-height: 46vh; overflow-y: auto; margin-top: 8px; }
+  .vh { font: 700 12px 'Rajdhani'; color: var(--accent); text-transform: uppercase; padding: 2px; }
+  .vname { display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 13px; }
+  .vname img { width: 44px; height: 35px; object-fit: cover; border-radius: 3px; }
+  .vcell { display: flex; align-items: center; gap: 3px; background: #0f171e; border-radius: 4px; padding: 3px; }
+  .vbtn { padding: 2px 6px; font-size: 12px; }
+  .vbtn.on { background: #5a1010; border-color: #ff4a3d; color: #fff; animation: blink 0.6s infinite; }
+  .vcount { font-size: 11px; color: var(--dim); margin-left: auto; }
+  .vcount.has { color: var(--green); }
+  #briefText p { font-size: 16px; }
+</style>
+<script type="importmap">
+{ "imports": { "three": "./lib/three.module.min.js" } }
+</script>
+</head>
+<body>
+<div id="view">
+  <canvas id="gl"></canvas>
+  <canvas id="overlay"></canvas>
+</div>
+<div id="topbar">
+  <div class="brand">WALLY SQUAD</div>
+  <div id="clock" style="font-weight:700;color:var(--dim)">00:00</div>
+  <div id="wx" style="font-weight:700;color:#bfe6ff"></div>
+  <div class="spacer"></div>
+  <button class="btn" id="bMusic" title="Toggle music">♪ Music</button>
+  <button class="btn" id="bHelp" title="Controls (F1)">? Help</button>
+  <button class="btn" id="bPause" title="Pause (P / Esc)">❚❚ Menu</button>
+</div>
+<div id="touchBar">
+  <button class="btn" id="tAll">Select army</button>
+  <button class="btn" id="tAM">Attack-move</button>
+  <button class="btn" id="tStop">Stop</button>
+  <button class="btn" id="tBox">Box select</button>
+</div>
+<div id="msgs"></div>
+<div id="selPanel"><div id="selTitle" class="title"></div><div id="selSub" class="sub"></div><div class="hp"><div id="selHp"></div></div><div id="selIcons"></div><div id="selCmds"></div></div>
+<div id="side">
+  <div id="credits">$ 0</div>
+  <div id="powerRow"><span>⚡</span><div id="powerBar"><div id="powerFill"></div><div id="powerUse"></div></div><span id="powerTxt">0/0</span></div>
+  <div id="minimapWrap"><canvas id="minimap" width="256" height="256"></canvas><div id="radarOff"></div></div>
+  <div id="superRow" style="display:none"><div id="superName"></div><div id="superBar"><div id="superFill"></div></div><button class="btn" id="bSuper">LAUNCH</button><div id="enemySuper"></div></div>
+  <div id="tabs"></div>
+  <div id="grid"></div>
+  <div id="modeRow">
+    <button class="btn" id="bRepair" title="Repair mode (R): click your buildings">🔧 Repair</button>
+    <button class="btn" id="bSell" title="Sell mode (X): click your buildings">$ Sell</button>
+    <button class="btn" id="bHome" title="Jump to base (H)">⌂ Base</button>
+  </div>
+</div>
+<div id="tooltip"></div>
+
+<div id="title" class="screen" style="display:none">
+  <div class="card" id="menuMain">
+    <h1 class="logo">WALLY<br>SQUAD</h1>
+    <div class="tag">REAL-TIME STRATEGY · BUILD · HARVEST · CONQUER</div>
+    <p style="text-align:center">The <b style="color:var(--blue)">Wally Squad</b> has landed in the Crystal Valley. The <b style="color:var(--red)">Grimlock Legion</b> wants every last crystal. Build your base, harvest crystal, raise an army and wipe them off the map.</p>
+    <div class="menuCol">
+      <button class="btn big" data-panel="menuCampaign">★ CAMPAIGN</button>
+      <button class="btn big" data-panel="menuSkirmish">⚔ SKIRMISH</button>
+      <button class="btn big" data-panel="menuOnline">🌐 ONLINE BATTLE</button>
+      <button class="btn big" data-panel="menuVoices">🎙 VOICE STUDIO</button>
+      <button class="btn" id="bHow">How to play</button>
+    </div>
+  </div>
+  <div class="card wide" id="menuCampaign" style="display:none">
+    <h2>CAMPAIGN</h2>
+    <p style="text-align:center">Lead Wally's squad through five missions against the Grimlock Warlord.</p>
+    <div id="missionList" class="cardList"></div>
+    <div class="row"><button class="btn" data-panel="menuMain">◀ Back</button></div>
+  </div>
+  <div class="card wide" id="menuSkirmish" style="display:none">
+    <h2>SKIRMISH</h2>
+    <div class="label">Map</div><div id="mapList" class="cardList maps"></div>
+    <div class="label">Your faction</div><div class="row" id="facRow"></div>
+    <div class="label">Enemy difficulty</div><div class="row" id="diffRow"></div>
+    <div class="label">Battlefield</div><div class="row" id="optRow"></div>
+    <div class="row"><button class="btn" data-panel="menuMain">◀ Back</button><button class="btn big" id="bStart">▶ DEPLOY</button></div>
+  </div>
+  <div class="card wide" id="menuOnline" style="display:none">
+    <h2>ONLINE BATTLE</h2>
+    <p style="text-align:center">Play 1 v 1 against a friend over the internet. One of you hosts and shares the room code.</p>
+    <div class="twoCol">
+      <div><div class="label">Host a battle</div>
+        <div class="label small">Map</div><div id="mapListMp" class="cardList maps small"></div>
+        <div class="label small">Your faction</div><div class="row" id="facRowMp"></div>
+        <div class="row"><button class="btn big" id="bHost">Create room</button></div></div>
+      <div><div class="label">Join a battle</div>
+        <p style="text-align:center;color:var(--dim)">Type the room code your friend gives you.</p>
+        <div class="row"><input id="roomInput" maxlength="5" placeholder="ROOM" autocomplete="off"></div>
+        <div class="row"><button class="btn big" id="bJoin">Join</button></div>
+        <p id="joinStatus" style="text-align:center;color:var(--accent)"></p></div>
+    </div>
+    <div class="row"><button class="btn" data-panel="menuMain">◀ Back</button></div>
+  </div>
+  <div class="card wide" id="menuVoices" style="display:none">
+    <h2>VOICE STUDIO</h2>
+    <p style="text-align:center">Record your own voice lines - and your friends' - for every unit. Each line keeps up to 3 takes and picks one at random. Lines without a recording use a computer voice.</p>
+    <div class="row"><label><input type="checkbox" id="vOn"> Unit voices on</label><label><input type="checkbox" id="vTts"> Computer voice for missing lines</label></div>
+    <div id="studio"></div>
+    <div class="row"><button class="btn" id="bExport">⬇ Export voice pack</button><label class="btn">⬆ Import voice pack<input type="file" id="importFile" accept=".json" style="display:none"></label></div>
+    <div class="row"><button class="btn" data-panel="menuMain">◀ Back</button></div>
+  </div>
+</div>
+
+<div id="briefing" class="screen" style="display:none">
+  <div class="card">
+    <div class="tag" id="briefNum"></div>
+    <h1 class="logo" id="briefTitle" style="font-size:44px"></h1>
+    <div id="briefText"></div>
+    <div class="label">Objectives</div>
+    <ul id="briefObj"></ul>
+    <div class="row"><button class="btn" onclick="location.href=location.pathname">◀ Menu</button><button class="btn big" id="bBegin">▶ BEGIN MISSION</button></div>
+  </div>
+</div>
+<div id="objectives"></div>
+
+<div id="help" class="screen" style="display:none">
+  <div class="card">
+    <h2>FIELD MANUAL</h2>
+    <ul>
+      <li><b>Build:</b> pick a structure in the sidebar. When it says <b>READY</b>, click it again and place it near your base.</li>
+      <li><b>Economy:</b> Harvesters gather glowing crystal and bring it to your Refinery. Blue crystal is worth double.</li>
+      <li><b>Power:</b> keep the ⚡ bar green. Low power slows production and switches off Plasma Towers.</li>
+      <li><b>Select:</b> left-click, or drag a box. <kbd>Shift</kbd> adds. Double-click selects all of that type on screen.</li>
+      <li><b>Command:</b> right-click ground to move, right-click enemies to attack. <kbd>A</kbd> + click = attack-move, <kbd>S</kbd> = stop.</li>
+      <li><b>Groups:</b> <kbd>Ctrl</kbd>+<kbd>1-9</kbd> to assign, <kbd>1-9</kbd> to recall (tap twice to jump to them).</li>
+      <li><b>Camera:</b> arrow keys, screen edges or right-drag to scroll, mouse wheel to zoom, <kbd>Q</kbd>/<kbd>E</kbd> to rotate, <kbd>H</kbd> home, <kbd>Space</kbd> jump to last alert.</li>
+      <li><b>Buildings:</b> select a factory and right-click to set a rally point. <kbd>R</kbd> repair mode, <kbd>X</kbd> sell mode.</li>
+      <li><b>Engineers</b> capture enemy buildings. <b>Wally</b> (hero) snipes infantry and plants C4 on buildings.</li>
+      <li><b>Veterancy:</b> units with 3 kills become Veterans (★), 6 kills Elite (★★) and self-repair.</li>
+      <li><b>Factions:</b> the Wally Squad has Titan tanks, Field Medics, Wally and the Sky Lance. The Grimlock Legion has Shade stealth tanks, Inferno flame tanks and the Doom Missile.</li>
+      <li><b>Superweapons:</b> build the Uplink / Silo after a Tech Lab. When charged, press LAUNCH in the sidebar and click a target.</li>
+      <li><b>Walls, gates &amp; mines</b> (Defence tab): drag to lay a wall line. Gates open for your units only. Mines are invisible to the enemy.</li>
+      <li><b>Weather &amp; night:</b> rain and snow slow vehicles, fog, blizzards, sandstorms and darkness cut sight range.</li>
+      <li><b>Touch:</b> tap to select / command, one finger drag to scroll, pinch to zoom, use <b>Box select</b> for drag-selecting.</li>
+    </ul>
+    <div class="row"><button class="btn big" id="bHelpClose">Got it</button></div>
+  </div>
+</div>
+
+<div id="pause" class="screen" style="display:none">
+  <div class="card">
+    <h2>PAUSED</h2>
+    <div class="row"><button class="btn big" id="bResume">Resume</button></div>
+    <div class="row"><button class="btn" id="bSpeed">Game speed: 1x</button><button class="btn" id="bRestart">Restart</button></div>
+    <div class="row"><button class="btn" id="bSurrender">🏳 Surrender</button><button class="btn" onclick="location.href=location.pathname">Quit to menu</button></div>
+  </div>
+</div>
+
+<div id="end" class="screen" style="display:none">
+  <div class="card">
+    <h1 class="logo" id="endTitle">VICTORY</h1>
+    <div class="tag" id="endSub"></div>
+    <div class="stats" id="endStats"></div>
+    <div class="row"><button class="btn big" id="bNext" style="display:none">Next mission ▶</button><button class="btn big" id="bAgain">Play again</button><button class="btn big" id="bWatch">Keep watching</button></div>
+    <div class="row"><button class="btn" onclick="location.href=location.pathname">Main menu</button></div>
+  </div>
+</div>
+
+<div id="loading">LOADING CRYSTAL VALLEY…<div class="bar"><div id="loadBar"></div></div></div>
+
+<script type="module" src="./js/main.js"></script>
+</body>
+</html>
