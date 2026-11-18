@@ -18,7 +18,7 @@ import * as Audio from './audio.js';
 import * as Voices from './voices.js';
 import { initWeather, updateWeatherSim, updateWeatherFX } from './weather.js';
 import { updateSuper } from './superweapons.js';
-import { MISSIONS, TUTORIAL, makeContext, campaignProgress, unlockNext } from './missions.js';
+import { MISSIONS, GRIM_MISSIONS, TUTORIAL, makeContext, campaignProgress, unlockNext, campaignList } from './missions.js';
 import { Lockstep, joinRoom } from './mp.js';
 import { randomRoomCode } from './net.js';
 import { issue } from './cmd.js';
@@ -57,8 +57,9 @@ if (cfg && cfg.mode === 'mp') sessionStorage.removeItem('ws_cfg');
 if (cfg) sessionStorage.setItem('ws_last', JSON.stringify(cfg));
 const run = cfg || { mode: 'title', map: 'valley', faction: 'wally', difficulty: 'normal', daynight: false };
 if (run.mode === 'campaign' || run.mode === 'tutorial') {
-  mission = run.mode === 'tutorial' ? TUTORIAL : MISSIONS[run.mission] || MISSIONS[0];
-  run.map = mission.map; run.faction = 'wally'; run.difficulty = mission.difficulty; run.daynight = false;
+  const CAMP = campaignList(run.camp);
+  mission = run.mode === 'tutorial' ? TUTORIAL : CAMP[run.mission] || CAMP[0];
+  run.map = mission.map; run.faction = mission.faction || 'wally'; run.difficulty = mission.difficulty; run.daynight = false;
 }
 G.cfg = run;
 G.player = run.faction === 'grim' ? 'grim' : 'wally';
@@ -249,7 +250,43 @@ function dailyRecord() { try { return JSON.parse(localStorage.getItem('ws_daily'
 const fmtTime = t => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
 
 // ---------------------------------------------------------------- battle log (kill feed)
-const feedName = e => e.hero ? 'Wally Man' : e.def.name;
+const feedName = e => e.def.name;
+// ---------------------------------------------------------------- enemy commander taunts
+const TAUNTS = {
+  grim: { who: 'Warlord Grak', voice: 'warlord',
+    start: ['Your crystals belong to the Legion!', 'Grak will crush your little squad!', 'Run home, Wally!'],
+    lostBuilding: ['Grak will make you pay for that!', 'You dare touch my base?', 'Grrr! Rebuild it! REBUILD IT!'],
+    tookBuilding: ['Ha! Your base crumbles like ice!', 'One less tower for Wally!', 'Burn, burn, BURN!'],
+    hero: ['Your hero is no match for Grak!', 'Who is next?'],
+    losing: ['This is not over, Wally!', 'Retreat! Er... I mean, regroup!'] },
+  wally: { who: 'Commander Wally', voice: 'wally',
+    start: ['Wally Squad, hold the line!', 'Nice try, Grimlocks. Not today!', 'Where is Wally? Right here!'],
+    lostBuilding: ['Hey! We were using that!', 'Oi! That cost good crystal!', 'Squad, get them!'],
+    tookBuilding: ['Another one bites the dust!', 'Your base is looking a bit thin, Grak!', 'Boom! Wally Squad strikes again!'],
+    hero: ['Grak is down! Ha!', 'Who needs a Warlord anyway?'],
+    losing: ['Fall back! Fall back!', 'We will be back, Grimlocks!'] },
+};
+let tauntT = -999;
+function taunt(kind, force) {
+  if (run.mode === 'mp' || run.mode === 'sandbox' || (mission && mission.tutorial) || G.over) return;
+  if (!force && G.time - tauntT < 35) return;
+  const T = TAUNTS[G.enemy]; const list = T[kind]; if (!list) return;
+  tauntT = G.time;
+  const line = list[Math.floor(Math.random() * list.length)];
+  UI.message(`💬 ${T.who}: "${line}"`, true);
+  Voices.sayLine(line, T.voice);
+}
+function setupTaunts() {
+  setTimeout(() => taunt('start', true), 9000);
+  on('kill', (victim, killer) => {
+    if (victim.kind === 'building' && !victim.def.isWall && !victim.def.isMine && victim.faction !== 'neutral') {
+      if (victim.faction === G.enemy && killer && killer.faction === G.player) taunt(G.buildings.filter(b => !b.dead && b.faction === G.enemy && !b.def.isWall && !b.def.isMine).length <= 3 ? 'losing' : 'lostBuilding');
+      else if (victim.faction === G.player) taunt('tookBuilding');
+    }
+    if (victim.kind === 'unit' && victim.def && (victim.type === 'wallyman' || victim.type === 'warlord') && victim.faction === G.player) taunt('hero', true);
+  });
+}
+
 function setupFeed() {
   const el = $('feed');
   on('kill', (victim, killer) => {
@@ -385,6 +422,8 @@ function setupMenus() {
   $('bStartSb').onclick = () => startWith(sb);
   // campaign
   const prog = campaignProgress();
+  const progG = campaignProgress('grim');
+  optionCards($('missionListGrim'), GRIM_MISSIONS.map((m, i) => ({ id: i, title: `${i + 1}. ${m.title}`, desc: i <= progG ? `${MAPS[m.map].name} · ${DIFFICULTY[m.difficulty].label}` : 'Locked - complete the previous mission', locked: i > progG, swatch: MAP_SWATCH[m.map] })), -1, i => startWith({ mode: 'campaign', camp: 'grim', mission: i }));
   optionCards($('missionList'), MISSIONS.map((m, i) => ({ id: i, title: `${i + 1}. ${m.title}`, desc: i <= prog ? `${MAPS[m.map].name} · ${DIFFICULTY[m.difficulty].label}` : 'Locked - complete the previous mission', locked: i > prog, swatch: MAP_SWATCH[m.map] })), -1, i => startWith({ mode: 'campaign', mission: i }));
   // online
   const mp = { map: 'valley', faction: 'wally' };
@@ -420,7 +459,7 @@ function setupMenus() {
   const again = () => { const last = sessionStorage.getItem('ws_last'); if (last && JSON.parse(last).mode !== 'mp') startWith(JSON.parse(last)); else location.href = location.pathname; };
   $('bRestart').onclick = again;
   $('bAgain').onclick = again;
-  $('bNext').onclick = () => startWith({ mode: 'campaign', mission: mission && mission.tutorial ? 0 : Math.min(MISSIONS.length - 1, run.mission + 1) });
+  $('bNext').onclick = () => startWith({ mode: 'campaign', camp: run.camp, mission: mission && mission.tutorial ? 0 : Math.min(campaignList(run.camp).length - 1, run.mission + 1) });
   $('bTutorial').onclick = () => startWith({ mode: 'tutorial' });
   $('bWatch').onclick = () => { $('end').style.display = 'none'; G.paused = false; };
   // ---- photo mode: hide the interface, slow time, free camera, save pictures ----
@@ -465,6 +504,26 @@ function setupMenus() {
     window.addEventListener('pointerup', once, true);
   }
   Audio.onTrackChange(name => { $('bMusic').title = `Now playing: ${name} - click to turn the music off`; if (G.started && !G.over) UI.message(`♪ Now playing: ${name}`); });
+  // cheat codes (single player only; a cheating game earns no XP or medals)
+  const CHEATS = {
+    WALLYCASH: () => { G.players[G.player].credits += 10000; return '+$10,000'; },
+    SHOWMETHEMAP: () => { G.revealed = true; revealAll(true); return 'Map revealed'; },
+    INSTABUILD: () => { G.players[G.player].buildMult = 10; return 'Super-fast building'; },
+    BIGBOOM: () => { const P = G.players[G.player]; if (!P.super) return 'Build a superweapon first'; P.super.charge = 1e9; return 'Superweapon charged'; },
+    POWERUP: () => { const P = G.players[G.player]; for (const k in (P.powers || {})) P.powers[k].charge = 1e9; return 'Support powers ready'; },
+    GODMODE: () => { G.god = !G.god; return G.god ? 'Your forces are invincible' : 'God mode off'; },
+    HEROES: () => { const b = G.buildings.find(x => !x.dead && x.faction === G.player); if (!b) return 'No base'; new Unit(G.player === 'wally' ? 'wallyman' : 'warlord', G.player, b.x + 8, b.z + 8, 0); new Unit('titan', G.player, b.x + 11, b.z + 8, 0); return 'Heroes have arrived'; },
+  };
+  const tryCheat = () => {
+    const code = $('cheatIn').value.trim().toUpperCase().replace(/\s+/g, ''); $('cheatIn').value = '';
+    if (!code) return;
+    if (lockstep || run.mode === 'mp') { UI.message('Cheats are off in online battles'); return; }
+    const fn = CHEATS[code];
+    if (!fn) { Audio.play('error'); UI.message('Unknown cheat code'); return; }
+    G.cheated = true; Audio.play('promote'); UI.message(`🕹 Cheat: ${fn()}`, true);
+  };
+  $('bCheat').onclick = tryCheat;
+  $('cheatIn').onkeydown = e => { e.stopPropagation(); if (e.key === 'Enter') tryCheat(); };
   $('bNextTune').onclick = () => { Audio.initAudio(); const n = Audio.nextTrack(); if (!G.started) UI.message?.(`♪ ${n}`); };
   $('bMusic').onclick = () => { Audio.initAudio(); const on = Audio.toggleMusic(); $('bMusic').classList.toggle('on', !on); $('bMusic').textContent = on ? '♪ Music' : '♪ Off'; };
   $('bIdle').onclick = () => UI.selectNextIdle();
@@ -484,7 +543,7 @@ function setupMenus() {
 }
 
 function showBriefing() {
-  $('briefNum').textContent = mission.tutorial ? 'TRAINING · ' + MAPS[mission.map].name.toUpperCase() : `MISSION ${run.mission + 1} OF ${MISSIONS.length} · ${MAPS[mission.map].name.toUpperCase()}`;
+  $('briefNum').textContent = mission.tutorial ? 'TRAINING · ' + MAPS[mission.map].name.toUpperCase() : `${run.camp === 'grim' ? 'GRIMLOCK CAMPAIGN · ' : ''}MISSION ${run.mission + 1} OF ${campaignList(run.camp).length} · ${MAPS[mission.map].name.toUpperCase()}`;
   $('briefTitle').textContent = mission.title.toUpperCase();
   $('briefText').innerHTML = mission.story.map(p => `<p>${p}</p>`).join('');
   $('briefObj').innerHTML = mission.objectives.map(o => `<li>${o.text}</li>`).join('');
@@ -516,6 +575,7 @@ function start() {
   if (run.mode === 'skirmish') ais = [new AI(G.enemy)];
   if (run.mode === 'sandbox') setupSandbox();
   setupFeed();
+  setupTaunts();
   if (run.mode === 'survival') { renderObjectives(); UI.message('Survival: build defences fast - the first wave arrives in 75 seconds!'); }
   if (mission) renderObjectives();
   const fname = FACTIONS[G.player].name;
@@ -548,14 +608,21 @@ function endGame(win, text) {
   emit('end', win);
   Audio.announce(win ? 'Mission accomplished' : 'Mission failed');
   Audio.sting(win);
+  // victory: fireworks over your base and cheering troops
+  if (win) {
+    G.won = true;
+    const home = G.buildings.find(b => !b.dead && b.faction === G.player && b.type === 'conyard') || G.buildings.find(b => !b.dead && b.faction === G.player);
+    const at = G.lastFallen && !G.surrendered ? G.lastFallen : home && { x: home.x, y: home.baseY || 0, z: home.z }; // where the finale camera is looking
+    if (at) for (let i = 0; i < 16; i++) setTimeout(() => G.fx?.firework?.(at.x + (Math.random() - 0.5) * 34, at.y || 0, at.z + (Math.random() - 0.5) * 34), 1600 + i * 360);
+  }
   // finale: slow motion on the last building to fall
   if (G.lastFallen && !G.surrendered) {
     UI.centerOn(G.lastFallen.x, G.lastFallen.z); G.camera.targetDist = 34;
     if (!lockstep) G.speed = 0.3;
     if (G.lastFallen.y !== undefined) G.fx?.finale?.(G.lastFallen.x, G.lastFallen.y, G.lastFallen.z);
   }
-  if (mission && win && !mission.tutorial) unlockNext(run.mission);
-  const award = run.mode === 'title' ? null : awardGame({ win, kills: G.stats.killed, lost: G.stats.lost, built: G.stats.built, time: G.time, difficulty: G.difficulty, mode: mission && mission.tutorial ? 'tutorial' : run.mode, streak: G.bestStreak });
+  if (mission && win && !mission.tutorial) unlockNext(run.mission, run.camp);
+  const award = run.mode === 'title' || G.cheated ? null : awardGame({ win, kills: G.stats.killed, lost: G.stats.lost, built: G.stats.built, time: G.time, difficulty: G.difficulty, mode: mission && mission.tutorial ? 'tutorial' : run.mode, streak: G.bestStreak });
   if (award && award.promoted) setTimeout(() => { Audio.announce(`Promoted to ${award.promoted.name}`); }, 3200);
   let dailyNote = '';
   if (run.daily && win) { const r = dailyRecord(); const best = r && r.date === run.daily ? r.best : Infinity; dailyNote = G.time < best ? `New best: ${fmtTime(G.time)}!` : `${fmtTime(G.time)} (best ${fmtTime(best)})`; if (G.time < best) { try { localStorage.setItem('ws_daily', JSON.stringify({ date: run.daily, best: G.time })); } catch { /* ignore */ } } }
@@ -566,7 +633,7 @@ function endGame(win, text) {
     const t = Math.floor(G.time);
     $('endStats').innerHTML = `<span>Mission time</span><span>${Math.floor(t / 60)}m ${t % 60}s</span>${run.mode === 'mp' ? '' : `<span>Difficulty</span><span>${DIFFICULTY[G.difficulty].label}</span>`}<span>Enemies destroyed</span><span>${G.stats.killed}</span><span>Units lost</span><span>${G.stats.lost}</span><span>Structures built</span><span>${G.stats.built}</span><span>Credits harvested</span><span>${Math.round(G.stats.harvested)}</span>${G.mvp ? `<span>MVP</span><span>🏅 ${G.mvp.name} · ${G.mvp.kills} kills</span>` : ''}${G.bestStreak > 1 ? `<span>Best kill streak</span><span>${G.bestStreak}</span>` : ''}${run.daily && win ? `<span>Daily Challenge</span><span>${dailyNote}</span>` : ''}${award ? `<span>Experience</span><span>+${award.xp} XP · ${award.rank.icon} ${award.rank.name}${award.promoted ? ' · <b style="color:var(--accent)">PROMOTED!</b>' : ''}</span>` : ''}`;
     recordHistory(99); drawHistory($('endGraph'));
-    $('bNext').style.display = mission && win && (mission.tutorial || run.mission < MISSIONS.length - 1) ? '' : 'none';
+    $('bNext').style.display = mission && win && (mission.tutorial || run.mission < campaignList(run.camp).length - 1) ? '' : 'none';
     $('bAgain').style.display = run.mode === 'mp' ? 'none' : '';
     $('end').style.display = 'flex';
   }, G.lastFallen && !G.surrendered ? 4200 : 2500); // give the finale time to play

@@ -14,6 +14,11 @@ Play it by opening `wally-squad/index.html` from any web server (GitHub Pages wo
   4. **Lights Out** – at night, cut the enemy's power so its Plasma Towers go dark, then finish the fortress.
   5. **The Warlord** – a full base battle against a Doom Missile silo.
   6. **Into the Fire** – cross the Magma Rift, find the cloaked Shade tanks and defeat Warlord Grak in his fortress.
+- **👹 Grimlock campaign** (Campaign menu): switch sides and lead **Warlord Grak**, who must survive every mission.
+  1. **Raid on Crystal Valley** – burn down a Wally Squad outpost.
+  2. **Night of the Shades** – use cloaked Shade tanks to destroy every Comms Center on Midnight Ridge within 8 minutes.
+  3. **Grak's Revenge** – defeat Wally Man himself and raze the Wally Squad fortress in Frostbite Pass.
+  - It has its own progress track and a medal for finishing it.
 - **Survival:** endless enemy waves that grow stronger each time, with a boss every 5th wave. The game keeps your best score and wave for each map.
 - **Skirmish:** choose a map, your faction and the difficulty, and turn the day–night cycle and dynamic weather on or off.
   - Skirmish options: switch superweapons, support powers, supply crates, tech buildings, fog of war and starting armies on or off, and choose the starting money ($2,500–$15,000).
@@ -75,6 +80,9 @@ Both factions share the basic army: riflemen, rocket troopers, Scorchers, engine
   - Long-Range Optics: +20% sight and range.
   - The computer opponent researches them too.
 - **👹 Warlord Grak** (Grimlock hero, Barracks + Comms Center, one at a time): a hulking brute with a rotary rocket cannon. **War Cry** (`G`) makes every Grimlock fighter within 13 m fire much faster for 6 seconds. The computer uses heroes' abilities too.
+- **💬 Enemy taunts:** the enemy commander (Warlord Grak, or Commander Wally when you play the Grimlocks) taunts you during skirmishes and campaigns. Taunts come at the start, when you destroy their buildings or they destroy yours, when a hero falls and when they're nearly beaten. They are spoken aloud, with at least 35 seconds between them.
+- **🎆 Victory celebration:** win and fireworks burst over the battlefield while your infantry jump for joy.
+- **🕹 Cheat codes** (type them into the box in the pause menu; single player only, and a cheating game earns no XP or medals): `WALLYCASH` (+$10,000), `SHOWMETHEMAP`, `INSTABUILD`, `BIGBOOM` (superweapon charged), `POWERUP` (support powers ready), `GODMODE` (your forces can't be hurt) and `HEROES` (a hero and a Titan arrive).
 - **🎨 Army colours** (Skirmish, Survival and Sandbox menus): paint your side Blue, Red, Green, Purple, Gold, Orange, Teal, Pink or Steel. Your choice is remembered. If you pick a colour close to the enemy's, they switch to your faction's usual colour so the sides stay easy to tell apart.
 - **🔁 Repeat production:** a toggle above the Infantry, Vehicles and Air build menus. Each finished unit is queued again, so a factory keeps pumping out your army.
 - **🧙 Grimlock Shaman** (Grimlocks only): a hooded healer with a glowing skull staff who heals nearby infantry, like the Field Medic.

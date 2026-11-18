@@ -617,7 +617,9 @@ export class Unit {
       if (Math.random() < 0.3 && this.y - gy < 12) FX.dust(this.x + rr(-2, 2), this.z + rr(-2, 2), 1.2);
     } else if (this.isInf) {
       this.y = Math.max(gy, WATER_LEVEL - 0.6);
-      m.position.set(this.x, this.y, this.z);
+      // victory: your troops jump for joy
+      const cheer = G.won && this.faction === G.player ? Math.abs(Math.sin(G.time * 7 + this.id * 1.3)) * 0.55 : 0;
+      m.position.set(this.x, this.y + cheer, this.z);
       m.rotation.set(0, this.heading, 0);
       const walking = this.speedNow > 0.3;
       if (walking) this.walkPhase += dt * this.speedNow * 3.2;
@@ -677,9 +679,9 @@ export class Unit {
     if (this.refinery && this.refinery.dockedBy === this) this.refinery.dockedBy = null;
     if (killer && killer.kind === 'unit' && !killer.dead) {
       killer.kills++;
-      if (killer.faction === G.player && killer.kills > (G.mvp?.kills || 0)) G.mvp = { kills: killer.kills, name: killer.hero ? 'Wally Man (Hero)' : killer.def.name, type: killer.type };
+      if (killer.faction === G.player && killer.kills > (G.mvp?.kills || 0)) G.mvp = { kills: killer.kills, name: killer.hero ? killer.def.name + ' (Hero)' : killer.def.name, type: killer.type };
       const r = killer.kills >= 10 ? 3 : killer.kills >= 6 ? 2 : killer.kills >= 3 ? 1 : 0;
-      if (r === 3 && killer.rank < 3) { FX.sparkBurst(killer.x, killer.y + 1.5, killer.z, 40, [4, 3.2, 0.8, 1]); if (killer.faction === G.player) G.announce?.(`${killer.hero ? 'Wally Man' : killer.def.name} is now HEROIC!`, G.player, 2); emit('heroic', killer); }
+      if (r === 3 && killer.rank < 3) { FX.sparkBurst(killer.x, killer.y + 1.5, killer.z, 40, [4, 3.2, 0.8, 1]); if (killer.faction === G.player) G.announce?.(`${killer.def.name} is now HEROIC!`, G.player, 2); emit('heroic', killer); }
       if (r > killer.rank) { killer.rank = r; if (killer.faction === G.player) G.sfx?.play('promote', killer.x, killer.z); }
     }
     if (this.faction === G.player) { G.stats.lost++; G.announce?.('Unit lost', G.player, 6); }
@@ -1312,6 +1314,7 @@ export function damage(target, amount, src, kind) {
     FX.explosion(target.x, (target.baseY || 0) + 1, target.z, 2.5, {});
     amount = target.maxHp * 2;
   }
+  if (G.god && target.faction === G.player) return; // GODMODE cheat
   if (hasMut(G.cfg, 'glass')) amount *= 1.75;
   target.hp -= amount;
   target.lastHit = G.time;

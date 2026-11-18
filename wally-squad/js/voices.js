@@ -45,6 +45,7 @@ const DEFAULT_LINES = {
 const FEMALE = /female|samantha|karen|moira|tessa|victoria|fiona|serena|kate|zira|susan|hazel|libby|sonia|catherine|allison|ava|nicky|siri.*(voice 2|voice 4)|google uk english female|google us english|jenny|aria|emma|amy|joanna|salli/i;
 const lastLine = {};
 const VOICE_STYLE = {
+  warlord: { pitch: 0.4, rate: 0.85 },
   flamer: { pitch: 1.15, rate: 1.08, female: true },
   wally: { pitch: 1.4, rate: 1.15 }, wallyman: { pitch: 0.9, rate: 1.05 }, medic: { pitch: 1.3, rate: 1.05 }, engineer: { pitch: 1.2, rate: 1.1 },
   titan: { pitch: 0.5, rate: 0.85 }, tank: { pitch: 0.7, rate: 0.95 }, harvester: { pitch: 0.8, rate: 0.9 },
@@ -103,6 +104,19 @@ export function playTake(type, ev) {
   const l = clips.get(keyOf(type, ev));
   if (l && l.length) { playBlob(l[Math.floor(Math.random() * l.length)]); return true; }
   return false;
+}
+
+// Speak any line in a given unit's voice style (used for enemy commander taunts)
+export function sayLine(text, type) {
+  if (!settings.voices || !settings.tts || !('speechSynthesis' in window)) return;
+  try {
+    const u = new SpeechSynthesisUtterance(text);
+    const st = VOICE_STYLE[type] || { pitch: 1, rate: 1 };
+    u.pitch = st.pitch; u.rate = st.rate; u.volume = 0.9;
+    const vs = speechSynthesis.getVoices().filter(v => /^en/i.test(v.lang));
+    if (vs.length) u.voice = vs[(type.length * 7) % vs.length];
+    speechSynthesis.speak(u);
+  } catch { /* ignore */ }
 }
 
 // Called by the game when the player selects or commands a unit

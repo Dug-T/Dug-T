@@ -30,6 +30,7 @@ export const MEDALS = {
   mutant:       { icon: '🎲', name: 'Mad Science', desc: 'Win a skirmish with 2 or more mutators.' },
   daily:        { icon: '📅', name: 'Daily Duty', desc: 'Win a Daily Challenge.' },
   heroic:       { icon: '🌟', name: 'Heroic', desc: 'Promote a unit to Heroic rank (10 kills).' },
+  grimcamp:     { icon: '👹', name: 'Legion Triumphant', desc: 'Finish the Grimlock campaign as Warlord Grak.' },
   epilogue:     { icon: '🗡', name: 'Into the Fire', desc: 'Defeat Warlord Grak in the final campaign mission.' },
 };
 
@@ -39,7 +40,7 @@ let got = load();
 const session = { crates: 0, powers: new Set(), structuresLost: 0 };
 
 export function unlock(id) {
-  if (got[id] || !MEDALS[id]) return;
+  if (got[id] || !MEDALS[id] || G.cheated) return;
   got[id] = Date.now();
   try { localStorage.setItem(KEY, JSON.stringify(got)); } catch { /* ignore */ }
   toast(MEDALS[id]);
@@ -74,7 +75,7 @@ export function initAchievements(run) {
   on('power', (f, type) => { if (f === G.player) { session.powers.add(type); if (session.powers.size >= 3) unlock('powers'); } });
   on('end', win => {
     if (!win) return;
-    if (run.mode === 'campaign') { unlock('mission'); if (run.mission === 4) unlock('campaign'); if (run.mission === 5) unlock('epilogue'); }
+    if (run.mode === 'campaign') { unlock('mission'); if (run.camp === 'grim') { if (run.mission === 2) unlock('grimcamp'); } else { if (run.mission === 4) unlock('campaign'); if (run.mission === 5) unlock('epilogue'); } }
     if (run.mode === 'tutorial') unlock('bootcamp');
     if (run.map === 'magma') unlock('magma');
     if (run.daily) unlock('daily');
