@@ -1,13 +1,16 @@
 // Version number and update notes. Bump VERSION and add a new entry at the top of CHANGELOG for every
 // update: players see a "What's New" screen the first time they load a new version.
-export const VERSION = '1.32';
+export const VERSION = '1.32.1';
 
 export const CHANGELOG = [
+  { v: '1.32.1', date: '2026-11-19', title: 'Works on more phones', items: [
+    '📱 Wally Squad now loads on older phones (iPhones before iOS 16.4 and older Android browsers).',
+    '🛟 If a phone really can\'t run the game, the loading screen now says why and what to try, instead of hanging.',
+  ] },
   { v: '1.32', date: '2026-11-19', title: 'Hero Hunt', items: [
     '🎯 Hero Hunt skirmish option: both sides start with their champion (Wally Man or Warlord Grak, with a gold crown) - lose yours and you lose!',
     '⚡ Blink Trooper (Wally Squad): teleports instantly wherever you send him, then fires a laser rifle.',
     '🕳 Tunnel Drill (Grimlocks): burrows underground while it moves - nothing can hit it - then bursts up to drill your base.',
-    '📱 Loads on older phones (iPhones before iOS 16.4 and older Android browsers), and if a device really can\'t run the game, the loading screen now says why.',
     '🎖 New medal: Headhunter.',
   ] },
   { v: '1.31.1', date: '2026-11-19', title: 'Easier building on phones', items: [
