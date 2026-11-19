@@ -87,6 +87,14 @@ Both factions share the basic army: riflemen, rocket troopers, Scorchers, engine
 - **🔁 Repeat production:** a toggle above the Infantry, Vehicles and Air build menus. Each finished unit is queued again, so a factory keeps pumping out your army.
 - **🧙 Grimlock Shaman** (Grimlocks only): a hooded healer with a glowing skull staff who heals nearby infantry, like the Field Medic.
 - **☄ Meteor showers:** the Natural Disasters mutator now also rains burning meteors on the battlefield every couple of minutes, with a warning first.
+- **📺 Watch AI Battle** (main menu): pick a map and AI skill, then watch the Wally Squad AI fight the Grimlock AI. The whole map is revealed and the build sidebar is hidden. Scroll and zoom to follow the action, and speed it up from the pause menu.
+- **🗿 Victory Monument** (Construction Yard, needs a Tech Lab; Skirmish and Online): a $5,000 wonder. If it stands for **5 minutes** after it's finished, its owner wins.
+  - Each side's monument is different: a golden Wally Man statue, or a horned Grimlock skull idol.
+  - A countdown floats above it, and warnings sound at 4, 3, 2 and 1 minutes, 30 seconds and 10 seconds.
+  - The AI builds one in long, rich games, and throws everything at yours.
+  - It can be switched off in the Skirmish options.
+- **✈ Strike Jet** (Helipad + Comms Center): a blisteringly fast, fragile jet with twin missiles that hit air and ground. The AI builds them too.
+- **🏝 Emerald Isles** (new map): tropical jungle islands around turquoise lagoons, joined by sandy causeways. Hovercraft shine here.
 - **🧪 Sandbox** (main menu): unlimited money, five-times-faster building and no win or lose. A toolbar spawns any unit for either side wherever you tap (one or five at a time), switches the enemy AI on or off, reveals the map and clears all units.
 - **🚁 Sky Hauler** (Helipad): a twin-rotor transport helicopter that carries 6 infantry over cliffs, water and lava. Load it like the APC. Unload (`U`) drops the troops on the nearest flat, dry ground; it refuses over water.
 - **📰 Battle log:** a feed in the top-right shows what your forces destroy and lose ("Battle Tank destroyed Scout Buggy ×2"), plus Heroic promotions.

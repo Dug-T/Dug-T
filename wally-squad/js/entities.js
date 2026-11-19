@@ -974,6 +974,17 @@ export class Building {
     // defensive weapon
     if (this.def.weapon && this.buildAnim >= 1 && !(this.empT > 0)) this.defend(dt);
     if (this.passengers && this.passengers.length) this.garrisonFire(dt);
+    // Wonder: counts down to victory once finished
+    if (this.def.wonder && this.buildAnim >= 1) {
+      const before = this.wonderT || 0; this.wonderT = before + dt;
+      const left = 300 - this.wonderT, was = 300 - before;
+      for (const mark of [240, 180, 120, 60, 30, 10]) if (was > mark && left <= mark) {
+        const mine = this.faction === G.player;
+        G.announce?.(mine ? `Victory Monument: ${mark >= 60 ? mark / 60 + ' minute' + (mark > 60 ? 's' : '') : mark + ' seconds'} to victory!` : `Warning: enemy monument completes in ${mark >= 60 ? mark / 60 + ' minute' + (mark > 60 ? 's' : '') : mark + ' seconds'}!`, G.player, 1);
+        if (!mine) G.alertAt = { x: this.x, z: this.z, t: G.time };
+      }
+      if (Math.random() < dt * 4 && this.mesh.visible) FX.sparkBurst(this.x + rr(-2, 2), this.baseY + rr(3, 7), this.z + rr(-2, 2), 2, [4, 3.2, 0.8, 1]);
+    }
     if (this.def.tech) techEffect(this, dt);
     if (this.faction !== G.player) this.mesh.visible = !!T.explored[idx(cellOf(this.x), cellOf(this.z))] || G.revealed;
   }

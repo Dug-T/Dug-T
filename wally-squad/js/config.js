@@ -63,6 +63,7 @@ export const WEAPONS = {
   inferno:  { warhead: 'flame', damage: 44, range: 8.5, rof: 0.3, proj: 'flame', air: false, ground: true, splash: 2.4, sound: 'flame', big: true },
   warCannon: { warhead: 'rocket', damage: 34, range: 12, rof: 0.75, proj: 'rocket', air: true, ground: true, splash: 1.6, sound: 'rocket' },
   hoverRkt: { warhead: 'rocket', damage: 30, range: 11.5, rof: 1.3, proj: 'rocket', air: true, ground: true, sound: 'rocket', twin: true },
+  jetMsl:   { warhead: 'rocket', damage: 62, range: 14, rof: 2.2, proj: 'missile', air: true, ground: true, sound: 'rocket', twin: true },
   shadeRkt: { warhead: 'rocket', damage: 50, range: 13, rof: 2.2, proj: 'rocket', air: false, ground: true, sound: 'rocket', twin: true },
 };
 
@@ -91,6 +92,7 @@ export const BUILDINGS = {
   hospital: { name: 'Field Hospital', cost: 1000, time: 0, hp: 900, w: 2, h: 2, power: 0, sight: 8, req: ['none'], tab: 'none', tech: true, desc: 'Neutral tech. Capture it with an Engineer to heal nearby infantry.' },
   depot:    { name: 'Repair Depot', cost: 1000, time: 0, hp: 900, w: 2, h: 2, power: 0, sight: 8, req: ['none'], tab: 'none', tech: true, desc: 'Neutral tech. Capture it with an Engineer to repair nearby vehicles.' },
   turret:   { name: 'Gun Turret', cost: 600, time: 10, hp: 750, w: 1, h: 1, power: -20, sight: 16, req: ['barracks'], tab: 'defense', weapon: 'turretGun', desc: 'Anti-vehicle cannon emplacement.' },
+  wonder:   { name: 'Victory Monument', cost: 5000, time: 60, hp: 3200, w: 3, h: 3, power: -40, sight: 12, req: ['tech'], tab: 'build', wonder: true, limit: 1, desc: 'A giant monument to your army. If it stands for 5 minutes after it is finished, you WIN. The enemy will throw everything at it.' },
   bunker:   { name: 'Battle Bunker', cost: 500, time: 9, hp: 1600, w: 2, h: 2, power: 0, sight: 15, req: ['barracks'], tab: 'defense', garrison: 4, desc: 'Garrison up to 4 infantry: they shoot out with +25% range and can\'t be hurt until the bunker falls. Right-click it with infantry selected.' },
   sam:      { name: 'SAM Site', cost: 750, time: 12, hp: 650, w: 2, h: 2, power: -20, sight: 22, req: ['radar'], tab: 'defense', weapon: 'sam', desc: 'Anti-aircraft missile launcher.' },
   plasma:   { name: 'Plasma Tower', cost: 1500, time: 18, hp: 950, w: 1, h: 1, power: -75, sight: 21, req: ['tech'], tab: 'defense', weapon: 'plasma', desc: 'Devastating energy beam. Needs power.' },
@@ -118,6 +120,7 @@ export const UNITS = {
   inferno:  { name: 'Inferno Tank', fac: 'grim', cost: 1000, time: 15, hp: 820, armor: 'heavy', speed: 4.6, sight: 12, radius: 1.4, weapon: 'inferno', turnRate: 2.2, tab: 'vehicle', req: ['factory', 'radar'], desc: 'Grimlock only. Heavy flamethrower tank that roasts infantry and buildings.' },
   hauler:   { name: 'Sky Hauler', cost: 900, time: 12, hp: 450, armor: 'air', speed: 11, sight: 14, radius: 1.7, weapon: null, air: true, transport: 6, tab: 'air', req: ['helipad'], desc: 'Twin-rotor transport helicopter. Carries 6 infantry over cliffs, water and lava. Right-click it with infantry selected to load; Unload (U) over solid ground.' },
   drone:    { name: 'Recon Drone', cost: 350, time: 6, hp: 110, armor: 'air', speed: 14, sight: 22, radius: 0.8, weapon: null, air: true, detector: 14, tab: 'air', req: ['helipad'], desc: 'Fast unarmed scout with a huge sight range. Reveals cloaked Shade tanks within 14 m.' },
+  jet:      { name: 'Strike Jet', cost: 1100, time: 13, hp: 280, armor: 'air', speed: 19, sight: 17, radius: 1.5, weapon: 'jetMsl', air: true, tab: 'air', req: ['helipad', 'radar'], desc: 'Blisteringly fast jet with twin missiles that hit air and ground. Fragile - strike and get out.' },
   gunship:  { name: 'Hornet Gunship', cost: 1200, time: 16, hp: 360, armor: 'air', speed: 10, sight: 18, radius: 1.6, weapon: 'heliRkt', tab: 'air', req: ['helipad'], air: true, desc: 'Fast attack helicopter. Hit it with rockets and SAMs.' },
 };
 

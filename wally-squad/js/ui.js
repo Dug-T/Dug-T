@@ -1039,8 +1039,8 @@ export function drawOverlay() {
     const P = G.players[b.faction];
     const off = b.faction === G.player && P.powerUse > P.powerProd && b.type === 'plasma';
     const gar = b.def.garrison && b.faction === G.player ? (b.passengers || []).length : 0;
-    if (!show && !off && !b.primary && !gar) continue;
-    const p = project(b.x, b.baseY + (b.def.w === 1 ? 5.5 : 4.8), b.z);
+    if (!show && !off && !b.primary && !gar && !(b.def.wonder && b.buildAnim >= 1)) continue;
+    const p = project(b.x, b.baseY + (b.def.wonder ? 8.4 : b.def.w === 1 ? 5.5 : 4.8), b.z);
     if (p.behind) continue;
     const w = clamp(b.def.w * 18, 30, 72);
     if (show) bar(b, p.x, p.y, w);
@@ -1048,6 +1048,7 @@ export function drawOverlay() {
     if (b.repairing) { octx.fillStyle = '#7fd0ff'; octx.fillText('🔧 REPAIRING', p.x, p.y - 4); }
     if (off) { octx.fillStyle = Math.sin(now * 8) > 0 ? '#ff4a3d' : '#ffc23a'; octx.fillText('⚡ NO POWER', p.x, p.y - 4); }
     if (b.primary && b.faction === G.player) { octx.fillStyle = '#ffc23a'; octx.fillText('PRIMARY', p.x, p.y + 16); }
+    if (b.def.wonder && b.buildAnim >= 1) { const left = Math.max(0, 300 - (b.wonderT || 0)); octx.font = 'bold 15px Rajdhani'; octx.fillStyle = b.faction === G.player ? '#ffd34a' : '#ff6a5a'; octx.fillText(`🗿 ${Math.floor(left / 60)}:${String(Math.floor(left % 60)).padStart(2, '0')}`, p.x, p.y - 8); }
     if (b.def.garrison && b.faction === G.player) for (let i = 0; i < b.def.garrison; i++) { octx.fillStyle = i < gar ? '#7dff9a' : 'rgba(0,0,0,0.5)'; octx.fillRect(p.x - 12 + i * 6, p.y - 9, 4, 4); }
     if (b.selected && b.rally && b.faction === G.player) {
       const r = project(b.rally.x, heightAt(b.rally.x, b.rally.z) + 0.2, b.rally.z);

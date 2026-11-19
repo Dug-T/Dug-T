@@ -38,6 +38,7 @@ const DEFAULT_LINES = {
   apc: { select: ['Carrier ready.', 'Room for five!'], move: ['Moving the squad.', 'Hold on back there!'], attack: ['Covering fire!'] },
   hover: { select: ['Skimmer ready.', 'Water, lava, whatever!'], move: ['Skimming!', 'Full throttle over the top!'], attack: ['Rockets away!', 'Hit and run!'] },
   repair: { select: ['Repair crew here.', 'Who needs fixing?'], move: ['On my way with the wrench.'], attack: ['I fix things, not fight them!'] },
+  jet: { select: ['Strike Jet, engines hot.', 'Ready to scramble!'], move: ['Afterburners!', 'Going supersonic!'], attack: ['Fox two!', 'Missiles away!'] },
   hauler: { select: ['Sky Hauler, rotors turning.', 'Need a lift?'], move: ['Airborne!', 'Hold on to something!'], attack: ['We are a taxi, not a gunship!'] },
   drone: { select: ['Drone online.', 'Eyes in the sky.'], move: ['Scouting ahead.'], attack: ['No weapons, just cameras!'] },
 };

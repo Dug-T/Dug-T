@@ -85,6 +85,7 @@ export class AI {
         return;
       }
     }
+    if (this.t > 900 && P.credits > 5500 && !this.count('wonder') && hasReqs(this.f, 'wonder') && srand() < 0.25) { enqueue(this.f, 'wonder'); return; }
     // late game: more defences
     if (P.credits > 2500 && srand() < 0.3) enqueue(this.f, srand() < 0.5 ? (hasReqs(this.f, 'plasma') ? 'plasma' : 'turret') : 'turret');
   }
@@ -140,6 +141,7 @@ export class AI {
         enqueue(this.f, t);
       }
     }
+    if (P.queues.air && P.queues.air.items.length < 1 && this.t > 360 && srand() < 0.15 && hasReqs(this.f, 'jet')) enqueue(this.f, 'jet');
     if (P.queues.vehicle.items.length < 2) {
       const opts = ['tank', 'tank', 'buggy', 'arty', 'titan', 'titan', 'stealth', 'stealth', 'inferno', 'inferno', 'repair', 'hover'].filter(t => hasReqs(this.f, t));
       if (opts.length) enqueue(this.f, opts[Math.floor(srand() * opts.length)]);
@@ -196,13 +198,14 @@ export class AI {
     for (const u of idle) if (!u.order && !u.target && Math.hypot(u.x - rx, u.z - rz) > 14) u.moveTo(rx + rr(-6, 6), rz + rr(-6, 6), { attackMove: true });
 
     const waveSize = this.diff.waveBase + this.waveN * this.diff.waveGrow;
-    if (this.t >= this.nextWave && idle.length >= Math.min(waveSize, 30)) {
+    const urgent = enemyB.some(b => b.def.wonder && b.buildAnim >= 1) && idle.length >= 4; // monument up: attack with whatever we have
+    if ((this.t >= this.nextWave || urgent && this.t >= this.nextWave - this.diff.waveGap * 0.6) && (urgent || idle.length >= Math.min(waveSize, 30))) {
       this.waveN++;
       this.nextWave = this.t + this.diff.waveGap;
       // pick a target: harvesters & refineries are juicy, otherwise nearest structure
-      let tgt = null;
+      let tgt = enemyB.find(b => b.def.wonder) || null; // an enemy monument must fall first
       const r = srand();
-      if (r < 0.3) tgt = enemyB.find(b => b.type === 'refinery');
+      if (!tgt && r < 0.3) tgt = enemyB.find(b => b.type === 'refinery');
       if (!tgt && r < 0.5) tgt = enemyB.find(b => b.def.weapon == null && b.type !== 'conyard');
       if (!tgt) { let bd = 1e9; for (const b of enemyB) { const d = Math.hypot(b.x - base.x, b.z - base.z); if (d < bd) { bd = d; tgt = b; } } }
       for (const u of idle) {
