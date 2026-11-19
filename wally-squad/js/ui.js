@@ -304,6 +304,7 @@ function startPlacing(type) {
   const wire = new THREE.Mesh(footprint.geometry, new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true, transparent: true, opacity: 0.4 }));
   footprint.add(wire);
   G.three.scene.add(footprint);
+  if (isTouch) { const v = $('view'); G.mouse.x = v.clientWidth / 2; G.mouse.y = v.clientHeight / 2; G.mouse.ground = screenToGround(G.mouse.x, G.mouse.y); } // show the outline mid-screen straight away
   Audio.play('click');
 }
 export function cancelPlacing() {
@@ -763,7 +764,7 @@ function setCursor() {
 let hoverT = 0;
 let barSig = '';
 function updateModeBar() {
-  const what = G.placing ? `Placing ${BUILDINGS[G.placing].name}` + (BUILDINGS[G.placing].isWall ? ' · drag for a line' : '') + ' · tap a green spot'
+  const what = G.placing ? `Placing ${BUILDINGS[G.placing].name}` + (BUILDINGS[G.placing].isWall ? ' · drag for a line' : '') + ' · drag the outline to a green spot and lift to build'
     : G.mode === 'sell' ? 'Sell mode · tap your building' : G.mode === 'repair' ? 'Repair mode · tap your building'
     : G.mode === 'spawn' ? `Sandbox · tap the map to spawn ${G.sandbox.n > 1 ? G.sandbox.n + ' × ' : ''}${UNITS[G.sandbox.type].name} (${G.sandbox.side === 'wally' ? 'Wally Squad' : 'Grimlocks'})`
     : G.mode === 'super' ? 'Superweapon · tap the target' : G.mode && G.mode.startsWith('power:') ? 'Support power · tap the target'
@@ -806,7 +807,7 @@ function bindTouch(gl) {
       start = { ...p, cx: G.camera.x, cz: G.camera.z, moved: false, t: performance.now(), box: touchBoxMode };
       G.mouse.x = p.x; G.mouse.y = p.y;
       if (touchBoxMode) drag = { x0: p.x, y0: p.y, x1: p.x, y1: p.y, active: true };
-      if (G.placing && BUILDINGS[G.placing].isWall) { const g = screenToGround(p.x, p.y); if (g) wallStart = placementCell(g.x, g.z); }
+      if (G.placing) { const g = screenToGround(p.x, p.y); if (g) { G.mouse.ground = g; if (BUILDINGS[G.placing].isWall) wallStart = placementCell(g.x, g.z); } }
     } else if (pts.size === 2) {
       const [a, b] = [...pts.values()];
       pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), dist: G.camera.dist, cx: G.camera.x, cz: G.camera.z, mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2 };
@@ -830,6 +831,7 @@ function bindTouch(gl) {
       G.mouse.x = p.x; G.mouse.y = p.y;
       if (Math.hypot(p.x - start.x, p.y - start.y) > 10) start.moved = true;
       if (start.box && drag) { drag.x1 = p.x; drag.y1 = p.y; }
+      else if (G.placing) { const g = screenToGround(p.x, p.y); if (g) G.mouse.ground = g; } // drag the building outline into place
       else if (start.moved && !G.placing) {
         const k = G.camera.dist / H * 1.4, c = Math.cos(G.camera.yaw), s = Math.sin(G.camera.yaw);
         const dx = p.x - start.x, dy = p.y - start.y;
@@ -844,8 +846,8 @@ function bindTouch(gl) {
     if (start && pts.size === 0) {
       const { x, y } = start;
       if (start.box && drag) { boxSelect(drag.x0, drag.y0, drag.x1, drag.y1, false); drag = null; touchBoxMode = false; $('tBox').classList.remove('on'); }
+      else if (G.placing) { const g = screenToGround(G.mouse.x, G.mouse.y); if (g) { G.mouse.ground = g; updateGhost(); tryPlace(); } }
       else if (!start.moved) touchTap(x, y);
-      else if (G.placing) { G.mouse.ground = screenToGround(G.mouse.x, G.mouse.y); if (wallStart) tryPlace(); }
       start = null;
     }
   };
