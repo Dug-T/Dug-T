@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import { G, nextId, rr, clamp, angleDiff, later, srand, srr, emit } from './state.js';
 import { UNITS, BUILDINGS, WEAPONS, WARHEADS, CELL, HALF, GRID, HARVEST_CAPACITY, FACTIONS, WATER_LEVEL, hasMut } from './config.js';
-import { T, heightAt, groundY, normalAt, cellOf, cellCenter, idx, isWalkable, isVisibleAt, inGrid } from './terrain.js';
+import { T, heightAt, groundY, normalAt, cellOf, cellCenter, idx, isWalkable, isVisibleAt, inGrid, blastTrees } from './terrain.js';
 import { makeUnitModel, makeBuildingModel, makeRubble, charModel } from './models.js';
 import { findPath, nearestFree } from './pathfind.js';
 import * as FX from './particles.js';
@@ -166,7 +166,7 @@ export class Unit {
   }
   attack(target) {
     if (!alive(target)) return;
-    if (this.type === 'engineer') { this.order = { type: 'capture', target }; this.requestPath(target.x, target.z, target.kind === 'building' ? target.id : 0); return; }
+    if (this.type === 'engineer' && !target.def.explosive) { this.order = { type: 'capture', target }; this.requestPath(target.x, target.z, target.kind === 'building' ? target.id : 0); return; }
     if (this.type === 'wally' && target.kind === 'building') { this.order = { type: 'c4', target }; this.requestPath(target.x, target.z, target.id); return; }
     if (!this.weapon) { this.moveTo(target.x, target.z); return; }
     this.order = { type: 'attack', target };
@@ -647,6 +647,11 @@ export class Unit {
     } else {
       this.y = this.def.hover ? Math.max(gy, WATER_LEVEL) + 0.15 + Math.sin(G.time * 3 + this.id) * 0.06 : gy; // hovercraft float over water and lava
       if (this.fans) for (const f of this.fans.children) f.rotation.z += dt * 30;
+      // tread / tyre tracks behind ground vehicles
+      if (!this.def.hover && this.speedNow > 0.5 && this.mesh.visible) {
+        this.trackD = (this.trackD || 0) + this.speedNow * dt;
+        if (this.trackD > 0.55) { this.trackD = 0; FX.trackMark(this.x - Math.sin(this.heading) * this.def.radius * 0.7, this.z - Math.cos(this.heading) * this.def.radius * 0.7, this.heading, this.def.radius * 0.55); }
+      }
       if (this.def.hover && this.speedNow > 1 && Math.random() < dt * 8 && this.mesh.visible) FX.dust(this.x - Math.sin(this.heading) * 1.5, this.z - Math.cos(this.heading) * 1.5, 0.6);
       m.position.set(this.x, this.y, this.z);
       normalAt(this.x, this.z, _n);
@@ -1092,6 +1097,21 @@ export class Building {
 
   die(killer) {
     if (this.dead) return;
+    if (this.def.explosive) {
+      // fuel barrels: a big fireball that hurts everyone nearby - including other barrels (chain reactions!)
+      this.dead = true; this.setSelected(false);
+      for (let j = 0; j < this.def.h; j++) for (let i = 0; i < this.def.w; i++) if (T.bld[idx(this.cx + i, this.cz + j)] === this.id) T.bld[idx(this.cx + i, this.cz + j)] = 0;
+      G.three.scene.remove(this.mesh);
+      FX.explosion(this.x, this.baseY + 1, this.z, 2.6, { force: true });
+      const x = this.x, z = this.z;
+      later(0.15, () => {
+        blastTrees(x, z, 5, 160);
+        for (const u of unitsNear(x, z, 6.5, [])) if (!u.air && !u.dead) damage(u, 170 * Math.max(0, 1 - Math.hypot(u.x - x, u.z - z) / 7), killer);
+        for (const b of G.buildings) if (!b.dead && distTo(b, x, z) < 5) damage(b, b.def.explosive ? 999 : 140 * (1 - distTo(b, x, z) / 5), killer); // barrels set each other off
+      });
+      emit('kill', this, killer);
+      return;
+    }
     if (this.passengers && this.passengers.length) ejectPassengers(this, 0.3, killer);
     if (this.def.isMine || this.def.isWall || this.def.isGate) {
       this.dead = true; this.setSelected(false);
@@ -1219,6 +1239,7 @@ export function fireWeapon(src, w, target, muzzleLocal, frame) {
   }
   const size = kind === 'bullet' ? 0.5 : kind === 'shell' ? (w.damage > 80 ? 1.8 : 1.4) : kind === 'artillery' ? 2.2 : kind === 'sniper' ? 0.6 : 1;
   FX.muzzle(mz.x, mz.y, mz.z, dx / dl, dz / dl, size);
+  if (kind === 'bullet' && vis && src.kind === 'unit' && Math.random() < 0.6) FX.casing(mz.x, mz.y, mz.z, Math.atan2(dx, dz));
   // recoil
   if (src.turret && (kind === 'shell' || kind === 'artillery')) src.recoil = 1;
   const speed = { bullet: 110, sniper: 220, shell: 70, rocket: 30, missile: 40, artillery: 0 }[kind];
@@ -1302,6 +1323,7 @@ function hit(src, w, target, at) {
 }
 
 function splash(src, w, x, z, r, faction, except) {
+  if (r >= 1.5) blastTrees(x, z, r * 0.8, w.damage);
   const near = unitsNear(x, z, r + 1, []);
   for (const u of near) {
     if (u === except || u.faction === faction || u.air) continue;

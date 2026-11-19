@@ -8,6 +8,7 @@ import { OutputPass } from '../lib/postprocessing/OutputPass.js';
 import { G, runTimers, seedSim, emit, on } from './state.js';
 import { DIFFICULTY, FACTIONS, MUTATORS, hasMut, UNITS, TEAM_COLORS, applyTeamColor } from './config.js';
 import { MAPS, THEMES, getMap } from './maps.js';
+import { updateFallingTrees } from './terrain.js';
 import { buildTerrain, setupMap, BASES, cellOf, updateVision, updateOre, regrowOre, animateWater, revealAll, revealCircle } from './terrain.js';
 import { initFX, updateFX, setParticleScale } from './particles.js';
 import { Building, Unit, rebuildHash, updateProjectiles, updateDecay, cleanupDead } from './entities.js';
@@ -25,7 +26,7 @@ import { issue } from './cmd.js';
 import { registerCustomUnits, loadDesigns, buildDesigner } from './customunits.js';
 import { gfx, initGraphics, pixelRatio, autoTune, buildGraphicsPanel, maxAnisotropy, isTouch, shadowInterval } from './graphics.js';
 import { allMaterials } from './materials.js';
-import { updateCrates, animateCrates, placeTechBuildings, recordHistory, drawHistory } from './features.js';
+import { updateCrates, animateCrates, placeTechBuildings, placeBarrels, recordHistory, drawHistory } from './features.js';
 import { updatePowers } from './powers.js';
 import { updateHazards } from './hazards.js';
 import { initAmbient, updateAmbient } from './ambient.js';
@@ -132,13 +133,28 @@ async function boot() {
   bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.7, 0.55, 0.92);
   composer.addPass(bloom);
   G.three.bloom = bloom;
-  composer.addPass(new ShaderPass({
-    uniforms: { tDiffuse: { value: null }, uVig: { value: 0.32 } },
+  // vignette + optional cinematic grade (film grain, a touch of chromatic aberration at the edges, richer colour)
+  const grade = new ShaderPass({
+    uniforms: { tDiffuse: { value: null }, uVig: { value: 0.32 }, uCine: { value: 0 }, uTime: { value: 0 } },
     vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
-    fragmentShader: `uniform sampler2D tDiffuse; uniform float uVig; varying vec2 vUv;
-      void main(){ vec4 c = texture2D(tDiffuse, vUv); vec2 d = vUv - 0.5; float v = 1.0 - dot(d, d) * uVig * 2.2;
-      c.rgb = mix(vec3(dot(c.rgb, vec3(0.299,0.587,0.114))), c.rgb, 1.08); gl_FragColor = vec4(c.rgb * v, c.a); }`,
-  }));
+    fragmentShader: `uniform sampler2D tDiffuse; uniform float uVig, uCine, uTime; varying vec2 vUv;
+      float hash(vec2 p){ return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
+      void main(){
+        vec2 d = vUv - 0.5;
+        vec4 c = texture2D(tDiffuse, vUv);
+        if (uCine > 0.5) {
+          vec2 off = d * dot(d, d) * 0.012;
+          c.r = texture2D(tDiffuse, vUv + off).r; c.b = texture2D(tDiffuse, vUv - off).b;
+          c.rgb = mix(c.rgb, c.rgb * c.rgb * (3.0 - 2.0 * c.rgb), 0.18);            // gentle S-curve contrast
+          c.rgb *= vec3(1.03, 1.0, 0.96);                                         // warm highlights
+          c.rgb += (hash(vUv * 811.0 + fract(uTime) * 97.0) - 0.5) * 0.035;        // film grain
+        }
+        float v = 1.0 - dot(d, d) * (uVig + uCine * 0.12) * 2.2;
+        c.rgb = mix(vec3(dot(c.rgb, vec3(0.299,0.587,0.114))), c.rgb, 1.08 + uCine * 0.07);
+        gl_FragColor = vec4(c.rgb * v, c.a); }`,
+  });
+  composer.addPass(grade);
+  G.three.grade = grade;
   composer.addPass(new OutputPass());
   G.onResize = (w, h) => {
     renderer.setSize(w, h, false);
@@ -188,6 +204,7 @@ async function boot() {
     if (run.mode === 'survival') { initSurvival(); G.players[G.player].credits = 6000; }
   }
   placeTechBuildings();
+  placeBarrels();
   revealCircle(BASES[G.player].x, BASES[G.player].z, 42);
   updatePower();
   await step(0.7);
@@ -659,7 +676,7 @@ function endGame(win, text, winner) {
 }
 
 // A side is beaten when it has no buildings left (walls, gates and mines don't count)
-const hasStructures = f => G.buildings.some(b => !b.dead && b.faction === f && !b.def.isMine && !b.def.isWall && !b.def.isGate);
+const hasStructures = f => G.buildings.some(b => !b.dead && b.faction === f && !b.def.isMine && !b.def.isWall && !b.def.isGate && !b.def.explosive);
 
 function checkEnd(dt) {
   winT -= dt; if (winT > 0 || G.over) return; winT = 1;
@@ -745,6 +762,7 @@ function loop(now) {
   updateVision(Math.max(dt, real * 0.5));
   updateFX(dt);
   updateWeatherFX(dt, real);
+  updateFallingTrees(real);
   updateAmbient(real);
   updateOrientation();
   UI.checkSize();
@@ -755,6 +773,7 @@ function loop(now) {
   animateWater(now / 1000);
   animateCrates(now / 1000);
   if (++shadowFrame >= shadowInterval()) { shadowFrame = 0; renderer.shadowMap.needsUpdate = true; }
+  if (G.three.grade) { G.three.grade.uniforms.uCine.value = gfx.cinematic ? 1 : 0; G.three.grade.uniforms.uTime.value = now / 1000; }
   composer.render();
   UI.drawOverlay();
 }

@@ -4,10 +4,10 @@ import * as THREE from 'three';
 import { appSize } from './orient.js';
 
 export const PRESETS = {
-  low:    { label: 'Low',    maxDpr: 1,   scale: 0.85, shadows: 'off',  bloom: false, samples: 0 },
-  medium: { label: 'Medium', maxDpr: 1.5, scale: 1,    shadows: 'med',  bloom: true,  samples: 2 },
-  high:   { label: 'High',   maxDpr: 2,   scale: 1,    shadows: 'high', bloom: true,  samples: 4 },
-  ultra:  { label: 'Ultra',  maxDpr: 3,   scale: 1.25, shadows: 'ultra', bloom: true, samples: 8 },
+  low:    { label: 'Low',    maxDpr: 1,   scale: 0.85, shadows: 'off',  bloom: false, samples: 0, cinematic: false },
+  medium: { label: 'Medium', maxDpr: 1.5, scale: 1,    shadows: 'med',  bloom: true,  samples: 2, cinematic: false },
+  high:   { label: 'High',   maxDpr: 2,   scale: 1,    shadows: 'high', bloom: true,  samples: 4, cinematic: true },
+  ultra:  { label: 'Ultra',  maxDpr: 3,   scale: 1.25, shadows: 'ultra', bloom: true, samples: 8, cinematic: true },
 };
 const SHADOW = { off: 0, med: 1024, high: 2048, ultra: 4096 };
 
@@ -112,7 +112,7 @@ export function buildGraphicsPanel(el) {
     // toggles
     const tg = document.createElement('div'); tg.className = 'row';
     const toggle = (txt, key) => { const b = document.createElement('button'); b.className = 'btn' + (gfx[key] ? ' on' : ''); b.textContent = (gfx[key] ? '✔ ' : '') + txt; b.onclick = () => { gfx[key] = !gfx[key]; save(); apply(); render(); }; tg.appendChild(b); };
-    toggle('Bloom glow', 'bloom'); toggle('Anti-aliasing', 'aa'); toggle('Auto-adjust for smooth play', 'auto'); toggle('Show FPS', 'fps');
+    toggle('Bloom glow', 'bloom'); toggle('🎬 Cinematic filter', 'cinematic'); toggle('Anti-aliasing', 'aa'); toggle('Auto-adjust for smooth play', 'auto'); toggle('Show FPS', 'fps');
     el.append(label('Options'), tg);
     const note = document.createElement('p'); note.style.cssText = 'text-align:center;color:var(--dim);font-size:13px';
     note.textContent = 'Tip: if the game stutters, choose a lower preset or turn on auto-adjust. Ultra looks best on a powerful computer.';
