@@ -37,7 +37,15 @@ function wanderingJar(host) {
   host.appendChild(b); host.appendChild(bubble);
   const j = { x: 0, y: 0, vx: 0, vy: 0, tx: 0, ty: 0, retarget: 0, clicks: 0, tired: false, cool: 0, sayT: 0 };
   // keep to a band across the top of the title screen
-  const area = () => { const w = host.clientWidth || innerWidth; return { x0: 12, x1: Math.max(140, w - 140), y0: 10, y1: 64 }; };
+  const area = () => {
+    // on a short (phone) main menu the logo fills the top, so roam the empty space beside "How to play"
+    const how = document.getElementById('bHow'), card = document.getElementById('menuMain');
+    if (how && card && card.offsetParent && how.offsetParent === host) {
+      const x0 = how.offsetLeft + how.offsetWidth + 14, x1 = card.offsetLeft + card.offsetWidth - (b.offsetWidth || 110) - 14;
+      if (x1 - x0 > 120 && host.clientHeight < 560) { const y = how.offsetTop + (how.offsetHeight - (b.offsetHeight || 30)) / 2; return { x0, x1, y0: y - 2, y1: y + 2 }; }
+    }
+    const w = host.clientWidth || innerWidth; return { x0: 12, x1: Math.max(140, w - 140), y0: 10, y1: 64 };
+  };
   const pick = (ax, ay) => {
     const a = area(); let best = null, bd = -1;
     for (let k = 0; k < 10; k++) { const x = a.x0 + Math.random() * (a.x1 - a.x0), y = a.y0 + Math.random() * (a.y1 - a.y0), d = ax === undefined ? Math.random() : Math.hypot(x - ax, y - ay); if (d > bd) { bd = d; best = [x, y]; } }

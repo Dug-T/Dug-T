@@ -156,6 +156,12 @@
   }
   .menuCol { display: flex; flex-direction: column; gap: 8px; align-items: center; margin-top: 12px; }
   .menuCol .big { width: 280px; }
+  /* main menu: a grid of buttons so every option is on screen at once */
+  #menuMain { width: min(640px, 94vw); }
+  #menuMain .menuCol { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; align-items: stretch; }
+  #menuMain .menuCol .big { width: auto; padding: 9px 10px; font-size: 18px; white-space: nowrap; }
+  #menuMain .menuCol #bHow { grid-column: 1 / -1; justify-self: center; padding: 6px 22px; }
+  #menuMain .btn.daily small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .card.wide { width: min(860px, 94vw); }
   .label { color: var(--accent); font: 700 13px 'Rajdhani'; letter-spacing: 1px; margin: 12px 0 4px; text-transform: uppercase; }
   .label.small { font-size: 11px; margin: 6px 0 3px; }
@@ -320,6 +326,19 @@
     .maps .opt span { display: none; }
     .card h2 { margin: 0 0 4px; font-size: 20px; }
     #facRow .opt span, #facRowMp .opt span { -webkit-line-clamp: 1; }
+  }
+  @media (max-height: 560px) and (orientation: landscape) {
+    /* phones: logo on one line, short intro hidden, 4 buttons per row, so the whole main menu fits */
+    #menuMain { width: min(900px, 96%); padding: 8px 12px 10px; }
+    #menuMain > p { display: none; }
+    #menuMain h1.logo { font-size: 28px !important; }
+    #menuMain .tag { margin: 1px 0 4px; font-size: 10px; }
+    #menuMain #profile { margin: 0 auto 5px; padding: 3px 10px; max-width: 520px; font-size: 12px; }
+    #menuMain #profile .profRank { font-size: 13px; display: inline; } #menuMain #profile .profBar { margin: 3px 0 2px; height: 4px; } #menuMain #profile .profSub { font-size: 10px; }
+    #menuMain .menuCol { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; margin-top: 2px; }
+    #menuMain .menuCol .big { font-size: 13.5px; padding: 6px 4px; letter-spacing: 0; }
+    #menuMain .menuCol #bHow { grid-column: auto; justify-self: stretch; padding: 6px 4px; font-size: 13.5px; }
+    #menuMain .btn.daily small { font-size: 8.5px; }
   }
 </style>
 <script type="importmap">
