@@ -157,9 +157,16 @@
   }
   .menuCol { display: flex; flex-direction: column; gap: 8px; align-items: center; margin-top: 12px; }
   .menuCol .big { width: 280px; }
+  /* main menu header: the Wally Man photo beside the logo */
+  .mmHead { display: flex; align-items: center; justify-content: center; gap: 12px; }
+  .mmPhoto { height: 200px; width: auto; flex-shrink: 0; filter: drop-shadow(0 8px 16px rgba(0,0,0,0.7)); pointer-events: none; user-select: none; -webkit-user-select: none; }
+  .mmHeadText { flex: 1; min-width: 0; }
+  @media (max-height: 880px) { #menuMain > p { display: none; } #menuMain .mmPhoto { height: 170px; } }
+  @media (max-width: 640px) { #menuMain .menuCol { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .copyright { text-align: center; color: var(--dim); font-size: 12px; margin-top: 10px; letter-spacing: 0.5px; }
   /* main menu: a grid of buttons so every option is on screen at once */
-  #menuMain { width: min(640px, 94vw); }
-  #menuMain .menuCol { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; align-items: stretch; }
+  #menuMain { width: min(800px, 94vw); }
+  #menuMain .menuCol { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; align-items: stretch; }
   #menuMain .menuCol .big { width: auto; padding: 9px 10px; font-size: 18px; white-space: nowrap; }
   #menuMain .menuCol #bHow { grid-column: 1 / -1; justify-self: center; padding: 6px 22px; }
   #menuMain .btn.daily small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -341,6 +348,8 @@
     #menuMain .menuCol .big { font-size: 13.5px; padding: 6px 4px; letter-spacing: 0; }
     #menuMain .menuCol #bHow { grid-column: auto; justify-self: stretch; padding: 6px 4px; font-size: 13.5px; }
     #menuMain .btn.daily small { font-size: 8.5px; }
+    #menuMain .mmPhoto { height: 96px; } #menuMain .mmHead { gap: 8px; }
+    #menuMain .copyright { font-size: 9.5px; margin-top: 4px; }
   }
 </style>
 <script type="importmap">
@@ -399,9 +408,14 @@
 
 <div id="title" class="screen" style="display:none">
   <div class="card" id="menuMain">
-    <h1 class="logo">WALLY <br>SQUAD</h1>
-    <div class="tag">REAL-TIME STRATEGY · BUILD · HARVEST · CONQUER</div>
-    <div id="profile" title="Your Commander profile: earn XP in every game to rise through the ranks"></div>
+    <div class="mmHead">
+      <img class="mmPhoto" src="img/wallyman-photo.webp" alt="Wally Man" draggable="false">
+      <div class="mmHeadText">
+        <h1 class="logo">WALLY <br>SQUAD</h1>
+        <div class="tag">REAL-TIME STRATEGY · BUILD · HARVEST · CONQUER</div>
+        <div id="profile" title="Your Commander profile: earn XP in every game to rise through the ranks"></div>
+      </div>
+    </div>
     <p style="text-align:center">The <b style="color:var(--blue)">Wally Squad</b> has landed in the Crystal Valley. The <b style="color:var(--red)">Grimlock Legion</b> wants every last crystal. Build your base, harvest crystal, raise an army and wipe them off the map.</p>
     <div class="menuCol">
       <button class="btn big" id="bTutorial">🎓 BOOT CAMP</button>
@@ -419,6 +433,7 @@
       <button class="btn big" data-panel="menuGraphics">⚙ GRAPHICS</button>
       <button class="btn" id="bHow">How to play</button>
     </div>
+    <div class="copyright">© 2026 Douglas Thomson. All rights reserved.</div>
   </div>
   <div class="card wide" id="menuCampaign" style="display:none">
     <h2>CAMPAIGN</h2>

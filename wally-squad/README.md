@@ -90,6 +90,7 @@ Both factions share the basic army: riflemen, rocket troopers, Scorchers, engine
 - **🐕 Attack Dog** (Barracks, both sides): cheap, fast and fierce. It has a big sight range for scouting, savages enemy infantry, and is useless against tanks. It wags its tail and barks.
 - **🏷 Nicknames:** when one of your units becomes a Veteran it earns a nickname, like "Sgt. Biscuit", "Sir Tanks-a-lot", "Iron Granny" or "Sir Barksalot" for dogs. The nickname shows in the selection panel, the battle log and the MVP.
 - **🌈 Ambient life:** flocks of birds wheel over the forests by day, and a rainbow arcs across the sky when rain or a storm clears.
+- **Main menu:** the Wally Man photo, with its background removed, sits beside the logo, with "© 2026 Douglas Thomson. All rights reserved." at the bottom. The image is `img/wallyman-photo.webp`.
 - **Loading screen** now reads "LOADING WALLY SQUAD…" and shows a random gameplay tip.
 - **🎯 Find enemy base** (🎯 in the top bar, "Find enemy" on touch screens, or `N`):
   - **Before the enemy is found:** the camera flies to where their base is, and a pulsing red beacon and a minimap ping mark the spot for 12 seconds. The fog stays, so it shows where to go, not what's there.
