@@ -1,8 +1,15 @@
 // Version number and update notes. Bump VERSION and add a new entry at the top of CHANGELOG for every
 // update: players see a "What's New" screen the first time they load a new version.
-export const VERSION = '1.27';
+export const VERSION = '1.28';
 
 export const CHANGELOG = [
+  { v: '1.28', date: '2026-11-19', title: 'Giants & Thunder', items: [
+    '🤖 Wally Mech (Wally Squad): a towering two-legged battle walker with twin shoulder cannons.',
+    '👹 Cave Troll (Grimlocks): a huge club-swinging brute that heals its own wounds.',
+    '⛈ Thunderstorms now throw real lightning strikes that can hit your troops.',
+    '🌋 The volcano on Magma Rift erupts, raining lava bombs.',
+    '🎖 New medal: Giant Slayer.',
+  ] },
   { v: '1.27', date: '2026-11-19', title: 'Bounty Hunters', items: [
     '💰 Bounty Convoys: an armoured cash truck crosses the map every few minutes. Destroy it before it escapes for $1,500!',
     '🛬 Reinforcements support power: two tanks parachute onto the battlefield.',

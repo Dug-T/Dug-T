@@ -138,6 +138,7 @@ export class Unit {
     this.fans = this.mesh.getObjectByName('fans');
     this.rotor2 = this.mesh.getObjectByName('rotor2');
     this.wingL = this.mesh.getObjectByName('wingL'); this.wingR = this.mesh.getObjectByName('wingR');
+    this.wLegL = this.mesh.getObjectByName('wLegL'); this.wLegR = this.mesh.getObjectByName('wLegR'); this.club = this.mesh.getObjectByName('club');
     if (!this.isInf && !this.air) { this.lights = makeHeadlights(this.def.radius); this.mesh.add(this.lights); }
     G.three.scene.add(this.mesh);
     this.ring = null;
@@ -229,6 +230,7 @@ export class Unit {
     if (this.dropH > 0) { paraFall(this, dt); return; } // still floating down under a parachute
     if (this.boarded) { this.x = this.boarded.x; this.z = this.boarded.z; this.y = this.boarded.y; return; } // riding inside an APC
     if (this.order && this.order.type === 'board') { this.boardLogic(); }
+    if (this.def.regen && this.hp < this.maxHp) this.hp = Math.min(this.maxHp, this.hp + this.def.regen * dt); // trolls heal themselves
     if (this.def.selfRepair && this.hp < this.maxHp * 0.5) this.hp = Math.min(this.maxHp * 0.5, this.hp + 6 * dt);
     if (this.rank >= 2 && this.hp < this.maxHp) this.hp = Math.min(this.maxHp, this.hp + (this.rank >= 3 ? 6 : 2) * dt);
     if (this.rank >= 3 && Math.random() < dt * 3 && this.mesh.visible) FX.sparkBurst(this.x, this.y + (this.isInf ? 1.9 : 2.4), this.z, 1, [4, 3.2, 0.8, 1]); // golden glint
@@ -652,7 +654,7 @@ export class Unit {
       this.y = this.def.hover ? Math.max(gy, WATER_LEVEL) + 0.15 + Math.sin(G.time * 3 + this.id) * 0.06 : gy; // hovercraft float over water and lava
       if (this.fans) for (const f of this.fans.children) f.rotation.z += dt * 30;
       // tread / tyre tracks behind ground vehicles
-      if (!this.def.hover && this.speedNow > 0.5 && this.mesh.visible) {
+      if (!this.def.hover && !this.def.walker && this.speedNow > 0.5 && this.mesh.visible) {
         this.trackD = (this.trackD || 0) + this.speedNow * dt;
         if (this.trackD > 0.55) { this.trackD = 0; FX.trackMark(this.x - Math.sin(this.heading) * this.def.radius * 0.7, this.z - Math.cos(this.heading) * this.def.radius * 0.7, this.heading, this.def.radius * 0.55); }
       }
@@ -664,6 +666,22 @@ export class Unit {
       _q1.setFromUnitVectors(UP, this.sn);
       _q2.setFromAxisAngle(UP, this.heading);
       m.quaternion.copy(_q1).multiply(_q2);
+      // walkers: striding legs, a bob in the step and a puff of dust at each footfall
+      if (this.wLegL) {
+        const walking = this.speedNow > 0.2;
+        if (walking) {
+          const before = Math.sin(this.walkPhase);
+          this.walkPhase += dt * this.speedNow * 1.5;
+          if (Math.sign(before) !== Math.sign(Math.sin(this.walkPhase)) && this.mesh.visible) FX.dust(this.x, this.z, 0.7);
+        }
+        const sw = walking ? Math.sin(this.walkPhase) * 0.5 : 0;
+        this.wLegL.rotation.x = sw; this.wLegR.rotation.x = -sw;
+        if (walking) m.position.y += Math.abs(Math.cos(this.walkPhase)) * 0.14;
+      }
+      if (this.club) {
+        const k = G.time - (this.lastFire ?? -9);
+        this.club.rotation.x = k < 0.25 ? -0.3 - 1.4 * Math.sin(k / 0.25 * Math.PI / 2) : k < 0.55 ? -1.7 + 2.6 * ((k - 0.25) / 0.3) : k < 1.0 ? 0.9 - 1.2 * ((k - 0.55) / 0.45) : -0.3;
+      }
       if (this.speedNow > 1 && Math.random() < 0.25 * (this.speedNow / this.def.speed)) {
         const back = m.localToWorld(_v.set(rr(-1, 1), 0, -this.def.radius));
         FX.dust(back.x, back.z, this.type === 'buggy' ? 0.9 : 1.2);
