@@ -505,6 +505,32 @@ export function makeTeslaTruck(faction) {
   });
 }
 
+// Bounty Convoy: a gold-trimmed armoured cash truck with flashing beacons and money crates
+export function makeConvoy() {
+  return cached('convoy', () => {
+    const m = M();
+    const armour = new THREE.MeshStandardMaterial({ color: 0x4a5048, roughness: 0.55, metalness: 0.6 });
+    const gold = new THREE.MeshStandardMaterial({ color: 0xffc23a, roughness: 0.3, metalness: 0.9, emissive: 0x3a2400 });
+    const cash = new THREE.MeshStandardMaterial({ color: 0x3f8a3a, roughness: 0.7 });
+    const root = new THREE.Group();
+    const b = new Builder();
+    for (const z of [1.2, 0.0, -1.1]) for (const x of [-0.9, 0.9]) wheel(b, m.metal, x, 0.45, z, 0.45, 0.32);
+    b.box(armour, 1.75, 1.0, 1.1, 0, 1.1, 1.35);                     // cab
+    b.box(m.glass, 1.4, 0.32, 0.04, 0, 1.38, 1.91);
+    b.box(m.darkMetal, 1.8, 0.3, 3.4, 0, 0.62, 0);                   // chassis
+    b.box(armour, 1.85, 1.5, 2.3, 0, 1.4, -0.55);                    // strongbox
+    b.box(gold, 1.87, 0.12, 2.32, 0, 2.1, -0.55); b.box(gold, 1.87, 0.12, 2.32, 0, 0.75, -0.55);
+    b.box(gold, 0.6, 0.6, 0.04, 0.93, 1.4, -0.55, 0, Math.PI / 2, 0); b.box(gold, 0.6, 0.6, 0.04, -0.93, 1.4, -0.55, 0, Math.PI / 2, 0); // $ plates
+    b.cyl(m.darkMetal, 0.25, 0.25, 0.08, 12, 0, 1.4, -1.72, Math.PI / 2, 0, 0);    // vault wheel
+    for (const [x, z] of [[-0.45, -0.2], [0.45, -0.2], [0, -0.95]]) b.box(cash, 0.5, 0.35, 0.5, x, 2.33, z); // cash bundles on the roof
+    b.box(m.lampRed, 0.3, 0.12, 0.14, -0.45, 1.67, 1.3); b.box(m.lampWhite, 0.3, 0.12, 0.14, 0.45, 1.67, 1.3);
+    b.box(m.lampWhite, 0.2, 0.1, 0.04, 0.6, 1.0, 1.91); b.box(m.lampWhite, 0.2, 0.1, 0.04, -0.6, 1.0, 1.91);
+    root.add(b.build());
+    root.userData.muzzle = new THREE.Vector3(0, 1.5, 1.9);
+    return root;
+  });
+}
+
 export function makeJet(faction) {
   return cached(`jet-${faction}`, () => {
     const t = mats(faction), m = M();
@@ -1074,6 +1100,7 @@ export function makeUnitModel(type, faction) {
     case 'inferno': return makeInferno(faction);
     case 'wallyman': return makeWallyMan(faction);
     case 'dog': return makeDog(faction);
+    case 'convoy': return makeConvoy();
     case 'wyvern': return makeWyvern(faction);
     case 'teslatruck': return makeTeslaTruck(faction);
     case 'warlord': return makeWarlord(faction);

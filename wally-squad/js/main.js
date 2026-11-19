@@ -26,6 +26,7 @@ import { issue } from './cmd.js';
 import { registerCustomUnits, loadDesigns, buildDesigner } from './customunits.js';
 import { gfx, initGraphics, pixelRatio, autoTune, buildGraphicsPanel, maxAnisotropy, isTouch, shadowInterval } from './graphics.js';
 import { allMaterials } from './materials.js';
+import { updateConvoy } from './features.js';
 import { updateCrates, animateCrates, placeTechBuildings, placeBarrels, placeHouses, recordHistory, drawHistory } from './features.js';
 import { updatePowers } from './powers.js';
 import { updateHazards } from './hazards.js';
@@ -36,6 +37,7 @@ import { registerCustomMaps, buildMapEditor } from './mapeditor.js';
 import { updateOrientation } from './orient.js';
 import { awardGame, profileCard } from './profile.js';
 import { initTipJar } from './tipjar.js';
+import { VERSION, isNewVersion, markSeen, buildNews } from './version.js';
 updateOrientation();
 import { initSurvival, updateSurvival, survivalPanel, saveBest, bestScores, survival } from './survival.js';
 
@@ -55,6 +57,7 @@ let mission = null, mctx = null, lockstep = null;
 const stored = sessionStorage.getItem('ws_cfg');
 let cfg = stored ? JSON.parse(stored) : null;
 const menuMode = !cfg;
+{ const lv = document.getElementById('loadVer'); if (lv) lv.textContent = `Version ${VERSION}`; }
 if (params.has('auto') && !cfg) cfg = { mode: 'skirmish', map: params.get('map') || 'valley', faction: params.get('faction') || 'wally', difficulty: localStorage.getItem('ws_diff') || 'normal', daynight: params.has('daynight'), weather: params.get('weather') || null, koth: params.has('koth') };
 if (cfg && cfg.mode !== 'mp') sessionStorage.removeItem('ws_cfg');
 if (cfg && cfg.mode === 'mp') sessionStorage.removeItem('ws_cfg');
@@ -249,13 +252,15 @@ function setupBase(faction, pos) {
 }
 
 // ---------------------------------------------------------------- menus
-const panels = ['menuMain', 'menuCampaign', 'menuSkirmish', 'menuOnline', 'menuVoices', 'menuDesigner', 'menuGraphics', 'menuSurvival', 'menuMedals', 'menuEditor', 'menuSandbox', 'menuWatch'];
+const panels = ['menuNews', 'menuMain', 'menuCampaign', 'menuSkirmish', 'menuOnline', 'menuVoices', 'menuDesigner', 'menuGraphics', 'menuSurvival', 'menuMedals', 'menuEditor', 'menuSandbox', 'menuWatch'];
 function showPanel(id) {
   for (const p of panels) $(p).style.display = p === id ? 'block' : 'none';
+  document.body.classList.toggle('newsOpen', id === 'menuNews'); // keep the roaming tip jar off the What's New screen
   if (id === 'menuVoices') Voices.buildStudio($('studio'), UI.icons);
   if (id === 'menuDesigner') buildDesigner($('designer'), { faction: 'wally' });
   if (id === 'menuGraphics') buildGraphicsPanel($('gfxPanel'));
   if (id === 'menuMedals') buildMedals($('medals'));
+  if (id === 'menuNews') buildNews($('news'));
   if (id === 'menuEditor') buildMapEditor($('editor'), (mode, map) => startWith({ mode, map, faction: 'wally', difficulty: localStorage.getItem('ws_diff') || 'normal', daynight: true, weather: null }));
 }
 // ---------------------------------------------------------------- daily challenge
@@ -400,6 +405,7 @@ function setupMenus() {
   toggle('Starting armies', () => sk.army !== false, v => { sk.army = v; });
   toggle('🗿 Victory Monuments', () => sk.wonders !== false, v => { sk.wonders = v; });
   toggle('👑 King of the Hill', () => !!sk.koth, v => { sk.koth = v; });
+  toggle('💰 Bounty convoys', () => sk.convoys !== false, v => { sk.convoys = v; });
   // starting money cycles through a few amounts
   const money = [2500, 4000, 7500, 15000];
   const mb = document.createElement('button'); mb.className = 'btn on';
@@ -424,6 +430,10 @@ function setupMenus() {
   }
   $('bStart').onclick = () => startWith(sk);
   $('profile').innerHTML = profileCard();
+  // version number, and the What's New screen the first time a new version loads
+  for (const el of document.querySelectorAll('.verNum')) el.textContent = VERSION;
+  $('verLink').onclick = e => { e.preventDefault(); Audio.play('click'); showPanel('menuNews'); };
+  $('bNewsOk').onclick = () => { markSeen(); Audio.initAudio(); Audio.play('click'); showPanel('menuMain'); };
   initTipJar();
   // daily challenge
   const dc = dailyChallenge(), rec = dailyRecord();
@@ -563,7 +573,7 @@ function setupMenus() {
   $('bSuper').onclick = () => { G.ui.setMode?.('super'); };
   G.togglePause = togglePause;
 
-  if (run.mode === 'title') { $('title').style.display = 'flex'; showPanel('menuMain'); revealAll(true); G.cfg.daynight = false; }
+  if (run.mode === 'title') { $('title').style.display = 'flex'; showPanel(isNewVersion() ? 'menuNews' : 'menuMain'); revealAll(true); G.cfg.daynight = false; }
   else if (run.mode === 'campaign' || run.mode === 'tutorial') showBriefing();
   else if (run.mode === 'mp') {
     $('bSpeed').style.display = 'none';
@@ -730,6 +740,7 @@ function simStep(dt) {
   cleanupDead();
   regrowOre(dt);
   updateCrates(dt);
+  updateConvoy(dt);
   updateHazards(dt);
   updateHill(dt);
   recordHistory(dt);

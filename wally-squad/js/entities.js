@@ -363,7 +363,7 @@ export class Unit {
     let best = null, bd = 1e9;
     const w = this.weapon, w2 = this.weapon2;
     for (const u of G.units) {
-      if (u.dead || u.boarded || u.faction === this.faction || u.faction === 'neutral') continue;
+      if (u.dead || u.boarded || u.faction === this.faction || (u.faction === 'neutral' && !u.def.bounty)) continue;
       if (!canTarget(w, u) && !(w2 && canTarget(w2, u))) continue;
       const d = Math.hypot(u.x - this.x, u.z - this.z);
       if (d > range) continue;
@@ -696,6 +696,12 @@ export class Unit {
   die(killer) {
     if (this.dead) return;
     if (this.passengers && this.passengers.length) ejectPassengers(this, 0.5, killer);
+    if (this.def.bounty && killer && G.players[killer.faction] && killer.faction !== 'neutral') {
+      G.players[killer.faction].credits += this.def.bounty;
+      G.announce?.(killer.faction === G.player ? `Convoy destroyed! +$${this.def.bounty.toLocaleString()} bounty` : 'The enemy has claimed the convoy bounty', G.player, 3);
+      FX.sparkBurst(this.x, this.y + 1.5, this.z, 50, [4, 3.2, 0.8, 1]);
+      emit('bounty', killer.faction);
+    }
     this.dead = true;
     this.setSelected(false);
     if (this.refinery && this.refinery.dockedBy === this) this.refinery.dockedBy = null;
@@ -1074,7 +1080,7 @@ export class Building {
         p.scanT = 0.35 + srand() * 0.2;
         let best = null, bd = 1e9;
         for (const u of G.units) {
-          if (u.dead || u.boarded || u.faction === this.faction || u.faction === 'neutral' || !canTarget(w, u)) continue;
+          if (u.dead || u.boarded || u.faction === this.faction || (u.faction === 'neutral' && !u.def.bounty) || !canTarget(w, u)) continue;
           if (u.cloaked && u.faction !== G.player) continue;
           const d = Math.hypot(u.x - this.x, u.z - this.z);
           if (d < range && d < bd) { bd = d; best = u; }

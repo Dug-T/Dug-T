@@ -35,6 +35,7 @@ export const MEDALS = {
   shock:        { icon: '🌩', name: 'Shocking!', desc: 'One Tesla Coil bolt strikes three enemies.' },
   autumn:       { icon: '🍂', name: 'Fall Guy', desc: 'Win a battle on Autumn Hollow.' },
   koth:         { icon: '👑', name: 'King of the Hill', desc: 'Win a King of the Hill skirmish.' },
+  bounty:       { icon: '💰', name: 'Highway Robbery', desc: 'Destroy a bounty convoy.' },
   epilogue:     { icon: '🗡', name: 'Into the Fire', desc: 'Defeat Warlord Grak in the final campaign mission.' },
 };
 
@@ -74,6 +75,7 @@ export function initAchievements(run) {
   });
   on('house', (b, f) => { if (f === G.player) unlock('squatter'); });
   on('chain3', f => { if (f === G.player) unlock('shock'); });
+  on('bounty', f => { if (f === G.player) unlock('bounty'); });
   on('heroic', u => { if (u.faction === G.player) unlock('heroic'); });
   on('crate', f => { if (f === G.player && ++session.crates >= 5) unlock('crates'); });
   on('capture', (b, f) => { if (f === G.player) unlock('capture'); });
