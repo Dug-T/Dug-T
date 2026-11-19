@@ -4,7 +4,7 @@
 import * as THREE from 'three';
 import { G, srand, srr, later } from './state.js';
 import { HALF } from './config.js';
-import { groundY, isVisibleAt, blastTrees } from './terrain.js';
+import { groundY, isVisibleAt, blastTrees, currentMap } from './terrain.js';
 import { unitsNear, damage, distTo } from './entities.js';
 import * as FX from './particles.js';
 
@@ -79,8 +79,58 @@ function fallingRock(x, z) {
   requestAnimationFrame(step);
 }
 
+// ---- lightning strikes: during a thunderstorm, bolts sometimes hit the ground near troops
+let strikeT = 10;
+function updateStrikes(dt) {
+  const W = G.weather;
+  if (!W || W.type !== 'storm' || W.k < 0.6) return;
+  strikeT -= dt;
+  if (strikeT > 0) return;
+  strikeT = srr(9, 18);
+  const pool = G.units.filter(u => !u.dead && !u.boarded && !u.air && u.faction !== 'neutral');
+  if (!pool.length) return;
+  const tgt = pool[Math.floor(srand() * pool.length)];
+  const x = tgt.x + srr(-3, 3), z = tgt.z + srr(-3, 3), y = groundY(x, z);
+  if (isVisibleAt(x, z) || G.revealed) {
+    FX.lightning([[x + srr(-6, 6), y + 70, z + srr(-6, 6)], [x, y + 0.2, z]]);
+    FX.explosion(x, y + 0.3, z, 0.9, { sound: true });
+  }
+  blastTrees(x, z, 2, 160);
+  for (const u of unitsNear(x, z, 3, buf)) if (!u.air && !u.dead) damage(u, (u.isInf ? 55 : 35) * (1 - Math.hypot(u.x - x, u.z - z) / 3.5), null);
+}
+
+// ---- Magma Rift: the volcano erupts every couple of minutes, raining lava bombs around a lava pool
+let eruptT = 100;
+function updateVolcano(dt) {
+  const map = currentMap();
+  if (!map || map.theme !== 'volcanic') return;
+  eruptT -= dt;
+  if (eruptT > 0) return;
+  eruptT = srr(90, 150);
+  const lakes = map.lakes || []; if (!lakes.length) return;
+  const L = lakes[Math.floor(srand() * lakes.length)];
+  G.announce?.('The volcano is erupting! Lava bombs incoming!', G.player, 8);
+  G.alertAt = { x: L.x, z: L.z, t: G.time };
+  for (let i = 0; i < 10; i++) {
+    const a = srand() * Math.PI * 2, r = L.r * 0.6 + srr(2, 16);
+    const x = L.x + Math.cos(a) * r, z = L.z + Math.sin(a) * r, at = 1.5 + i * 0.35 + srr(0, 0.3);
+    later(at - 1.2, () => fallingRock(x, z));
+    later(at, () => {
+      const y = groundY(x, z);
+      FX.explosion(x, y + 0.5, z, 1.4, { sound: i % 3 === 0 });
+      for (let k = 0; k < 6; k++) G.fx?.ember?.(x, y + 0.5, z);
+      blastTrees(x, z, 3.5, 200);
+      for (const u of unitsNear(x, z, 4, buf)) if (!u.air && !u.dead) damage(u, (u.isInf ? 80 : 100) * (1 - Math.hypot(u.x - x, u.z - z) / 4.5), null);
+      for (const b of G.buildings) if (!b.dead && b.faction !== 'neutral' && distTo(b, x, z) < 3) damage(b, 90, null);
+    });
+  }
+}
+
 export function updateHazards(dt) {
-  if (!(G.cfg.mut && G.cfg.mut.includes('disasters')) || G.over) return;
+  if (G.over) return;
+  updateStrikes(dt);
+  updateVolcano(dt);
+  if (!(G.cfg.mut && G.cfg.mut.includes('disasters'))) return;
   nextT -= dt;
   if (nextT <= 0) { nextT = srr(90, 150); spawn(); }
   nextM -= dt;

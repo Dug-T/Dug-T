@@ -36,6 +36,7 @@ export const MEDALS = {
   autumn:       { icon: '🍂', name: 'Fall Guy', desc: 'Win a battle on Autumn Hollow.' },
   koth:         { icon: '👑', name: 'King of the Hill', desc: 'Win a King of the Hill skirmish.' },
   bounty:       { icon: '💰', name: 'Highway Robbery', desc: 'Destroy a bounty convoy.' },
+  giant:        { icon: '🗡', name: 'Giant Slayer', desc: 'Destroy an enemy Wally Mech or Cave Troll.' },
   epilogue:     { icon: '🗡', name: 'Into the Fire', desc: 'Defeat Warlord Grak in the final campaign mission.' },
 };
 
@@ -67,6 +68,7 @@ export function initAchievements(run) {
     if (victim.faction === G.player && victim.kind === 'building' && !victim.def.isMine && !victim.def.isWall) session.structuresLost++;
     if (!killer || killer.faction !== G.player || victim.faction === G.player) return;
     unlock('first_blood');
+    if (victim.kind === 'unit' && (victim.type === 'mech' || victim.type === 'troll')) unlock('giant');
     if (killer.kind === 'unit') {
       if (killer.rank >= 2) unlock('elite');
       if (killer.type === 'wallyman' && killer.kills >= 10) unlock('rampage');

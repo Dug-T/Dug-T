@@ -531,6 +531,87 @@ export function makeConvoy() {
   });
 }
 
+// Wally Mech: a two-legged battle walker. Legs (wLegL / wLegR) stride; the torso is the turret.
+export function makeMech(faction) {
+  return cached(`mech-${faction}`, () => {
+    const t = mats(faction), m = M();
+    const root = new THREE.Group();
+    const b = new Builder();
+    b.box(m.darkMetal, 1.5, 0.45, 0.8, 0, 2.15, 0);                    // hips
+    b.cyl(m.metal, 0.25, 0.25, 1.8, 10, 0, 2.15, 0, 0, 0, Math.PI / 2); // hip axle
+    root.add(b.build());
+    for (const s of [-1, 1]) {
+      const lb = new Builder();
+      lb.box(t.teamDark, 0.42, 1.05, 0.5, 0, -0.5, 0);                  // thigh
+      lb.sph(m.metal, 0.24, 0, -1.05, 0.05);                            // knee
+      lb.box(m.darkMetal, 0.36, 0.95, 0.42, 0, -1.5, 0.12, -0.15, 0, 0); // shin
+      lb.box(m.metal, 0.62, 0.16, 1.0, 0, -2.02, 0.2);                  // foot
+      lb.box(t.accent, 0.44, 0.08, 0.3, 0, -0.3, 0.26);
+      const leg = lb.build(); leg.position.set(s * 0.82, 2.15, 0); leg.name = s < 0 ? 'wLegL' : 'wLegR';
+      root.add(leg);
+    }
+    const tb = new Builder();
+    tb.box(t.team, 1.7, 1.1, 1.5, 0, 0.55, 0);                         // torso
+    tb.box(t.teamDark, 1.75, 0.15, 1.55, 0, 1.12, 0);
+    tb.box(m.glass, 1.0, 0.35, 0.05, 0, 0.75, 0.76);                   // cockpit window
+    tb.box(t.accent, 0.4, 0.4, 0.04, 0.6, 0.45, 0.76);
+    for (const s of [-1, 1]) {
+      tb.box(t.teamDark, 0.45, 0.6, 0.9, s * 1.08, 0.7, 0.1);          // shoulder
+      tb.cyl(m.gun, 0.11, 0.13, 1.6, 10, s * 1.08, 0.62, 1.0, Math.PI / 2, 0, 0); // cannon
+      tb.cyl(m.gun, 0.16, 0.16, 0.25, 10, s * 1.08, 0.62, 1.78, Math.PI / 2, 0, 0);
+    }
+    tb.box(m.darkMetal, 0.7, 0.35, 0.6, 0, 1.35, -0.3);                // missile pod
+    for (let i = 0; i < 3; i++) tb.cyl(m.lampRed, 0.07, 0.07, 0.05, 8, -0.2 + i * 0.2, 1.38, 0.0, Math.PI / 2, 0, 0);
+    tb.cyl(m.gun, 0.03, 0.03, 0.8, 5, -0.6, 1.5, -0.5);                // antenna
+    const tur = tb.build(); tur.position.set(0, 2.4, 0); tur.name = 'turret';
+    root.add(tur);
+    root.userData.muzzle = new THREE.Vector3(1.08, 0.62, 1.95);
+    root.userData.muzzle2 = new THREE.Vector3(-1.08, 0.62, 1.95);
+    return root;
+  });
+}
+
+// Cave Troll: a hulking grey-green brute with a tree-trunk club (swings on attack)
+export function makeTroll(faction) {
+  return cached(`troll-${faction}`, () => {
+    const t = mats(faction), m = M();
+    const hide = new THREE.MeshStandardMaterial({ color: 0x6a7a5a, roughness: 0.95, flatShading: true });
+    const wood = new THREE.MeshStandardMaterial({ color: 0x5a3a22, roughness: 0.9, flatShading: true });
+    const root = new THREE.Group();
+    const b = new Builder();
+    b.sph(hide, 0.85, 0, 2.3, -0.05, 1.05, 0.95, 0.85);               // hunched body
+    b.sph(hide, 0.65, 0, 1.65, 0.05, 1.0, 0.8, 0.9);                  // belly
+    b.box(t.team, 1.2, 0.35, 1.0, 0, 1.35, 0);                         // loincloth / belt
+    b.box(t.accent, 0.3, 0.3, 0.05, 0, 1.35, 0.52);
+    b.sph(hide, 0.38, 0, 3.05, 0.55);                                  // head, jutting forward
+    b.box(m.black, 0.1, 0.06, 0.04, 0.13, 3.12, 0.88); b.box(m.black, 0.1, 0.06, 0.04, -0.13, 3.12, 0.88);
+    b.box(m.lampRed, 0.06, 0.04, 0.02, 0.13, 3.12, 0.9); b.box(m.lampRed, 0.06, 0.04, 0.02, -0.13, 3.12, 0.9); // glowing eyes
+    b.add(new THREE.ConeGeometry(0.06, 0.25, 5), m.concrete, 0.14, 2.88, 0.85, -2.6, 0, 0); b.add(new THREE.ConeGeometry(0.06, 0.25, 5), m.concrete, -0.14, 2.88, 0.85, -2.6, 0, 0); // tusks
+    b.sph(hide, 0.12, 0.38, 3.15, 0.45); b.sph(hide, 0.12, -0.38, 3.15, 0.45); // ears
+    b.box(hide, 0.32, 1.3, 0.34, -1.0, 2.0, 0.2, 0.2, 0, 0.25);        // left arm, hanging
+    b.sph(hide, 0.24, -1.12, 1.35, 0.35);
+    for (let i = 0; i < 4; i++) b.add(new THREE.ConeGeometry(0.1, 0.35, 4), m.concrete, -0.4 + i * 0.27, 3.0, -0.35, -0.5, 0, 0); // back spikes
+    root.add(b.build());
+    for (const s of [-1, 1]) {
+      const lb = new Builder();
+      lb.box(hide, 0.42, 0.85, 0.46, 0, -0.42, 0);
+      lb.box(hide, 0.55, 0.2, 0.75, 0, -0.9, 0.12);
+      const leg = lb.build(); leg.position.set(s * 0.42, 1.25, 0); leg.name = s < 0 ? 'wLegL' : 'wLegR';
+      root.add(leg);
+    }
+    const cb = new Builder();                                          // right arm + club, pivoting at the shoulder
+    cb.box(hide, 0.34, 1.0, 0.36, 0, -0.45, 0);
+    cb.sph(hide, 0.24, 0, -0.95, 0.05);
+    cb.cyl(wood, 0.16, 0.3, 2.0, 8, 0, -0.95, 0.95, Math.PI / 2, 0, 0);
+    for (let i = 0; i < 4; i++) cb.add(new THREE.ConeGeometry(0.06, 0.22, 4), m.metal, Math.cos(i * 1.6) * 0.28, -0.95 + Math.sin(i * 1.6) * 0.28, 1.6 + i * 0.08, Math.sin(i * 1.6), 0, -Math.cos(i * 1.6));
+    const club = cb.build(); club.position.set(1.0, 2.6, 0.1); club.name = 'club'; club.rotation.x = -0.3;
+    root.add(club);
+    root.scale.setScalar(1.2);
+    root.userData.muzzle = new THREE.Vector3(1.0, 1.6, 2.2);
+    return root;
+  });
+}
+
 export function makeJet(faction) {
   return cached(`jet-${faction}`, () => {
     const t = mats(faction), m = M();
@@ -1100,6 +1181,8 @@ export function makeUnitModel(type, faction) {
     case 'inferno': return makeInferno(faction);
     case 'wallyman': return makeWallyMan(faction);
     case 'dog': return makeDog(faction);
+    case 'mech': return makeMech(faction);
+    case 'troll': return makeTroll(faction);
     case 'convoy': return makeConvoy();
     case 'wyvern': return makeWyvern(faction);
     case 'teslatruck': return makeTeslaTruck(faction);
