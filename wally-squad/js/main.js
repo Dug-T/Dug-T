@@ -227,7 +227,7 @@ function setupBase(faction, pos) {
 }
 
 // ---------------------------------------------------------------- menus
-const panels = ['menuMain', 'menuCampaign', 'menuSkirmish', 'menuOnline', 'menuVoices', 'menuDesigner', 'menuGraphics', 'menuSurvival', 'menuMedals', 'menuEditor', 'menuSandbox'];
+const panels = ['menuMain', 'menuCampaign', 'menuSkirmish', 'menuOnline', 'menuVoices', 'menuDesigner', 'menuGraphics', 'menuSurvival', 'menuMedals', 'menuEditor', 'menuSandbox', 'menuWatch'];
 function showPanel(id) {
   for (const p of panels) $(p).style.display = p === id ? 'block' : 'none';
   if (id === 'menuVoices') Voices.buildStudio($('studio'), UI.icons);
@@ -242,7 +242,7 @@ function dailyChallenge() {
   const d = new Date(), date = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   let h = 2166136261; for (const ch of date) h = Math.imul(h ^ ch.charCodeAt(0), 16777619) >>> 0;
   const rnd = () => { h = Math.imul(h ^ (h >>> 15), 2246822519) >>> 0; h = (h + 0x6D2B79F5) >>> 0; return h / 4294967296; };
-  const maps = ['valley', 'frost', 'dunes', 'midnight', 'magma'].filter(m => MAPS[m]);
+  const maps = ['valley', 'frost', 'dunes', 'midnight', 'magma', 'isles'].filter(m => MAPS[m]);
   const muts = Object.keys(MUTATORS);
   const a = muts.splice(Math.floor(rnd() * muts.length), 1)[0], b = muts[Math.floor(rnd() * muts.length)];
   return { mode: 'skirmish', daily: date, map: maps[Math.floor(rnd() * maps.length)], faction: rnd() < 0.5 ? 'wally' : 'grim', difficulty: 'hard', daynight: true, weather: null, mut: [a, b] };
@@ -269,7 +269,7 @@ const TAUNTS = {
 };
 let tauntT = -999;
 function taunt(kind, force) {
-  if (run.mode === 'mp' || run.mode === 'sandbox' || (mission && mission.tutorial) || G.over) return;
+  if (run.mode === 'mp' || run.mode === 'sandbox' || run.mode === 'watch' || (mission && mission.tutorial) || G.over) return;
   if (!force && G.time - tauntT < 35) return;
   const T = TAUNTS[G.enemy]; const list = T[kind]; if (!list) return;
   tauntT = G.time;
@@ -347,7 +347,7 @@ function optionCards(el, items, sel, onPick) {
     el.appendChild(d);
   }
 }
-const MAP_SWATCH = { magma: 'linear-gradient(135deg,#2a2624,#5e3f2d 55%,#ff5a14)', valley: 'linear-gradient(135deg,#4f7a2a,#76913a 50%,#1d4b63)', frost: 'linear-gradient(135deg,#f4f7fa,#a7b0b8 60%,#6f9fb8)', dunes: 'linear-gradient(135deg,#e8d29c,#b48a58 60%,#2a7d86)', midnight: 'linear-gradient(135deg,#0a1124,#1d2b4a 60%,#ffd27a)' };
+const MAP_SWATCH = { isles: 'linear-gradient(135deg,#4f8f2e,#e6d49a 55%,#18a6ae)', magma: 'linear-gradient(135deg,#2a2624,#5e3f2d 55%,#ff5a14)', valley: 'linear-gradient(135deg,#4f7a2a,#76913a 50%,#1d4b63)', frost: 'linear-gradient(135deg,#f4f7fa,#a7b0b8 60%,#6f9fb8)', dunes: 'linear-gradient(135deg,#e8d29c,#b48a58 60%,#2a7d86)', midnight: 'linear-gradient(135deg,#0a1124,#1d2b4a 60%,#ffd27a)' };
 const THEME_SWATCH = { temperate: MAP_SWATCH.valley, snow: MAP_SWATCH.frost, desert: MAP_SWATCH.dunes, night: MAP_SWATCH.midnight };
 const mapItems = () => Object.entries(MAPS).map(([id, m]) => ({ id, title: (m.custom ? '🗺 ' : '') + m.name, desc: m.desc, swatch: MAP_SWATCH[id] || THEME_SWATCH[m.theme] }));
 const facItems = [{ id: 'wally', title: 'Wally Squad', desc: 'Titan tanks, medics, Wally the hero, Sky Lance' }, { id: 'grim', title: 'Grimlock Legion', desc: 'Stealth tanks, Inferno tanks, Doom Missile' }];
@@ -376,6 +376,7 @@ function setupMenus() {
   toggle('Tech buildings', () => sk.tech !== false, v => { sk.tech = v; });
   toggle('Fog of war', () => sk.fog !== false, v => { sk.fog = v; });
   toggle('Starting armies', () => sk.army !== false, v => { sk.army = v; });
+  toggle('🗿 Victory Monuments', () => sk.wonders !== false, v => { sk.wonders = v; });
   // starting money cycles through a few amounts
   const money = [2500, 4000, 7500, 15000];
   const mb = document.createElement('button'); mb.className = 'btn on';
@@ -422,6 +423,11 @@ function setupMenus() {
   const sb = { mode: 'sandbox', map: 'valley', faction: 'wally', difficulty: 'normal', daynight: true, weather: null };
   optionCards($('mapListSb'), mapItems(), sb.map, id => { sb.map = id; });
   $('bStartSb').onclick = () => startWith(sb);
+  // watch an AI battle
+  const wt = { mode: 'watch', map: 'valley', faction: 'wally', difficulty: 'normal', daynight: true, weather: null };
+  optionCards($('mapListW'), mapItems(), wt.map, id => { wt.map = id; });
+  for (const k in DIFFICULTY) { const b = document.createElement('button'); b.className = 'btn' + (k === wt.difficulty ? ' on' : ''); b.textContent = DIFFICULTY[k].label; b.onclick = () => { wt.difficulty = k; [...$('diffRowW').children].forEach(x => x.classList.toggle('on', x === b)); }; $('diffRowW').appendChild(b); }
+  $('bStartW').onclick = () => startWith(wt);
   // campaign
   const prog = campaignProgress();
   const progG = campaignProgress('grim');
@@ -576,6 +582,14 @@ function start() {
   G.started = true; G.paused = false;
   if (run.mode === 'skirmish') ais = [new AI(G.enemy)];
   if (run.mode === 'sandbox') setupSandbox();
+  if (run.mode === 'watch') {
+    // both sides are computer players; you just watch
+    ais = [new AI(G.enemy)]; G.extraAI = [new AI(G.player)];
+    G.spectating = true; G.revealed = true; revealAll(true);
+    document.body.classList.add('spectate'); UI.checkSize?.();
+    const ob = $('objectives'); ob.style.display = 'block';
+    ob.innerHTML = `<div class="label" style="margin:0 0 3px">📺 Watching</div><div class="ob"><b style="color:${FACTIONS.wally.css}">Wally Squad AI</b> vs <b style="color:${FACTIONS.grim.css}">Grimlock AI</b></div><div class="obHint">Scroll and zoom to follow the action. Speed it up from the pause menu.</div>`;
+  }
   setupFeed();
   setupTaunts();
   if (run.mode === 'survival') { renderObjectives(); UI.message('Survival: build defences fast - the first wave arrives in 75 seconds!'); }
@@ -604,15 +618,16 @@ function togglePause(force) {
   if (!lockstep) G.paused = want; // online games keep running while the menu is open
 }
 
-function endGame(win, text) {
+function endGame(win, text, winner) {
   if (G.over) return;
   G.over = true;
+  if (run.mode === 'watch') G.watchWinner = winner;
   emit('end', win);
   Audio.announce(win ? 'Mission accomplished' : 'Mission failed');
   Audio.sting(win);
   // victory: fireworks over your base and cheering troops
   if (win) {
-    G.won = true;
+    G.won = run.mode !== 'watch';
     const home = G.buildings.find(b => !b.dead && b.faction === G.player && b.type === 'conyard') || G.buildings.find(b => !b.dead && b.faction === G.player);
     const at = G.lastFallen && !G.surrendered ? G.lastFallen : home && { x: home.x, y: home.baseY || 0, z: home.z }; // where the finale camera is looking
     if (at) for (let i = 0; i < 16; i++) setTimeout(() => G.fx?.firework?.(at.x + (Math.random() - 0.5) * 34, at.y || 0, at.z + (Math.random() - 0.5) * 34), 1600 + i * 360);
@@ -624,12 +639,12 @@ function endGame(win, text) {
     if (G.lastFallen.y !== undefined) G.fx?.finale?.(G.lastFallen.x, G.lastFallen.y, G.lastFallen.z);
   }
   if (mission && win && !mission.tutorial) unlockNext(run.mission, run.camp);
-  const award = run.mode === 'title' || G.cheated ? null : awardGame({ win, kills: G.stats.killed, lost: G.stats.lost, built: G.stats.built, time: G.time, difficulty: G.difficulty, mode: mission && mission.tutorial ? 'tutorial' : run.mode, streak: G.bestStreak });
+  const award = run.mode === 'title' || run.mode === 'watch' || G.cheated ? null : awardGame({ win, kills: G.stats.killed, lost: G.stats.lost, built: G.stats.built, time: G.time, difficulty: G.difficulty, mode: mission && mission.tutorial ? 'tutorial' : run.mode, streak: G.bestStreak });
   if (award && award.promoted) setTimeout(() => { Audio.announce(`Promoted to ${award.promoted.name}`); }, 3200);
   let dailyNote = '';
   if (run.daily && win) { const r = dailyRecord(); const best = r && r.date === run.daily ? r.best : Infinity; dailyNote = G.time < best ? `New best: ${fmtTime(G.time)}!` : `${fmtTime(G.time)} (best ${fmtTime(best)})`; if (G.time < best) { try { localStorage.setItem('ws_daily', JSON.stringify({ date: run.daily, best: G.time })); } catch { /* ignore */ } } }
   setTimeout(() => {
-    $('endTitle').textContent = win ? 'VICTORY' : 'DEFEAT';
+    $('endTitle').textContent = run.mode === 'watch' ? `${G.watchWinner === 'grim' ? 'GRIMLOCKS' : 'WALLY SQUAD'} WIN` : win ? 'VICTORY' : 'DEFEAT';
     $('endTitle').style.color = win ? 'var(--accent)' : 'var(--red)';
     $('endSub').textContent = text || (win ? (mission ? `${mission.title}: mission complete.` : `The ${FACTIONS[G.enemy].name} has been crushed!`) : 'Our forces have fallen. Regroup, commander.');
     const t = Math.floor(G.time);
@@ -647,7 +662,15 @@ const hasStructures = f => G.buildings.some(b => !b.dead && b.faction === f && !
 function checkEnd(dt) {
   winT -= dt; if (winT > 0 || G.over) return; winT = 1;
   if (run.mode === 'sandbox') { const P = G.players[G.player]; P.credits = 999999; P.buildMult = 5; return; } // sandbox never ends
+  if (run.mode === 'watch') {
+    const w = hasStructures('wally'), g = hasStructures('grim');
+    if (!w || !g) endGame(true, `The ${FACTIONS[w ? 'wally' : 'grim'].name} AI wins the battle!`, w ? 'wally' : 'grim');
+    return;
+  }
   if (G.surrendered) { endGame(G.surrendered !== G.player, G.surrendered === G.player ? 'You surrendered.' : 'The enemy has surrendered!'); return; }
+  // a Victory Monument that has stood for 5 minutes wins the game
+  const won = G.buildings.find(b => !b.dead && b.def.wonder && (b.wonderT || 0) >= 300);
+  if (won) { endGame(run.mode === 'watch' ? true : won.faction === G.player, `${FACTIONS[won.faction].name}'s Victory Monument stood for 5 minutes!`, won.faction); return; }
   const pAlive = hasStructures(G.player);
   if (mission) { if (!pAlive) mctx.fail('All our buildings have been destroyed. Mission failed.'); return; }
   if (run.mode === 'survival') {

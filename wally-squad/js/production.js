@@ -38,6 +38,7 @@ export function hasReqs(faction, type) {
   const d = defOf(type);
   if (d.fac && d.fac !== faction) return false;
   if (d.superweapon && G.cfg.supers === false) return false;
+  if (d.wonder && (G.cfg.wonders === false || !['skirmish', 'mp'].includes(G.cfg.mode))) return false; // wonders: skirmish & online only
   if (d.research && (P.upgrades[type] || P.queues.research.items.includes(type))) return false;
   if (G.allowed && !d.research && !G.allowed.includes(type)) return false; // campaign tech restrictions
   if (hasMut(G.cfg, 'infantry') && (d.tab === 'vehicle' || d.tab === 'air') && type !== 'harvester' && type !== 'apc') return false;

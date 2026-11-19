@@ -61,6 +61,7 @@ export function M() {
   const win = windowTexture();
   common = {
     metal: std({ color: 0xe2e6ea, map: metal, roughness: 0.32, metalness: 0.85 }),
+    gold: std({ color: 0xe0a92a, map: metal, roughness: 0.28, metalness: 0.95 }),
     darkMetal: std({ color: 0x80858c, map: metal, roughness: 0.48, metalness: 0.7 }),
     gun: std({ color: 0x5a5e64, map: metal, roughness: 0.38, metalness: 0.85 }),
     tread: std({ color: 0x9a9a9a, map: tread, roughness: 0.9, metalness: 0.2 }),

@@ -40,7 +40,7 @@ let got = load();
 const session = { crates: 0, powers: new Set(), structuresLost: 0 };
 
 export function unlock(id) {
-  if (got[id] || !MEDALS[id] || G.cheated) return;
+  if (got[id] || !MEDALS[id] || G.cheated || G.spectating) return;
   got[id] = Date.now();
   try { localStorage.setItem(KEY, JSON.stringify(got)); } catch { /* ignore */ }
   toast(MEDALS[id]);

@@ -68,6 +68,23 @@ export const MAPS = {
     ridge: 50, forest: 0.08,
     theme: 'night', weather: ['clear', 'rain', 'fog', 'storm'], night: true,
   },
+  isles: {
+    name: 'Emerald Isles', desc: 'Tropical jungle islands around turquoise lagoons, joined by sandy causeways. Hovercraft rule the water.',
+    seed: [63, 8, -41, 29],
+    slots: [{ x: -90, z: 90 }, { x: 90, z: -90 }],
+    lanes: [
+      [[-90, 90], [0, 0], [90, -90]],
+      [[-90, 90], [-95, -20], [-20, -95], [90, -90]],
+      [[-90, 90], [20, 95], [95, 20], [90, -90]],
+    ],
+    ore: [
+      { x: -60, z: 104, r: 11 }, { x: -104, z: 52, r: 10 }, { x: 60, z: -104, r: 11 }, { x: 104, z: -52, r: 10 },
+      { x: 0, z: 30, r: 7, rich: 1 }, { x: 0, z: -30, r: 7, rich: 1 }, { x: -66, z: -66, r: 8 }, { x: 66, z: 66, r: 8 },
+    ],
+    lakes: [{ x: -35, z: -35, r: 20 }, { x: 35, z: 35, r: 20 }, { x: -112, z: -112, r: 22 }, { x: 112, z: 112, r: 22 }, { x: 60, z: -20, r: 9 }, { x: -60, z: 20, r: 9 }],
+    ridge: 40, forest: 0.2,
+    theme: 'jungle', weather: ['clear', 'clear', 'rain', 'storm', 'fog'],
+  },
   magma: {
     name: 'Magma Rift', desc: 'A volcanic wasteland split by a river of glowing lava. Three crossings, falling ash.',
     seed: [41, -73, 12, 66],
@@ -90,6 +107,12 @@ export const MAPS = {
 
 // Visual themes
 export const THEMES = {
+  jungle: {
+    grass1: 0x2f6a24, grass2: 0x4f8f2e, dirt: 0x7a5a36, rock: 0x5e6658, sand: 0xe6d49a, mud: 0x3e4a2a, base: 0x8a8070,
+    oreTint: 0x3f7a4a, water: 0x18a6ae,
+    skyTop: 0x3f8fd0, horizon: 0xbfe0e8, skyBottom: 0x4a5a3a, sun: 0xfff2d0, sunI: 3.2, hemiSky: 0xc8f0ff, hemiGround: 0x3a4a22, hemiI: 0.85,
+    trees: { palm: 0.45, leaf: 0.55 }, rockTint: [0.25, 0.1, 0.4],
+  },
   volcanic: {
     grass1: 0x4a413b, grass2: 0x645549, dirt: 0x6e4a33, rock: 0x2a2624, sand: 0x6b5848, mud: 0x8a3212, base: 0x5a524c,
     oreTint: 0x7a4a2a, water: 0xff5a14, lava: true,

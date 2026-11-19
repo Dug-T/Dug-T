@@ -410,6 +410,27 @@ export function makeRepairTruck(faction) {
   });
 }
 
+export function makeJet(faction) {
+  return cached(`jet-${faction}`, () => {
+    const t = mats(faction), m = M();
+    const root = new THREE.Group();
+    const b = new Builder();
+    b.add(new THREE.ConeGeometry(0.42, 4.2, 12), t.team, 0, 0, 0.2, Math.PI / 2, 0, 0);          // fuselage
+    b.sph(m.glass, 0.32, 0, 0.25, 0.9, 0.8, 0.7, 1.8);                                             // canopy
+    const wing = new THREE.BufferGeometry();
+    wing.setAttribute('position', new THREE.BufferAttribute(new Float32Array([0, 0, 1.2, -2.4, 0, -1.4, 2.4, 0, -1.4]), 3)); wing.computeVertexNormals();
+    b.add(wing, t.teamDark, 0, -0.05, 0); b.add(wing.clone().rotateX(Math.PI), t.teamDark, 0, -0.07, 0); // delta wing (both faces)
+    b.box(t.teamDark, 0.06, 0.9, 0.9, 0, 0.45, -1.4, 0.2, 0, 0);                                   // tail fin
+    b.box(t.accent, 0.07, 0.25, 0.4, 0, 0.75, -1.55);
+    for (const s of [-1, 1]) { b.cyl(m.darkMetal, 0.07, 0.07, 0.9, 6, s * 1.3, -0.15, -0.6, Math.PI / 2, 0, 0); b.box(m.lampRed, 0.06, 0.04, 0.06, s * 2.3, 0, -1.35); }
+    b.cyl(m.darkMetal, 0.22, 0.28, 0.4, 10, 0, 0, -1.9, Math.PI / 2, 0, 0);                        // engine nozzle
+    b.sph(new THREE.MeshBasicMaterial({ color: new THREE.Color(4, 1.8, 0.6) }), 0.17, 0, 0, -2.1, 1, 1, 0.6); // afterburner glow
+    root.add(b.build());
+    root.userData.muzzle = new THREE.Vector3(1.3, -0.15, 0); root.userData.muzzle2 = new THREE.Vector3(-1.3, -0.15, 0);
+    return root;
+  });
+}
+
 export function makeHauler(faction) {
   return cached(`hauler-${faction}`, () => {
     const t = mats(faction), m = M();
@@ -926,6 +947,7 @@ export function makeUnitModel(type, faction) {
     case 'hover': return makeHovercraft(faction);
     case 'drone': return makeDrone(faction);
     case 'hauler': return makeHauler(faction);
+    case 'jet': return makeJet(faction);
     case 'stealth': return makeStealth(faction);
     case 'inferno': return makeInferno(faction);
     case 'wallyman': return makeWallyMan(faction);
@@ -954,8 +976,8 @@ export function makeBuildingModel(type, faction) {
     const t = mats(faction), m = M();
     const root = new THREE.Group();
     const b = new Builder();
-    const W = { bunker: 2, conyard: 4, power: 3, refinery: 4, barracks: 3, factory: 4, radar: 3, tech: 3, helipad: 3, turret: 1, sam: 2, plasma: 1, uplink: 3, silo: 3, wall: 1, gate: 2, mine: 1, derrick: 2, hospital: 2, depot: 2 };
-    const D = { bunker: 2, conyard: 4, power: 3, refinery: 3, barracks: 3, factory: 4, radar: 3, tech: 3, helipad: 3, turret: 1, sam: 2, plasma: 1, uplink: 3, silo: 3, wall: 1, gate: 1, mine: 1, derrick: 2, hospital: 2, depot: 2 };
+    const W = { wonder: 3, bunker: 2, conyard: 4, power: 3, refinery: 4, barracks: 3, factory: 4, radar: 3, tech: 3, helipad: 3, turret: 1, sam: 2, plasma: 1, uplink: 3, silo: 3, wall: 1, gate: 2, mine: 1, derrick: 2, hospital: 2, depot: 2 };
+    const D = { wonder: 3, bunker: 2, conyard: 4, power: 3, refinery: 3, barracks: 3, factory: 4, radar: 3, tech: 3, helipad: 3, turret: 1, sam: 2, plasma: 1, uplink: 3, silo: 3, wall: 1, gate: 1, mine: 1, derrick: 2, hospital: 2, depot: 2 };
     const w = W[type] * CELL - 0.3, d = D[type] * CELL - 0.3;
     const parts = {};
     switch (type) {
@@ -1230,6 +1252,31 @@ export function makeBuildingModel(type, faction) {
         pb.cyl(m.gun, 0.03, 0.03, 1.4, 5, 1.4, -0.9, 0);
         const pump = pb.build(); pump.position.set(0, 2.1, 0.6); pump.name = 'pump';
         parts.pump = pump;
+        break;
+      }
+      case 'wonder': {
+        // stepped marble plinth with gold trim, and a giant statue: Wally Man for the Wally Squad, a skull-headed Grimlock idol for the Legion
+        foundation(b, w, d, 0.3);
+        b.box(m.concrete, 5.4, 0.6, 5.4, 0, 0.5, 0); b.box(m.concrete, 4.4, 0.6, 4.4, 0, 1.1, 0); b.box(m.concrete, 3.4, 1.4, 3.4, 0, 2.1, 0);
+        b.box(t.accent, 3.5, 0.15, 3.5, 0, 2.85, 0); b.box(t.team, 3.45, 0.5, 0.05, 0, 2.1, 1.71);
+        for (const [x, z] of [[-2.4, -2.4], [2.4, -2.4], [-2.4, 2.4], [2.4, 2.4]]) { b.cyl(m.concrete, 0.18, 0.2, 2.6, 10, x, 1.6, z); b.sph(t.accent, 0.22, x, 3.0, z); }
+        lamps(b, [[-2.4, 3.3, -2.4], [2.4, 3.3, -2.4], [-2.4, 3.3, 2.4], [2.4, 3.3, 2.4]], m.lampWhite);
+        const gold = M().gold || t.accent;
+        if (faction === 'wally') {
+          // Wally Man: legs apart, cape, gatling raised
+          b.box(gold, 0.45, 1.5, 0.5, -0.35, 3.7, 0); b.box(gold, 0.45, 1.5, 0.5, 0.35, 3.7, 0);
+          b.box(t.team, 1.3, 1.5, 0.8, 0, 5.15, 0); b.sph(gold, 0.42, 0, 6.3, 0); b.box(m.black, 0.5, 0.12, 0.05, 0, 6.35, 0.4);
+          b.box(t.team, 1.2, 1.9, 0.1, 0, 5.0, -0.5, 0.15, 0, 0);                               // cape
+          b.box(gold, 0.3, 1.2, 0.3, -0.85, 5.6, 0, 0, 0, 0.6); b.cyl(m.gun, 0.12, 0.12, 1.4, 8, -1.3, 6.4, 0.2, 0.4, 0, 0.6); // raised gatling arm
+          b.box(gold, 0.3, 1.1, 0.3, 0.8, 5.1, 0.2, -0.3, 0, -0.3);
+        } else {
+          // Grimlock idol: horned skull on a spiked pillar
+          b.cyl(m.darkMetal, 0.6, 0.9, 2.6, 8, 0, 4.2, 0);
+          for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2; b.add(new THREE.ConeGeometry(0.15, 0.8, 6), gold, Math.cos(a) * 0.8, 4.0, Math.sin(a) * 0.8, 0, 0, Math.cos(a) > 0 ? -1.2 : 1.2); }
+          b.sph(m.concrete, 1.0, 0, 6.2, 0, 1, 1.1, 1); b.box(m.black, 0.32, 0.3, 0.1, -0.35, 6.3, 0.9); b.box(m.black, 0.32, 0.3, 0.1, 0.35, 6.3, 0.9);
+          b.box(m.lampRed, 0.22, 0.15, 0.06, -0.35, 6.3, 0.95); b.box(m.lampRed, 0.22, 0.15, 0.06, 0.35, 6.3, 0.95);
+          for (const s of [-1, 1]) b.add(new THREE.ConeGeometry(0.22, 1.6, 8), gold, s * 1.1, 7.0, 0, 0, 0, -s * 0.7);
+        }
         break;
       }
       case 'bunker': {
