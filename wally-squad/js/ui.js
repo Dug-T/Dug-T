@@ -478,7 +478,50 @@ function flashMarker(x, z, color) {
   m.position.set(x, heightAt(x, z) + 0.3, z); m.renderOrder = 7;
   G.three.scene.add(m); markers.push({ m, t: 0 });
 }
+// ---- find the enemy base: jump to enemy buildings you have seen, or (if none yet) point at where the
+// enemy is with a pulsing red beacon. The fog stays: it shows where to go, not what is there.
+let findIdx = 0;
+const beacons = [];
+export function findEnemyBase() {
+  if (!G.started || !G.players[G.enemy]) return;
+  const enemy = G.buildings.filter(b => !b.dead && b.faction === G.enemy && !b.def.isMine && !b.def.isWall);
+  if (!enemy.length) { message(G.cfg.mode === 'survival' ? 'No enemy base in Survival - they come in waves!' : 'No enemy buildings left!'); return; }
+  const home = G.buildings.find(b => !b.dead && b.faction === G.player && b.type === 'conyard') || G.buildings.find(b => !b.dead && b.faction === G.player) || { x: 0, z: 0 };
+  const dist = b => Math.hypot(b.x - home.x, b.z - home.z);
+  const seen = enemy.filter(b => G.revealed || isExploredAt(b.x, b.z))
+    .sort((a, b) => (b.type === 'conyard') - (a.type === 'conyard') || dist(a) - dist(b));
+  if (seen.length) {
+    const b = seen[findIdx++ % seen.length];
+    centerOn(b.x, b.z); flashMarker(b.x, b.z, 0xff4a3d);
+    message(`🎯 Enemy ${b.def.name}${seen.length > 1 ? ` (${(findIdx - 1) % seen.length + 1} of ${seen.length} found)` : ''}`);
+  } else {
+    // not discovered yet: aim at the nearest enemy structure, slightly fuzzed so it is a hint, not a map hack
+    const b = enemy.slice().sort((a, c) => (c.type === 'conyard') - (a.type === 'conyard') || dist(a) - dist(c))[0];
+    const x = b.x + (Math.random() - 0.5) * 12, z = b.z + (Math.random() - 0.5) * 12;
+    centerOn(x, z); G.camera.targetDist = Math.max(G.camera.targetDist || 60, 70);
+    placeBeacon(x, z);
+    message('🎯 Intel: the enemy base is around the red beacon. Send units to uncover it!');
+  }
+  G.alertAt = { x: G.camera.x, z: G.camera.z, t: G.time }; // minimap ping
+  Audio.play('beep');
+}
+function placeBeacon(x, z) {
+  const g = new THREE.Group();
+  const y = heightAt(x, z);
+  const col = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.2, 40, 16, 1, true), new THREE.MeshBasicMaterial({ color: new THREE.Color(2.5, 0.4, 0.3), transparent: true, opacity: 0.3, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
+  col.position.y = 20; g.add(col);
+  const ring = new THREE.Mesh(new THREE.RingGeometry(5, 6, 40).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: new THREE.Color(3, 0.5, 0.4), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
+  ring.position.y = 0.4; g.add(ring);
+  g.position.set(x, y, z); g.renderOrder = 8;
+  G.three.scene.add(g); beacons.push({ g, ring, col, t: 0 });
+}
 export function updateMarkers(dt) {
+  for (let i = beacons.length - 1; i >= 0; i--) {
+    const b = beacons[i]; b.t += dt;
+    const k = 1 + 0.15 * Math.sin(b.t * 6); b.ring.scale.set(k, 1, k);
+    const fade = Math.min(1, (12 - b.t) / 2); b.ring.material.opacity = fade; b.col.material.opacity = 0.3 * fade;
+    if (b.t > 12) { G.three.scene.remove(b.g); beacons.splice(i, 1); }
+  }
   for (let i = markers.length - 1; i >= 0; i--) {
     const k = markers[i]; k.t += dt;
     const s = 1 + k.t * 3; k.m.scale.set(s, 1, s); k.m.material.opacity = 1 - k.t / 0.6;
@@ -603,6 +646,7 @@ function bindInput() {
     if (k === 'KeyG') { const w = myUnits().filter(u => u.type === 'wallyman' || u.type === 'warlord'); if (w.length) { issue({ t: 'ability', ids: w.map(u => u.id) }); Voices.say(w[0].type, 'attack', true); } return; }
     if (k === 'KeyU') { const a = G.selection.filter(e => alive(e) && e.faction === G.player && (e.def.transport || e.def.garrison) && (e.passengers || []).length); if (a.length) { issue({ t: 'unload', ids: a.map(u => u.id) }); Audio.play('ack'); } return; }
     if (k === 'Period') { selectNextIdle(); return; }
+    if (k === 'KeyN') { findEnemyBase(); return; }
     if (k === 'KeyP') { if (myUnits().length) { attackMoveArmed = 'patrol'; setCursor(); } return; }
     if (k === 'KeyH') { const b = G.buildings.find(b => b.faction === G.player && b.type === 'conyard') || G.buildings.find(b => b.faction === G.player); if (b) centerOn(b.x, b.z); return; }
     if (k === 'Space') { e.preventDefault(); if (G.alertAt) centerOn(G.alertAt.x, G.alertAt.z); return; }
@@ -834,6 +878,8 @@ function bindButtons() {
   $('bHome').onclick = () => { const b = G.buildings.find(b => b.faction === G.player && b.type === 'conyard') || G.buildings.find(b => b.faction === G.player); if (b) centerOn(b.x, b.z); };
   $('tAll').onclick = selectArmy;
   $('tStop').onclick = () => issue({ t: 'stop', ids: myUnits().map(u => u.id) });
+  $('tFind').onclick = () => findEnemyBase();
+  $('bFind').onclick = () => findEnemyBase();
   $('tAM').onclick = () => { attackMoveArmed = !attackMoveArmed; $('tAM').classList.toggle('on', attackMoveArmed); };
   $('tBox').onclick = () => { touchBoxMode = !touchBoxMode; $('tBox').classList.toggle('on', touchBoxMode); };
 }

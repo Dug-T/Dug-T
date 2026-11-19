@@ -87,6 +87,9 @@ Both factions share the basic army: riflemen, rocket troopers, Scorchers, engine
 - **🔁 Repeat production:** a toggle above the Infantry, Vehicles and Air build menus. Each finished unit is queued again, so a factory keeps pumping out your army.
 - **🧙 Grimlock Shaman** (Grimlocks only): a hooded healer with a glowing skull staff who heals nearby infantry, like the Field Medic.
 - **☄ Meteor showers:** the Natural Disasters mutator now also rains burning meteors on the battlefield every couple of minutes, with a warning first.
+- **🎯 Find enemy base** (🎯 in the top bar, "Find enemy" on touch screens, or `N`):
+  - **Before the enemy is found:** the camera flies to where their base is, and a pulsing red beacon and a minimap ping mark the spot for 12 seconds. The fog stays, so it shows where to go, not what's there.
+  - **Once their buildings have been seen:** each press jumps to the next one, HQ first.
 - **📺 Watch AI Battle** (main menu): pick a map and AI skill, then watch the Wally Squad AI fight the Grimlock AI. The whole map is revealed and the build sidebar is hidden. Scroll and zoom to follow the action, and speed it up from the pause menu.
 - **🗿 Victory Monument** (Construction Yard, needs a Tech Lab; Skirmish and Online): a $5,000 wonder. If it stands for **5 minutes** after it's finished, its owner wins.
   - Each side's monument is different: a golden Wally Man statue, or a horned Grimlock skull idol.
@@ -188,6 +191,7 @@ For testing, add `?loopnet` to the URL to connect two tabs on the same computer 
 | Superweapon | **LAUNCH** in the sidebar, then click a target |
 | Load / unload APC | Right-click the APC with infantry selected / `U` |
 | Next idle unit | `.` or the 💤 button |
+| Find enemy base | `N` or the 🎯 button |
 | Patrol | `P`, then click the far end of the route |
 | Hero ability (Frenzy / War Cry) | `G` |
 
