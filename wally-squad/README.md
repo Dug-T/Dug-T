@@ -122,10 +122,14 @@ Both factions share the basic army: riflemen, rocket troopers, Scorchers, engine
 - **↔ Patrol** (`P` or the selection-panel button, then pick a point): units walk back and forth between where they are and that point, attacking anything they meet.
 - **Building info** closes by itself after 10 seconds. Touching the panel (or hovering over it with a mouse) restarts the countdown.
 - **New medals:** Graduate, Unstoppable, Fortified, Grak Smash, Trial by Fire, Mad Science, Daily Duty and Into the Fire.
+- **More medals:** Home Sweet Home (take a civilian house) and Shocking! (one Tesla bolt strikes three enemies).
 - **🌋 Magma Rift** (new map): a volcanic wasteland split by a river of glowing, bubbling lava with three crossings, charred dead trees and ashfall weather.
 - **🔧 Repair Truck** (War Factory): drives to damaged vehicles nearby and repairs them in the field.
 - **🛸 Recon Drone** (Helipad): a cheap, fast, unarmed scout with a huge sight range. It reveals cloaked Shade tanks within 14 m.
 - **💤 Idle units:** the top bar shows how many fighting units are idle. Click it (or press `.`) to jump to the next one.
+- **⚡ Tesla Coil** (Wally Squad only, Defence tab, needs a Radar): hurls a bolt of lightning that arcs on to two more enemies nearby. Needs power.
+- **🔥 Flame Tower** (Grimlocks only, Defence tab, needs a Barracks and Refinery): a spiked tower with a swivelling nozzle that sprays a wide gout of fire. Short range, roasts infantry and buildings.
+- **🏠 Civilian houses**: every lane has a couple of neutral cottages. Send up to 3 infantry inside (right-click or tap the house): they shoot out of the windows with extra range, and the house flies your flag until they leave or it's knocked down. The AI grabs them too. Houses don't count as structures for winning or losing.
 - **🏰 Battle Bunker** (Defence tab, needs a Barracks): a sandbagged pillbox for up to 4 infantry. Select infantry and right-click (or tap) it to garrison.
   - Troops inside shoot out with +25% range and can't be hurt until the bunker falls; then they bail out wounded.
   - Evacuate (`U`) sends them back out. The computer builds and garrisons bunkers too.

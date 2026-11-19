@@ -64,6 +64,8 @@ export const WEAPONS = {
   warCannon: { warhead: 'rocket', damage: 34, range: 12, rof: 0.75, proj: 'rocket', air: true, ground: true, splash: 1.6, sound: 'rocket' },
   hoverRkt: { warhead: 'rocket', damage: 30, range: 11.5, rof: 1.3, proj: 'rocket', air: true, ground: true, sound: 'rocket', twin: true },
   jetMsl:   { warhead: 'rocket', damage: 62, range: 14, rof: 2.2, proj: 'missile', air: true, ground: true, sound: 'rocket', twin: true },
+  tesla:    { warhead: 'beam', damage: 115, range: 15, rof: 2.1, proj: 'tesla', air: false, ground: true, sound: 'zap', needsPower: true },
+  flameTower: { warhead: 'flame', damage: 36, range: 10, rof: 0.3, proj: 'flame', air: false, ground: true, splash: 2.4, sound: 'flame', big: true },
   bite:     { warhead: 'bullet', damage: 24, range: 1.7, rof: 0.7, proj: 'melee', air: false, ground: true, sound: 'bite' },
   shadeRkt: { warhead: 'rocket', damage: 50, range: 13, rof: 2.2, proj: 'rocket', air: false, ground: true, sound: 'rocket', twin: true },
 };
@@ -97,6 +99,9 @@ export const BUILDINGS = {
   xbarrel:  { name: 'Fuel Barrels', cost: 0, time: 0, hp: 70, w: 1, h: 1, power: 0, sight: 0, req: [], explosive: true, desc: 'Explosive! Shoot them to blow up anything nearby.' },
   bunker:   { name: 'Battle Bunker', cost: 500, time: 9, hp: 1600, w: 2, h: 2, power: 0, sight: 15, req: ['barracks'], tab: 'defense', garrison: 4, desc: 'Garrison up to 4 infantry: they shoot out with +25% range and can\'t be hurt until the bunker falls. Right-click it with infantry selected.' },
   sam:      { name: 'SAM Site', cost: 750, time: 12, hp: 650, w: 2, h: 2, power: -20, sight: 22, req: ['radar'], tab: 'defense', weapon: 'sam', desc: 'Anti-aircraft missile launcher.' },
+  tesla:    { name: 'Tesla Coil', fac: 'wally', cost: 1000, time: 14, hp: 800, w: 1, h: 1, power: -50, sight: 17, req: ['radar'], tab: 'defense', weapon: 'tesla', desc: 'Wally Squad only. Hurls a bolt of lightning that arcs on to two more nearby enemies. Needs power.' },
+  flametower: { name: 'Flame Tower', fac: 'grim', cost: 800, time: 12, hp: 950, w: 1, h: 1, power: -25, sight: 13, req: ['barracks', 'refinery'], tab: 'defense', weapon: 'flameTower', desc: 'Grimlock only. Sprays a wide gout of fire that roasts infantry and buildings. Short range.' },
+  house:    { name: 'Civilian House', cost: 0, time: 0, hp: 1100, w: 2, h: 2, power: 0, sight: 10, req: [], tab: 'none', garrison: 3, civil: true, desc: 'Neutral. Send up to 3 infantry inside: they shoot out of the windows, and the house is yours while they stay.' },
   plasma:   { name: 'Plasma Tower', cost: 1500, time: 18, hp: 950, w: 1, h: 1, power: -75, sight: 21, req: ['tech'], tab: 'defense', weapon: 'plasma', desc: 'Devastating energy beam. Needs power.' },
 };
 

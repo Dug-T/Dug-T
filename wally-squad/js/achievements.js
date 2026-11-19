@@ -31,6 +31,8 @@ export const MEDALS = {
   daily:        { icon: '📅', name: 'Daily Duty', desc: 'Win a Daily Challenge.' },
   heroic:       { icon: '🌟', name: 'Heroic', desc: 'Promote a unit to Heroic rank (10 kills).' },
   grimcamp:     { icon: '👹', name: 'Legion Triumphant', desc: 'Finish the Grimlock campaign as Warlord Grak.' },
+  squatter:     { icon: '🏠', name: 'Home Sweet Home', desc: 'Move troops into a civilian house.' },
+  shock:        { icon: '🌩', name: 'Shocking!', desc: 'One Tesla Coil bolt strikes three enemies.' },
   epilogue:     { icon: '🗡', name: 'Into the Fire', desc: 'Defeat Warlord Grak in the final campaign mission.' },
 };
 
@@ -68,6 +70,8 @@ export function initAchievements(run) {
       if (killer.type === 'warlord' && killer.kills >= 10) unlock('grak');
     }
   });
+  on('house', (b, f) => { if (f === G.player) unlock('squatter'); });
+  on('chain3', f => { if (f === G.player) unlock('shock'); });
   on('heroic', u => { if (u.faction === G.player) unlock('heroic'); });
   on('crate', f => { if (f === G.player && ++session.crates >= 5) unlock('crates'); });
   on('capture', (b, f) => { if (f === G.player) unlock('capture'); });
@@ -94,7 +98,7 @@ export function checkAchievements(dt) {
   t -= dt; if (t > 0) return; t = 1;
   if (G.stats.built >= 20) unlock('builder');
   if ((G.bestStreak || 0) >= 8) unlock('streak');
-  if (G.buildings.some(b => !b.dead && b.faction === G.player && b.def.garrison && (b.passengers || []).length >= b.def.garrison)) unlock('garrison');
+  if (G.buildings.some(b => !b.dead && b.faction === G.player && b.type === 'bunker' && (b.passengers || []).length >= b.def.garrison)) unlock('garrison');
   if (G.stats.harvested >= 20000) unlock('tycoon');
   if (G.units.some(u => !u.dead && u.faction === G.player && u.def.custom)) unlock('designer');
   if (G.units.some(u => !u.dead && u.faction === G.player && u.rank >= 2 && !u.hero)) unlock('elite');

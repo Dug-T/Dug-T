@@ -64,6 +64,7 @@ export function ejectPassengers(host, hurt = 0, killer = null) {
     u.heading = a; u.mesh.visible = true; u.order = null; u.path = null; u.target = null;
   });
   if (hurt) for (const u of list) damage(u, u.maxHp * hurt, killer);
+  if (host.def.civil && host.hp > 0 && host.faction !== 'neutral') host.occupy('neutral'); // empty houses go back to the civilians
   return list.length;
 }
 export const capacityOf = e => (e && e.def && (e.def.transport || e.def.garrison)) || 0;
@@ -166,7 +167,7 @@ export class Unit {
   }
   attack(target) {
     if (!alive(target)) return;
-    if (this.type === 'engineer' && !target.def.explosive) { this.order = { type: 'capture', target }; this.requestPath(target.x, target.z, target.kind === 'building' ? target.id : 0); return; }
+    if (this.type === 'engineer' && !target.def.explosive && !target.def.civil) { this.order = { type: 'capture', target }; this.requestPath(target.x, target.z, target.kind === 'building' ? target.id : 0); return; }
     if (this.type === 'wally' && target.kind === 'building') { this.order = { type: 'c4', target }; this.requestPath(target.x, target.z, target.id); return; }
     if (!this.weapon) { this.moveTo(target.x, target.z); return; }
     this.order = { type: 'attack', target };
@@ -198,9 +199,10 @@ export class Unit {
   }
   boardLogic() {
     const apc = this.order.target;
-    if (!alive(apc) || apc.faction !== this.faction || (apc.passengers || []).length >= capacityOf(apc)) { this.order = null; this.path = null; return; }
+    if (!alive(apc) || (apc.faction !== this.faction && !(apc.def.civil && apc.faction === 'neutral')) || (apc.passengers || []).length >= capacityOf(apc)) { this.order = null; this.path = null; return; }
     if (apc.kind === 'building' ? distTo(apc, this.x, this.z) < 1.8 : Math.hypot(apc.x - this.x, apc.z - this.z) < 2.8) {
       apc.passengers = apc.passengers || [];
+      if (apc.def.civil && apc.faction !== this.faction) apc.occupy(this.faction);
       apc.passengers.push(this);
       this.boarded = apc; this.order = null; this.path = null; this.target = null;
       this.setSelected(false); this.mesh.visible = false;
@@ -927,6 +929,18 @@ export class Building {
   }
   get powered() { const P = G.players[this.faction]; return P.powerProd >= P.powerUse; }
 
+  // a civilian house changes hands when troops move in or out
+  occupy(faction) {
+    if (this.faction === faction) return;
+    const old = this.faction;
+    this.faction = faction;
+    this.makeMesh();
+    if (faction !== 'neutral') emit('house', this, faction);
+    if (faction === G.player) G.ui?.message('🏠 Your troops have taken a civilian house');
+    else if (old === G.player) G.ui?.message('🏠 Your troops have left the house');
+    if (this.selected && faction !== G.player && faction !== 'neutral') { G.selection = G.selection.filter(s => s !== this); this.setSelected(false); }
+  }
+
   capture(faction) {
     const old = this.faction;
     this.faction = faction;
@@ -965,7 +979,7 @@ export class Building {
     }
     if (this.crane) this.crane.rotation.y = Math.sin(t * 0.3 + this.id) * 1.6;
     if (this.dish) this.dish.rotation.y += dt * (this.powered ? 0.8 : 0.05);
-    if (this.core) { this.core.rotation.y += dt * 1.5; this.core.rotation.x = Math.sin(t) * 0.3; this.core.position.y = (this.type === 'plasma' ? 4.7 : 3.4) + Math.sin(t * 2) * 0.1; }
+    if (this.core) { this.core.rotation.y += dt * 1.5; this.core.rotation.x = Math.sin(t) * 0.3; this.core.position.y = (this.type === 'plasma' ? 4.7 : this.type === 'tesla' ? 4.25 : 3.4) + Math.sin(t * 2) * 0.1; }
     if (this.door) {
       const open = this.doorOpen > 0 ? 1 : 0; this.doorOpen = Math.max(0, (this.doorOpen || 0) - dt);
       this.door.position.y += ((open ? 3.6 : 1.4) - this.door.position.y) * Math.min(1, dt * 4);
@@ -1212,6 +1226,7 @@ function getProj(kind) {
 function freeProj(kind, m) { G.three.scene.remove(m); pools[kind].push(m); }
 
 const _mz = new THREE.Vector3();
+const chainBuf = [];
 export function fireWeapon(src, w, target, muzzleLocal, frame) {
   src.lastFire = G.time;
   if (src.cloaked) { src.cloaked = false; src.cloakT = 0.3; }
@@ -1224,6 +1239,28 @@ export function fireWeapon(src, w, target, muzzleLocal, frame) {
   if (vis) G.sfx?.play(w.sound, mz.x, mz.z);
   const kind = w.proj;
   if (kind === 'melee') { hit(src, w, target, tp); if (vis) FX.smallHit(tp.x, tp.y, tp.z, 'bullet'); return; } // bites and punches
+  if (kind === 'tesla') {
+    // lightning strikes the target, then arcs on to up to two more enemies close by
+    const pts = [[mz.x, mz.y, mz.z], [tp.x, tp.y, tp.z]];
+    hit(src, w, target, tp);
+    const struck = [target]; let prev = target;
+    for (let j = 0; j < 2; j++) {
+      let best = null, bd = 6;
+      for (const u of unitsNear(prev.x, prev.z, 6, chainBuf)) {
+        if (u.dead || u.air || u.boarded || u.faction === src.faction || u.faction === 'neutral' || struck.includes(u)) continue;
+        const d = Math.hypot(u.x - prev.x, u.z - prev.z);
+        if (d < bd) { bd = d; best = u; }
+      }
+      if (!best) break;
+      struck.push(best);
+      const p = aimPoint(best); pts.push([p.x, p.y, p.z]);
+      damage(best, w.damage * (j ? 0.4 : 0.6) * (WARHEADS[w.warhead][best.def.armor] ?? 1), src);
+      prev = best;
+    }
+    if (vis) FX.lightning(pts);
+    if (struck.length >= 3) emit('chain3', src.faction);
+    return;
+  }
   if (kind === 'beam') {
     FX.beam(mz.x, mz.y, mz.z, tp.x, tp.y, tp.z);
     FX.smallHit(tp.x, tp.y, tp.z, 'plasma');
@@ -1233,7 +1270,8 @@ export function fireWeapon(src, w, target, muzzleLocal, frame) {
   if (kind === 'flame') {
     // stream of fire: particles + damage over time
     const dy = (tp.y - mz.y) / dl;
-    for (let i = 0; i < 3; i++) FX.flame(mz.x, mz.y, mz.z, dx / dl, dy, dz / dl);
+    const reach = Math.min(1.7, Math.max(1, dl / 6.5));
+    for (let i = 0; i < 3; i++) FX.flame(mz.x, mz.y, mz.z, dx / dl, dy, dz / dl, reach);
     later(0.2, () => { if (alive(target)) hit(src, w, target, aimPoint(target)); });
     return;
   }

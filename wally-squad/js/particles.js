@@ -268,9 +268,9 @@ export function trail(x, y, z, big = false) {
 export function shellTrail(x, y, z) {
   add.spawn(x, y, z, 0, 0, 0, 0.12, 0.45, 0.1, [3, 2, 1, 0.8], C.fireEnd);
 }
-export function flame(x, y, z, dx, dy, dz) {
+export function flame(x, y, z, dx, dy, dz, reach = 1) {
   for (let i = 0; i < 3; i++) {
-    const sp = rr(9, 13);
+    const sp = rr(9, 13) * reach;
     add.spawn(x, y, z, dx * sp + rr(-0.8, 0.8), dy * sp + rr(-0.3, 0.8), dz * sp + rr(-0.8, 0.8), rr(0.45, 0.65), 0.3, rr(2.2, 3.2), C.fireHot, C.fireEnd, 1.6, -1.5, rr(-3, 3));
   }
   if (Math.random() < 0.4) smoke.spawn(x + dx * 5, y + 0.8, z + dz * 5, dx * 2, 1.5, dz * 2, 1.4, 1, 3.5, C.smokeDark, C.smokeEnd, 0.8, -0.3, rr(-1, 1));
@@ -375,6 +375,53 @@ export function teleportSwirl(x, y, z) {
   for (let i = 0; i < 30; i++) { const a = i / 30 * 6.28; add.spawn(x + Math.cos(a) * 1.5, y, z + Math.sin(a) * 1.5, -Math.cos(a), rr(2, 5), -Math.sin(a), 0.7, 0.6, 0.1, [1, 2.5, 4, 1], [0.2, 0.5, 1.5, 0], 1, 0); }
 }
 
+// Tesla lightning: a jagged, flickering bolt through a list of points [[x,y,z], ...]
+const bolts = [];
+const BOLT_SEG = 10;
+function makeBolt() {
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(BOLT_SEG * 3 * 3 * 2), 3));
+  const core = new THREE.LineSegments(g, new THREE.LineBasicMaterial({ color: new THREE.Color(3.5, 4.2, 6), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false }));
+  core.frustumCulled = false; core.visible = false; scene.add(core);
+  const b = { core, t: 1, pts: null }; bolts.push(b); return b;
+}
+function shapeBolt(b) {
+  const arr = b.core.geometry.attributes.position.array; let n = 0;
+  for (let s = 0; s < b.pts.length - 1 && s < 3; s++) {
+    const [x0, y0, z0] = b.pts[s], [x1, y1, z1] = b.pts[s + 1];
+    const len = Math.hypot(x1 - x0, y1 - y0, z1 - z0), j = Math.min(1.2, len * 0.09);
+    let px = x0, py = y0, pz = z0;
+    for (let i = 1; i <= BOLT_SEG; i++) {
+      const k = i / BOLT_SEG, e = i === BOLT_SEG ? 0 : j;
+      const nx = x0 + (x1 - x0) * k + rr(-e, e), ny = y0 + (y1 - y0) * k + rr(-e, e), nz = z0 + (z1 - z0) * k + rr(-e, e);
+      arr.set([px, py, pz, nx, ny, nz], n); n += 6; px = nx; py = ny; pz = nz;
+    }
+  }
+  b.core.geometry.setDrawRange(0, n / 3);
+  b.core.geometry.attributes.position.needsUpdate = true;
+}
+export function lightning(pts) {
+  const b = bolts.find(o => o.t >= 0.35) || (bolts.length < 8 ? makeBolt() : bolts[0]);
+  b.pts = pts.map(p => p.slice()); b.t = 0; b.core.visible = true; shapeBolt(b);
+  // a glowing halo along the bolt so it reads as a thick, bright arc
+  for (let s = 0; s < pts.length - 1; s++) {
+    const [x0, y0, z0] = pts[s], [x1, y1, z1] = pts[s + 1], n = Math.ceil(Math.hypot(x1 - x0, z1 - z0) * 1.6);
+    for (let i = 0; i <= n; i++) { const k = i / n; add.spawn(x0 + (x1 - x0) * k + rr(-0.25, 0.25), y0 + (y1 - y0) * k + rr(-0.25, 0.25), z0 + (z1 - z0) * k + rr(-0.25, 0.25), 0, 0, 0, rr(0.15, 0.28), rr(0.5, 0.8), 0.15, [1.6, 2.6, 6, 1], [0.3, 0.6, 2, 0], 0); }
+  }
+  for (const [x, y, z] of pts.slice(1)) for (let i = 0; i < 10; i++) add.spawn(x, y, z, rr(-4, 4), rr(-1, 5), rr(-4, 4), rr(0.2, 0.45), 0.3, 0.05, [2, 3, 6, 1], [0.4, 0.8, 2, 0], 1, 6);
+  const [x0, y0, z0] = pts[0]; flash(x0, y0, z0, 24, 0.2, 0x8fd0ff, 18);
+  const [x1, y1, z1] = pts[1]; flash(x1, y1, z1, 14, 0.2, 0x8fd0ff, 12);
+}
+function updateBolts(dt) {
+  for (const b of bolts) {
+    if (!b.core.visible) continue;
+    b.t += dt;
+    if (b.t >= 0.35) { b.core.visible = false; continue; }
+    if (Math.random() < 0.5) shapeBolt(b);   // flicker
+    b.core.material.opacity = 1 - b.t / 0.35;
+  }
+}
+
 export function beam(x0, y0, z0, x1, y1, z1) {
   const B = beams.find(b => b.t >= b.dur) || beams[0];
   const len = Math.hypot(x1 - x0, y1 - y0, z1 - z0);
@@ -404,6 +451,7 @@ const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _e = new THREE.Eule
 
 export function updateFX(dt) {
   updateTracks(dt);
+  updateBolts(dt);
   add.update(dt); smoke.update(dt);
   for (const L of lights) {
     if (L.l.intensity <= 0) continue;

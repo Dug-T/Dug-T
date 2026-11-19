@@ -1,5 +1,6 @@
 // Computer opponent: builds a base, harvests, trains an army, defends and attacks in waves.
 import { G, srr as rr, srand } from './state.js';
+import { BASES } from './terrain.js';
 import { DIFFICULTY, BUILDINGS, UNITS, CELL, GRID } from './config.js';
 import { enqueue, hasReqs, canPlace, placeBuilding, defOf, placeInstant } from './production.js';
 import { superState, fireSuperweapon, aiSuperTarget } from './superweapons.js';
@@ -8,7 +9,7 @@ import { aiUsePowers } from './powers.js';
 import { alive, distTo } from './entities.js';
 import { cellOf, T, idx } from './terrain.js';
 
-const BUILD_ORDER = ['power', 'refinery', 'barracks', 'power', 'factory', 'turret', 'refinery', 'radar', 'power', 'turret', 'bunker', 'sam', 'power', 'tech', 'helipad', 'power', 'plasma', 'turret', 'power', 'uplink', 'silo', 'sam', 'power', 'plasma', 'factory', 'barracks', 'power'];
+const BUILD_ORDER = ['power', 'refinery', 'barracks', 'power', 'factory', 'turret', 'refinery', 'radar', 'power', 'turret', 'bunker', 'tesla', 'flametower', 'sam', 'power', 'tech', 'helipad', 'power', 'plasma', 'turret', 'power', 'uplink', 'silo', 'sam', 'power', 'plasma', 'factory', 'barracks', 'power'];
 const available = (f, t) => { const d = defOf(t); return !(d.fac && d.fac !== f) && !(G.allowed && !G.allowed.includes(t)); };
 
 export class AI {
@@ -56,6 +57,16 @@ export class AI {
       if (room <= 0) continue;
       const pick = G.units.filter(u => !u.dead && !u.boarded && u.faction === this.f && u.isInf && u.weapon && !u.hero && !u.order && !u.target && !this.attackers.has(u) && distTo(b, u.x, u.z) < 30);
       pick.slice(0, room).forEach(u => u.board(b));
+    }
+    // now and then, send a few idle infantry out to hold the nearest empty civilian house
+    if (srand() < 0.3) {
+      const home = BASES[this.f]; let house = null, hd = 125;
+      for (const b of G.buildings) { if (b.dead || !b.def.civil || b.faction !== 'neutral') continue; const d = Math.hypot(b.x - home.x, b.z - home.z); if (d < hd) { hd = d; house = b; } }
+      const held = G.buildings.filter(b => !b.dead && b.def.civil && b.faction === this.f).length;
+      if (house && held < 2 && !G.units.some(u => !u.dead && u.faction === this.f && u.order && u.order.type === 'board' && u.order.target === house)) {
+        const pick = G.units.filter(u => !u.dead && !u.boarded && u.faction === this.f && u.isInf && u.weapon && !u.hero && !u.order && !u.target && !this.attackers.has(u));
+        if (pick.length >= 4) pick.slice(0, 3).forEach(u => u.board(house));
+      }
     }
   }
 

@@ -26,7 +26,7 @@ import { issue } from './cmd.js';
 import { registerCustomUnits, loadDesigns, buildDesigner } from './customunits.js';
 import { gfx, initGraphics, pixelRatio, autoTune, buildGraphicsPanel, maxAnisotropy, isTouch, shadowInterval } from './graphics.js';
 import { allMaterials } from './materials.js';
-import { updateCrates, animateCrates, placeTechBuildings, placeBarrels, recordHistory, drawHistory } from './features.js';
+import { updateCrates, animateCrates, placeTechBuildings, placeBarrels, placeHouses, recordHistory, drawHistory } from './features.js';
 import { updatePowers } from './powers.js';
 import { updateHazards } from './hazards.js';
 import { initAmbient, updateAmbient } from './ambient.js';
@@ -205,6 +205,7 @@ async function boot() {
   }
   placeTechBuildings();
   placeBarrels();
+  placeHouses();
   revealCircle(BASES[G.player].x, BASES[G.player].z, 42);
   updatePower();
   await step(0.7);
@@ -677,7 +678,7 @@ function endGame(win, text, winner) {
 }
 
 // A side is beaten when it has no buildings left (walls, gates and mines don't count)
-const hasStructures = f => G.buildings.some(b => !b.dead && b.faction === f && !b.def.isMine && !b.def.isWall && !b.def.isGate && !b.def.explosive);
+const hasStructures = f => G.buildings.some(b => !b.dead && b.faction === f && !b.def.isMine && !b.def.isWall && !b.def.isGate && !b.def.explosive && !b.def.civil);
 
 function checkEnd(dt) {
   winT -= dt; if (winT > 0 || G.over) return; winT = 1;
