@@ -594,6 +594,7 @@ function renderObjectives() {
 }
 
 function start() {
+  document.body.classList.add('ingame');
   Audio.initAudio();
   $('title').style.display = 'none';
   if (run.fog === false) G.revealed = true;
