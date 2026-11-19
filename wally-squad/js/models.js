@@ -157,6 +157,11 @@ export function makeInfantry(type, faction) {
       b.cyl(m.concrete, 0.29, 0.29, 0.02, 14, 0, 0.98, 0.49, Math.PI / 2, 0, 0);
       for (const s2 of [-1, 1]) b.cyl(m.wood || m.darkMetal, 0.02, 0.03, 0.42, 5, s2 * 0.2, 1.2, 0.4, 0.9, 0, s2 * 0.3);
     }
+    if (type === 'blink') { // glowing visor and a teleport ring on the backpack
+      const glow = new THREE.MeshStandardMaterial({ color: 0x9fe8ff, emissive: 0x40d8ff, emissiveIntensity: 2.6 });
+      b.box(glow, 0.24, 0.07, 0.05, 0, 1.45, 0.16);
+      b.add(new THREE.TorusGeometry(0.17, 0.035, 6, 16), glow, 0, 1.08, -0.3);
+    }
     if (type === 'grenadier') { // bandolier of grenades
       b.box(m.cloth, 0.08, 0.62, 0.05, 0, 1.02, 0.15, 0, 0, 0.75);
       for (let i = 0; i < 4; i++) b.sph(m.gun, 0.05, -0.15 + i * 0.1, 0.88 + i * 0.11, 0.19);
@@ -174,6 +179,8 @@ export function makeInfantry(type, faction) {
     } else if (type === 'flamer') {
       b.cyl(m.gun, 0.05, 0.06, 0.7, 10, 0.05, 0.98, 0.45, Math.PI / 2, 0, 0);
       b.cyl(m.darkMetal, 0.07, 0.07, 0.1, 10, 0.05, 0.98, 0.8, Math.PI / 2, 0, 0);
+    } else if (type === 'blink') {
+      b.box(m.gun, 0.07, 0.12, 0.8, 0.05, 1.0, 0.5); b.box(new THREE.MeshStandardMaterial({ color: 0x9fe8ff, emissive: 0x40d8ff, emissiveIntensity: 2.4 }), 0.05, 0.05, 0.3, 0.05, 1.08, 0.55); // laser rifle
     } else if (type === 'piper' || type === 'drummer') {
       // hands busy with the music - no gun
     } else if (type === 'grenadier') {
@@ -686,6 +693,30 @@ export function makeShieldGen(faction) {
     b.box(t.accent, 0.5, 0.5, 0.02, 0.77, 1.05, 1.15, 0, Math.PI / 2, 0);
     root.add(b.build());
     root.userData.muzzle = new THREE.Vector3(0, 2.0, -0.7);
+    return root;
+  });
+}
+
+// Tunnel Drill: an armoured mole-machine with a huge spinning drill ('drill') on the nose
+export function makeBurrower(faction) {
+  return cached(`burrower-${faction}`, () => {
+    const t = mats(faction), m = M();
+    const root = new THREE.Group();
+    const b = new Builder();
+    trackUnit(b, -1, 2.8, 0.6, 0.5, 0.35, faction);
+    trackUnit(b, 1, 2.8, 0.6, 0.5, 0.35, faction);
+    b.box(t.team, 1.5, 0.8, 2.2, 0, 0.95, -0.2);
+    b.box(t.teamDark, 1.55, 0.18, 2.25, 0, 1.4, -0.2);
+    b.box(m.darkMetal, 0.7, 0.45, 0.8, 0, 1.6, -0.7);                  // engine
+    for (const s of [-1, 1]) b.cyl(m.darkMetal, 0.08, 0.1, 0.6, 6, s * 0.25, 2.0, -0.85);  // exhausts
+    b.box(m.hazard, 1.56, 0.1, 0.12, 0, 1.15, 0.9);
+    root.add(b.build());
+    const db = new Builder();
+    db.add(new THREE.ConeGeometry(0.62, 1.6, 10).rotateX(Math.PI / 2).translate(0, 0, 0.8), m.metal, 0, 0, 0);
+    for (let i = 0; i < 4; i++) db.add(new THREE.TorusGeometry(0.52 - i * 0.12, 0.05, 5, 12), m.darkMetal, 0, 0, 0.25 + i * 0.35);
+    const drill = db.build(false); drill.position.set(0, 0.95, 0.95); drill.name = 'drill';
+    root.add(drill);
+    root.userData.muzzle = new THREE.Vector3(0, 0.95, 2.4);
     return root;
   });
 }
@@ -1259,6 +1290,7 @@ export function makeUnitModel(type, faction) {
     case 'inferno': return makeInferno(faction);
     case 'wallyman': return makeWallyMan(faction);
     case 'dog': return makeDog(faction);
+    case 'burrower': return makeBurrower(faction);
     case 'catapult': return makeCatapult(faction);
     case 'shieldgen': return makeShieldGen(faction);
     case 'mech': return makeMech(faction);

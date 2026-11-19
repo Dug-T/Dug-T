@@ -166,7 +166,7 @@ export class AI {
     if (P.credits < reserve) return;
     if (this.saving && P.credits < 1600 && this.army.size >= 0 && this.ownCombat() > 6) return;
     if (P.queues.infantry.items.length < 2) {
-      const opts = ['rifle', 'rifle', 'rocket', 'rocket', 'dog', 'spy', 'piper', 'drummer', 'grenadier', 'boomer', 'boomer', 'troll', 'flamer', 'engineer', 'medic', 'shaman', 'wallyman', 'warlord'].filter(t => hasReqs(this.f, t));
+      const opts = ['rifle', 'rifle', 'rocket', 'rocket', 'dog', 'spy', 'piper', 'drummer', 'blink', 'grenadier', 'boomer', 'boomer', 'troll', 'flamer', 'engineer', 'medic', 'shaman', 'wallyman', 'warlord'].filter(t => hasReqs(this.f, t));
       if (hasReqs(this.f, 'wally') && srand() < 0.2) opts.push('wally');
       if (opts.length) {
         let t = opts[Math.floor(srand() * opts.length)];
@@ -176,7 +176,7 @@ export class AI {
     }
     if (P.queues.air && P.queues.air.items.length < 1 && this.t > 360 && srand() < 0.15 && hasReqs(this.f, 'jet')) enqueue(this.f, 'jet');
     if (P.queues.vehicle.items.length < 2) {
-      const opts = ['tank', 'tank', 'buggy', 'arty', 'titan', 'titan', 'stealth', 'stealth', 'inferno', 'inferno', 'repair', 'hover', 'teslatruck', 'mech', 'catapult', 'shieldgen'].filter(t => hasReqs(this.f, t));
+      const opts = ['tank', 'tank', 'buggy', 'arty', 'titan', 'titan', 'stealth', 'stealth', 'inferno', 'inferno', 'repair', 'hover', 'teslatruck', 'mech', 'catapult', 'shieldgen', 'burrower'].filter(t => hasReqs(this.f, t));
       if (opts.length) enqueue(this.f, opts[Math.floor(srand() * opts.length)]);
     }
     if (P.credits > 2200 && !P.queues.research.items.length) {
@@ -189,6 +189,8 @@ export class AI {
 
   layMines() {
     const base = this.base; if (!base) return;
+    // Hero Hunt: the champion stays home, near the Construction Yard
+    for (const v of G.units) if (v.vip && !v.dead && v.faction === this.f && !v.target && Math.hypot(v.x - base.x, v.z - base.z) > 18) v.moveTo(base.x + rr(-6, 6), base.z + rr(-6, 6));
     const e = G.buildings.find(b => !b.dead && b.faction !== this.f && b.faction !== 'neutral');
     if (!e) return;
     const l = Math.hypot(e.x - base.x, e.z - base.z);
@@ -222,7 +224,7 @@ export class AI {
 
   manageAttack() {
     for (const u of [...this.attackers]) if (!alive(u)) this.attackers.delete(u);
-    const idle = G.units.filter(u => !u.dead && !u.boarded && !(u.order && u.order.type === 'board') && u.faction === this.f && u.weapon && u.type !== 'harvester' && !this.attackers.has(u));
+    const idle = G.units.filter(u => !u.dead && !u.boarded && !u.vip && !(u.order && u.order.type === 'board') && u.faction === this.f && u.weapon && u.type !== 'harvester' && !this.attackers.has(u));
     // gather idle army at a rally point in front of the base
     const base = this.base; if (!base) return;
     const enemyB = G.buildings.filter(b => !b.dead && b.faction !== this.f && b.faction !== 'neutral' && !b.def.isMine && !b.def.isWall);

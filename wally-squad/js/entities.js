@@ -135,6 +135,7 @@ function canTarget(w, e) {
   if (!alive(e)) return false;
   if (e.boarded) return false;
   if (e.cloaked) return false;
+  if (e.burrowed) return false; // a Tunnel Drill underground can't be hit
   if (e.kind === 'building' && e.def.isMine) return false;
   const air = e.kind === 'unit' && e.def.air;
   return air ? w.air : w.ground;
@@ -197,6 +198,12 @@ export class Unit {
 
   // ---------------------------------------------------- orders
   moveTo(x, z, opts = {}) {
+    if (this.def.blink && !(this.blinkCD > 0) && !this.boarded && Math.hypot(x - this.x, z - this.z) > 4 && Math.hypot(x - this.x, z - this.z) <= this.def.blink && this.canStand(x, z)) {
+      FX.teleportSwirl(this.x, this.y + 0.5, this.z); // blink! (the swirl is visual; the jump itself is sim state)
+      this.x = x; this.z = z; this.blinkCD = 10; this.path = null;
+      FX.teleportSwirl(x, groundY(x, z) + 0.5, z);
+      if (this.faction === G.player) G.sfx?.play('zap', x, z);
+    }
     if (!opts.keepWaypoints) this.waypoints = null;
     this.order = { type: opts.attackMove ? 'attackMove' : 'move', x, z };
     if (opts.patrol) this.order.patrol = opts.patrol;
@@ -213,6 +220,15 @@ export class Unit {
     this.order = { type: 'attack', target };
     this.target = target;
     this.path = null;
+  }
+  // Hero Hunt champion: a spinning gold crown above his head
+  addCrown() {
+    const g = new THREE.Group();
+    const gold = new THREE.MeshStandardMaterial({ color: 0xffc23a, emissive: 0x6a4a00, metalness: 0.9, roughness: 0.3 });
+    g.add(new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.16, 12, 1, true), gold));
+    for (let i = 0; i < 5; i++) { const c = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.2, 4), gold); const a = i / 5 * Math.PI * 2; c.position.set(Math.cos(a) * 0.28, 0.16, Math.sin(a) * 0.28); g.add(c); }
+    g.position.y = this.type === 'warlord' ? 2.7 : 2.0; g.name = 'crown';
+    this.mesh.add(g); this.crown = g;
   }
   // Wally Man's special ability: Gatling Frenzy
   frenzy() {
@@ -268,6 +284,8 @@ export class Unit {
     if (this.dropH > 0) { paraFall(this, dt); return; } // still floating down under a parachute
     if (this.boarded) { this.x = this.boarded.x; this.z = this.boarded.z; this.y = this.boarded.y; return; } // riding inside an APC
     if (this.order && this.order.type === 'board') { this.boardLogic(); }
+    if (this.blinkCD > 0) this.blinkCD -= dt;
+    if (this.def.burrow) this.burrowed = this.speedNow > 0.4; // underground while travelling, surfaces when it stops to fight
     if (this.def.regen && this.hp < this.maxHp) this.hp = Math.min(this.maxHp, this.hp + this.def.regen * dt); // trolls heal themselves
     if (this.def.selfRepair && this.hp < this.maxHp * 0.5) this.hp = Math.min(this.maxHp * 0.5, this.hp + 6 * dt);
     if (this.rank >= 2 && this.hp < this.maxHp) this.hp = Math.min(this.maxHp, this.hp + (this.rank >= 3 ? 6 : 2) * dt);
@@ -720,6 +738,12 @@ export class Unit {
         this.wLegL.rotation.x = sw; this.wLegR.rotation.x = -sw;
         if (walking) m.position.y += Math.abs(Math.cos(this.walkPhase)) * 0.14;
       }
+      if (this.def.burrow) {
+        this.sink = (this.sink || 0) + ((this.burrowed ? 1 : 0) - (this.sink || 0)) * Math.min(1, dt * 4);
+        m.position.y -= this.sink * 2.2;
+        const drill = this.mesh.getObjectByName('drill'); if (drill) drill.rotation.z += dt * (this.burrowed || this.target ? 18 : 2);
+        if (this.sink > 0.5 && this.mesh.visible && Math.random() < dt * 14) FX.dust(this.x + rr(-0.8, 0.8), this.z + rr(-0.8, 0.8), 1.1);
+      }
       if (this.arm) { // catapult arm whips forward when it throws, then winds back down
         const k = G.time - (this.lastFire ?? -9);
         this.arm.rotation.x = k < 0.2 ? 0.55 - 2.3 * (k / 0.2) : k < 2.5 ? -1.75 + 2.3 * Math.min(1, (k - 0.2) / 2.3) : 0.55;
@@ -729,6 +753,7 @@ export class Unit {
         if (Math.random() < dt * 3) FX.sparkBurst(this.x + rr(-0.4, 0.4), this.y + 2.1, this.z + rr(-0.4, 0.4), 1, this.type === 'piper' ? [3, 3, 1, 1] : [4, 1.2, 0.6, 1]);
         if (this.tuneT <= 0) { this.tuneT = 7 + Math.random() * 6; G.sfx?.play(this.type === 'piper' ? 'pipes' : 'wardrum', this.x, this.z); }
       }
+      if (this.crown) this.crown.rotation.y += dt * 1.5;
       if (this.bubble) {
         this.shieldFlash = Math.max(0, (this.shieldFlash || 0) - dt * 3);
         this.bubble.material.opacity = 0.09 + Math.sin(G.time * 3 + this.id) * 0.03 + this.shieldFlash * 0.25;
@@ -1494,6 +1519,7 @@ export function damage(target, amount, src, kind) {
     amount = target.maxHp * 2;
   }
   if (G.god && target.faction === G.player) return; // GODMODE cheat
+  if (target.burrowed) return;
   if (hasMut(G.cfg, 'glass')) amount *= 1.75;
   // inside a friendly Shield Projector's bubble: 40% less damage
   if (target.kind === 'unit' && G.shields && G.shields.length) for (const s of G.shields) {
