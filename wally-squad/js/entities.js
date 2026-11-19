@@ -1239,6 +1239,16 @@ export function fireWeapon(src, w, target, muzzleLocal, frame) {
   if (vis) G.sfx?.play(w.sound, mz.x, mz.z);
   const kind = w.proj;
   if (kind === 'melee') { hit(src, w, target, tp); if (vis) FX.smallHit(tp.x, tp.y, tp.z, 'bullet'); return; } // bites and punches
+  if (kind === 'kamikaze') {
+    // the Goblin Boomer: one almighty bang, and that's the end of him
+    const x = src.x, z = src.z;
+    FX.explosion(x, groundY(x, z) + 0.8, z, 2.4, { sound: true, force: true });
+    damage(target, w.damage * (WARHEADS[w.warhead][target.kind === 'building' ? 'building' : target.def.armor] ?? 1), src);
+    splash(src, w, x, z, w.splash, src.faction, target);
+    emit('boom', src);
+    src.die(null);
+    return;
+  }
   if (kind === 'tesla') {
     // lightning strikes the target, then arcs on to up to two more enemies close by
     const pts = [[mz.x, mz.y, mz.z], [tp.x, tp.y, tp.z]];
@@ -1283,10 +1293,10 @@ export function fireWeapon(src, w, target, muzzleLocal, frame) {
   const speed = { bullet: 110, sniper: 220, shell: 70, rocket: 30, missile: 40, artillery: 0 }[kind];
   const p = { kind, src, w, target, x: mz.x, y: mz.y, z: mz.z, tx: tp.x, ty: tp.y, tz: tp.z, speed, t: 0, faction: src.faction };
   if (kind === 'artillery') {
-    const scatter = 1.5;
+    const scatter = w.lob ? 0.8 : 1.5;
     p.tx += srr(-scatter, scatter); p.tz += srr(-scatter, scatter); p.ty = groundY(p.tx, p.tz);
-    p.flight = 1.2 + dl / 22; p.x0 = mz.x; p.y0 = mz.y; p.z0 = mz.z;
-    p.arc = 6 + dl * 0.45;
+    p.flight = w.lob ? 0.7 + dl / 24 : 1.2 + dl / 22; p.x0 = mz.x; p.y0 = mz.y; p.z0 = mz.z;
+    p.arc = w.lob ? 2.5 + dl * 0.3 : 6 + dl * 0.45;
   }
   if (kind === 'rocket' || kind === 'missile') { p.wob = srand() * 6; p.vy = 4 + srand() * 3; }
   p.mesh = getProj(kind === 'missile' ? 'rocket' : kind);
@@ -1349,7 +1359,7 @@ function impact(p) {
   if (kind === 'bullet' || kind === 'sniper') FX.smallHit(p.tx, p.ty, p.tz, kind);
   else if (kind === 'shell') FX.explosion(p.tx, p.ty, p.tz, w.damage > 80 ? 0.75 : 0.6, { debris: false, sound: vis, ground: p.ty - groundY(p.tx, p.tz) < 1.5 });
   else if (kind === 'rocket' || kind === 'missile') FX.explosion(p.tx, p.ty, p.tz, 0.55, { debris: false, sound: vis, ground: p.ty - groundY(p.tx, p.tz) < 1.5 });
-  else if (kind === 'artillery') FX.explosion(p.tx, p.ty, p.tz, 1.3, { sound: vis });
+  else if (kind === 'artillery') FX.explosion(p.tx, p.ty, p.tz, w.lob ? 0.8 : 1.3, { sound: vis });
   if (kind === 'artillery') { splash(p.src, w, p.tx, p.tz, w.splash, p.faction); return; }
   if (alive(p.target)) hit(p.src, w, p.target, { x: p.tx, y: p.ty, z: p.tz });
 }

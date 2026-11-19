@@ -66,6 +66,8 @@ export const WEAPONS = {
   jetMsl:   { warhead: 'rocket', damage: 62, range: 14, rof: 2.2, proj: 'missile', air: true, ground: true, sound: 'rocket', twin: true },
   tesla:    { warhead: 'beam', damage: 115, range: 15, rof: 2.1, proj: 'tesla', air: false, ground: true, sound: 'zap', needsPower: true },
   flameTower: { warhead: 'flame', damage: 36, range: 10, rof: 0.3, proj: 'flame', air: false, ground: true, splash: 2.4, sound: 'flame', big: true },
+  grenade:  { warhead: 'artillery', damage: 48, range: 12, minRange: 2.5, rof: 2.3, proj: 'artillery', lob: true, air: false, ground: true, splash: 2.4, sound: 'cannon' },
+  boom:     { warhead: 'artillery', damage: 230, range: 1.9, rof: 1, proj: 'kamikaze', air: false, ground: true, splash: 3.6, sound: 'arty' },
   bite:     { warhead: 'bullet', damage: 24, range: 1.7, rof: 0.7, proj: 'melee', air: false, ground: true, sound: 'bite' },
   shadeRkt: { warhead: 'rocket', damage: 50, range: 13, rof: 2.2, proj: 'rocket', air: false, ground: true, sound: 'rocket', twin: true },
 };
@@ -109,6 +111,8 @@ export const UNITS = {
   shaman:   { name: 'Grimlock Shaman', fac: 'grim', cost: 320, time: 6, hp: 110, armor: 'infantry', speed: 3.4, sight: 12, radius: 0.45, weapon: null, heals: true, tab: 'infantry', req: ['barracks'], desc: 'Grimlock only. Chants over wounded infantry to heal them.' },
   medic:    { name: 'Field Medic', fac: 'wally', cost: 300, time: 6, hp: 90, armor: 'infantry', speed: 3.5, sight: 12, radius: 0.45, weapon: null, heals: true, tab: 'infantry', req: ['barracks'], desc: 'Wally Squad only. Heals nearby infantry.' },
   rifle:    { name: 'Rifle Trooper', cost: 100, time: 4, hp: 100, armor: 'infantry', speed: 3.4, sight: 13, radius: 0.45, weapon: 'rifle', tab: 'infantry', req: ['barracks'], desc: 'Cheap all-round infantry.' },
+  grenadier:{ name: 'Grenadier', fac: 'wally', cost: 250, time: 6, hp: 100, armor: 'infantry', speed: 3.3, sight: 13, radius: 0.45, weapon: 'grenade', tab: 'infantry', req: ['barracks', 'refinery'], desc: 'Wally Squad only. Lobs grenades over walls and into crowds. Great against infantry, bunkers and houses; can\'t hit anything right next to him.' },
+  boomer:   { name: 'Goblin Boomer', fac: 'grim', cost: 200, time: 5, hp: 70, armor: 'infantry', speed: 5.2, sight: 12, radius: 0.45, weapon: 'boom', tab: 'infantry', req: ['barracks', 'refinery'], desc: 'Grimlock only. A cackling goblin with a huge bomb strapped to his back. Sprints at the enemy and blows up, wrecking everything nearby. One use only!' },
   dog:      { name: 'Attack Dog', cost: 150, time: 4, hp: 75, armor: 'infantry', speed: 6.6, sight: 16, radius: 0.45, weapon: 'bite', tab: 'infantry', req: ['barracks'], desc: 'Cheap, fast and fierce. Great scout with a big sight range; savages enemy infantry, but useless against tanks.' },
   rocket:   { name: 'Rocket Trooper', cost: 300, time: 7, hp: 90, armor: 'infantry', speed: 3.0, sight: 14, radius: 0.45, weapon: 'bazooka', tab: 'infantry', req: ['barracks'], desc: 'Anti-tank and anti-air.' },
   flamer:   { name: 'Scorcher', cost: 250, time: 6, hp: 120, armor: 'infantry', speed: 3.2, sight: 11, radius: 0.45, weapon: 'flamer', tab: 'infantry', req: ['barracks', 'refinery'], desc: 'Flamethrower. Burns infantry and buildings.' },

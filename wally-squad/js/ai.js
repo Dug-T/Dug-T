@@ -144,7 +144,7 @@ export class AI {
     if (P.credits < reserve) return;
     if (this.saving && P.credits < 1600 && this.army.size >= 0 && this.ownCombat() > 6) return;
     if (P.queues.infantry.items.length < 2) {
-      const opts = ['rifle', 'rifle', 'rocket', 'rocket', 'dog', 'flamer', 'engineer', 'medic', 'shaman', 'wallyman', 'warlord'].filter(t => hasReqs(this.f, t));
+      const opts = ['rifle', 'rifle', 'rocket', 'rocket', 'dog', 'grenadier', 'boomer', 'boomer', 'flamer', 'engineer', 'medic', 'shaman', 'wallyman', 'warlord'].filter(t => hasReqs(this.f, t));
       if (hasReqs(this.f, 'wally') && srand() < 0.2) opts.push('wally');
       if (opts.length) {
         let t = opts[Math.floor(srand() * opts.length)];
