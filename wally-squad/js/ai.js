@@ -169,7 +169,7 @@ export class AI {
     }
     if (P.queues.air && P.queues.air.items.length < 1 && this.t > 360 && srand() < 0.15 && hasReqs(this.f, 'jet')) enqueue(this.f, 'jet');
     if (P.queues.vehicle.items.length < 2) {
-      const opts = ['tank', 'tank', 'buggy', 'arty', 'titan', 'titan', 'stealth', 'stealth', 'inferno', 'inferno', 'repair', 'hover', 'teslatruck', 'mech'].filter(t => hasReqs(this.f, t));
+      const opts = ['tank', 'tank', 'buggy', 'arty', 'titan', 'titan', 'stealth', 'stealth', 'inferno', 'inferno', 'repair', 'hover', 'teslatruck', 'mech', 'catapult', 'shieldgen'].filter(t => hasReqs(this.f, t));
       if (opts.length) enqueue(this.f, opts[Math.floor(srand() * opts.length)]);
     }
     if (P.credits > 2200 && !P.queues.research.items.length) {

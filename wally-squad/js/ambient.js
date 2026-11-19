@@ -21,7 +21,7 @@ function treeSpot() {
 export function initAmbient(scene, theme) {
   setSkyTheme(theme);
   if (theme && theme.animals) initAnimals(scene, theme.animals);
-  if (theme && theme.leaves) initLeaves(scene);
+  if (theme && theme.leaves) initLeaves(scene, theme.leaves);
   if (theme && !theme.lava && !theme.ice && !theme.trees.cactus) { initFireflies(scene); initButterflies(scene); }
   if (theme && !theme.lava && !theme.ice) initFish(scene);
   if (theme && theme.lava) return; // nothing flies over the lava fields
@@ -283,13 +283,14 @@ function updateAnimals(dt) {
 let leaves = null;
 const LEAF_N = 220, leafState = [];
 const _lm = new THREE.Matrix4(), _lq = new THREE.Quaternion(), _le = new THREE.Euler(), _lp = new THREE.Vector3(), _ls = new THREE.Vector3(1, 1, 1);
-function initLeaves(scene) {
+function initLeaves(scene, kind) {
   const g = new THREE.PlaneGeometry(0.32, 0.22);
   leaves = new THREE.InstancedMesh(g, new THREE.MeshLambertMaterial({ side: THREE.DoubleSide }), LEAF_N);
   leaves.frustumCulled = false;
   const c = new THREE.Color();
   for (let i = 0; i < LEAF_N; i++) {
-    leaves.setColorAt(i, c.setHSL(Math.random() * 0.12, 0.8, 0.42 + Math.random() * 0.15));
+    if (kind === 'petals') leaves.setColorAt(i, c.setHSL(0.9 + Math.random() * 0.08, 0.6 + Math.random() * 0.3, 0.78 + Math.random() * 0.12)); // cherry blossom petals
+    else leaves.setColorAt(i, c.setHSL(Math.random() * 0.12, 0.8, 0.42 + Math.random() * 0.15));
     leafState.push({ x: (Math.random() - 0.5) * 70, y: Math.random() * 22, z: (Math.random() - 0.5) * 70, rx: Math.random() * 6, ry: Math.random() * 6, sp: 0.8 + Math.random() * 0.8, ph: Math.random() * 6.28 });
   }
   scene.add(leaves);

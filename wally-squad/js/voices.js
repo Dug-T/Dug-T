@@ -19,6 +19,8 @@ const DEFAULT_LINES = {
   mech: { select: ['Mech online. All systems green.', 'Wally Mech, standing tall!', 'Big feet, bigger guns.'], move: ['Stomping over.', 'Moving out. Mind your toes.'], attack: ['Twin cannons, fire!', 'Target locked!', 'Stomp them flat!'] },
   troll: { select: ['Hhrrrmm. Troll here.', 'Troll hungry...', 'Who wake troll?'], move: ['Troll go.', 'Stomp stomp.'], attack: ['TROLL SMASH!', 'Crush puny things!', 'RRRAAAGH!'] },
   spy: { select: ['Agent reporting. Nobody saw me.', 'Shaken, not stirred.', 'I was never here.', 'Disguise is ready.'], move: ['Blending in.', 'Moving quietly.', 'Just another face in the crowd.'], attack: ['Time to infiltrate.', 'They will never know.', 'Going in.'] },
+  catapult: { select: ['Big rock ready!', 'Catapult crew here!', 'Load the boulder!'], move: ['Push, push!', 'Roll it out!'], attack: ['FLING IT!', 'Rocks away!', 'Smash their walls!'] },
+  shieldgen: { select: ['Shields up!', 'Shield Projector online.', 'Stay close, stay safe.'], move: ['Moving the bubble.', 'Keep together, everyone!'], attack: ['I am not armed, but I have got your back!', 'Shields holding!'] },
   rifle: { select: ['Rifleman reporting.', 'Ready for action!'], move: ['Moving out.', 'On my way.'], attack: ['Opening fire!', 'Engaging!'] },
   rocket: { select: ['Rockets loaded.', 'Anti-armour ready.'], move: ['Relocating.'], attack: ['Rocket away!', 'Tank spotted!'] },
   flamer: { select: [
@@ -89,7 +91,7 @@ const VOICE_STYLE = {
   warlord: { pitch: 0.4, rate: 0.85 },
   flamer: { pitch: 1.15, rate: 1.08, female: true },
   spy: { pitch: 0.95, rate: 0.95, clear: true },
-  wally: { pitch: 1.4, rate: 1.15 }, wallyman: { pitch: 1.0, rate: 0.92, clear: true, loud: true }, medic: { pitch: 1.3, rate: 1.05 }, engineer: { pitch: 1.2, rate: 1.1 },
+  wally: { pitch: 1.4, rate: 1.15 }, wallyman: { pitch: 1.85, rate: 1.08, clear: true, loud: true }, /* squeaky superhero! */ medic: { pitch: 1.3, rate: 1.05 }, engineer: { pitch: 1.2, rate: 1.1 },
   titan: { pitch: 0.5, rate: 0.85 }, tank: { pitch: 0.7, rate: 0.95 }, harvester: { pitch: 0.8, rate: 0.9 },
   stealth: { pitch: 0.6, rate: 0.8 }, inferno: { pitch: 0.55, rate: 0.9 }, gunship: { pitch: 1.0, rate: 1.2 },
 };

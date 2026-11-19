@@ -93,6 +93,7 @@ export const capacityOf = e => (e && e.def && (e.def.transport || e.def.garrison
 const _gm = new THREE.Vector3();
 export function rebuildHash() {
   for (const b of buckets) b.length = 0;
+  G.shields = G.units.filter(u => u.def.shield && !u.dead && !u.boarded);
   for (const u of G.units) {
     if (u.dead || u.boarded) continue;
     const bx = clamp(Math.floor((u.x + HALF) / HS), 0, HN - 1), bz = clamp(Math.floor((u.z + HALF) / HS), 0, HN - 1);
@@ -161,6 +162,12 @@ export class Unit {
     this.fans = this.mesh.getObjectByName('fans');
     this.rotor2 = this.mesh.getObjectByName('rotor2');
     this.wingL = this.mesh.getObjectByName('wingL'); this.wingR = this.mesh.getObjectByName('wingR');
+    this.arm = this.mesh.getObjectByName('arm');
+    if (this.def.shield) { // shimmering bubble around a Shield Projector
+      const mat = new THREE.MeshBasicMaterial({ color: new THREE.Color(0.35, 0.8, 1.6), transparent: true, opacity: 0.12, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending });
+      this.bubble = new THREE.Mesh(new THREE.SphereGeometry(1, 28, 14, 0, Math.PI * 2, 0, Math.PI / 2), mat);
+      this.bubble.scale.set(this.def.shield, this.def.shield * 0.55, this.def.shield); this.mesh.add(this.bubble);
+    }
     this.wLegL = this.mesh.getObjectByName('wLegL'); this.wLegR = this.mesh.getObjectByName('wLegR'); this.club = this.mesh.getObjectByName('club');
     if (!this.isInf && !this.air) { this.lights = makeHeadlights(this.def.radius); this.mesh.add(this.lights); }
     G.three.scene.add(this.mesh);
@@ -705,6 +712,15 @@ export class Unit {
         const sw = walking ? Math.sin(this.walkPhase) * 0.5 : 0;
         this.wLegL.rotation.x = sw; this.wLegR.rotation.x = -sw;
         if (walking) m.position.y += Math.abs(Math.cos(this.walkPhase)) * 0.14;
+      }
+      if (this.arm) { // catapult arm whips forward when it throws, then winds back down
+        const k = G.time - (this.lastFire ?? -9);
+        this.arm.rotation.x = k < 0.2 ? 0.55 - 2.3 * (k / 0.2) : k < 2.5 ? -1.75 + 2.3 * Math.min(1, (k - 0.2) / 2.3) : 0.55;
+      }
+      if (this.bubble) {
+        this.shieldFlash = Math.max(0, (this.shieldFlash || 0) - dt * 3);
+        this.bubble.material.opacity = 0.09 + Math.sin(G.time * 3 + this.id) * 0.03 + this.shieldFlash * 0.25;
+        this.bubble.rotation.y += dt * 0.4;
       }
       if (this.club) {
         const k = G.time - (this.lastFire ?? -9);
@@ -1467,6 +1483,10 @@ export function damage(target, amount, src, kind) {
   }
   if (G.god && target.faction === G.player) return; // GODMODE cheat
   if (hasMut(G.cfg, 'glass')) amount *= 1.75;
+  // inside a friendly Shield Projector's bubble: 40% less damage
+  if (target.kind === 'unit' && G.shields && G.shields.length) for (const s of G.shields) {
+    if (s.faction === target.faction && !s.dead && Math.hypot(s.x - target.x, s.z - target.z) <= s.def.shield) { amount *= 0.6; s.shieldFlash = 1; break; }
+  }
   target.hp -= amount;
   target.lastHit = G.time;
   // how hot the fighting is for the player (drives the dynamic music; never read by the simulation)

@@ -621,6 +621,59 @@ export function makeTroll(faction) {
   });
 }
 
+// Bone Catapult: wooden frame on four wheels with a throwing arm ('arm') and a flaming boulder
+export function makeCatapult(faction) {
+  return cached(`catapult-${faction}`, () => {
+    const t = mats(faction), m = M();
+    const wood = new THREE.MeshStandardMaterial({ color: 0x6a4a2a, roughness: 0.9, flatShading: true });
+    const bone = new THREE.MeshStandardMaterial({ color: 0xe8dcc0, roughness: 0.7 });
+    const root = new THREE.Group();
+    const b = new Builder();
+    for (const z of [0.9, -0.9]) for (const x of [-0.95, 0.95]) wheel(b, wood, x, 0.5, z, 0.5, 0.25);
+    b.box(wood, 1.7, 0.25, 2.6, 0, 0.75, 0);                           // base frame
+    for (const s of [-1, 1]) { b.box(wood, 0.18, 1.5, 0.18, s * 0.65, 1.55, -0.2, 0.25, 0, 0); b.box(wood, 0.18, 1.5, 0.18, s * 0.65, 1.55, 0.4, -0.25, 0, 0); }
+    b.box(wood, 1.5, 0.18, 0.18, 0, 2.2, 0.1);                         // cross beam
+    b.box(t.team, 1.72, 0.12, 0.6, 0, 0.92, 0.9);                      // team banner rail
+    for (let i = 0; i < 4; i++) b.add(new THREE.ConeGeometry(0.06, 0.3, 4), bone, -0.6 + i * 0.4, 1.0, 1.25, Math.PI / 2, 0, 0); // bone spikes
+    b.sph(bone, 0.16, 0.7, 1.05, 1.15); b.sph(bone, 0.16, -0.7, 1.05, 1.15); // skulls
+    b.box(m.black, 0.06, 0.04, 0.02, 0.75, 1.07, 1.3); b.box(m.black, 0.06, 0.04, 0.02, -0.65, 1.07, 1.3);
+    b.box(m.darkMetal, 0.9, 0.5, 0.6, 0, 1.1, -0.95);                  // counterweight box
+    root.add(b.build());
+    const ab = new Builder();
+    ab.box(wood, 0.16, 0.16, 2.6, 0, 0, 1.1);                          // the arm, pivoting at the cross beam
+    ab.box(wood, 0.5, 0.12, 0.45, 0, 0.05, 2.35);                      // cup
+    ab.sph(m.rock || m.concreteDark, 0.24, 0, 0.28, 2.35);             // boulder
+    ab.sph(new THREE.MeshBasicMaterial({ color: new THREE.Color(4, 1.6, 0.4) }), 0.12, 0, 0.42, 2.35);
+    const arm = ab.build(false); arm.position.set(0, 2.25, 0.1); arm.rotation.x = 0.55; arm.name = 'arm';
+    root.add(arm);
+    root.userData.muzzle = new THREE.Vector3(0, 3.6, 0.6);
+    return root;
+  });
+}
+
+// Shield Projector: a six-wheeled truck with a dish emitter; the bubble itself is added by the unit
+export function makeShieldGen(faction) {
+  return cached(`shieldgen-${faction}`, () => {
+    const t = mats(faction), m = M();
+    const glow = new THREE.MeshStandardMaterial({ color: 0x9fe8ff, emissive: 0x58c8ff, emissiveIntensity: 2.4, roughness: 0.3 });
+    const root = new THREE.Group();
+    const b = new Builder();
+    for (const z of [1.0, -0.2, -1.0]) for (const x of [-0.8, 0.8]) wheel(b, m.metal, x, 0.42, z, 0.4, 0.3);
+    b.box(t.team, 1.5, 0.95, 1.0, 0, 1.05, 1.15);
+    b.box(m.glass, 1.3, 0.4, 0.04, 0, 1.3, 1.66);
+    b.box(m.darkMetal, 1.55, 0.3, 3.0, 0, 0.62, -0.2);
+    b.box(t.teamDark, 1.55, 0.6, 1.9, 0, 1.0, -0.7);
+    b.cyl(m.metal, 0.12, 0.18, 0.8, 8, 0, 1.7, -0.7);                  // mast
+    b.add(new THREE.SphereGeometry(0.75, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2.4), m.metal, 0, 2.05, -0.7, Math.PI, 0, 0); // dish
+    b.sph(glow, 0.22, 0, 2.0, -0.7);                                   // emitter
+    for (const s of [-1, 1]) b.cyl(glow, 0.08, 0.08, 1.7, 8, s * 0.6, 1.33, -0.7, Math.PI / 2, 0, 0); // glowing capacitor rails
+    b.box(t.accent, 0.5, 0.5, 0.02, 0.77, 1.05, 1.15, 0, Math.PI / 2, 0);
+    root.add(b.build());
+    root.userData.muzzle = new THREE.Vector3(0, 2.0, -0.7);
+    return root;
+  });
+}
+
 export function makeJet(faction) {
   return cached(`jet-${faction}`, () => {
     const t = mats(faction), m = M();
@@ -1190,6 +1243,8 @@ export function makeUnitModel(type, faction) {
     case 'inferno': return makeInferno(faction);
     case 'wallyman': return makeWallyMan(faction);
     case 'dog': return makeDog(faction);
+    case 'catapult': return makeCatapult(faction);
+    case 'shieldgen': return makeShieldGen(faction);
     case 'mech': return makeMech(faction);
     case 'troll': return makeTroll(faction);
     case 'convoy': return makeConvoy();
