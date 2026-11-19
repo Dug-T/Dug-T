@@ -103,6 +103,23 @@ export const MAPS = {
     ridge: 55, forest: 0.07,
     theme: 'volcanic', weather: ['clear', 'ashfall', 'clear', 'fog', 'ashfall'],
   },
+  blossom: {
+    name: 'Blossom Gardens', desc: 'Peaceful spring gardens of pink cherry blossom around koi ponds. Petals drift on the breeze - until the tanks arrive.',
+    seed: [61, -19, 37, 4],
+    slots: [{ x: -90, z: 0 }, { x: 90, z: 0 }],
+    lanes: [
+      [[-90, 0], [0, 0], [90, 0]],
+      [[-90, 0], [-50, -60], [50, -60], [90, 0]],
+      [[-90, 0], [-50, 60], [50, 60], [90, 0]],
+    ],
+    ore: [
+      { x: -112, z: 32, r: 10 }, { x: -112, z: -32, r: 9 }, { x: 112, z: -32, r: 10 }, { x: 112, z: 32, r: 9 },
+      { x: 0, z: 0, r: 8, rich: 1 }, { x: 0, z: -84, r: 7 }, { x: 0, z: 84, r: 7 },
+    ],
+    lakes: [{ x: -30, z: -28, r: 12 }, { x: 30, z: 28, r: 12 }, { x: -25, z: 32, r: 10 }, { x: 25, z: -32, r: 10 }],
+    ridge: 52, forest: 0.14,
+    theme: 'blossom', weather: ['clear', 'clear', 'rain', 'fog'],
+  },
   autumn: {
     name: 'Autumn Hollow', desc: 'Rolling hills of red and gold woodland, quiet ponds and grazing farm animals. Leaves drift on the wind.',
     seed: [23, 58, -41, 9],
@@ -124,6 +141,12 @@ export const MAPS = {
 
 // Visual themes
 export const THEMES = {
+  blossom: {
+    grass1: 0x5f8a3a, grass2: 0x8aae4e, dirt: 0x8a7150, rock: 0x7a7470, sand: 0xd8c49a, mud: 0x4a4232, base: 0x958a7a,
+    oreTint: 0x4f6b3a, water: 0x2a6a78, leaves: 'petals', animals: 'farm',
+    skyTop: 0x5a8ed0, horizon: 0xf0d8e0, skyBottom: 0x6a5a50, sun: 0xfff0e6, sunI: 3.0, hemiSky: 0xffe0ee, hemiGround: 0x4a3f2c, hemiI: 0.8,
+    trees: { blossom: 0.6, leaf: 0.2, pine: 0.2 }, rockTint: [0.08, 0.05, 0.4],
+  },
   autumn: {
     grass1: 0x6c7c30, grass2: 0xb0983c, dirt: 0x8a6440, rock: 0x6e665e, sand: 0xc4a878, mud: 0x4e3e2a, base: 0x8d8270,
     oreTint: 0x6a6a3a, water: 0x2a4e5a, leaves: true, animals: 'farm',

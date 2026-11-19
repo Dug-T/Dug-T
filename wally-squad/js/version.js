@@ -1,8 +1,15 @@
 // Version number and update notes. Bump VERSION and add a new entry at the top of CHANGELOG for every
 // update: players see a "What's New" screen the first time they load a new version.
-export const VERSION = '1.29';
+export const VERSION = '1.30';
 
 export const CHANGELOG = [
+  { v: '1.30', date: '2026-11-19', title: 'Blossom & Boulders', items: [
+    '🐭 Wally Man now has a squeaky superhero voice!',
+    '🌸 New map: Blossom Gardens - pink cherry trees, koi ponds and drifting petals.',
+    '🪨 Bone Catapult (Grimlocks): hurls flaming boulders a very long way.',
+    '🛡 Shield Projector (Wally Squad): a bubble that makes your units inside take 40% less damage.',
+    '🎖 New medal: Petal Power.',
+  ] },
   { v: '1.29', date: '2026-11-19', title: 'Spies & Starlight', items: [
     '🗣 Wally Man has a much clearer voice, and the music dips while he talks so you can hear him.',
     '🔇 Silly novelty voices (bubbles, robots, whispers) are never used for any unit.',
