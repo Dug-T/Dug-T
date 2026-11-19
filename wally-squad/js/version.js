@@ -1,8 +1,12 @@
 // Version number and update notes. Bump VERSION and add a new entry at the top of CHANGELOG for every
 // update: players see a "What's New" screen the first time they load a new version.
-export const VERSION = '1.31';
+export const VERSION = '1.31.1';
 
 export const CHANGELOG = [
+  { v: '1.31.1', date: '2026-11-19', title: 'Easier building on phones', items: [
+    '🏗 Fixed: tapping the ground to place a building sometimes did nothing on phones (if your finger moved slightly during the tap).',
+    '👆 The building outline now appears as soon as you pick it - drag it to a green spot and lift your finger to build.',
+  ] },
   { v: '1.31', date: '2026-11-19', title: 'Highland Fling', items: [
     '🏴 Wally Man is now Scottish! New lines like "Gie it laldy!" - and a Scottish voice on devices that have one.',
     '☔ Select Wally Man in the rain and he tells you: "It\'s pishing doon!"',
