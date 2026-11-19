@@ -30,6 +30,7 @@ export function updatePower() {
     if (pw > 0) P.powerProd += pw * (0.5 + 0.5 * b.hp / b.maxHp); else P.powerUse -= pw;
   }
   for (const u of G.units) if (!u.dead) { const P = G.players[u.faction]; P.owned[u.type] = (P.owned[u.type] || 0) + 1; }
+  for (const f in G.players) { const P = G.players[f]; if (P.blackoutUntil > G.time) P.powerProd = 0; } // a spy blacked out the grid
 }
 export const powerFactor = P => (P.powerUse <= P.powerProd ? 1 : Math.max(0.3, P.powerProd / Math.max(1, P.powerUse)));
 

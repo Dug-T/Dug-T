@@ -144,6 +144,16 @@ if ('speechSynthesis' in window) speechSynthesis.onvoiceschanged = () => { voice
 // intro · verse · chorus · breakdown · verse · chorus (about a minute and a half). The arrangement also
 // follows the fighting: calm = stripped back, battle = full band, war = extra drums, doubled lead.
 let musicOn = true;
+// briefly turn the music down so a spoken line can be heard clearly
+let duckTimer = 0;
+export function duckMusic(sec) {
+  if (!ctx || !musicBus || !musicOn) return;
+  const t = ctx.currentTime;
+  musicBus.gain.cancelScheduledValues(t);
+  musicBus.gain.setTargetAtTime(0.06, t, 0.08);
+  clearTimeout(duckTimer);
+  duckTimer = setTimeout(() => { if (musicOn && musicBus) musicBus.gain.setTargetAtTime(0.22, ctx.currentTime, 0.4); }, sec * 1000);
+}
 export function toggleMusic() { musicOn = !musicOn; if (musicBus) musicBus.gain.value = musicOn ? 0.22 : 0; return musicOn; }
 let target = 0.15, level = 0.15;
 export function setIntensity(x) { target = Math.max(0, Math.min(1, x)); }

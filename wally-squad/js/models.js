@@ -101,6 +101,13 @@ export function makeInfantry(type, faction) {
       b.add(new THREE.TorusGeometry(0.05, 0.012, 6, 14), m.black, 0.065, 1.45, 0.14);
       b.add(new THREE.TorusGeometry(0.05, 0.012, 6, 14), m.black, -0.065, 1.45, 0.14);
       for (let i = 0; i < 4; i++) b.box(M().lampRed, 0.47, 0.06, 0.29, 0, 0.82 + i * 0.13, 0);
+    } else if (type === 'spy') {
+      // trench coat, fedora and dark glasses
+      b.cyl(m.black, 0.27, 0.27, 0.03, 16, 0, 1.55, 0);
+      b.cyl(m.black, 0.16, 0.18, 0.18, 14, 0, 1.64, 0);
+      b.box(m.black, 0.26, 0.06, 0.04, 0, 1.45, 0.15);
+      b.box(new THREE.MeshStandardMaterial({ color: 0x8a7a5a, roughness: 0.85 }), 0.5, 0.62, 0.32, 0, 0.82, 0); // coat skirt
+      b.box(new THREE.MeshStandardMaterial({ color: 0x8a7a5a, roughness: 0.85 }), 0.5, 0.12, 0.33, 0, 1.24, 0.0);  // collar
     } else if (type === 'boomer') {
       // goblin: green head, big pointy ears, leather cap and goggles
       const gob = new THREE.MeshStandardMaterial({ color: 0x6f9a3a, roughness: 0.75 });
@@ -157,6 +164,8 @@ export function makeInfantry(type, faction) {
       b.cyl(m.gun, 0.07, 0.07, 0.55, 10, 0.05, 1.02, 0.5, Math.PI / 2, 0, 0);
       b.cyl(m.darkMetal, 0.13, 0.13, 0.16, 10, 0.05, 0.98, 0.3, 0, 0, Math.PI / 2);
       b.box(m.gun, 0.05, 0.15, 0.08, 0.05, 0.88, 0.25);
+    } else if (type === 'spy') {
+      b.box(m.darkMetal, 0.32, 0.24, 0.08, 0.26, 0.82, 0.3); b.box(m.metal, 0.08, 0.04, 0.02, 0.26, 0.96, 0.3); // briefcase
     } else if (type === 'boomer') {
       b.box(m.lampRed, 0.07, 0.24, 0.07, 0.24, 1.0, 0.36); // a stick of dynamite in each hand
       b.box(m.lampRed, 0.07, 0.24, 0.07, -0.2, 1.05, 0.38);

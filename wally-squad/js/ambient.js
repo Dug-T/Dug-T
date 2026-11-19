@@ -19,6 +19,7 @@ function treeSpot() {
 }
 
 export function initAmbient(scene, theme) {
+  setSkyTheme(theme);
   if (theme && theme.animals) initAnimals(scene, theme.animals);
   if (theme && theme.leaves) initLeaves(scene);
   if (theme && !theme.lava && !theme.ice && !theme.trees.cactus) { initFireflies(scene); initButterflies(scene); }
@@ -63,6 +64,7 @@ export function updateAmbient(dt) {
     }
   }
   updateRainbow(dt);
+  updateNightSky(dt);
   updateAnimals(dt);
   updateLeaves(dt, t);
   updateFireflies(dt, t);
@@ -326,5 +328,35 @@ function updateRainbow(dt) {
   if (rbT > 0) rbT -= dt;
   rainbow.style.opacity = rbT > 0 ? String(0.55 * Math.min(1, (45 - rbT) / 4, rbT / 6)) : '0';
 }
+// ---- night sky: shooting stars streak across the top of the screen on clear nights, and the northern
+// lights shimmer over the snow maps (drawn as screen overlays, like the rainbow - the camera never sees the sky)
+let auroraEl = null, starT = 6, skyTheme = null;
+export function setSkyTheme(theme) { skyTheme = theme; }
+function updateNightSky(dt) {
+  if (!skyTheme || skyTheme.lava) return;
+  const W = G.weather, clear = !W || W.type === 'clear' || W.type === 'snow';
+  const night = Math.max(0, Math.min(1, ((G.nightLevel || 0) - 0.55) * 3));
+  const view = document.getElementById('view') || document.body;
+  if (skyTheme.ice) {
+    if (!auroraEl) {
+      auroraEl = document.createElement('div'); auroraEl.id = 'aurora';
+      auroraEl.style.cssText = 'position:absolute;left:0;right:0;top:0;height:42%;pointer-events:none;z-index:3;opacity:0;mix-blend-mode:screen;filter:blur(4px);transition:opacity 2s;' +
+        'background:repeating-linear-gradient(95deg, rgba(255,255,255,0) 0 22px, rgba(170,255,210,.22) 24px 27px, rgba(255,255,255,0) 30px 48px), radial-gradient(ellipse 60% 75% at 28% 0%, rgba(60,255,150,.95), transparent 72%), radial-gradient(ellipse 50% 65% at 72% 0%, rgba(70,210,255,.85), transparent 72%), radial-gradient(ellipse 40% 55% at 50% 8%, rgba(200,90,255,.6), transparent 72%);' +
+        'animation:auroraWave 9s ease-in-out infinite alternate';
+      if (!document.getElementById('auroraKF')) { const st = document.createElement('style'); st.id = 'auroraKF'; st.textContent = '@keyframes auroraWave{0%{transform:translateX(-4%) scaleY(.9) skewX(-6deg)}50%{transform:translateX(3%) scaleY(1.1) skewX(4deg)}100%{transform:translateX(-2%) scaleY(1) skewX(-3deg)}} @keyframes shootStar{0%{opacity:0;transform:translate(0,0) rotate(var(--a))}10%{opacity:1}100%{opacity:0;transform:translate(var(--dx),var(--dy)) rotate(var(--a))}}'; document.head.appendChild(st); }
+      view.appendChild(auroraEl);
+    }
+    auroraEl.style.opacity = String(clear ? night : 0);
+  }
+  if (night < 0.5 || !clear) return;
+  starT -= dt;
+  if (starT > 0) return;
+  starT = 4 + Math.random() * 9;
+  if (!document.getElementById('auroraKF')) { const st = document.createElement('style'); st.id = 'auroraKF'; st.textContent = '@keyframes shootStar{0%{opacity:0;transform:translate(0,0) rotate(var(--a))}10%{opacity:1}100%{opacity:0;transform:translate(var(--dx),var(--dy)) rotate(var(--a))}}'; document.head.appendChild(st); }
+  const s = document.createElement('div'), ang = 15 + Math.random() * 25, dx = 180 + Math.random() * 200;
+  s.style.cssText = `position:absolute;left:${10 + Math.random() * 60}%;top:${2 + Math.random() * 16}%;width:110px;height:2px;pointer-events:none;z-index:3;border-radius:2px;background:linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,.95));box-shadow:0 0 8px rgba(200,230,255,.9);--a:${ang}deg;--dx:${dx}px;--dy:${dx * Math.tan(ang * Math.PI / 180)}px;animation:shootStar 1.1s ease-out forwards`;
+  view.appendChild(s); setTimeout(() => s.remove(), 1300);
+}
+
 // for testing: show the rainbow now
 export function _showRainbow() { rbT = 45; }
