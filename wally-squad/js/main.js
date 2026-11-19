@@ -28,6 +28,7 @@ import { allMaterials } from './materials.js';
 import { updateCrates, animateCrates, placeTechBuildings, recordHistory, drawHistory } from './features.js';
 import { updatePowers } from './powers.js';
 import { updateHazards } from './hazards.js';
+import { initAmbient, updateAmbient } from './ambient.js';
 import { initAchievements, checkAchievements, buildMedals } from './achievements.js';
 import { registerCustomMaps, buildMapEditor } from './mapeditor.js';
 import { updateOrientation } from './orient.js';
@@ -158,6 +159,7 @@ async function boot() {
   await step(0.55);
   initFX(scene);
   initWeather(scene, map, theme);
+  initAmbient(scene, theme);
   G.sfx = Audio.sfx;
   initAchievements(run);
   G.announce = Audio.announce;
@@ -251,7 +253,7 @@ function dailyRecord() { try { return JSON.parse(localStorage.getItem('ws_daily'
 const fmtTime = t => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
 
 // ---------------------------------------------------------------- battle log (kill feed)
-const feedName = e => e.def.name;
+const feedName = e => e.nick ? `${e.nick} (${e.def.name})` : e.def.name;
 // ---------------------------------------------------------------- enemy commander taunts
 const TAUNTS = {
   grim: { who: 'Warlord Grak', voice: 'warlord',
@@ -743,6 +745,7 @@ function loop(now) {
   updateVision(Math.max(dt, real * 0.5));
   updateFX(dt);
   updateWeatherFX(dt, real);
+  updateAmbient(real);
   updateOrientation();
   UI.checkSize();
   UI.updateCamera(real);

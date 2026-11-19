@@ -64,6 +64,7 @@ export const WEAPONS = {
   warCannon: { warhead: 'rocket', damage: 34, range: 12, rof: 0.75, proj: 'rocket', air: true, ground: true, splash: 1.6, sound: 'rocket' },
   hoverRkt: { warhead: 'rocket', damage: 30, range: 11.5, rof: 1.3, proj: 'rocket', air: true, ground: true, sound: 'rocket', twin: true },
   jetMsl:   { warhead: 'rocket', damage: 62, range: 14, rof: 2.2, proj: 'missile', air: true, ground: true, sound: 'rocket', twin: true },
+  bite:     { warhead: 'bullet', damage: 24, range: 1.7, rof: 0.7, proj: 'melee', air: false, ground: true, sound: 'bite' },
   shadeRkt: { warhead: 'rocket', damage: 50, range: 13, rof: 2.2, proj: 'rocket', air: false, ground: true, sound: 'rocket', twin: true },
 };
 
@@ -102,6 +103,7 @@ export const UNITS = {
   shaman:   { name: 'Grimlock Shaman', fac: 'grim', cost: 320, time: 6, hp: 110, armor: 'infantry', speed: 3.4, sight: 12, radius: 0.45, weapon: null, heals: true, tab: 'infantry', req: ['barracks'], desc: 'Grimlock only. Chants over wounded infantry to heal them.' },
   medic:    { name: 'Field Medic', fac: 'wally', cost: 300, time: 6, hp: 90, armor: 'infantry', speed: 3.5, sight: 12, radius: 0.45, weapon: null, heals: true, tab: 'infantry', req: ['barracks'], desc: 'Wally Squad only. Heals nearby infantry.' },
   rifle:    { name: 'Rifle Trooper', cost: 100, time: 4, hp: 100, armor: 'infantry', speed: 3.4, sight: 13, radius: 0.45, weapon: 'rifle', tab: 'infantry', req: ['barracks'], desc: 'Cheap all-round infantry.' },
+  dog:      { name: 'Attack Dog', cost: 150, time: 4, hp: 75, armor: 'infantry', speed: 6.6, sight: 16, radius: 0.45, weapon: 'bite', tab: 'infantry', req: ['barracks'], desc: 'Cheap, fast and fierce. Great scout with a big sight range; savages enemy infantry, but useless against tanks.' },
   rocket:   { name: 'Rocket Trooper', cost: 300, time: 7, hp: 90, armor: 'infantry', speed: 3.0, sight: 14, radius: 0.45, weapon: 'bazooka', tab: 'infantry', req: ['barracks'], desc: 'Anti-tank and anti-air.' },
   flamer:   { name: 'Scorcher', cost: 250, time: 6, hp: 120, armor: 'infantry', speed: 3.2, sight: 11, radius: 0.45, weapon: 'flamer', tab: 'infantry', req: ['barracks', 'refinery'], desc: 'Flamethrower. Burns infantry and buildings.' },
   warlord:  { name: 'Warlord Grak', fac: 'grim', cost: 900, time: 13, hp: 520, armor: 'infantry', speed: 3.3, sight: 15, radius: 0.6, weapon: 'warCannon', tab: 'infantry', req: ['barracks', 'radar'], limit: 1, desc: 'Grimlock only. Hulking hero with a rocket cannon. War Cry (G): nearby Grimlock troops fire much faster for 6 seconds.' },
