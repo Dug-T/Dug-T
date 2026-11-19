@@ -1,8 +1,12 @@
 // Version number and update notes. Bump VERSION and add a new entry at the top of CHANGELOG for every
 // update: players see a "What's New" screen the first time they load a new version.
-export const VERSION = '1.28';
+export const VERSION = '1.28.1';
 
 export const CHANGELOG = [
+  { v: '1.28.1', date: '2026-11-19', title: 'Always up to date', items: [
+    '🔄 Updates now load straight away instead of showing an old version from your browser\'s memory.',
+    '🆕 If a newer version comes out while the game is open, a "tap to update" banner appears on the main menu.',
+  ] },
   { v: '1.28', date: '2026-11-19', title: 'Giants & Thunder', items: [
     '🤖 Wally Mech (Wally Squad): a towering two-legged battle walker with twin shoulder cannons.',
     '👹 Cave Troll (Grimlocks): a huge club-swinging brute that heals its own wounds.',
@@ -63,6 +67,27 @@ export const CHANGELOG = [
   { v: '1.1', date: '2026-11-18', title: 'Sidebar', items: ['Build sidebar fits on phones.'] },
   { v: '1.0', date: '2026-11-18', title: 'Launch', items: ['Wally Squad launches: campaign, online play, superweapons, maps, weather and voices.'] },
 ];
+
+// Is a newer version on the server than the one running? (asks for version.js, skipping every cache)
+const newer = (a, b) => { const x = a.split('.').map(Number), y = b.split('.').map(Number); for (let i = 0; i < Math.max(x.length, y.length); i++) { if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) > (y[i] || 0); } return false; };
+export async function checkForUpdate() {
+  try {
+    const r = await fetch(new URL(`version.js?check=${Date.now()}`, import.meta.url), { cache: 'no-store' });
+    if (!r.ok) return null;
+    const m = (await r.text()).match(/VERSION = '([\d.]+)'/);
+    return m && newer(m[1], VERSION) ? m[1] : null;
+  } catch { return null; }
+}
+// keep the game files fresh after every update (see sw.js)
+export function registerUpdater() {
+  try { if ('serviceWorker' in navigator) navigator.serviceWorker.register(new URL('../sw.js', import.meta.url), { updateViaCache: 'none' }).catch(() => {}); } catch { /* ignore */ }
+}
+// throw away any saved copies and load the newest version
+export async function updateNow() {
+  try { if (window.caches) for (const k of await caches.keys()) await caches.delete(k); } catch { /* ignore */ }
+  try { const regs = await navigator.serviceWorker?.getRegistrations?.(); for (const r of regs || []) await r.update(); } catch { /* ignore */ }
+  location.reload();
+}
 
 const KEY = 'ws_seen_version';
 export function isNewVersion() { try { return localStorage.getItem(KEY) !== VERSION; } catch { return false; } }
