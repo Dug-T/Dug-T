@@ -1,8 +1,16 @@
 // Version number and update notes. Bump VERSION and add a new entry at the top of CHANGELOG for every
 // update: players see a "What's New" screen the first time they load a new version.
-export const VERSION = '1.30';
+export const VERSION = '1.31';
 
 export const CHANGELOG = [
+  { v: '1.31', date: '2026-11-19', title: 'Highland Fling', items: [
+    '🏴 Wally Man is now Scottish! New lines like "Gie it laldy!" - and a Scottish voice on devices that have one.',
+    '☔ Select Wally Man in the rain and he tells you: "It\'s pishing doon!"',
+    '🏞 New map: Highland Glen - heather, pines, dark lochs and shaggy Highland cows. Usually raining.',
+    '🎵 Bagpiper (Wally Squad) and War Drummer (Grimlocks): nearby allies fire 25% faster.',
+    '🎶 New bagpipe battle tune: Highland Charge.',
+    '🎖 New medal: Braveheart.',
+  ] },
   { v: '1.30', date: '2026-11-19', title: 'Blossom & Boulders', items: [
     '🐭 Wally Man now has a squeaky superhero voice!',
     '🌸 New map: Blossom Gardens - pink cherry trees, koi ponds and drifting petals.',

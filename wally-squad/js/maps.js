@@ -103,6 +103,23 @@ export const MAPS = {
     ridge: 55, forest: 0.07,
     theme: 'volcanic', weather: ['clear', 'ashfall', 'clear', 'fog', 'ashfall'],
   },
+  highland: {
+    name: 'Highland Glen', desc: 'A misty Scottish glen of heather, pines and dark lochs, with shaggy Highland cows. Bring a brolly - it is usually pishing doon.',
+    seed: [17, 88, -29, 40],
+    slots: [{ x: -96, z: -30 }, { x: 96, z: 30 }],
+    lanes: [
+      [[-96, -30], [0, 0], [96, 30]],
+      [[-96, -30], [-60, -90], [40, -80], [96, 30]],
+      [[-96, -30], [-40, 80], [60, 90], [96, 30]],
+    ],
+    ore: [
+      { x: -118, z: 4, r: 10 }, { x: -110, z: -76, r: 9 }, { x: 118, z: -4, r: 10 }, { x: 110, z: 76, r: 9 },
+      { x: 0, z: 0, r: 8, rich: 1 }, { x: -60, z: 2, r: 7 }, { x: 60, z: -2, r: 7 },
+    ],
+    lakes: [{ x: -30, z: 32, r: 14 }, { x: 30, z: -32, r: 14 }, { x: 0, z: 54, r: 10 }, { x: 0, z: -54, r: 10 }],
+    ridge: 48, forest: 0.1,
+    theme: 'highland', weather: ['rain', 'rain', 'fog', 'clear', 'storm'],
+  },
   blossom: {
     name: 'Blossom Gardens', desc: 'Peaceful spring gardens of pink cherry blossom around koi ponds. Petals drift on the breeze - until the tanks arrive.',
     seed: [61, -19, 37, 4],
@@ -141,6 +158,12 @@ export const MAPS = {
 
 // Visual themes
 export const THEMES = {
+  highland: {
+    grass1: 0x6a8c44, grass2: 0x94709e, dirt: 0x7a6a52, rock: 0x8a8076, sand: 0xb8a888, mud: 0x3e3a30, base: 0x8a8478,
+    oreTint: 0x5a6a48, water: 0x1e3a48, animals: 'highland',
+    skyTop: 0x6a7e96, horizon: 0xc8ccd0, skyBottom: 0x5a5a58, sun: 0xf0eadc, sunI: 3.0, hemiSky: 0xe0e8f0, hemiGround: 0x5a5040, hemiI: 0.95,
+    trees: { pine: 0.75, leaf: 0.25 }, rockTint: [0.6, 0.05, 0.35],
+  },
   blossom: {
     grass1: 0x5f8a3a, grass2: 0x8aae4e, dirt: 0x8a7150, rock: 0x7a7470, sand: 0xd8c49a, mud: 0x4a4232, base: 0x958a7a,
     oreTint: 0x4f6b3a, water: 0x2a6a78, leaves: 'petals', animals: 'farm',
