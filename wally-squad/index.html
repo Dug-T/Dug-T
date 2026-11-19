@@ -167,6 +167,17 @@
   @media (max-height: 880px) { #menuMain > p { display: none; } #menuMain .mmPhoto { height: 170px; } }
   @media (max-width: 640px) { #menuMain .menuCol { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
   .copyright { text-align: center; color: var(--dim); font-size: 12px; margin-top: 10px; letter-spacing: 0.5px; }
+  body.newsOpen .tipjar, body.newsOpen .tjSay { display: none !important; }
+  .verLink { color: var(--accent); text-decoration: none; white-space: nowrap; }
+  .verLink:hover { text-decoration: underline; }
+  #news .newsHead { font-size: 16px; margin: 4px 0 6px; }
+  #news .newsVer { display: inline-block; background: var(--accent); color: #1a1408; font-weight: 800; border-radius: 6px; padding: 1px 7px; font-size: 0.85em; }
+  #news .newsDate { color: var(--dim); font-size: 12px; margin-left: 4px; }
+  #news .newsList { margin: 4px 0 10px; padding-left: 20px; line-height: 1.5; }
+  #news .newsList li { margin: 3px 0; }
+  #news .newsOld { max-height: 34vh; overflow-y: auto; border-top: 1px solid rgba(255,255,255,.1); padding-top: 4px; }
+  #news .newsRow { padding: 6px 2px; border-bottom: 1px solid rgba(255,255,255,.06); font-size: 13px; }
+  #news .newsSub { color: var(--dim); font-size: 12px; margin-top: 2px; }
   /* main menu: a grid of buttons so every option is on screen at once */
   #menuMain { width: min(800px, 94vw); }
   #menuMain .menuCol { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; align-items: stretch; }
@@ -436,7 +447,7 @@
       <button class="btn big" data-panel="menuGraphics">⚙ GRAPHICS</button>
       <button class="btn" id="bHow">How to play</button>
     </div>
-    <div class="copyright">© 2026 Douglas Thomson. All rights reserved.</div>
+    <div class="copyright">© 2026 Douglas Thomson. All rights reserved. · <a href="#" id="verLink" class="verLink">v<span class="verNum"></span> · What's new</a></div>
   </div>
   <div class="card wide" id="menuCampaign" style="display:none">
     <h2>CAMPAIGN</h2>
@@ -507,6 +518,11 @@
     <h2>MAP EDITOR</h2>
     <div id="editor"></div>
     <div class="row"><button class="btn" data-panel="menuMain">◀ Back</button></div>
+  </div>
+  <div class="card wide" id="menuNews" style="display:none">
+    <h2>🆕 WHAT'S NEW</h2>
+    <div id="news"></div>
+    <div class="row"><button class="btn big" id="bNewsOk">▶ LET'S PLAY!</button></div>
   </div>
   <div class="card wide" id="menuMedals" style="display:none">
     <h2>MEDALS</h2>
@@ -626,7 +642,7 @@
   <p>Wally Squad is played in landscape. Turn your phone sideways to continue.</p>
   <button class="btn big" id="bFullRotate">⛶ Play fullscreen</button>
 </div>
-<div id="loading">LOADING WALLY SQUAD…<div class="bar"><div id="loadBar"></div></div><div id="loadTip"></div></div>
+<div id="loading">LOADING WALLY SQUAD…<div class="bar"><div id="loadBar"></div></div><div id="loadTip"></div><div id="loadVer" style="margin-top:10px;font-size:12px;letter-spacing:1px;opacity:.6"></div></div>
 <script>
   // a random tip while the game loads
   (function () {
