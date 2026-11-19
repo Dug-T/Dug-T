@@ -445,6 +445,10 @@ function commandAt(sx, sy, attackMove = false, queue = false) {
     }
     return;
   }
+  if (target && target.def && target.def.civil && target.faction === 'neutral' && !attackMove) {
+    const inf = units.filter(u => u.isInf);
+    if (inf.length) { issue({ t: 'board', ids: inf.map(u => u.id), tid: target.id }); flashMarker(target.x, target.z, 0x55ff77); Audio.play('ack'); return; }
+  }
   if (target && target.faction !== G.player && !attackMove) {
     issue({ t: 'atk', ids, tid: target.id });
     flashMarker(target.x, target.z, 0xff4433);
@@ -988,7 +992,7 @@ function refreshSelPanel(force) {
     }
   }
 }
-function WEAPONSneedsPower(d) { return d.weapon === 'plasma'; }
+function WEAPONSneedsPower(d) { return d.weapon === 'plasma' || d.weapon === 'tesla'; }
 
 // ------------------------------------------------------------ minimap
 let mmT = 0, fogCanvas = null, fogCtx = null, fogImg = null;
@@ -1083,7 +1087,7 @@ export function drawOverlay() {
     if (b.dead || !b.mesh.visible) continue;
     const show = b.selected || b === hoverEnt || (b.lastHit && now - b.lastHit < 3) || b.repairing;
     const P = G.players[b.faction];
-    const off = b.faction === G.player && P.powerUse > P.powerProd && b.type === 'plasma';
+    const off = b.faction === G.player && P.powerUse > P.powerProd && (b.type === 'plasma' || b.type === 'tesla');
     const gar = b.def.garrison && b.faction === G.player ? (b.passengers || []).length : 0;
     if (!show && !off && !b.primary && !gar && !(b.def.wonder && b.buildAnim >= 1)) continue;
     const p = project(b.x, b.baseY + (b.def.wonder ? 8.4 : b.def.w === 1 ? 5.5 : 4.8), b.z);

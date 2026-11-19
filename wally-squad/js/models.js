@@ -1004,7 +1004,7 @@ export function makeBuildingModel(type, faction) {
     const t = mats(faction), m = M();
     const root = new THREE.Group();
     const b = new Builder();
-    const W = { xbarrel: 1, wonder: 3, bunker: 2, conyard: 4, power: 3, refinery: 4, barracks: 3, factory: 4, radar: 3, tech: 3, helipad: 3, turret: 1, sam: 2, plasma: 1, uplink: 3, silo: 3, wall: 1, gate: 2, mine: 1, derrick: 2, hospital: 2, depot: 2 };
+    const W = { tesla: 1, flametower: 1, house: 2, tesla: 1, flametower: 1, house: 2, xbarrel: 1, wonder: 3, bunker: 2, conyard: 4, power: 3, refinery: 4, barracks: 3, factory: 4, radar: 3, tech: 3, helipad: 3, turret: 1, sam: 2, plasma: 1, uplink: 3, silo: 3, wall: 1, gate: 2, mine: 1, derrick: 2, hospital: 2, depot: 2 };
     const D = { xbarrel: 1, wonder: 3, bunker: 2, conyard: 4, power: 3, refinery: 3, barracks: 3, factory: 4, radar: 3, tech: 3, helipad: 3, turret: 1, sam: 2, plasma: 1, uplink: 3, silo: 3, wall: 1, gate: 1, mine: 1, derrick: 2, hospital: 2, depot: 2 };
     const w = W[type] * CELL - 0.3, d = D[type] * CELL - 0.3;
     const parts = {};
@@ -1280,6 +1280,62 @@ export function makeBuildingModel(type, faction) {
         pb.cyl(m.gun, 0.03, 0.03, 1.4, 5, 1.4, -0.9, 0);
         const pump = pb.build(); pump.position.set(0, 2.1, 0.6); pump.name = 'pump';
         parts.pump = pump;
+        break;
+      }
+      case 'tesla': {
+        // copper coil on a concrete plinth, crowned by a crackling electric orb
+        const copper = new THREE.MeshStandardMaterial({ color: 0xb8673a, roughness: 0.35, metalness: 0.85 });
+        b.cyl(m.concreteDark, 0.95, 1.05, 0.4, 8, 0, 0.1, 0);
+        b.cyl(t.teamDark, 0.7, 0.85, 0.7, 8, 0, 0.6, 0);
+        b.cyl(m.darkMetal, 0.28, 0.36, 3.0, 10, 0, 2.3, 0);
+        for (let i = 0; i < 9; i++) b.add(new THREE.TorusGeometry(0.42 - i * 0.015, 0.07, 6, 16), copper, 0, 1.2 + i * 0.3, 0, Math.PI / 2, 0, 0);
+        for (let i = 0; i < 3; i++) { const a = i / 3 * Math.PI * 2; b.box(t.team, 0.16, 2.6, 0.16, Math.cos(a) * 0.62, 2.1, Math.sin(a) * 0.62, 0, -a, Math.cos(a) * 0.1); }
+        b.add(new THREE.TorusGeometry(0.62, 0.09, 8, 20), copper, 0, 3.85, 0, Math.PI / 2, 0, 0);
+        const cb = new Builder();
+        cb.add(new THREE.IcosahedronGeometry(0.4, 1), new THREE.MeshStandardMaterial({ color: 0x9fe8ff, emissive: 0x58c8ff, emissiveIntensity: 2.6, roughness: 0.3 }), 0, 0, 0);
+        const core = cb.build(false); core.position.set(0, 4.25, 0); core.name = 'core';
+        parts.core = core; parts.muzzle = new THREE.Vector3(0, 4.25, 0);
+        break;
+      }
+      case 'flametower': {
+        // squat iron tower with fuel tanks and a swivelling flame nozzle, spikes all round
+        b.cyl(m.concreteDark, 0.95, 1.05, 0.4, 8, 0, 0.1, 0);
+        b.cyl(t.teamDark, 0.65, 0.85, 1.9, 8, 0, 1.2, 0);
+        b.cyl(m.darkMetal, 0.75, 0.75, 0.2, 8, 0, 2.2, 0);
+        for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2; b.add(new THREE.ConeGeometry(0.08, 0.45, 5), m.metal, Math.cos(a) * 0.82, 2.4, Math.sin(a) * 0.82, Math.sin(a) * 0.5, 0, -Math.cos(a) * 0.5); }
+        const fuel = new THREE.MeshStandardMaterial({ color: 0x7a2a18, roughness: 0.5, metalness: 0.5 });
+        for (const s of [-1, 1]) { b.cyl(fuel, 0.22, 0.22, 1.1, 10, s * 0.8, 0.95, -0.35); b.cyl(m.hazard, 0.23, 0.23, 0.1, 10, s * 0.8, 1.1, -0.35); }
+        const tb = new Builder();
+        tb.sph(t.team, 0.45, 0, 0, 0, 1, 0.75, 1.1);
+        tb.cyl(m.gun, 0.11, 0.17, 1.1, 10, 0, 0.0, 0.7, Math.PI / 2, 0, 0);
+        tb.cyl(m.darkMetal, 0.2, 0.2, 0.15, 10, 0, 0.0, 1.25, Math.PI / 2, 0, 0);
+        tb.add(new THREE.SphereGeometry(0.07, 6, 4), m.lampRed, 0, 0.12, 1.32);
+        const tur = tb.build(); tur.position.set(0, 2.6, 0); tur.name = 'turret';
+        parts.turret = tur; parts.muzzle = new THREE.Vector3(0, 0, 1.35);
+        break;
+      }
+      case 'house': {
+        // a little cottage: plastered walls, tiled gable roof, chimney, and a flag showing who holds it
+        const plaster = new THREE.MeshStandardMaterial({ color: 0xdccbaa, roughness: 0.92 });
+        const tiles = new THREE.MeshStandardMaterial({ color: 0x8f3e2c, roughness: 0.8 });
+        const wood = new THREE.MeshStandardMaterial({ color: 0x5a3a22, roughness: 0.85 });
+        foundation(b, w, d, 0.2);
+        b.box(plaster, 3.0, 1.8, 2.4, 0, 1.0, 0);
+        b.box(plaster, 2.98, 1.7, 1.7, 0, 1.9, 0, Math.PI / 4, 0, 0);           // gable
+        b.box(tiles, 3.3, 0.12, 2.0, 0, 2.56, 0.66, Math.PI / 4, 0, 0);          // roof slopes
+        b.box(tiles, 3.3, 0.12, 2.0, 0, 2.56, -0.66, -Math.PI / 4, 0, 0);
+        b.box(tiles, 3.32, 0.14, 0.18, 0, 3.12, 0);                              // ridge
+        b.box(m.concreteDark, 0.36, 1.1, 0.36, 0.95, 2.95, -0.55);               // chimney
+        for (const s of [-1, 1]) {
+          b.box(m.windows, 0.55, 0.5, 0.02, s * 0.85, 1.25, 1.21); b.box(wood, 0.65, 0.07, 0.06, s * 0.85, 0.97, 1.23);
+          b.box(m.windows, 0.55, 0.5, 0.02, s * 0.85, 1.25, -1.21);
+          b.box(m.windows, 0.02, 0.5, 0.55, s * 1.51, 1.25, 0);
+        }
+        b.box(wood, 0.55, 1.05, 0.05, 0, 0.62, 1.22);                            // door
+        b.cyl(m.metal, 0.03, 0.03, 2.2, 5, 1.55, 1.2, 1.35);                     // flag pole
+        b.box(t.team, 0.55, 0.34, 0.03, 1.84, 2.05, 1.35);
+        for (let i = 0; i < 6; i++) b.box(wood, 0.06, 0.4, 0.06, -1.6 + i * 0.4, 0.3, 1.75); // picket fence
+        b.box(wood, 2.1, 0.05, 0.04, -0.6, 0.38, 1.75);
         break;
       }
       case 'xbarrel': {

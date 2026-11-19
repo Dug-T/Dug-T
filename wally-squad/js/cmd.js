@@ -47,7 +47,7 @@ export function execute(c) {
     }
     case 'stop': for (const u of myUnits(c)) { u.stop(); u.waypoints = null; } break;
     case 'ability': for (const u of myUnits(c)) u.frenzy(); break;
-    case 'board': { const apc = mine(c, c.tid); if (apc && capacityOf(apc)) { const room = capacityOf(apc) - (apc.passengers || []).length; myUnits(c).filter(u => u.isInf && !u.boarded).slice(0, room).forEach(u => u.board(apc)); } break; }
+    case 'board': { const h = byId.get(c.tid), apc = alive(h) && h.def.civil && h.faction === 'neutral' ? h : mine(c, c.tid); if (apc && capacityOf(apc)) { const room = capacityOf(apc) - (apc.passengers || []).length; myUnits(c).filter(u => u.isInf && !u.boarded).slice(0, room).forEach(u => u.board(apc)); } break; }
     case 'unload': for (const e of (c.ids || []).map(id => mine(c, id))) if (e && capacityOf(e) && e.passengers && e.passengers.length) ejectPassengers(e); break;
     case 'stance': for (const u of myUnits(c)) { u.stance = c.s === 'aggressive' ? null : c.s; if (c.s === 'holdfire') u.target = null; } break;
     case 'harv': for (const u of myUnits(c)) if (u.type === 'harvester') { u.oreCell = c.cell; u.hState = 'toOre'; u.requestPath(cellCenter(c.cell % 128), cellCenter((c.cell / 128) | 0)); } break;
