@@ -40,6 +40,7 @@ export const MEDALS = {
   spy:          { icon: '🕵', name: 'Double Agent', desc: 'Sneak a Spy into an enemy building.' },
   blossom:      { icon: '🌸', name: 'Petal Power', desc: 'Win a battle on Blossom Gardens.' },
   highland:     { icon: '🏴', name: 'Braveheart', desc: 'Win a battle on Highland Glen.' },
+  hunt:         { icon: '🎯', name: 'Headhunter', desc: 'Win a Hero Hunt skirmish.' },
   epilogue:     { icon: '🗡', name: 'Into the Fire', desc: 'Defeat Warlord Grak in the final campaign mission.' },
 };
 
@@ -96,6 +97,7 @@ export function initAchievements(run) {
     if (run.map === 'blossom') unlock('blossom');
     if (run.map === 'highland') unlock('highland');
     if (run.koth && run.mode === 'skirmish') unlock('koth');
+    if (run.hunt && run.mode === 'skirmish') unlock('hunt');
     if (run.daily) unlock('daily');
     if (run.mode === 'skirmish' && run.mut && run.mut.length >= 2) unlock('mutant');
     if (run.mode === 'skirmish') {

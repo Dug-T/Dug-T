@@ -58,7 +58,7 @@ const stored = sessionStorage.getItem('ws_cfg');
 let cfg = stored ? JSON.parse(stored) : null;
 const menuMode = !cfg;
 { const lv = document.getElementById('loadVer'); if (lv) lv.textContent = `Version ${VERSION}`; }
-if (params.has('auto') && !cfg) cfg = { mode: 'skirmish', map: params.get('map') || 'valley', faction: params.get('faction') || 'wally', difficulty: localStorage.getItem('ws_diff') || 'normal', daynight: params.has('daynight'), weather: params.get('weather') || null, koth: params.has('koth') };
+if (params.has('auto') && !cfg) cfg = { mode: 'skirmish', map: params.get('map') || 'valley', faction: params.get('faction') || 'wally', difficulty: localStorage.getItem('ws_diff') || 'normal', daynight: params.has('daynight'), weather: params.get('weather') || null, koth: params.has('koth'), hunt: params.has('hunt') };
 if (cfg && cfg.mode !== 'mp') sessionStorage.removeItem('ws_cfg');
 if (cfg && cfg.mode === 'mp') sessionStorage.removeItem('ws_cfg');
 if (cfg) sessionStorage.setItem('ws_last', JSON.stringify(cfg));
@@ -238,6 +238,13 @@ async function boot() {
 
 function setupBase(faction, pos) {
   new Building('conyard', faction, cellOf(pos.x) - 2, cellOf(pos.z) - 2, true);
+  // Hero Hunt: each side's champion starts beside the Construction Yard - lose him and you lose the battle
+  if (run.hunt && ['skirmish', 'mp', 'watch'].includes(run.mode)) {
+    const l0 = Math.hypot(pos.x, pos.z) || 1;
+    const hx = pos.x + (-pos.x / l0) * 6 + (pos.z / l0) * 6, hz = pos.z + (-pos.z / l0) * 6 - (pos.x / l0) * 6;
+    const v = new Unit(faction === 'wally' ? 'wallyman' : 'warlord', faction, hx, hz, 0);
+    v.vip = true; v.maxHp *= 2; v.hp = v.maxHp; v.addCrown?.();
+  }
   if (run.army === false) return;
   // starting force rolls out toward the middle of the map
   const l = Math.hypot(pos.x, pos.z) || 1;
@@ -405,6 +412,7 @@ function setupMenus() {
   toggle('Starting armies', () => sk.army !== false, v => { sk.army = v; });
   toggle('🗿 Victory Monuments', () => sk.wonders !== false, v => { sk.wonders = v; });
   toggle('👑 King of the Hill', () => !!sk.koth, v => { sk.koth = v; });
+  toggle('🎯 Hero Hunt', () => !!sk.hunt, v => { sk.hunt = v; });
   toggle('💰 Bounty convoys', () => sk.convoys !== false, v => { sk.convoys = v; });
   // starting money cycles through a few amounts
   const money = [2500, 4000, 7500, 15000];
@@ -709,6 +717,10 @@ function checkEnd(dt) {
     const w = hasStructures('wally'), g = hasStructures('grim');
     if (!w || !g) endGame(true, `The ${FACTIONS[w ? 'wally' : 'grim'].name} AI wins the battle!`, w ? 'wally' : 'grim');
     return;
+  }
+  if (run.hunt && ['skirmish', 'mp', 'watch'].includes(run.mode)) {
+    const dead = ['wally', 'grim'].find(f => !G.units.some(u => u.vip && u.faction === f && !u.dead));
+    if (dead) { const win = dead === 'wally' ? 'grim' : 'wally'; endGame(run.mode === 'watch' ? true : win === G.player, `${dead === 'wally' ? 'Wally Man' : 'Warlord Grak'} has fallen! The ${FACTIONS[win].name} wins the Hero Hunt!`, win); return; }
   }
   const kh = hillWinner();
   if (kh) { endGame(run.mode === 'watch' ? true : kh === G.player, `${FACTIONS[kh].name} held the hill for 3 minutes!`, kh); return; }

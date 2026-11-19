@@ -24,6 +24,8 @@ const DEFAULT_LINES = {
   shieldgen: { select: ['Shields up!', 'Shield Projector online.', 'Stay close, stay safe.'], move: ['Moving the bubble.', 'Keep together, everyone!'], attack: ['I am not armed, but I have got your back!', 'Shields holding!'] },
   piper: { select: ['Piper ready! Wheesht an listen!', 'The pipes, the pipes are callin!', 'Ah will play ye intae battle!'], move: ['Marchin oan!', 'Follow the pipes!'], attack: ['Gie them a tune!', 'Pipe them doon!'] },
   drummer: { select: ['BOOM. BOOM. BOOM.', 'War drums ready!', 'Grimlocks, march to the beat!'], move: ['Drum on!', 'Keep the beat!'], attack: ['Faster! FASTER!', 'Drums of war!'] },
+  blink: { select: ['Blink Trooper, phase locked.', 'Now you see me...', 'Ready to jump.'], move: ['Blinking!', 'Zip!', 'See you there!'], attack: ['Laser online!', 'Surprise!'] },
+  burrower: { select: ['Drill spinning!', 'Dig dig dig!', 'Tunnel Drill ready!'], move: ['Going under!', 'Diggin in!'], attack: ['DRILL THEM!', 'Bursting out!'] },
   rifle: { select: ['Rifleman reporting.', 'Ready for action!'], move: ['Moving out.', 'On my way.'], attack: ['Opening fire!', 'Engaging!'] },
   rocket: { select: ['Rockets loaded.', 'Anti-armour ready.'], move: ['Relocating.'], attack: ['Rocket away!', 'Tank spotted!'] },
   flamer: { select: [
