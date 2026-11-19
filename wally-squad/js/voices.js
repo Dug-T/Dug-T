@@ -2,6 +2,7 @@
 // Clips are stored in this browser (IndexedDB) and can be exported / imported as a voice pack file.
 // Units without a recording fall back to the computer's text-to-speech with a per-unit voice.
 import { UNITS } from './config.js';
+import { duckMusic } from './audio.js';
 
 export const EVENTS = { select: 'Selected', move: 'Move order', attack: 'Attack order' };
 const DEFAULT_LINES = {
@@ -17,6 +18,7 @@ const DEFAULT_LINES = {
   teslatruck: { select: ['Tesla Truck, fully charged!', 'Volts are up!', 'Mind the sparks.'], move: ['Rolling out.', 'Moving the coil.'], attack: ['Light em up!', 'Unlimited power!', 'Zap zap!'] },
   mech: { select: ['Mech online. All systems green.', 'Wally Mech, standing tall!', 'Big feet, bigger guns.'], move: ['Stomping over.', 'Moving out. Mind your toes.'], attack: ['Twin cannons, fire!', 'Target locked!', 'Stomp them flat!'] },
   troll: { select: ['Hhrrrmm. Troll here.', 'Troll hungry...', 'Who wake troll?'], move: ['Troll go.', 'Stomp stomp.'], attack: ['TROLL SMASH!', 'Crush puny things!', 'RRRAAAGH!'] },
+  spy: { select: ['Agent reporting. Nobody saw me.', 'Shaken, not stirred.', 'I was never here.', 'Disguise is ready.'], move: ['Blending in.', 'Moving quietly.', 'Just another face in the crowd.'], attack: ['Time to infiltrate.', 'They will never know.', 'Going in.'] },
   rifle: { select: ['Rifleman reporting.', 'Ready for action!'], move: ['Moving out.', 'On my way.'], attack: ['Opening fire!', 'Engaging!'] },
   rocket: { select: ['Rockets loaded.', 'Anti-armour ready.'], move: ['Relocating.'], attack: ['Rocket away!', 'Tank spotted!'] },
   flamer: { select: [
@@ -65,6 +67,16 @@ const DEFAULT_LINES = {
   drone: { select: ['Drone online.', 'Eyes in the sky.'], move: ['Scouting ahead.'], attack: ['No weapons, just cameras!'] },
 };
 // names of common female text-to-speech voices (iPhone/iPad, Mac, Windows, Android/Chrome)
+// novelty / effect voices some devices list as "English" (iPhones especially) - never use these
+const NOVELTY = /albert|bad news|bahh|bells|boing|bubbles|cellos|good news|jester|organ|superstar|trinoids|whisper|wobble|zarvox|deranged|hysterical|princess|grandma|grandpa|junior|ralph|kathy/i;
+// the clearest male voices on common devices, best first (used for Wally Man)
+const CLEAR = [/google uk english male/i, /daniel/i, /arthur/i, /microsoft (ryan|george|guy|andrew|brian|christopher|eric)/i, /\b(aaron|alex|oliver|tom|rishi|gordon|lee|nathan)\b/i, /microsoft (david|mark)/i, /google us english/i];
+const english = () => speechSynthesis.getVoices().filter(v => /^en/i.test(v.lang) && !NOVELTY.test(v.name));
+function clearVoice(vs) {
+  const good = v => /enhanced|premium|natural|neural|online/i.test(v.name);
+  for (const re of CLEAR) { const m = vs.filter(v => re.test(v.name)); if (m.length) return m.find(good) || m.find(v => v.localService) || m[0]; }
+  return vs.find(good) || vs.find(v => v.default) || vs[0] || null;
+}
 const FEMALE = /female|samantha|karen|moira|tessa|victoria|fiona|serena|kate|zira|susan|hazel|libby|sonia|catherine|allison|ava|nicky|siri.*(voice 2|voice 4)|google uk english female|google us english|jenny|aria|emma|amy|joanna|salli/i;
 const lastLine = {};
 const VOICE_STYLE = {
@@ -76,7 +88,8 @@ const VOICE_STYLE = {
   dog: { pitch: 1.9, rate: 1.3 },
   warlord: { pitch: 0.4, rate: 0.85 },
   flamer: { pitch: 1.15, rate: 1.08, female: true },
-  wally: { pitch: 1.4, rate: 1.15 }, wallyman: { pitch: 0.9, rate: 1.05 }, medic: { pitch: 1.3, rate: 1.05 }, engineer: { pitch: 1.2, rate: 1.1 },
+  spy: { pitch: 0.95, rate: 0.95, clear: true },
+  wally: { pitch: 1.4, rate: 1.15 }, wallyman: { pitch: 1.0, rate: 0.92, clear: true, loud: true }, medic: { pitch: 1.3, rate: 1.05 }, engineer: { pitch: 1.2, rate: 1.1 },
   titan: { pitch: 0.5, rate: 0.85 }, tank: { pitch: 0.7, rate: 0.95 }, harvester: { pitch: 0.8, rate: 0.9 },
   stealth: { pitch: 0.6, rate: 0.8 }, inferno: { pitch: 0.55, rate: 0.9 }, gunship: { pitch: 1.0, rate: 1.2 },
 };
@@ -142,8 +155,8 @@ export function sayLine(text, type) {
     const u = new SpeechSynthesisUtterance(text);
     const st = VOICE_STYLE[type] || { pitch: 1, rate: 1 };
     u.pitch = st.pitch; u.rate = st.rate; u.volume = 0.9;
-    const vs = speechSynthesis.getVoices().filter(v => /^en/i.test(v.lang));
-    if (vs.length) u.voice = vs[(type.length * 7) % vs.length];
+    const vs = english();
+    if (st.clear) u.voice = clearVoice(vs); else if (vs.length) u.voice = vs[(type.length * 7) % vs.length];
     speechSynthesis.speak(u);
   } catch { /* ignore */ }
 }
@@ -166,11 +179,13 @@ export function say(type, ev, force = false) {
   lastLine[key] = i;
   const u = new SpeechSynthesisUtterance(lines[i]);
   const st = VOICE_STYLE[type] || { pitch: 1, rate: 1.05 };
-  u.pitch = st.pitch; u.rate = st.rate; u.volume = 0.85;
-  const vs = speechSynthesis.getVoices().filter(v => /^en/i.test(v.lang));
+  u.pitch = st.pitch; u.rate = st.rate; u.volume = st.loud ? 1 : 0.85;
+  const vs = english();
   const fem = st.female ? vs.find(v => FEMALE.test(v.name)) : null;
   if (fem) u.voice = fem;
+  else if (st.clear) u.voice = clearVoice(vs);
   else if (vs.length) u.voice = vs[(type.length * 7) % vs.length];
+  if (st.clear) duckMusic(0.8 + lines[i].length * 0.075 / st.rate); // music dips so the hero is easy to hear
   speechSynthesis.speak(u);
 }
 

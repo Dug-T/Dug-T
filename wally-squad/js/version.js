@@ -1,8 +1,15 @@
 // Version number and update notes. Bump VERSION and add a new entry at the top of CHANGELOG for every
 // update: players see a "What's New" screen the first time they load a new version.
-export const VERSION = '1.28.1';
+export const VERSION = '1.29';
 
 export const CHANGELOG = [
+  { v: '1.29', date: '2026-11-19', title: 'Spies & Starlight', items: [
+    '🗣 Wally Man has a much clearer voice, and the music dips while he talks so you can hear him.',
+    '🔇 Silly novelty voices (bubbles, robots, whispers) are never used for any unit.',
+    '🕵 Spy (both sides): enemies ignore him - send him into an enemy building to steal cash, black out their power or reset their superweapon. Attack Dogs can sniff him out!',
+    '🌌 Northern lights over the snow maps, and shooting stars on clear nights.',
+    '🎖 New medal: Double Agent.',
+  ] },
   { v: '1.28.1', date: '2026-11-19', title: 'Always up to date', items: [
     '🔄 Updates now load straight away instead of showing an old version from your browser\'s memory.',
     '🆕 If a newer version comes out while the game is open, a "tap to update" banner appears on the main menu.',

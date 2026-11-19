@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import { G, nextId, rr, clamp, angleDiff, later, srand, srr, emit } from './state.js';
 import { UNITS, BUILDINGS, WEAPONS, WARHEADS, CELL, HALF, GRID, HARVEST_CAPACITY, FACTIONS, WATER_LEVEL, hasMut } from './config.js';
-import { T, heightAt, groundY, normalAt, cellOf, cellCenter, idx, isWalkable, isVisibleAt, inGrid, blastTrees } from './terrain.js';
+import { T, heightAt, groundY, normalAt, cellOf, cellCenter, idx, isWalkable, isVisibleAt, inGrid, blastTrees, revealCircle } from './terrain.js';
 import { makeUnitModel, makeBuildingModel, makeRubble, charModel } from './models.js';
 import { findPath, nearestFree } from './pathfind.js';
 import * as FX from './particles.js';
@@ -40,6 +40,27 @@ function nickname(u) {
   const used = new Set(G.units.filter(o => o.nick).map(o => o.nick));
   const free = pool.filter(n => !used.has(n)), name = (free.length ? free : pool)[Math.floor(Math.random() * (free.length || pool.length))];
   return u.isInf && u.type !== 'dog' ? `${['Pvt.', 'Cpl.', 'Sgt.'][Math.floor(Math.random() * 3)]} ${name}` : name;
+}
+
+// A Spy slips into an enemy building. What he does depends on the building.
+function spyInfiltrate(spy, b) {
+  const f = spy.faction, e = b.faction, P = G.players[f], E = G.players[e];
+  if (!P || !E) return;
+  let msg;
+  if (b.type === 'refinery' || b.type === 'conyard') {
+    const cash = Math.min(2500, Math.floor(E.credits * 0.5)); E.credits -= cash; P.credits += cash; msg = `stole $${cash.toLocaleString()}`;
+  } else if (b.def.power > 0) {
+    E.blackoutUntil = G.time + 40; msg = 'blacked out their power for 40 seconds';
+  } else if (b.type === 'radar' || b.type === 'tech' || b.def.superweapon) {
+    if (E.powers) for (const k in E.powers) E.powers[k].charge = 0;
+    if (E.super) E.super.charge = 0;
+    msg = 'reset their support powers and superweapon';
+  } else {
+    const cash = Math.min(800, Math.floor(E.credits * 0.2)); E.credits -= cash; P.credits += cash; msg = `sabotaged it and pocketed $${cash.toLocaleString()}`;
+  }
+  if (f === G.player) { G.announce?.(`Spy infiltrated the enemy ${b.def.name}: ${msg}!`, G.player, 3); revealCircle(b.x, b.z, 30); }
+  else if (e === G.player) { G.announce?.(`Enemy spy infiltrated our ${b.def.name}: ${msg.replace('their', 'our')}!`, G.player, 3); G.alertAt = { x: b.x, z: b.z, t: G.time }; }
+  emit('infiltrate', f, b);
 }
 
 // Units riding in an APC or garrisoning a bunker get out around the host.
@@ -100,6 +121,8 @@ export function aimPoint(e) {
   return { x: e.x, y: e.y + (e.def.air ? 0.2 : e.def.armor === 'infantry' ? 1.0 : 1.1), z: e.z };
 }
 export const FACIDX = { wally: 1, grim: 2 };
+// a disguised Spy: enemies ignore him until he is right next to them, but Attack Dogs always smell him
+function hiddenSpy(u, from) { return !!u.def.spy && u.faction !== from.faction && from.type !== 'dog' && Math.hypot(u.x - from.x, u.z - from.z) > 3.5; }
 function canTarget(w, e) {
   if (!alive(e)) return false;
   if (e.boarded) return false;
@@ -169,6 +192,7 @@ export class Unit {
   }
   attack(target) {
     if (!alive(target)) return;
+    if (this.def.spy) { if (target.kind === 'building' && target.faction !== this.faction && target.faction !== 'neutral') { this.order = { type: 'infiltrate', target }; this.requestPath(target.x, target.z, target.id); } else this.moveTo(target.x, target.z); return; }
     if (this.type === 'engineer' && !target.def.explosive && !target.def.civil) { this.order = { type: 'capture', target }; this.requestPath(target.x, target.z, target.kind === 'building' ? target.id : 0); return; }
     if (this.type === 'wally' && target.kind === 'building') { this.order = { type: 'c4', target }; this.requestPath(target.x, target.z, target.id); return; }
     if (!this.weapon) { this.moveTo(target.x, target.z); return; }
@@ -256,7 +280,7 @@ export class Unit {
     }
     if (this.def.heals || this.def.repairs) this.medicLogic(dt);
     else if (this.type === 'harvester') this.harvestLogic(dt);
-    else if (this.order && (this.order.type === 'capture' || this.order.type === 'c4')) this.specialLogic(dt);
+    else if (this.order && (this.order.type === 'capture' || this.order.type === 'c4' || this.order.type === 'infiltrate')) this.specialLogic(dt);
     else this.combatLogic(dt);
 
     this.moveLogic(dt);
@@ -365,7 +389,7 @@ export class Unit {
     let best = null, bd = 1e9;
     const w = this.weapon, w2 = this.weapon2;
     for (const u of G.units) {
-      if (u.dead || u.boarded || u.faction === this.faction || (u.faction === 'neutral' && !u.def.bounty)) continue;
+      if (u.dead || u.boarded || u.faction === this.faction || (u.faction === 'neutral' && !u.def.bounty) || hiddenSpy(u, this)) continue;
       if (!canTarget(w, u) && !(w2 && canTarget(w2, u))) continue;
       const d = Math.hypot(u.x - this.x, u.z - this.z);
       if (d > range) continue;
@@ -421,6 +445,10 @@ export class Unit {
           FX.teleportSwirl(this.x, this.y + 0.5, this.z);
           this.remove();
         } else this.order = null;
+      } else if (o.type === 'infiltrate') {
+        if (t.kind === 'building' && t.faction !== this.faction && t.faction !== 'neutral') spyInfiltrate(this, t);
+        FX.teleportSwirl(this.x, this.y + 0.5, this.z);
+        this.remove();
       } else if (o.type === 'c4') {
         o.plantT = (o.plantT || 0) + dt;
         if (o.plantT > 1.2) {
@@ -1059,7 +1087,7 @@ export class Building {
       this.scanT = 0.3;
       let best = null, bd = 1e9;
       for (const u of G.units) {
-        if (u.dead || u.faction === this.faction || !canTarget(w, u)) continue;
+        if (u.dead || u.faction === this.faction || !canTarget(w, u) || hiddenSpy(u, this)) continue;
         const d = Math.hypot(u.x - this.x, u.z - this.z);
         if (d < w.range && d < bd) { bd = d; best = u; }
       }
@@ -1100,6 +1128,7 @@ export class Building {
         for (const u of G.units) {
           if (u.dead || u.boarded || u.faction === this.faction || (u.faction === 'neutral' && !u.def.bounty) || !canTarget(w, u)) continue;
           if (u.cloaked && u.faction !== G.player) continue;
+          if (hiddenSpy(u, this)) continue;
           const d = Math.hypot(u.x - this.x, u.z - this.z);
           if (d < range && d < bd) { bd = d; best = u; }
         }

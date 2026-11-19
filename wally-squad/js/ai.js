@@ -39,6 +39,13 @@ export class AI {
     this.manageDefence();
     if (!this.opts.noAttack) this.manageAttack();
     if (srand() < 0.25) this.manageGarrison();
+    // idle spies sneak into the nearest enemy refinery or power plant
+    for (const s of G.units) {
+      if (s.dead || s.faction !== this.f || !s.def.spy || s.order) continue;
+      let best = null, bd = 1e9;
+      for (const b of G.buildings) { if (b.dead || b.faction === this.f || b.faction === 'neutral' || !(b.type === 'refinery' || b.def.power > 0 || b.type === 'radar')) continue; const d = Math.hypot(b.x - s.x, b.z - s.z); if (d < bd) { bd = d; best = b; } }
+      if (best) s.attack(best);
+    }
     // a bounty convoy passing nearby? send a hunting party after it
     const cv = convoyActive();
     if (cv && srand() < 0.3 && !G.units.some(u => !u.dead && u.faction === this.f && u.target === cv)) {
@@ -152,7 +159,7 @@ export class AI {
     if (P.credits < reserve) return;
     if (this.saving && P.credits < 1600 && this.army.size >= 0 && this.ownCombat() > 6) return;
     if (P.queues.infantry.items.length < 2) {
-      const opts = ['rifle', 'rifle', 'rocket', 'rocket', 'dog', 'grenadier', 'boomer', 'boomer', 'troll', 'flamer', 'engineer', 'medic', 'shaman', 'wallyman', 'warlord'].filter(t => hasReqs(this.f, t));
+      const opts = ['rifle', 'rifle', 'rocket', 'rocket', 'dog', 'spy', 'grenadier', 'boomer', 'boomer', 'troll', 'flamer', 'engineer', 'medic', 'shaman', 'wallyman', 'warlord'].filter(t => hasReqs(this.f, t));
       if (hasReqs(this.f, 'wally') && srand() < 0.2) opts.push('wally');
       if (opts.length) {
         let t = opts[Math.floor(srand() * opts.length)];
