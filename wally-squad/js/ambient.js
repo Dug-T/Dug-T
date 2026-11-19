@@ -20,6 +20,7 @@ function treeSpot() {
 export function initAmbient(scene, theme) {
   if (theme && theme.animals) initAnimals(scene, theme.animals);
   if (theme && theme.leaves) initLeaves(scene);
+  if (theme && !theme.lava && !theme.ice && !theme.trees.cactus) initFireflies(scene);
   if (theme && theme.lava) return; // nothing flies over the lava fields
   // a bird: two thin wings in a shallow V
   birdGeo = new THREE.BufferGeometry();
@@ -62,6 +63,41 @@ export function updateAmbient(dt) {
   updateRainbow(dt);
   updateAnimals(dt);
   updateLeaves(dt, t);
+  updateFireflies(dt, t);
+}
+
+// ---- fireflies: on warm maps after dark, little green-gold lights drift and blink near the camera
+let flies = null;
+const FLY_N = 140, flyState = [];
+function initFireflies(scene) {
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(FLY_N * 3), 3));
+  g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(FLY_N * 3), 3));
+  const cv = document.createElement('canvas'); cv.width = cv.height = 32;
+  const cx2 = cv.getContext('2d'), gr = cx2.createRadialGradient(16, 16, 0, 16, 16, 16);
+  gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.25, 'rgba(255,255,255,0.8)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+  cx2.fillStyle = gr; cx2.fillRect(0, 0, 32, 32);
+  flies = new THREE.Points(g, new THREE.PointsMaterial({ map: new THREE.CanvasTexture(cv), size: 1.4, vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false, sizeAttenuation: true }));
+  flies.frustumCulled = false; flies.visible = false;
+  for (let i = 0; i < FLY_N; i++) flyState.push({ x: (Math.random() - 0.5) * 70, z: (Math.random() - 0.5) * 70, h: 0.6 + Math.random() * 2.5, ph: Math.random() * 6.28, sp: 0.5 + Math.random() });
+  scene.add(flies);
+}
+function updateFireflies(dt, t) {
+  if (!flies) return;
+  const dark = Math.min(1, Math.max(0, ((G.nightLevel || 0) - 0.45) * 3));
+  flies.visible = dark > 0.02;
+  if (!flies.visible) return;
+  const pos = flies.geometry.attributes.position.array, col = flies.geometry.attributes.color.array, cx = G.camera.x, cz = G.camera.z;
+  for (let i = 0; i < FLY_N; i++) {
+    const f = flyState[i];
+    f.x += Math.sin(t * 0.7 * f.sp + f.ph) * dt * 0.8; f.z += Math.cos(t * 0.6 * f.sp + f.ph * 1.3) * dt * 0.8;
+    if (Math.abs(f.x) > 36 || Math.abs(f.z) > 36) { f.x = (Math.random() - 0.5) * 70; f.z = (Math.random() - 0.5) * 70; }
+    const wx = cx + f.x, wz = cz + f.z;
+    pos[i * 3] = wx; pos[i * 3 + 1] = groundY(wx, wz) + f.h + Math.sin(t * 1.3 + f.ph) * 0.3; pos[i * 3 + 2] = wz;
+    const blink = Math.max(0, Math.sin(t * 2.2 * f.sp + f.ph)) ** 2 * dark * (isVisibleAt(wx, wz) ? 1 : 0);
+    col[i * 3] = 3.2 * blink; col[i * 3 + 1] = 4.4 * blink; col[i * 3 + 2] = 0.5 * blink;
+  }
+  flies.geometry.attributes.position.needsUpdate = true; flies.geometry.attributes.color.needsUpdate = true;
 }
 
 // ---- grazing animals: little herds of sheep and cows (penguins on snow maps). Purely decorative: they

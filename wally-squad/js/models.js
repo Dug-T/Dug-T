@@ -434,6 +434,77 @@ export function makeRepairTruck(faction) {
   });
 }
 
+// Wyvern Rider: a scaly winged beast with a goblin on its back. Wings flap (wingL / wingR).
+export function makeWyvern(faction) {
+  return cached(`wyvern-${faction}`, () => {
+    const t = mats(faction), m = M();
+    const scale = new THREE.MeshStandardMaterial({ color: 0x3f5a2a, roughness: 0.7, metalness: 0.1, flatShading: true });
+    const belly = new THREE.MeshStandardMaterial({ color: 0xa08a5a, roughness: 0.8, flatShading: true });
+    const root = new THREE.Group();
+    const b = new Builder();
+    b.sph(scale, 0.75, 0, 0, 0, 0.9, 0.8, 1.6);                         // body
+    b.sph(belly, 0.6, 0, -0.25, 0.1, 0.8, 0.55, 1.35);
+    b.cyl(scale, 0.22, 0.38, 1.4, 8, 0, 0.35, 1.45, -0.9, 0, 0);       // neck
+    b.box(scale, 0.42, 0.36, 0.75, 0, 0.75, 2.2);                      // head
+    b.box(belly, 0.36, 0.12, 0.6, 0, 0.55, 2.3);                       // jaw
+    b.add(new THREE.ConeGeometry(0.07, 0.4, 5), m.concrete, 0.14, 1.0, 2.0, -0.6, 0, 0); b.add(new THREE.ConeGeometry(0.07, 0.4, 5), m.concrete, -0.14, 1.0, 2.0, -0.6, 0, 0); // horns
+    b.box(m.lampRed, 0.08, 0.06, 0.04, 0.16, 0.82, 2.45); b.box(m.lampRed, 0.08, 0.06, 0.04, -0.16, 0.82, 2.45); // glowing eyes
+    b.cyl(scale, 0.3, 0.05, 2.6, 7, 0, -0.05, -2.0, Math.PI / 2 + 0.15, 0, 0); // tail
+    b.add(new THREE.ConeGeometry(0.25, 0.5, 4).rotateX(-Math.PI / 2), t.team, 0, -0.25, -3.35);
+    for (let i = 0; i < 5; i++) b.add(new THREE.ConeGeometry(0.08, 0.3, 4), t.teamDark, 0, 0.62 - i * 0.04, 0.7 - i * 0.45); // back spines
+    for (const s of [-1, 1]) { b.box(scale, 0.16, 0.55, 0.2, s * 0.4, -0.65, 0.5); b.box(scale, 0.16, 0.5, 0.2, s * 0.4, -0.65, -0.6); } // legs tucked
+    // goblin rider in a team-coloured saddle
+    b.box(t.team, 0.6, 0.2, 0.7, 0, 0.62, 0.1);
+    b.box(t.teamDark, 0.34, 0.42, 0.24, 0, 0.95, 0.05);
+    b.sph(new THREE.MeshStandardMaterial({ color: 0x6f9a3a, roughness: 0.75 }), 0.16, 0, 1.3, 0.05);
+    b.box(m.glass, 0.24, 0.06, 0.05, 0, 1.33, 0.2);
+    const body = b.build(); root.add(body);
+    const wingMat = new THREE.MeshStandardMaterial({ color: 0x5a2a22, roughness: 0.8, side: THREE.DoubleSide, flatShading: true });
+    for (const s of [-1, 1]) {
+      const wb = new Builder();
+      wb.box(scale, 1.6, 0.1, 0.12, s * 0.8, 0, 0.3);                  // wing bone
+      wb.box(scale, 1.3, 0.08, 0.1, s * 2.2, 0, -0.2, 0, s * 0.5, 0);
+      const mem = new THREE.BufferGeometry().setAttribute('position', new THREE.BufferAttribute(new Float32Array([0, 0, 0.3, s * 1.6, 0, 0.35, s * 2.9, 0, -0.65, s * 1.6, 0, 0.35, s * 1.8, 0, -1.3, s * 2.9, 0, -0.65, 0, 0, 0.3, s * 1.8, 0, -1.3, 0, 0, -0.9]), 3)); // wing membrane
+      mem.computeVertexNormals();
+      wb.add(mem, wingMat, 0, 0, 0);
+      const wing = wb.build(false); wing.position.set(s * 0.45, 0.35, 0.1); wing.name = s < 0 ? 'wingL' : 'wingR';
+      root.add(wing);
+    }
+    root.userData.muzzle = new THREE.Vector3(0, 0.6, 2.65);
+    return root;
+  });
+}
+
+// Tesla Truck: a six-wheeled truck with a coil and electric orb on a swivelling mount
+export function makeTeslaTruck(faction) {
+  return cached(`teslatruck-${faction}`, () => {
+    const t = mats(faction), m = M();
+    const copper = new THREE.MeshStandardMaterial({ color: 0xb8673a, roughness: 0.35, metalness: 0.85 });
+    const root = new THREE.Group();
+    const b = new Builder();
+    for (const z of [1.0, -0.2, -1.0]) for (const x of [-0.8, 0.8]) wheel(b, m.metal, x, 0.42, z, 0.4, 0.3);
+    b.box(t.team, 1.5, 0.95, 1.0, 0, 1.05, 1.15);                     // cab
+    b.box(m.glass, 1.3, 0.4, 0.04, 0, 1.3, 1.66);
+    b.box(m.darkMetal, 1.55, 0.3, 3.0, 0, 0.62, -0.2);                // chassis
+    b.box(t.teamDark, 1.6, 0.4, 1.9, 0, 0.95, -0.7);                  // flatbed
+    b.box(m.hazard, 1.62, 0.08, 1.92, 0, 1.17, -0.7);
+    for (const s of [-1, 1]) b.cyl(m.darkMetal, 0.16, 0.16, 1.6, 8, s * 0.55, 1.35, -0.7, Math.PI / 2, 0, 0); // capacitor drums
+    b.box(m.lampWhite, 0.18, 0.1, 0.04, 0.5, 0.95, 1.66); b.box(m.lampWhite, 0.18, 0.1, 0.04, -0.5, 0.95, 1.66);
+    b.box(t.accent, 0.5, 0.5, 0.02, 0.77, 1.05, 1.15, 0, Math.PI / 2, 0);
+    root.add(b.build());
+    const c = new Builder();
+    c.cyl(m.darkMetal, 0.35, 0.4, 0.25, 10, 0, 0, 0);
+    c.cyl(m.darkMetal, 0.12, 0.16, 1.4, 8, 0, 0.8, 0);
+    for (let i = 0; i < 5; i++) c.add(new THREE.TorusGeometry(0.28, 0.06, 6, 14), copper, 0, 0.35 + i * 0.22, 0, Math.PI / 2, 0, 0);
+    c.add(new THREE.TorusGeometry(0.36, 0.06, 6, 16), copper, 0, 1.5, 0, Math.PI / 2, 0, 0);
+    c.add(new THREE.SphereGeometry(0.26, 12, 8), new THREE.MeshStandardMaterial({ color: 0x9fe8ff, emissive: 0x58c8ff, emissiveIntensity: 2.6, roughness: 0.3 }), 0, 1.75, 0);
+    const coil = c.build(false); coil.position.set(0, 1.2, -0.75); coil.name = 'turret';
+    root.add(coil);
+    root.userData.muzzle = new THREE.Vector3(0, 1.75, 0);
+    return root;
+  });
+}
+
 export function makeJet(faction) {
   return cached(`jet-${faction}`, () => {
     const t = mats(faction), m = M();
@@ -1003,6 +1074,8 @@ export function makeUnitModel(type, faction) {
     case 'inferno': return makeInferno(faction);
     case 'wallyman': return makeWallyMan(faction);
     case 'dog': return makeDog(faction);
+    case 'wyvern': return makeWyvern(faction);
+    case 'teslatruck': return makeTeslaTruck(faction);
     case 'warlord': return makeWarlord(faction);
     default: return type.startsWith('custom_') ? makeCustomModel(UNITS[type].design, faction) : makeInfantry(type, faction);
   }

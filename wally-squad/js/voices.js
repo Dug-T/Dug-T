@@ -13,6 +13,8 @@ const DEFAULT_LINES = {
   dog: { select: ['Woof!', 'Arf arf!', 'Grrrr!'], move: ['Woof woof!', 'Arf!'], attack: ['GRRRR!', 'Bark bark bark!'] },
   grenadier: { select: ['Grenadier ready.', 'Who ordered the fireworks?', 'Pins out, sir!', 'Got a pocket full of boom.'], move: ['Moving. Keep your heads down.', 'On it.', 'Relocating.'], attack: ['Fire in the hole!', 'Grenade out!', 'Catch!'] },
   boomer: { select: ['Hehehe! Boom time?', 'Gimme something to blow up!', 'Ooh, shiny fuse!', 'Me go big bang!'], move: ['Running, running!', 'Hehehehe!', 'Outta my way!'], attack: ['KABOOOOM!', 'For the Legion! Hehehe!', 'Here comes the BANG!'] },
+  wyvern: { select: ['SKREEEEE!', 'Wyvern ready! Hehehe!', 'Up, up, up!'], move: ['Flap faster, beastie!', 'To the skies!'], attack: ['BURN THEM!', 'Breathe fire, beastie!', 'Roast em!'] },
+  teslatruck: { select: ['Tesla Truck, fully charged!', 'Volts are up!', 'Mind the sparks.'], move: ['Rolling out.', 'Moving the coil.'], attack: ['Light em up!', 'Unlimited power!', 'Zap zap!'] },
   rifle: { select: ['Rifleman reporting.', 'Ready for action!'], move: ['Moving out.', 'On my way.'], attack: ['Opening fire!', 'Engaging!'] },
   rocket: { select: ['Rockets loaded.', 'Anti-armour ready.'], move: ['Relocating.'], attack: ['Rocket away!', 'Tank spotted!'] },
   flamer: { select: [
@@ -64,6 +66,7 @@ const DEFAULT_LINES = {
 const FEMALE = /female|samantha|karen|moira|tessa|victoria|fiona|serena|kate|zira|susan|hazel|libby|sonia|catherine|allison|ava|nicky|siri.*(voice 2|voice 4)|google uk english female|google us english|jenny|aria|emma|amy|joanna|salli/i;
 const lastLine = {};
 const VOICE_STYLE = {
+  wyvern: { pitch: 1.6, rate: 1.2 },
   boomer: { pitch: 1.75, rate: 1.3 },
   grenadier: { pitch: 0.9, rate: 1.0 },
   dog: { pitch: 1.9, rate: 1.3 },

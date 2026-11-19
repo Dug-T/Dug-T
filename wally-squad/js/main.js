@@ -29,6 +29,7 @@ import { allMaterials } from './materials.js';
 import { updateCrates, animateCrates, placeTechBuildings, placeBarrels, placeHouses, recordHistory, drawHistory } from './features.js';
 import { updatePowers } from './powers.js';
 import { updateHazards } from './hazards.js';
+import { initHill, updateHill, hillWinner, hill } from './koth.js';
 import { initAmbient, updateAmbient } from './ambient.js';
 import { initAchievements, checkAchievements, buildMedals } from './achievements.js';
 import { registerCustomMaps, buildMapEditor } from './mapeditor.js';
@@ -54,7 +55,7 @@ let mission = null, mctx = null, lockstep = null;
 const stored = sessionStorage.getItem('ws_cfg');
 let cfg = stored ? JSON.parse(stored) : null;
 const menuMode = !cfg;
-if (params.has('auto') && !cfg) cfg = { mode: 'skirmish', map: params.get('map') || 'valley', faction: params.get('faction') || 'wally', difficulty: localStorage.getItem('ws_diff') || 'normal', daynight: params.has('daynight'), weather: params.get('weather') || null };
+if (params.has('auto') && !cfg) cfg = { mode: 'skirmish', map: params.get('map') || 'valley', faction: params.get('faction') || 'wally', difficulty: localStorage.getItem('ws_diff') || 'normal', daynight: params.has('daynight'), weather: params.get('weather') || null, koth: params.has('koth') };
 if (cfg && cfg.mode !== 'mp') sessionStorage.removeItem('ws_cfg');
 if (cfg && cfg.mode === 'mp') sessionStorage.removeItem('ws_cfg');
 if (cfg) sessionStorage.setItem('ws_last', JSON.stringify(cfg));
@@ -206,6 +207,7 @@ async function boot() {
   placeTechBuildings();
   placeBarrels();
   placeHouses();
+  initHill(scene);
   revealCircle(BASES[G.player].x, BASES[G.player].z, 42);
   updatePower();
   await step(0.7);
@@ -397,6 +399,7 @@ function setupMenus() {
   toggle('Fog of war', () => sk.fog !== false, v => { sk.fog = v; });
   toggle('Starting armies', () => sk.army !== false, v => { sk.army = v; });
   toggle('🗿 Victory Monuments', () => sk.wonders !== false, v => { sk.wonders = v; });
+  toggle('👑 King of the Hill', () => !!sk.koth, v => { sk.koth = v; });
   // starting money cycles through a few amounts
   const money = [2500, 4000, 7500, 15000];
   const mb = document.createElement('button'); mb.className = 'btn on';
@@ -688,6 +691,8 @@ function checkEnd(dt) {
     if (!w || !g) endGame(true, `The ${FACTIONS[w ? 'wally' : 'grim'].name} AI wins the battle!`, w ? 'wally' : 'grim');
     return;
   }
+  const kh = hillWinner();
+  if (kh) { endGame(run.mode === 'watch' ? true : kh === G.player, `${FACTIONS[kh].name} held the hill for 3 minutes!`, kh); return; }
   if (G.surrendered) { endGame(G.surrendered !== G.player, G.surrendered === G.player ? 'You surrendered.' : 'The enemy has surrendered!'); return; }
   // a Victory Monument that has stood for 5 minutes wins the game
   const won = G.buildings.find(b => !b.dead && b.def.wonder && (b.wonderT || 0) >= 300);
@@ -726,6 +731,7 @@ function simStep(dt) {
   regrowOre(dt);
   updateCrates(dt);
   updateHazards(dt);
+  updateHill(dt);
   recordHistory(dt);
   if (run.mode === 'survival' && !G.over) { updateSurvival(dt); missionT -= dt; if (missionT <= 0) { missionT = 0.5; renderObjectives(); } }
   if (mission && !G.over) { missionT -= dt; if (missionT <= 0) { missionT = 0.5; if (mctx.heroCheck()) mission.tick(mctx); renderObjectives(); } }
