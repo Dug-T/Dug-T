@@ -48,9 +48,65 @@ function copyLandscapeRules() {
   }
 }
 
+// the real visible size, for CSS (--vw / --vh): 100vh/100dvh are wrong in some in-app browsers
+let lastW = 0, lastH = 0;
+function updateViewportVars() {
+  const w = window.innerWidth, h = window.innerHeight;
+  if (w === lastW && h === lastH) return;
+  lastW = w; lastH = h;
+  const s = document.documentElement.style;
+  s.setProperty('--vw', w + 'px'); s.setProperty('--vh', h + 'px');
+}
+updateViewportVars();
+window.addEventListener('resize', updateViewportVars);
+window.visualViewport?.addEventListener('resize', updateViewportVars);
+
 export function updateOrientation() {
+  updateViewportVars();
   const rot = coarse.matches && window.innerHeight > window.innerWidth;
   if (rot) copyLandscapeRules();
   if (rot !== isRot()) document.body.classList.toggle('rot', rot);
   return rot;
 }
+
+// ---- finger scrolling for the turned (upright phone) layout
+// When #app is turned 90 degrees the browser no longer scrolls menus under a swipe, and in-app browsers
+// (Facebook, Instagram...) treat the unused swipe as "close the page". So while turned we scroll the
+// nearest scrollable box ourselves, in the game's own up/down direction, with a little momentum, and keep
+// the swipe from reaching the surrounding app.
+const SCROLLERS = '.screen, .card, #grid, .vgrid, .medalGrid, #objectives, .cardList';
+function scrollBoxFor(el) {
+  for (let e = el; e && e !== document.body; e = e.parentElement) {
+    if (!e.matches || !e.matches(SCROLLERS)) continue;
+    const oy = getComputedStyle(e).overflowY;
+    if ((oy === 'auto' || oy === 'scroll') && e.scrollHeight > e.clientHeight + 1) return e;
+  }
+  return null;
+}
+let drag = null, coast = null;
+document.addEventListener('touchstart', e => {
+  if (coast) { cancelAnimationFrame(coast); coast = null; }
+  if (!isRot() || e.touches.length !== 1) { drag = null; return; }
+  const box = scrollBoxFor(e.target);
+  if (!box) { drag = null; return; }
+  const p = appPos(e.touches[0]);
+  drag = { box, y: p.y, x: p.x, moved: false, v: 0, t: performance.now() };
+}, { passive: true });
+document.addEventListener('touchmove', e => {
+  if (!drag) return;
+  const p = appPos(e.touches[0]);
+  const dy = drag.y - p.y;
+  if (!drag.moved && Math.abs(dy) < 6 && Math.abs(p.x - drag.x) < 6) return;
+  drag.moved = true;
+  e.preventDefault(); // ours, not the page's or the app's
+  const now = performance.now(), dt = Math.max(1, now - drag.t);
+  drag.box.scrollTop += dy;
+  drag.v = drag.v * 0.6 + (dy / dt) * 0.4; // px per ms
+  drag.y = p.y; drag.t = now;
+}, { passive: false });
+document.addEventListener('touchend', () => {
+  if (!drag || !drag.moved) { drag = null; return; }
+  const box = drag.box; let v = drag.v * 16; drag = null;
+  const step = () => { if (Math.abs(v) < 0.4) { coast = null; return; } box.scrollTop += v; v *= 0.93; coast = requestAnimationFrame(step); };
+  coast = requestAnimationFrame(step);
+}, { passive: true });

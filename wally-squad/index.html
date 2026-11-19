@@ -113,6 +113,11 @@
   body.touch #touchBar { display: flex; }
   /* let the build list (and menus) scroll by touch even though the map itself handles all gestures */
   #grid, .card, .vgrid, #objectives { touch-action: pan-y; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+  /* Menu screens scroll as a whole with a finger. They are always scrollable by at least a couple of pixels,
+     so a swipe is never handed to the surrounding app (in Facebook's built-in browser that closes the game). */
+  .screen { overflow-y: auto; overflow-x: hidden; touch-action: pan-y; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; align-items: flex-start; }
+  .screen::before { content: ''; position: absolute; left: 0; top: 0; width: 1px; height: calc(100% + 2px); pointer-events: none; }
+  .screen > .card { margin: auto; max-height: none; overflow: visible; flex-shrink: 0; }
   /* the sidebar can be tucked away to see more of the battlefield */
   #sideToggle { position: absolute; right: var(--side); top: 50%; transform: translateY(-50%); z-index: 7; background: var(--panel2); border: 1px solid var(--line2); border-right: none; color: var(--accent); font: 700 12px 'Rajdhani'; padding: 14px 4px; border-radius: 6px 0 0 6px; cursor: pointer; display: none; writing-mode: vertical-rl; }
   body.touch #sideToggle { display: block; }
@@ -269,9 +274,11 @@
   #rotate .screenbar { position: absolute; left: 8px; right: 8px; top: 10px; bottom: 16px; background: linear-gradient(135deg, #2f7fe0, #4cff7a); border-radius: 3px; opacity: 0.7; }
   @keyframes rot { 0%, 25% { transform: rotate(0deg); } 55%, 85% { transform: rotate(-90deg); } 100% { transform: rotate(0deg); } }
   /* the whole game lives in #app; on an upright phone it is turned 90 degrees so it stays landscape */
-  #app { position: fixed; left: 0; top: 0; width: 100vw; height: 100vh; width: 100dvw; height: 100dvh; overflow: hidden; }
-  body.rot #app { width: 100vh; height: 100vw; width: 100dvh; height: 100dvw; transform-origin: top left; transform: rotate(90deg) translateY(-100%); }
+  /* --vw/--vh are the real visible size (set from JS): in-app browsers such as Facebook's report a 100vh taller than what you can see */
+  #app { position: fixed; left: 0; top: 0; width: 100vw; height: 100vh; width: 100dvw; height: 100dvh; width: var(--vw, 100dvw); height: var(--vh, 100dvh); overflow: hidden; }
+  body.rot #app { width: 100vh; height: 100vw; width: 100dvh; height: 100dvw; width: var(--vh, 100dvh); height: var(--vw, 100dvw); transform-origin: top left; transform: rotate(90deg) translateY(-100%); }
   body.rot .card { max-height: calc(100dvw - 16px); }
+  body.rot .screen > .card { max-height: none; }
   body.rot .medalGrid, body.rot .vgrid { max-height: 55dvw; }
   body.rot #minimapWrap { max-height: none; }
   #fps { font: 700 12px monospace; padding: 2px 6px; border-radius: 4px; background: #0009; color: #7dff9a; white-space: nowrap; pointer-events: none; display: none; }
