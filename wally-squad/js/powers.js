@@ -3,7 +3,7 @@
 import * as THREE from 'three';
 import { G, later, srr, emit } from './state.js';
 import { HALF } from './config.js';
-import { groundY, BASES } from './terrain.js';
+import { groundY, BASES, blastTrees } from './terrain.js';
 import { Unit, damage, unitsNear, decay, distTo } from './entities.js';
 import { mats, M } from './materials.js';
 import * as FX from './particles.js';
@@ -168,6 +168,7 @@ function airstrike(f, x, z) {
       const bx = x + dx * off + srr(-1.2, 1.2), bz = z + dz * off + srr(-1.2, 1.2);
       const by = groundY(bx, bz);
       FX.explosion(bx, by + 0.5, bz, 1.7, { force: true, sound: i % 2 === 0 });
+      blastTrees(bx, bz, 4.5, 200);
       for (const u of unitsNear(bx, bz, 4.5, [])) if (u.faction !== f && !u.air) damage(u, 170 * (1 - Math.hypot(u.x - bx, u.z - bz) / 5), null);
       for (const b of G.buildings) if (!b.dead && b.faction !== f && b.faction !== 'neutral' && distTo(b, bx, bz) < 3.5) damage(b, 140, null);
     });

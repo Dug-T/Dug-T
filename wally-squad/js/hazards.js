@@ -4,7 +4,7 @@
 import * as THREE from 'three';
 import { G, srand, srr, later } from './state.js';
 import { HALF } from './config.js';
-import { groundY, isVisibleAt } from './terrain.js';
+import { groundY, isVisibleAt, blastTrees } from './terrain.js';
 import { unitsNear, damage, distTo } from './entities.js';
 import * as FX from './particles.js';
 
@@ -55,6 +55,7 @@ function meteorShower() {
     later(at, () => {
       const y = groundY(x, z);
       FX.explosion(x, y + 0.5, z, 1.6, { sound: i % 3 === 0 });
+      blastTrees(x, z, 4, 200);
       for (const u of unitsNear(x, z, 4.5, buf)) if (!u.air && !u.dead) damage(u, (u.isInf ? 90 : 120) * (1 - Math.hypot(u.x - x, u.z - z) / 5), null);
       for (const b of G.buildings) if (!b.dead && b.faction !== 'neutral' && distTo(b, x, z) < 3) damage(b, 110, null);
     });

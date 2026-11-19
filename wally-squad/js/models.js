@@ -1004,8 +1004,8 @@ export function makeBuildingModel(type, faction) {
     const t = mats(faction), m = M();
     const root = new THREE.Group();
     const b = new Builder();
-    const W = { wonder: 3, bunker: 2, conyard: 4, power: 3, refinery: 4, barracks: 3, factory: 4, radar: 3, tech: 3, helipad: 3, turret: 1, sam: 2, plasma: 1, uplink: 3, silo: 3, wall: 1, gate: 2, mine: 1, derrick: 2, hospital: 2, depot: 2 };
-    const D = { wonder: 3, bunker: 2, conyard: 4, power: 3, refinery: 3, barracks: 3, factory: 4, radar: 3, tech: 3, helipad: 3, turret: 1, sam: 2, plasma: 1, uplink: 3, silo: 3, wall: 1, gate: 1, mine: 1, derrick: 2, hospital: 2, depot: 2 };
+    const W = { xbarrel: 1, wonder: 3, bunker: 2, conyard: 4, power: 3, refinery: 4, barracks: 3, factory: 4, radar: 3, tech: 3, helipad: 3, turret: 1, sam: 2, plasma: 1, uplink: 3, silo: 3, wall: 1, gate: 2, mine: 1, derrick: 2, hospital: 2, depot: 2 };
+    const D = { xbarrel: 1, wonder: 3, bunker: 2, conyard: 4, power: 3, refinery: 3, barracks: 3, factory: 4, radar: 3, tech: 3, helipad: 3, turret: 1, sam: 2, plasma: 1, uplink: 3, silo: 3, wall: 1, gate: 1, mine: 1, derrick: 2, hospital: 2, depot: 2 };
     const w = W[type] * CELL - 0.3, d = D[type] * CELL - 0.3;
     const parts = {};
     switch (type) {
@@ -1280,6 +1280,17 @@ export function makeBuildingModel(type, faction) {
         pb.cyl(m.gun, 0.03, 0.03, 1.4, 5, 1.4, -0.9, 0);
         const pump = pb.build(); pump.position.set(0, 2.1, 0.6); pump.name = 'pump';
         parts.pump = pump;
+        break;
+      }
+      case 'xbarrel': {
+        // a cluster of red fuel drums with hazard bands and a little puddle
+        const red = new THREE.MeshStandardMaterial({ color: 0xc8281e, roughness: 0.45, metalness: 0.4 });
+        for (const [x, z, h] of [[-0.3, -0.25, 0], [0.32, -0.2, 0], [0, 0.3, 0], [0.05, 0, 0.92]]) {
+          b.cyl(red, 0.3, 0.3, 0.9, 12, x, 0.45 + h, z);
+          b.cyl(m.hazard, 0.31, 0.31, 0.12, 12, x, 0.6 + h, z);
+          b.cyl(m.darkMetal, 0.06, 0.06, 0.04, 6, x + 0.12, 0.92 + h, z);
+        }
+        b.add(new THREE.CircleGeometry(0.75, 14).rotateX(-Math.PI / 2), m.black, 0.1, 0.02, 0.1);
         break;
       }
       case 'wonder': {

@@ -101,6 +101,22 @@ export const crateList = () => crates;
 
 // ------------------------------------------------------------------ neutral tech buildings
 // Placed at the middle of each lane; engineers capture them.
+// explosive fuel barrels a third and two thirds of the way along each lane, just off the road
+export function placeBarrels() {
+  const map = currentMap(); if (!map || G.cfg.mode === 'tutorial') return;
+  map.lanes.forEach(lane => {
+    let len = 0; const segs = [];
+    for (let k = 0; k < lane.length - 1; k++) { const l = Math.hypot(lane[k + 1][0] - lane[k][0], lane[k + 1][1] - lane[k][1]); segs.push(l); len += l; }
+    for (const [frac, side] of [[0.33, 1], [0.67, -1]]) {
+      let want = len * frac, k = 0;
+      while (k < segs.length - 1 && want > segs[k]) { want -= segs[k]; k++; }
+      const t = want / segs[k], dx = lane[k + 1][0] - lane[k][0], dz = lane[k + 1][1] - lane[k][1], l = Math.hypot(dx, dz);
+      const x = lane[k][0] + dx * t, z = lane[k][1] + dz * t;
+      forcePlace('neutral', 'xbarrel', x - dz / l * 7 * side, z + dx / l * 7 * side);
+    }
+  });
+}
+
 export function placeTechBuildings() {
   const map = currentMap();
   if (!map || G.cfg.tech === false) return;

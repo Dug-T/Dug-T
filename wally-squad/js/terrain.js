@@ -189,6 +189,8 @@ export function buildTerrain(scene) {
   scene.add(water);
   G.three.water = water;
 
+  T.treeHp = new Float32Array(GRID * GRID).fill(120);
+  treeAt.clear();
   buildTrees(scene, treeSpots);
   buildRocks(scene);
   buildOre(scene);
@@ -230,6 +232,7 @@ function addTiled(scene, geo, mat, items, { tint = false, shadow = true } = {}) 
   const tiles = new Map();
   const p = new THREE.Vector3();
   for (const it of items) {
+    it.refs = it.refs || [];
     p.setFromMatrixPosition(it.m);
     const key = Math.floor((p.x + HALF) / SCENERY_TILE) + ',' + Math.floor((p.z + HALF) / SCENERY_TILE);
     if (!tiles.has(key)) tiles.set(key, []);
@@ -237,7 +240,7 @@ function addTiled(scene, geo, mat, items, { tint = false, shadow = true } = {}) 
   }
   for (const list of tiles.values()) {
     const im = new THREE.InstancedMesh(geo, mat, list.length);
-    list.forEach((t, i) => { im.setMatrixAt(i, t.m); if (tint && t.c) im.setColorAt(i, t.c); });
+    list.forEach((t, i) => { im.setMatrixAt(i, t.m); if (tint && t.c) im.setColorAt(i, t.c); t.refs.push({ im, i }); });
     im.computeBoundingSphere();
     im.castShadow = shadow; im.receiveShadow = true;
     scene.add(im);
@@ -282,6 +285,55 @@ function treeKinds() {
   return K;
 }
 
+// ---- destructible trees: big blasts knock them down. Hit points live in sim state (T.treeHp), so felling
+// a tree (which also clears its cell for movement) happens identically on every machine online.
+const treeAt = new Map();      // cell index -> instanced tree record (visual)
+let treeKindsCache = null;
+export function blastTrees(x, z, r, dmg) {
+  if (!T.treeHp) return;
+  const c0x = cellOf(x - r), c1x = cellOf(x + r), c0z = cellOf(z - r), c1z = cellOf(z + r);
+  for (let cz = c0z; cz <= c1z; cz++) for (let cx = c0x; cx <= c1x; cx++) {
+    if (!inGrid(cx, cz)) continue;
+    const i = idx(cx, cz);
+    if (!T.tree[i]) continue;
+    const d = Math.hypot(cellCenter(cx) - x, cellCenter(cz) - z);
+    if (d > r) continue;
+    T.treeHp[i] -= dmg * (1 - d / (r + 0.5));
+    if (T.treeHp[i] <= 0) fellTree(i, x, z);
+  }
+}
+function fellTree(i, fromX, fromZ) {
+  T.tree[i] = 0; T.blocked[i] = T.water[i] ? 1 : 0;
+  const it = treeAt.get(i); if (!it) return;
+  treeAt.delete(i);
+  // hide the standing tree...
+  const zero = new THREE.Matrix4().makeScale(0, 0, 0);
+  for (const { im, i: k } of it.refs) { im.setMatrixAt(k, zero); im.instanceMatrix.needsUpdate = true; }
+  if (!G.three) return;
+  // ...and topple a charred copy away from the blast, leaving a burnt stump
+  treeKindsCache = treeKindsCache || treeKinds();
+  const burnt = M().burnt, g = new THREE.Group();
+  for (const [geo] of treeKindsCache[it.kind] || []) g.add(new THREE.Mesh(geo, burnt));
+  const pos = new THREE.Vector3(), q = new THREE.Quaternion(), sc = new THREE.Vector3(); it.m.decompose(pos, q, sc);
+  g.position.copy(pos); g.quaternion.copy(q); g.scale.copy(sc);
+  const pivot = new THREE.Group(); pivot.position.copy(pos); G.three.scene.add(pivot);
+  g.position.set(0, 0, 0); pivot.add(g);
+  const away = Math.atan2(pos.x - fromX, pos.z - fromZ);
+  const stump = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.28, 0.5, 7), burnt); stump.position.set(pos.x, pos.y + 0.2, pos.z); stump.castShadow = true; G.three.scene.add(stump);
+  let t = 0;
+  G.fx?.treeFall?.(pos.x, pos.y, pos.z);
+  decayTrees.push({ update: dt => {
+    t += dt;
+    const k = Math.min(1, t / 1.1);
+    pivot.rotation.set(Math.cos(away) * k * k * 1.45, 0, -Math.sin(away) * k * k * 1.45, 'YXZ');
+    if (t > 5) pivot.position.y -= dt * 0.5;
+    if (t > 8) { G.three.scene.remove(pivot); return false; }
+    return true;
+  } });
+}
+const decayTrees = [];
+export function updateFallingTrees(dt) { for (let i = decayTrees.length - 1; i >= 0; i--) if (!decayTrees[i].update(dt)) decayTrees.splice(i, 1); }
+
 function buildTrees(scene, spots) {
   const R = mulberry32(5);
   const K = treeKinds();
@@ -295,7 +347,9 @@ function buildTrees(scene, spots) {
     const sc = 0.8 + R() * 0.6;
     p.set(x, heightAt(x, z) - 0.1, z); e.set((R() - 0.5) * 0.1, R() * 6.28, (R() - 0.5) * 0.1); q.setFromEuler(e); s.set(sc, sc * (0.9 + R() * 0.3), sc);
     m.compose(p, q, s);
-    (groups[kind] = groups[kind] || []).push({ m: m.clone(), c: new THREE.Color().setHSL(0.22 + R() * 0.08, 0.45 + R() * 0.2, 0.75 + R() * 0.35) });
+    const item = { m: m.clone(), c: new THREE.Color().setHSL(0.22 + R() * 0.08, 0.45 + R() * 0.2, 0.75 + R() * 0.35), kind, x, z };
+    (groups[kind] = groups[kind] || []).push(item);
+    treeAt.set(idx(cellOf(x0), cellOf(z0)), item);
   }
   for (const kind in groups) {
     const list = groups[kind];

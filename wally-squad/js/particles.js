@@ -114,7 +114,8 @@ const DEBRIS_MAX = 400;
 
 export function initFX(sc) {
   scene = sc;
-  G.fx = { ember, finale, firework };
+  initTracks();
+  G.fx = { ember, finale, firework, treeFall };
   add = new PSys(scene, 9000, softSprite(), true);
   smoke = new PSys(scene, 7000, smokeSprite(), false);
   for (let i = 0; i < 6; i++) {
@@ -314,6 +315,50 @@ export function firework(x, y, z) {
   };
   climb();
 }
+// a felled tree: dust, smoke and a shower of embers
+export function treeFall(x, y, z) {
+  if (!isVisibleAt(x, z)) return;
+  for (let i = 0; i < 14; i++) add.spawn(x + rr(-0.5, 0.5), y + rr(0.5, 3), z + rr(-0.5, 0.5), rr(-2, 2), rr(1, 4), rr(-2, 2), rr(0.6, 1.4), 0.25, 0.05, [4, 1.6, 0.3, 1], [1, 0.2, 0.05, 0], 1, 4);
+  for (let i = 0; i < 5; i++) smoke.spawn(x + rr(-1, 1), y + rr(1, 3), z + rr(-1, 1), rr(-0.4, 0.4), rr(0.8, 1.6), rr(-0.4, 0.4), rr(2.5, 4), 1.5, 4, [0.18, 0.16, 0.15, 0.6], [0.3, 0.28, 0.26, 0], 0.4, 0);
+}
+// spent brass shell casings flicking out of machine guns
+export function casing(x, y, z, heading) {
+  const side = heading + Math.PI / 2, s = rr(2, 3.5);
+  add.spawn(x, y, z, Math.sin(side) * s, rr(2.5, 4), Math.cos(side) * s, rr(0.45, 0.65), 0.12, 0.09, [3.2, 2.3, 0.7, 1], [1.4, 0.9, 0.3, 0.6], 0.5, 14);
+}
+// tyre / tread marks pressed into the ground behind vehicles: a ring buffer of flat quads that shrink away
+const TRACKS_MAX = 900;
+let tracks = null, trackN = 0;
+const trackLife = new Float32Array(TRACKS_MAX), trackPos = new Float32Array(TRACKS_MAX * 4); // x, y, z, heading
+const _tm = new THREE.Matrix4(), _tq = new THREE.Quaternion(), _ts = new THREE.Vector3(), _tp = new THREE.Vector3(), _te = new THREE.Euler();
+function initTracks() {
+  const g = new THREE.PlaneGeometry(0.34, 0.62).rotateX(-Math.PI / 2);
+  tracks = new THREE.InstancedMesh(g, new THREE.MeshBasicMaterial({ color: 0x2a2018, transparent: true, opacity: 0.38, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }), TRACKS_MAX);
+  tracks.frustumCulled = false; tracks.renderOrder = 1; tracks.count = TRACKS_MAX;
+  _tm.makeScale(0, 0, 0); for (let i = 0; i < TRACKS_MAX; i++) tracks.setMatrixAt(i, _tm);
+  scene.add(tracks);
+}
+export function trackMark(x, z, heading, half) {
+  if (!tracks || !isVisibleAt(x, z)) return;
+  for (const s of [-1, 1]) {
+    const px = x + Math.cos(heading) * half * s, pz = z - Math.sin(heading) * half * s, y = groundY(px, pz);
+    if (y <= WATER_LEVEL + 0.05) continue; // no tracks on water
+    const i = trackN = (trackN + 1) % TRACKS_MAX;
+    trackLife[i] = 22; trackPos.set([px, y + 0.03, pz, heading], i * 4);
+  }
+}
+function updateTracks(dt) {
+  if (!tracks) return;
+  let dirty = false;
+  for (let i = 0; i < TRACKS_MAX; i++) {
+    if (trackLife[i] <= 0) continue;
+    trackLife[i] -= dt; dirty = true;
+    const k = Math.max(0, Math.min(1, trackLife[i] / 6)); // shrink away in the last few seconds
+    _tp.set(trackPos[i * 4], trackPos[i * 4 + 1], trackPos[i * 4 + 2]); _te.set(0, trackPos[i * 4 + 3], 0); _tq.setFromEuler(_te); _ts.set(k, 1, k);
+    _tm.compose(_tp, _tq, _ts); tracks.setMatrixAt(i, _tm);
+  }
+  if (dirty) tracks.instanceMatrix.needsUpdate = true;
+}
 // lava embers: a few glowing sparks that pop out of a lava pool and fade
 export function ember(x, y, z) {
   for (let i = 0; i < 3; i++) add.spawn(x, y, z, rr(-1, 1), rr(3, 7), rr(-1, 1), rr(0.8, 1.6), rr(0.15, 0.3), 0.05, [5, 1.6, 0.3, 1], [1.2, 0.2, 0.05, 0], 1, 6);
@@ -358,6 +403,7 @@ function spawnDebris(x, y, z, s, burning) {
 const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _e = new THREE.Euler(), _p = new THREE.Vector3(), _s = new THREE.Vector3();
 
 export function updateFX(dt) {
+  updateTracks(dt);
   add.update(dt); smoke.update(dt);
   for (const L of lights) {
     if (L.l.intensity <= 0) continue;

@@ -90,6 +90,11 @@ Both factions share the basic army: riflemen, rocket troopers, Scorchers, engine
 - **🐕 Attack Dog** (Barracks, both sides): cheap, fast and fierce. It has a big sight range for scouting, savages enemy infantry, and is useless against tanks. It wags its tail and barks.
 - **🏷 Nicknames:** when one of your units becomes a Veteran it earns a nickname, like "Sgt. Biscuit", "Sir Tanks-a-lot", "Iron Granny" or "Sir Barksalot" for dogs. The nickname shows in the selection panel, the battle log and the MVP.
 - **🌈 Ambient life:** flocks of birds wheel over the forests by day, and a rainbow arcs across the sky when rain or a storm clears.
+- **🌲 Destructible forests:** artillery, explosions, airstrikes, meteors and barrels knock trees down. They topple away from the blast, charred and smoking, leaving a burnt stump, and the ground they stood on becomes passable. You can blast your way through a forest. Tree damage is part of the shared game state, so it stays in sync online.
+- **🛢 Explosive fuel barrels:** red fuel drums sit beside every lane. Shoot one to blow up anything nearby, and nearby barrels go up in a chain reaction. They don't count as anyone's building.
+- **🛞 Tread and tyre tracks:** vehicles leave twin tracks in the ground, which slowly fade (but not on water).
+- **🔫 Shell casings:** brass casings flick out of machine guns and rifles.
+- **🎬 Cinematic filter** (Graphics settings; on for High and Ultra): film grain, a touch of colour fringing at the screen edges, a gentle contrast curve and warmer highlights.
 - **Main menu:** the Wally Man photo, with its background removed, sits beside the logo, with "© 2026 Douglas Thomson. All rights reserved." at the bottom. The image is `img/wallyman-photo.webp`.
 - **Loading screen** now reads "LOADING WALLY SQUAD…" and shows a random gameplay tip.
 - **🎯 Find enemy base** (🎯 in the top bar, "Find enemy" on touch screens, or `N`):
