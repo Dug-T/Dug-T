@@ -101,6 +101,19 @@ export function makeInfantry(type, faction) {
       b.add(new THREE.TorusGeometry(0.05, 0.012, 6, 14), m.black, 0.065, 1.45, 0.14);
       b.add(new THREE.TorusGeometry(0.05, 0.012, 6, 14), m.black, -0.065, 1.45, 0.14);
       for (let i = 0; i < 4; i++) b.box(M().lampRed, 0.47, 0.06, 0.29, 0, 0.82 + i * 0.13, 0);
+    } else if (type === 'boomer') {
+      // goblin: green head, big pointy ears, leather cap and goggles
+      const gob = new THREE.MeshStandardMaterial({ color: 0x6f9a3a, roughness: 0.75 });
+      b.sph(gob, 0.17, 0, 1.43, 0.0);
+      b.add(new THREE.ConeGeometry(0.06, 0.26, 5), gob, 0.2, 1.48, 0, 0, 0, -1.3);
+      b.add(new THREE.ConeGeometry(0.06, 0.26, 5), gob, -0.2, 1.48, 0, 0, 0, 1.3);
+      b.add(new THREE.SphereGeometry(0.18, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), m.cloth, 0, 1.5, -0.01);
+      b.box(m.glass, 0.24, 0.07, 0.05, 0, 1.47, 0.15);
+      // the bomb on his back, with a sizzling fuse
+      b.sph(m.black, 0.3, 0, 1.12, -0.36);
+      b.box(m.hazard, 0.62, 0.08, 0.08, 0, 1.12, -0.18);
+      b.cyl(m.cloth, 0.02, 0.02, 0.25, 5, 0, 1.5, -0.4, 0.4, 0, 0);
+      b.sph(new THREE.MeshBasicMaterial({ color: new THREE.Color(5, 2.5, 0.6) }), 0.05, 0, 1.63, -0.45);
     } else if (type === 'engineer') {
       b.add(new THREE.SphereGeometry(0.18, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2), m.hazard, 0, 1.5, 0);
       b.cyl(m.hazard, 0.24, 0.24, 0.03, 16, 0, 1.5, 0);
@@ -123,6 +136,10 @@ export function makeInfantry(type, faction) {
       b.sph(m.concrete, 0.09, 0.3, 1.95, 0.25, 1, 1.1, 1);
       b.sph(shamanGlow(), 0.07, 0.3, 2.1, 0.25);
     }
+    if (type === 'grenadier') { // bandolier of grenades
+      b.box(m.cloth, 0.08, 0.62, 0.05, 0, 1.02, 0.15, 0, 0, 0.75);
+      for (let i = 0; i < 4; i++) b.sph(m.gun, 0.05, -0.15 + i * 0.1, 0.88 + i * 0.11, 0.19);
+    }
     if (type === 'flamer') { b.cyl(m.lampRed, 0.08, 0.08, 0.5, 10, 0.1, 1.05, -0.28); b.cyl(m.lampRed, 0.08, 0.08, 0.5, 10, -0.1, 1.05, -0.28); }
     // arms holding weapon
     b.box(uniform, 0.12, 0.42, 0.12, 0.29, 1.05, 0.1, -0.7, 0, 0.1);
@@ -136,6 +153,13 @@ export function makeInfantry(type, faction) {
     } else if (type === 'flamer') {
       b.cyl(m.gun, 0.05, 0.06, 0.7, 10, 0.05, 0.98, 0.45, Math.PI / 2, 0, 0);
       b.cyl(m.darkMetal, 0.07, 0.07, 0.1, 10, 0.05, 0.98, 0.8, Math.PI / 2, 0, 0);
+    } else if (type === 'grenadier') {
+      b.cyl(m.gun, 0.07, 0.07, 0.55, 10, 0.05, 1.02, 0.5, Math.PI / 2, 0, 0);
+      b.cyl(m.darkMetal, 0.13, 0.13, 0.16, 10, 0.05, 0.98, 0.3, 0, 0, Math.PI / 2);
+      b.box(m.gun, 0.05, 0.15, 0.08, 0.05, 0.88, 0.25);
+    } else if (type === 'boomer') {
+      b.box(m.lampRed, 0.07, 0.24, 0.07, 0.24, 1.0, 0.36); // a stick of dynamite in each hand
+      b.box(m.lampRed, 0.07, 0.24, 0.07, -0.2, 1.05, 0.38);
     } else if (type === 'engineer') {
       b.box(m.metal, 0.06, 0.06, 0.4, 0.05, 0.98, 0.42);
     } else if (type === 'shaman') {

@@ -260,6 +260,7 @@ function treeKinds() {
   for (let i = 0; i < lp.count; i++) { const s = 1 + noise2(lp.getX(i) * 2, lp.getZ(i) * 2 + lp.getY(i)) * 0.35; lp.setXYZ(i, lp.getX(i) * s, lp.getY(i) * s * 0.85 + 3.0, lp.getZ(i) * s); }
   leafG.computeVertexNormals();
   K.leaf = [[trunkG, trunkM], [leafG, std({ color: 0x4a6b26, roughness: 0.9, flatShading: true }), true]];
+  K.autumn = [[trunkG, trunkM], [leafG, std({ color: 0xffffff, roughness: 0.9, flatShading: true }), true]]; // tinted red / orange / gold per tree
   // snowy pine: dark needles with white snow caps
   const capParts = [];
   for (let k = 0; k < 3; k++) capParts.push(new THREE.ConeGeometry(1.15 - k * 0.3, 0.9, 8).translate(0, 2.55 + k * 1.15, 0));
@@ -347,7 +348,7 @@ function buildTrees(scene, spots) {
     const sc = 0.8 + R() * 0.6;
     p.set(x, heightAt(x, z) - 0.1, z); e.set((R() - 0.5) * 0.1, R() * 6.28, (R() - 0.5) * 0.1); q.setFromEuler(e); s.set(sc, sc * (0.9 + R() * 0.3), sc);
     m.compose(p, q, s);
-    const item = { m: m.clone(), c: new THREE.Color().setHSL(0.22 + R() * 0.08, 0.45 + R() * 0.2, 0.75 + R() * 0.35), kind, x, z };
+    const item = { m: m.clone(), c: kind === 'autumn' ? new THREE.Color().setHSL(R() * 0.13, 0.75 + R() * 0.15, 0.36 + R() * 0.14) : new THREE.Color().setHSL(0.22 + R() * 0.08, 0.45 + R() * 0.2, 0.75 + R() * 0.35), kind, x, z };
     (groups[kind] = groups[kind] || []).push(item);
     treeAt.set(idx(cellOf(x0), cellOf(z0)), item);
   }

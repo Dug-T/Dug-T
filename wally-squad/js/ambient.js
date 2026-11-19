@@ -2,7 +2,7 @@
 // day, and a rainbow when a rain storm clears.
 import * as THREE from 'three';
 import { G } from './state.js';
-import { T, cellCenter, groundY } from './terrain.js';
+import { T, cellCenter, cellOf, groundY, isVisibleAt, BASES } from './terrain.js';
 import { GRID as GRID_CELLS } from './config.js';
 
 const flocks = [];
@@ -18,6 +18,8 @@ function treeSpot() {
 }
 
 export function initAmbient(scene, theme) {
+  if (theme && theme.animals) initAnimals(scene, theme.animals);
+  if (theme && theme.leaves) initLeaves(scene);
   if (theme && theme.lava) return; // nothing flies over the lava fields
   // a bird: two thin wings in a shallow V
   birdGeo = new THREE.BufferGeometry();
@@ -58,6 +60,129 @@ export function updateAmbient(dt) {
     }
   }
   updateRainbow(dt);
+  updateAnimals(dt);
+  updateLeaves(dt, t);
+}
+
+// ---- grazing animals: little herds of sheep and cows (penguins on snow maps). Purely decorative: they
+// amble about and munch grass, and scatter in a panic when soldiers or vehicles come close.
+const herds = [];
+function boxGeo(w, h, d, x, y, z) { return new THREE.BoxGeometry(w, h, d).translate(x, y, z); }
+function animalMesh(kind) {
+  const g = new THREE.Group();
+  const add = (geo, color) => { const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color, roughness: 0.95 })); m.castShadow = true; g.add(m); return m; };
+  if (kind === 'sheep') {
+    add(new THREE.IcosahedronGeometry(0.42, 1).scale(1, 0.85, 1.3).translate(0, 0.62, 0), 0xf2efe6);
+    const head = add(boxGeo(0.2, 0.24, 0.3, 0, 0.7, 0.55), 0x2a2522); head.name = 'head';
+    for (const [x, z] of [[-0.18, 0.25], [0.18, 0.25], [-0.18, -0.25], [0.18, -0.25]]) add(boxGeo(0.08, 0.32, 0.08, x, 0.16, z), 0x2a2522);
+  } else if (kind === 'cow') {
+    add(boxGeo(0.62, 0.55, 1.15, 0, 0.82, 0), 0xf4f1ea);
+    add(boxGeo(0.64, 0.3, 0.35, 0, 0.9, 0.1), 0x2a2420); add(boxGeo(0.64, 0.25, 0.3, 0, 0.78, -0.35), 0x2a2420); // patches
+    const head = add(boxGeo(0.34, 0.36, 0.42, 0, 0.98, 0.72), 0xf4f1ea); head.name = 'head';
+    add(boxGeo(0.36, 0.16, 0.12, 0, 0.88, 0.95), 0xe8a6a0);
+    add(boxGeo(0.5, 0.06, 0.06, 0, 1.2, 0.65), 0xe8e0c8);
+    for (const [x, z] of [[-0.22, 0.4], [0.22, 0.4], [-0.22, -0.4], [0.22, -0.4]]) add(boxGeo(0.13, 0.55, 0.13, x, 0.28, z), 0xe8e4dc);
+  } else { // penguin
+    add(new THREE.CapsuleGeometry(0.22, 0.35, 4, 8).translate(0, 0.42, 0), 0x1c1e24);
+    add(new THREE.CapsuleGeometry(0.17, 0.3, 4, 8).translate(0, 0.4, 0.07), 0xf4f6fa);
+    const head = add(new THREE.SphereGeometry(0.17, 10, 8).translate(0, 0.85, 0), 0x1c1e24); head.name = 'head';
+    add(new THREE.ConeGeometry(0.05, 0.16, 5).rotateX(Math.PI / 2).translate(0, 0.83, 0.2), 0xf0a020);
+    add(boxGeo(0.08, 0.03, 0.14, -0.1, 0.02, 0.06), 0xf0a020); add(boxGeo(0.08, 0.03, 0.14, 0.1, 0.02, 0.06), 0xf0a020);
+  }
+  return g;
+}
+function openSpot() {
+  for (let k = 0; k < 200; k++) {
+    const cx = 6 + Math.floor(Math.random() * (GRID_CELLS - 12)), cz = 6 + Math.floor(Math.random() * (GRID_CELLS - 12));
+    const i = cz * GRID_CELLS + cx;
+    if (T.blocked[i] || T.water[i] || T.tree[i]) continue;
+    let ore = false; for (let j = -6; j <= 6 && !ore; j++) for (let k2 = -6; k2 <= 6; k2++) if (T.ore[(cz + j) * GRID_CELLS + cx + k2] > 0) { ore = true; break; }
+    if (ore) continue; // keep the herds out of the crystal fields
+    const x = cellCenter(cx), z = cellCenter(cz);
+    if (Object.values(BASES).some(b => Math.hypot(b.x - x, b.z - z) < 40)) continue;
+    return { x, z };
+  }
+  return null;
+}
+const walkable = (x, z) => { const cx = cellOf(x), cz = cellOf(z); if (cx < 1 || cz < 1 || cx >= GRID_CELLS - 1 || cz >= GRID_CELLS - 1) return false; const i = cz * GRID_CELLS + cx; return !T.blocked[i] && !T.water[i] && !T.tree[i] && !(T.ore[i] > 0); };
+function initAnimals(scene, type) {
+  const kinds = type === 'penguin' ? ['penguin'] : ['sheep', 'sheep', 'cow'];
+  for (let h = 0; h < 4; h++) {
+    const c = openSpot(); if (!c) continue;
+    const kind = kinds[h % kinds.length], n = kind === 'cow' ? 3 : kind === 'penguin' ? 6 : 5;
+    const herd = { kind, animals: [] };
+    for (let i = 0; i < n; i++) {
+      const x = c.x + (Math.random() - 0.5) * 6, z = c.z + (Math.random() - 0.5) * 6;
+      if (!walkable(x, z)) continue;
+      const m = animalMesh(kind); m.scale.setScalar(kind === 'penguin' ? 1.1 : 1.25); scene.add(m);
+      herd.animals.push({ m, head: m.getObjectByName('head'), x, z, h: Math.random() * 6.28, tx: x, tz: z, wait: Math.random() * 4, panic: 0, ph: Math.random() * 6 });
+    }
+    herds.push(herd);
+  }
+}
+function updateAnimals(dt) {
+  const t = performance.now() / 1000;
+  for (const herd of herds) for (const a of herd.animals) {
+    if (a.dead) continue;
+    // anything military nearby? run away from it
+    let fx = 0, fz = 0;
+    for (const u of G.units) { if (u.dead || u.boarded || u.air) continue; const dx = a.x - u.x, dz = a.z - u.z, d2 = dx * dx + dz * dz; if (d2 < 64 && d2 > 0.01) { const d = Math.sqrt(d2); fx += dx / d; fz += dz / d; } }
+    if (fx || fz) { const l = Math.hypot(fx, fz); a.tx = a.x + fx / l * 8; a.tz = a.z + fz / l * 8; a.panic = 2.5; a.wait = 0; }
+    a.panic = Math.max(0, a.panic - dt);
+    const dx = a.tx - a.x, dz = a.tz - a.z, d = Math.hypot(dx, dz);
+    let moving = false;
+    if (d > 0.2 && a.wait <= 0) {
+      const sp = (a.panic > 0 ? (herd.kind === 'penguin' ? 2.6 : 4.2) : 0.7) * dt;
+      const nx = a.x + dx / d * Math.min(sp, d), nz = a.z + dz / d * Math.min(sp, d);
+      if (walkable(nx, nz)) { a.x = nx; a.z = nz; moving = true; a.h += Math.atan2(Math.sin(Math.atan2(dx, dz) - a.h), Math.cos(Math.atan2(dx, dz) - a.h)) * Math.min(1, dt * 6); }
+      else { a.tx = a.x; a.tz = a.z; }
+    } else {
+      a.wait -= dt;
+      if (a.wait <= 0 && d <= 0.2) { // pick a new patch of grass near the herd
+        const lead = herd.animals[0];
+        a.tx = lead.x + (Math.random() - 0.5) * 9; a.tz = lead.z + (Math.random() - 0.5) * 9; a.wait = 2 + Math.random() * 6;
+      }
+    }
+    const vis = isVisibleAt(a.x, a.z) || G.revealed;
+    a.m.visible = vis;
+    if (!vis) continue;
+    const bob = moving ? Math.abs(Math.sin(t * (a.panic > 0 ? 14 : 7) + a.ph)) * 0.08 : 0;
+    a.m.position.set(a.x, groundY(a.x, a.z) + bob, a.z);
+    a.m.rotation.y = a.h;
+    if (herd.kind === 'penguin') a.m.rotation.z = moving ? Math.sin(t * 10 + a.ph) * 0.15 : 0; // waddle
+    if (a.head) a.head.rotation.x = !moving && herd.kind !== 'penguin' ? 0.35 + Math.sin(t * 2 + a.ph) * 0.15 : 0; // grazing
+  }
+}
+
+// ---- falling leaves (autumn maps): a cloud of tumbling red and gold leaves drifting around the camera
+let leaves = null;
+const LEAF_N = 220, leafState = [];
+const _lm = new THREE.Matrix4(), _lq = new THREE.Quaternion(), _le = new THREE.Euler(), _lp = new THREE.Vector3(), _ls = new THREE.Vector3(1, 1, 1);
+function initLeaves(scene) {
+  const g = new THREE.PlaneGeometry(0.32, 0.22);
+  leaves = new THREE.InstancedMesh(g, new THREE.MeshLambertMaterial({ side: THREE.DoubleSide }), LEAF_N);
+  leaves.frustumCulled = false;
+  const c = new THREE.Color();
+  for (let i = 0; i < LEAF_N; i++) {
+    leaves.setColorAt(i, c.setHSL(Math.random() * 0.12, 0.8, 0.42 + Math.random() * 0.15));
+    leafState.push({ x: (Math.random() - 0.5) * 70, y: Math.random() * 22, z: (Math.random() - 0.5) * 70, rx: Math.random() * 6, ry: Math.random() * 6, sp: 0.8 + Math.random() * 0.8, ph: Math.random() * 6.28 });
+  }
+  scene.add(leaves);
+}
+function updateLeaves(dt, t) {
+  if (!leaves) return;
+  const cx = G.camera.x, cz = G.camera.z, wind = 1.2;
+  for (let i = 0; i < LEAF_N; i++) {
+    const L = leafState[i];
+    L.y -= L.sp * dt; L.x += (wind + Math.sin(t * 1.3 + L.ph) * 0.8) * dt; L.z += Math.cos(t * 0.9 + L.ph) * 0.6 * dt;
+    L.rx += dt * 2.4; L.ry += dt * 1.7;
+    let wx = cx + L.x, wz = cz + L.z;
+    const gy = groundY(wx, wz);
+    if (L.y < gy || Math.abs(L.x) > 36 || Math.abs(L.z) > 36) { L.x = (Math.random() - 0.5) * 70; L.z = (Math.random() - 0.5) * 70; wx = cx + L.x; wz = cz + L.z; L.y = groundY(wx, wz) + 14 + Math.random() * 10; }
+    _le.set(L.rx, L.ry, 0); _lq.setFromEuler(_le); _lp.set(wx, L.y, wz);
+    leaves.setMatrixAt(i, _lm.compose(_lp, _lq, _ls));
+  }
+  leaves.instanceMatrix.needsUpdate = true;
 }
 
 // ---- rainbow: appears for about 45 seconds when rain or a storm clears in daylight. The camera looks down

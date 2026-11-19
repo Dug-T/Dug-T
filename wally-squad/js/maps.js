@@ -103,10 +103,33 @@ export const MAPS = {
     ridge: 55, forest: 0.07,
     theme: 'volcanic', weather: ['clear', 'ashfall', 'clear', 'fog', 'ashfall'],
   },
+  autumn: {
+    name: 'Autumn Hollow', desc: 'Rolling hills of red and gold woodland, quiet ponds and grazing farm animals. Leaves drift on the wind.',
+    seed: [23, 58, -41, 9],
+    slots: [{ x: -88, z: -40 }, { x: 88, z: 40 }],
+    lanes: [
+      [[-88, -40], [0, 0], [88, 40]],
+      [[-88, -40], [-40, -96], [60, -80], [88, 40]],
+      [[-88, -40], [-60, 80], [40, 96], [88, 40]],
+    ],
+    ore: [
+      { x: -112, z: -8, r: 10 }, { x: -96, z: -88, r: 9 }, { x: 112, z: 8, r: 10 }, { x: 96, z: 88, r: 9 },
+      { x: 0, z: 0, r: 8, rich: 1 }, { x: -30, z: -62, r: 7 }, { x: 30, z: 62, r: 7 },
+    ],
+    lakes: [{ x: 0, z: -34, r: 13 }, { x: 0, z: 34, r: 13 }, { x: 40, z: -45, r: 15 }, { x: -40, z: 45, r: 15 }],
+    ridge: 50, forest: 0.16,
+    theme: 'autumn', weather: ['clear', 'clear', 'rain', 'fog', 'storm'],
+  },
 };
 
 // Visual themes
 export const THEMES = {
+  autumn: {
+    grass1: 0x6c7c30, grass2: 0xb0983c, dirt: 0x8a6440, rock: 0x6e665e, sand: 0xc4a878, mud: 0x4e3e2a, base: 0x8d8270,
+    oreTint: 0x6a6a3a, water: 0x2a4e5a, leaves: true, animals: 'farm',
+    skyTop: 0x4a7ab0, horizon: 0xe0c8a0, skyBottom: 0x6a5440, sun: 0xffdcb0, sunI: 3.0, hemiSky: 0xffe2c4, hemiGround: 0x5a3f22, hemiI: 0.8,
+    trees: { autumn: 0.75, pine: 0.25 }, rockTint: [0.08, 0.05, 0.4],
+  },
   jungle: {
     grass1: 0x2f6a24, grass2: 0x4f8f2e, dirt: 0x7a5a36, rock: 0x5e6658, sand: 0xe6d49a, mud: 0x3e4a2a, base: 0x8a8070,
     oreTint: 0x3f7a4a, water: 0x18a6ae,
@@ -123,13 +146,13 @@ export const THEMES = {
     grass1: 0x4f7a2a, grass2: 0x76913a, dirt: 0x8a7150, rock: 0x6e6a64, sand: 0xc2ac7c, mud: 0x4a4232, base: 0x8d8270,
     oreTint: 0x4f6b3a, water: 0x1d4b63,
     skyTop: 0x3d78b8, horizon: 0xa9c4d8, skyBottom: 0x5a5446, sun: 0xfff0d6, sunI: 3.0, hemiSky: 0xbfd8ff, hemiGround: 0x4a3f2c, hemiI: 0.75,
-    trees: { pine: 0.6, leaf: 0.4 }, rockTint: [0.08, 0.05, 0.4],
+    trees: { pine: 0.6, leaf: 0.4 }, rockTint: [0.08, 0.05, 0.4], animals: 'farm',
   },
   snow: {
     grass1: 0xdfe6ec, grass2: 0xf4f7fa, dirt: 0xa7b0b8, rock: 0x5b6068, sand: 0xc9d3db, mud: 0x6d7a86, base: 0x9aa0a6,
     oreTint: 0x9ec7d8, water: 0x6f9fb8, ice: true,
     skyTop: 0x6c8fb3, horizon: 0xd2dde8, skyBottom: 0x8a929a, sun: 0xeaf2ff, sunI: 2.6, hemiSky: 0xdbe8ff, hemiGround: 0x8090a0, hemiI: 0.9,
-    trees: { snowpine: 1 }, rockTint: [0.6, 0.05, 0.4],
+    trees: { snowpine: 1 }, rockTint: [0.6, 0.05, 0.4], animals: 'penguin',
   },
   desert: {
     grass1: 0xd2b27a, grass2: 0xe0c38c, dirt: 0xb48a58, rock: 0xa0653e, sand: 0xe8d29c, mud: 0x6d5a3c, base: 0xb9a07a,

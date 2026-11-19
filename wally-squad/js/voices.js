@@ -11,6 +11,8 @@ const DEFAULT_LINES = {
     'Grimlocks, your worst nightmare has arrived!', 'Stand tall, Wally Man is with you!', 'Wally Man never misses!', 'Here I come to save the day!',
     'One squad, one hero, Wally Man!', 'Polish the glasses, it is hero time!', 'Wally Man, ready to rumble!', 'Cape flapping, gun spinning, let us go!'], move: ['Up, up and away!', 'To the rescue!'], attack: ['Spin it up!', 'Taste the Gatling!', 'Wally Man, open fire!'] },
   dog: { select: ['Woof!', 'Arf arf!', 'Grrrr!'], move: ['Woof woof!', 'Arf!'], attack: ['GRRRR!', 'Bark bark bark!'] },
+  grenadier: { select: ['Grenadier ready.', 'Who ordered the fireworks?', 'Pins out, sir!', 'Got a pocket full of boom.'], move: ['Moving. Keep your heads down.', 'On it.', 'Relocating.'], attack: ['Fire in the hole!', 'Grenade out!', 'Catch!'] },
+  boomer: { select: ['Hehehe! Boom time?', 'Gimme something to blow up!', 'Ooh, shiny fuse!', 'Me go big bang!'], move: ['Running, running!', 'Hehehehe!', 'Outta my way!'], attack: ['KABOOOOM!', 'For the Legion! Hehehe!', 'Here comes the BANG!'] },
   rifle: { select: ['Rifleman reporting.', 'Ready for action!'], move: ['Moving out.', 'On my way.'], attack: ['Opening fire!', 'Engaging!'] },
   rocket: { select: ['Rockets loaded.', 'Anti-armour ready.'], move: ['Relocating.'], attack: ['Rocket away!', 'Tank spotted!'] },
   flamer: { select: [
@@ -62,6 +64,8 @@ const DEFAULT_LINES = {
 const FEMALE = /female|samantha|karen|moira|tessa|victoria|fiona|serena|kate|zira|susan|hazel|libby|sonia|catherine|allison|ava|nicky|siri.*(voice 2|voice 4)|google uk english female|google us english|jenny|aria|emma|amy|joanna|salli/i;
 const lastLine = {};
 const VOICE_STYLE = {
+  boomer: { pitch: 1.75, rate: 1.3 },
+  grenadier: { pitch: 0.9, rate: 1.0 },
   dog: { pitch: 1.9, rate: 1.3 },
   warlord: { pitch: 0.4, rate: 0.85 },
   flamer: { pitch: 1.15, rate: 1.08, female: true },

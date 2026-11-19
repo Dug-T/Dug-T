@@ -87,6 +87,10 @@ Both factions share the basic army: riflemen, rocket troopers, Scorchers, engine
 - **🔁 Repeat production:** a toggle above the Infantry, Vehicles and Air build menus. Each finished unit is queued again, so a factory keeps pumping out your army.
 - **🧙 Grimlock Shaman** (Grimlocks only): a hooded healer with a glowing skull staff who heals nearby infantry, like the Field Medic.
 - **☄ Meteor showers:** the Natural Disasters mutator now also rains burning meteors on the battlefield every couple of minutes, with a warning first.
+- **💣 Grenadier** (Wally Squad only, Barracks + Refinery): lobs grenades in a short arc over walls and into crowds. Great against infantry, bunkers and garrisoned houses, but can't hit anything right next to him.
+- **🧨 Goblin Boomer** (Grimlocks only, Barracks + Refinery): a cackling goblin with a huge bomb on his back. He sprints at the enemy and blows himself up, wrecking everything nearby. One use only!
+- **🍂 Autumn Hollow** (new map): rolling hills of red, orange and gold woodland around four quiet ponds, with leaves drifting on the wind. Win there for the **Fall Guy** medal.
+- **🐑 Wildlife:** flocks of sheep and cows graze on the green and autumn maps, and penguins waddle about on Frostbite Pass. They're just for show: they munch grass and scatter in a panic when troops or tanks come near.
 - **🐕 Attack Dog** (Barracks, both sides): cheap, fast and fierce. It has a big sight range for scouting, savages enemy infantry, and is useless against tanks. It wags its tail and barks.
 - **🏷 Nicknames:** when one of your units becomes a Veteran it earns a nickname, like "Sgt. Biscuit", "Sir Tanks-a-lot", "Iron Granny" or "Sir Barksalot" for dogs. The nickname shows in the selection panel, the battle log and the MVP.
 - **🌈 Ambient life:** flocks of birds wheel over the forests by day, and a rainbow arcs across the sky when rain or a storm clears.
