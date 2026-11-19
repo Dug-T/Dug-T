@@ -39,6 +39,13 @@ export class AI {
     this.manageDefence();
     if (!this.opts.noAttack) this.manageAttack();
     if (srand() < 0.25) this.manageGarrison();
+    // pipers and drummers tag along behind the army
+    for (const p of G.units) {
+      if (p.dead || p.faction !== this.f || !p.def.inspire || (p.order && srand() < 0.9)) continue;
+      let best = null, bd = 1e9;
+      for (const a of this.attackers) { if (!alive(a)) continue; const d = Math.hypot(a.x - p.x, a.z - p.z); if (d < bd) { bd = d; best = a; } }
+      if (best && bd > 6) p.moveTo(best.x + rr(-3, 3), best.z + rr(-3, 3));
+    }
     // idle spies sneak into the nearest enemy refinery or power plant
     for (const s of G.units) {
       if (s.dead || s.faction !== this.f || !s.def.spy || s.order) continue;
@@ -159,7 +166,7 @@ export class AI {
     if (P.credits < reserve) return;
     if (this.saving && P.credits < 1600 && this.army.size >= 0 && this.ownCombat() > 6) return;
     if (P.queues.infantry.items.length < 2) {
-      const opts = ['rifle', 'rifle', 'rocket', 'rocket', 'dog', 'spy', 'grenadier', 'boomer', 'boomer', 'troll', 'flamer', 'engineer', 'medic', 'shaman', 'wallyman', 'warlord'].filter(t => hasReqs(this.f, t));
+      const opts = ['rifle', 'rifle', 'rocket', 'rocket', 'dog', 'spy', 'piper', 'drummer', 'grenadier', 'boomer', 'boomer', 'troll', 'flamer', 'engineer', 'medic', 'shaman', 'wallyman', 'warlord'].filter(t => hasReqs(this.f, t));
       if (hasReqs(this.f, 'wally') && srand() < 0.2) opts.push('wally');
       if (opts.length) {
         let t = opts[Math.floor(srand() * opts.length)];

@@ -39,6 +39,7 @@ export const MEDALS = {
   giant:        { icon: '🗡', name: 'Giant Slayer', desc: 'Destroy an enemy Wally Mech or Cave Troll.' },
   spy:          { icon: '🕵', name: 'Double Agent', desc: 'Sneak a Spy into an enemy building.' },
   blossom:      { icon: '🌸', name: 'Petal Power', desc: 'Win a battle on Blossom Gardens.' },
+  highland:     { icon: '🏴', name: 'Braveheart', desc: 'Win a battle on Highland Glen.' },
   epilogue:     { icon: '🗡', name: 'Into the Fire', desc: 'Defeat Warlord Grak in the final campaign mission.' },
 };
 
@@ -93,6 +94,7 @@ export function initAchievements(run) {
     if (run.map === 'magma') unlock('magma');
     if (run.map === 'autumn') unlock('autumn');
     if (run.map === 'blossom') unlock('blossom');
+    if (run.map === 'highland') unlock('highland');
     if (run.koth && run.mode === 'skirmish') unlock('koth');
     if (run.daily) unlock('daily');
     if (run.mode === 'skirmish' && run.mut && run.mut.length >= 2) unlock('mutant');

@@ -207,6 +207,15 @@ function animalMesh(kind) {
     add(boxGeo(0.36, 0.16, 0.12, 0, 0.88, 0.95), 0xe8a6a0);
     add(boxGeo(0.5, 0.06, 0.06, 0, 1.2, 0.65), 0xe8e0c8);
     for (const [x, z] of [[-0.22, 0.4], [0.22, 0.4], [-0.22, -0.4], [0.22, -0.4]]) add(boxGeo(0.13, 0.55, 0.13, x, 0.28, z), 0xe8e4dc);
+  } else if (kind === 'hcow') { // shaggy ginger Highland cow with long horns and a fringe over its eyes
+    add(boxGeo(0.66, 0.6, 1.15, 0, 0.8, 0), 0xb4622a);
+    add(boxGeo(0.7, 0.18, 1.18, 0, 0.55, 0), 0xa4562a);                 // shaggy belly fringe
+    const head = add(boxGeo(0.38, 0.38, 0.45, 0, 0.92, 0.72), 0xb4622a); head.name = 'head';
+    add(boxGeo(0.4, 0.14, 0.2, 0, 1.04, 0.92), 0x9a4e22);               // fringe
+    add(boxGeo(0.3, 0.14, 0.1, 0, 0.82, 0.96), 0x3a2a20);               // nose
+    add(new THREE.ConeGeometry(0.05, 0.45, 5).rotateZ(Math.PI / 2 + 0.4).translate(0.38, 1.14, 0.7), 0xe8dcc0); // horns
+    add(new THREE.ConeGeometry(0.05, 0.45, 5).rotateZ(-Math.PI / 2 - 0.4).translate(-0.38, 1.14, 0.7), 0xe8dcc0);
+    for (const [x, z] of [[-0.22, 0.4], [0.22, 0.4], [-0.22, -0.4], [0.22, -0.4]]) add(boxGeo(0.14, 0.5, 0.14, x, 0.25, z), 0x8a4a22);
   } else { // penguin
     add(new THREE.CapsuleGeometry(0.22, 0.35, 4, 8).translate(0, 0.42, 0), 0x1c1e24);
     add(new THREE.CapsuleGeometry(0.17, 0.3, 4, 8).translate(0, 0.4, 0.07), 0xf4f6fa);
@@ -231,10 +240,10 @@ function openSpot() {
 }
 const walkable = (x, z) => { const cx = cellOf(x), cz = cellOf(z); if (cx < 1 || cz < 1 || cx >= GRID_CELLS - 1 || cz >= GRID_CELLS - 1) return false; const i = cz * GRID_CELLS + cx; return !T.blocked[i] && !T.water[i] && !T.tree[i] && !(T.ore[i] > 0); };
 function initAnimals(scene, type) {
-  const kinds = type === 'penguin' ? ['penguin'] : ['sheep', 'sheep', 'cow'];
+  const kinds = type === 'penguin' ? ['penguin'] : type === 'highland' ? ['hcow', 'sheep', 'hcow'] : ['sheep', 'sheep', 'cow'];
   for (let h = 0; h < 4; h++) {
     const c = openSpot(); if (!c) continue;
-    const kind = kinds[h % kinds.length], n = kind === 'cow' ? 3 : kind === 'penguin' ? 6 : 5;
+    const kind = kinds[h % kinds.length], n = kind === 'cow' || kind === 'hcow' ? 3 : kind === 'penguin' ? 6 : 5;
     const herd = { kind, animals: [] };
     for (let i = 0; i < n; i++) {
       const x = c.x + (Math.random() - 0.5) * 6, z = c.z + (Math.random() - 0.5) * 6;

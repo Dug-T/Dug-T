@@ -3,14 +3,15 @@
 // Units without a recording fall back to the computer's text-to-speech with a per-unit voice.
 import { UNITS } from './config.js';
 import { duckMusic } from './audio.js';
+import { G } from './state.js';
 
 export const EVENTS = { select: 'Selected', move: 'Move order', attack: 'Attack order' };
 const DEFAULT_LINES = {
   warlord: { select: ['Grak hungers.', 'Who dares summon the Warlord?', 'Grimlock, to me!'], move: ['Grak marches!', 'Out of my way.'], attack: ['WAAAR!', 'Crush them all!', 'Feel the cannon of Grak!'] },
-  wallyman: { select: ['Wally Man is here!', 'Never fear, Wally Man is near!', 'Cape on, glasses on!',
-    'Wally Man, reporting for duty!', 'Gatling spun up, Wally Man is ready!', 'Did someone call for a hero?', 'Wally Man, at your service!',
-    'Grimlocks, your worst nightmare has arrived!', 'Stand tall, Wally Man is with you!', 'Wally Man never misses!', 'Here I come to save the day!',
-    'One squad, one hero, Wally Man!', 'Polish the glasses, it is hero time!', 'Wally Man, ready to rumble!', 'Cape flapping, gun spinning, let us go!'], move: ['Up, up and away!', 'To the rescue!'], attack: ['Spin it up!', 'Taste the Gatling!', 'Wally Man, open fire!'] },
+  wallyman: { select: ['Wally Man is here, ya dancer!', 'Nae bother, Wally Man is oan it!', 'Haw! Who called fur a hero?', 'Och aye, cape oan, specs oan!',
+    'Wally Man, reportin fur duty!', 'Gatling is birlin, Wally Man is ready!', 'Ah am here tae save the day, so ah am!', 'Grimlocks, yer in fur it noo!',
+    'Mon then, let us huv ye!', 'Wally Man never misses, by the way!', 'Pure dead brilliant, a hero!', 'Gonnae gie them laldy!', 'Wally Man, at yer service!',
+    'Away an bile yer heid, Grimlocks!', 'Haud oan, Wally Man is comin!'], move: ['Up, up an awa!', 'Tae the rescue!', 'Ah am aff!', 'Shift yersel!'], attack: ['Gie it laldy!', 'Taste the Gatling, ya numpties!', 'Get it right up ye!', 'Wally Man, open fire!'] },
   dog: { select: ['Woof!', 'Arf arf!', 'Grrrr!'], move: ['Woof woof!', 'Arf!'], attack: ['GRRRR!', 'Bark bark bark!'] },
   grenadier: { select: ['Grenadier ready.', 'Who ordered the fireworks?', 'Pins out, sir!', 'Got a pocket full of boom.'], move: ['Moving. Keep your heads down.', 'On it.', 'Relocating.'], attack: ['Fire in the hole!', 'Grenade out!', 'Catch!'] },
   boomer: { select: ['Hehehe! Boom time?', 'Gimme something to blow up!', 'Ooh, shiny fuse!', 'Me go big bang!'], move: ['Running, running!', 'Hehehehe!', 'Outta my way!'], attack: ['KABOOOOM!', 'For the Legion! Hehehe!', 'Here comes the BANG!'] },
@@ -21,6 +22,8 @@ const DEFAULT_LINES = {
   spy: { select: ['Agent reporting. Nobody saw me.', 'Shaken, not stirred.', 'I was never here.', 'Disguise is ready.'], move: ['Blending in.', 'Moving quietly.', 'Just another face in the crowd.'], attack: ['Time to infiltrate.', 'They will never know.', 'Going in.'] },
   catapult: { select: ['Big rock ready!', 'Catapult crew here!', 'Load the boulder!'], move: ['Push, push!', 'Roll it out!'], attack: ['FLING IT!', 'Rocks away!', 'Smash their walls!'] },
   shieldgen: { select: ['Shields up!', 'Shield Projector online.', 'Stay close, stay safe.'], move: ['Moving the bubble.', 'Keep together, everyone!'], attack: ['I am not armed, but I have got your back!', 'Shields holding!'] },
+  piper: { select: ['Piper ready! Wheesht an listen!', 'The pipes, the pipes are callin!', 'Ah will play ye intae battle!'], move: ['Marchin oan!', 'Follow the pipes!'], attack: ['Gie them a tune!', 'Pipe them doon!'] },
+  drummer: { select: ['BOOM. BOOM. BOOM.', 'War drums ready!', 'Grimlocks, march to the beat!'], move: ['Drum on!', 'Keep the beat!'], attack: ['Faster! FASTER!', 'Drums of war!'] },
   rifle: { select: ['Rifleman reporting.', 'Ready for action!'], move: ['Moving out.', 'On my way.'], attack: ['Opening fire!', 'Engaging!'] },
   rocket: { select: ['Rockets loaded.', 'Anti-armour ready.'], move: ['Relocating.'], attack: ['Rocket away!', 'Tank spotted!'] },
   flamer: { select: [
@@ -74,6 +77,9 @@ const NOVELTY = /albert|bad news|bahh|bells|boing|bubbles|cellos|good news|jeste
 // the clearest male voices on common devices, best first (used for Wally Man)
 const CLEAR = [/google uk english male/i, /daniel/i, /arthur/i, /microsoft (ryan|george|guy|andrew|brian|christopher|eric)/i, /\b(aaron|alex|oliver|tom|rishi|gordon|lee|nathan)\b/i, /microsoft (david|mark)/i, /google us english/i];
 const english = () => speechSynthesis.getVoices().filter(v => /^en/i.test(v.lang) && !NOVELTY.test(v.name));
+// a Scottish voice if the device has one (e.g. Apple's Fiona, lang en-GB-...-gbsct), otherwise the clearest one
+const SCOTS = v => /sct|scot/i.test(v.lang) || /fiona|scottish|scotland/i.test(v.name);
+function scottishVoice(vs) { return vs.find(v => SCOTS(v) && /enhanced|premium/i.test(v.name)) || vs.find(SCOTS) || clearVoice(vs); }
 function clearVoice(vs) {
   const good = v => /enhanced|premium|natural|neural|online/i.test(v.name);
   for (const re of CLEAR) { const m = vs.filter(v => re.test(v.name)); if (m.length) return m.find(good) || m.find(v => v.localService) || m[0]; }
@@ -82,6 +88,8 @@ function clearVoice(vs) {
 const FEMALE = /female|samantha|karen|moira|tessa|victoria|fiona|serena|kate|zira|susan|hazel|libby|sonia|catherine|allison|ava|nicky|siri.*(voice 2|voice 4)|google uk english female|google us english|jenny|aria|emma|amy|joanna|salli/i;
 const lastLine = {};
 const VOICE_STYLE = {
+  piper: { pitch: 1.1, rate: 1.0, scottish: true },
+  drummer: { pitch: 0.5, rate: 0.8 },
   troll: { pitch: 0.3, rate: 0.75 },
   mech: { pitch: 0.8, rate: 0.95 },
   wyvern: { pitch: 1.6, rate: 1.2 },
@@ -91,7 +99,7 @@ const VOICE_STYLE = {
   warlord: { pitch: 0.4, rate: 0.85 },
   flamer: { pitch: 1.15, rate: 1.08, female: true },
   spy: { pitch: 0.95, rate: 0.95, clear: true },
-  wally: { pitch: 1.4, rate: 1.15 }, wallyman: { pitch: 1.85, rate: 1.08, clear: true, loud: true }, /* squeaky superhero! */ medic: { pitch: 1.3, rate: 1.05 }, engineer: { pitch: 1.2, rate: 1.1 },
+  wally: { pitch: 1.4, rate: 1.15 }, wallyman: { pitch: 1.5, rate: 1.0, clear: true, scottish: true, loud: true }, /* squeaky Scottish superhero! */ medic: { pitch: 1.3, rate: 1.05 }, engineer: { pitch: 1.2, rate: 1.1 },
   titan: { pitch: 0.5, rate: 0.85 }, tank: { pitch: 0.7, rate: 0.95 }, harvester: { pitch: 0.8, rate: 0.9 },
   stealth: { pitch: 0.6, rate: 0.8 }, inferno: { pitch: 0.55, rate: 0.9 }, gunship: { pitch: 1.0, rate: 1.2 },
 };
@@ -172,7 +180,11 @@ export function say(type, ev, force = false) {
   if (playTake(type, ev)) return;
   if (!settings.tts || !('speechSynthesis' in window)) return;
   if (speechSynthesis.speaking && !force) return;
-  const lines = DEFAULT_LINES[type]?.[ev] || DEFAULT_LINES[UNITS[type]?.tab === 'vehicle' ? 'tank' : 'rifle'][ev];
+  let lines = DEFAULT_LINES[type]?.[ev] || DEFAULT_LINES[UNITS[type]?.tab === 'vehicle' ? 'tank' : 'rifle'][ev];
+  // Wally Man has something to say about the weather
+  const wt = G.weather && G.weather.type;
+  if (type === 'wallyman' && ev === 'select' && (wt === 'rain' || wt === 'storm')) lines = ["It's pishing doon!"];
+  else if (type === 'wallyman' && ev === 'select' && (wt === 'snow' || wt === 'blizzard') && Math.random() < 0.5) lines = ["It's Baltic oot here!"];
   if (!lines) return;
   // pick a line, never the same one twice in a row for this unit
   const key = type + ':' + ev;
@@ -185,6 +197,7 @@ export function say(type, ev, force = false) {
   const vs = english();
   const fem = st.female ? vs.find(v => FEMALE.test(v.name)) : null;
   if (fem) u.voice = fem;
+  else if (st.scottish) u.voice = scottishVoice(vs);
   else if (st.clear) u.voice = clearVoice(vs);
   else if (vs.length) u.voice = vs[(type.length * 7) % vs.length];
   if (st.clear) duckMusic(0.8 + lines[i].length * 0.075 / st.rate); // music dips so the hero is easy to hear

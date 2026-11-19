@@ -143,6 +143,20 @@ export function makeInfantry(type, faction) {
       b.sph(m.concrete, 0.09, 0.3, 1.95, 0.25, 1, 1.1, 1);
       b.sph(shamanGlow(), 0.07, 0.3, 2.1, 0.25);
     }
+    if (type === 'piper') { // kilt, sporran, feather bonnet and a set of bagpipes
+      const tartan = new THREE.MeshStandardMaterial({ color: 0x2a5a3a, roughness: 0.85 });
+      b.box(tartan, 0.52, 0.32, 0.34, 0, 0.66, 0); b.box(m.lampRed, 0.53, 0.04, 0.35, 0, 0.7, 0); b.box(t.team, 0.53, 0.03, 0.35, 0, 0.6, 0); // kilt
+      b.box(m.black, 0.16, 0.16, 0.06, 0, 0.66, 0.19);                                   // sporran
+      b.cyl(m.black, 0.18, 0.2, 0.3, 12, 0, 1.68, 0);                                    // feather bonnet
+      b.sph(tartan, 0.2, -0.22, 1.08, 0.12, 1, 0.8, 1.2);                                 // the bag
+      for (const [dx, h] of [[-0.05, 0.75], [0.07, 0.6], [0.18, 0.5]]) b.cyl(m.black, 0.025, 0.03, h, 6, -0.3 + dx, 1.25 + h / 2, -0.05 - dx, -0.35, 0, 0.3); // drones
+      b.cyl(m.black, 0.03, 0.035, 0.5, 6, -0.05, 0.95, 0.35, 0.6, 0, 0);                // chanter
+    }
+    if (type === 'drummer') { // a huge war drum slung on the front
+      b.cyl(t.teamDark, 0.3, 0.3, 0.32, 14, 0, 0.98, 0.32, Math.PI / 2, 0, 0);
+      b.cyl(m.concrete, 0.29, 0.29, 0.02, 14, 0, 0.98, 0.49, Math.PI / 2, 0, 0);
+      for (const s2 of [-1, 1]) b.cyl(m.wood || m.darkMetal, 0.02, 0.03, 0.42, 5, s2 * 0.2, 1.2, 0.4, 0.9, 0, s2 * 0.3);
+    }
     if (type === 'grenadier') { // bandolier of grenades
       b.box(m.cloth, 0.08, 0.62, 0.05, 0, 1.02, 0.15, 0, 0, 0.75);
       for (let i = 0; i < 4; i++) b.sph(m.gun, 0.05, -0.15 + i * 0.1, 0.88 + i * 0.11, 0.19);
@@ -160,6 +174,8 @@ export function makeInfantry(type, faction) {
     } else if (type === 'flamer') {
       b.cyl(m.gun, 0.05, 0.06, 0.7, 10, 0.05, 0.98, 0.45, Math.PI / 2, 0, 0);
       b.cyl(m.darkMetal, 0.07, 0.07, 0.1, 10, 0.05, 0.98, 0.8, Math.PI / 2, 0, 0);
+    } else if (type === 'piper' || type === 'drummer') {
+      // hands busy with the music - no gun
     } else if (type === 'grenadier') {
       b.cyl(m.gun, 0.07, 0.07, 0.55, 10, 0.05, 1.02, 0.5, Math.PI / 2, 0, 0);
       b.cyl(m.darkMetal, 0.13, 0.13, 0.16, 10, 0.05, 0.98, 0.3, 0, 0, Math.PI / 2);

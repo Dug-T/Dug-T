@@ -79,6 +79,8 @@ const SOUNDS = {
   error(o, t) { tone(o, t, 0.25, 'sawtooth', 140, 110, 0.2); },
   beep(o, t) { for (let i = 0; i < 3; i++) tone(o, t + i * 0.18, 0.08, 'square', 1800, 0, 0.12); },
   promote(o, t) { tone(o, t, 0.1, 'triangle', 523, 0, 0.3); tone(o, t + 0.1, 0.1, 'triangle', 659, 0, 0.3); tone(o, t + 0.2, 0.25, 'triangle', 784, 0, 0.3); },
+  pipes(o, t) { tone(o, t, 1.1, 'sawtooth', 110, 110, 0.07); for (const [d, f] of [[0, 659], [0.22, 740], [0.44, 880], [0.7, 740]]) { tone(o, t + d, 0.24, 'sawtooth', f, f, 0.08); tone(o, t + d, 0.03, 'sawtooth', f * 1.78, f * 1.78, 0.06); } },
+  wardrum(o, t) { for (const d of [0, 0.18, 0.36, 0.72]) tone(o, t + d, 0.3, 'sine', 120, 45, 0.5); },
   bite(o, t) { env(noise(o, t, 0.12, 'bandpass', 900, 2), t, 0.002, 0.5, 0.1); tone(o, t, 0.25, 'sawtooth', 160, 90, 0.18); },
   zap(o, t) { tone(o, t, 0.9, 'sawtooth', 2400, 60, 0.35); tone(o, t + 0.05, 0.7, 'square', 180, 40, 0.25); env(noise(o, t, 0.8, 'bandpass', 4000, 3), t, 0.005, 0.5, 0.7); },
   scream(o, t) { tone(o, t, 0.35, 'sawtooth', 500 + Math.random() * 200, 250, 0.06); },
@@ -192,6 +194,8 @@ const TRACKS = [
     verse: [[52, 'm'], [48, 'M'], [50, 'M'], [47, 'M']], chorus: [[48, 'M'], [50, 'M'], [52, 'm'], [47, 'M']], seed: 89 },
   { name: 'Funky Harvester', bpm: 108, key: 52, minor: true, drums: 'funk', bass: 'funk', lead: 'pluck', arp: false, skank: true,
     verse: [[52, 'm'], [57, 'M'], [52, 'm'], [57, 'M']], chorus: [[55, 'M'], [57, 'M'], [59, 'm'], [59, 'm']], seed: 97 },
+  { name: 'Highland Charge', bpm: 112, key: 57, minor: false, drums: 'march', bass: 'drone', lead: 'pipes', arp: false,
+    verse: [[57, 'M'], [55, 'M'], [57, 'M'], [52, 'm']], chorus: [[55, 'M'], [57, 'M'], [55, 'M'], [57, 'M']], seed: 107 },
   { name: 'Desert Shuffle', bpm: 122, key: 57, minor: false, drums: 'shuffle', bass: 'walk', lead: 'square', arp: false,
     verse: [[57, 'M'], [50, 'M'], [57, 'M'], [52, 'M']], chorus: [[50, 'M'], [50, 'M'], [57, 'M'], [52, 'M']], seed: 101 },
 ];
@@ -229,6 +233,12 @@ function buildMelody(tr) {
 
 // ---- voices
 let pump, leadIn, delay, fb, wet, musicStarted = false;
+// a bagpipe chanter note: bright and reedy, with a quick grace note flicked in front of it
+function pipeNote(t, dur, n, gain) {
+  synth(leadIn, t, 0.035, 'sawtooth', mtof(n + 10), gain * 0.9, 5200, 5000, 2, 0.002);
+  synth(leadIn, t + 0.03, Math.max(0.08, dur - 0.03), 'sawtooth', mtof(n), gain * 1.1, 5200, 4200, 3, 0.004);
+  synth(leadIn, t + 0.03, Math.max(0.08, dur - 0.03), 'square', mtof(n + 12), gain * 0.25, 6000, 5000, 0, 0.004);
+}
 function synth(dest, t, dur, type, freq, gain, cutoff = 2400, cutEnd = 600, detune = 7, attack = 0.005) {
   const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.Q.value = 2.5;
   f.frequency.setValueAtTime(cutoff, t); f.frequency.exponentialRampToValueAtTime(Math.max(80, cutEnd), t + Math.max(0.05, dur));
@@ -311,7 +321,9 @@ function schedule() {
     const b = tr.bass;
     const bassHit = calm || brk ? s === 0 : b === 'eighth' || b === 'octave' ? s % 2 === 0 : b === 'gallop' ? [0, 2, 3, 4, 6, 7, 8, 10, 11, 12, 14, 15].includes(s)
       : b === 'pulse' ? true : b === 'walk' ? s % 4 === 0 : b === 'funk' ? [0, 3, 6, 7, 10, 13, 14].includes(s) : [0, 3, 6, 10, 12].includes(s);
-    if (bassHit && !intro) {
+    if (b === 'drone') { // bagpipe drones: one low note held under everything, retuned every bar
+      if (s === 0) { synth(pump, t, beat * 4.1, 'sawtooth', mtof(tr.key - 24), 0.07, 1400, 1300, 2, 0.05); synth(pump, t, beat * 4.1, 'sawtooth', mtof(tr.key - 12), 0.05, 1800, 1700, 3, 0.05); }
+    } else if (bassHit && !intro) {
       // walking bass climbs root - third - fifth - sixth; funk pops up the octave
       let n = b === 'octave' && s % 4 === 2 ? bn + 12 : bn;
       if (b === 'walk' && !calm && !brk) n = bn + [0, q === 'm' ? 3 : 4, 7, 9][s / 4];
@@ -334,15 +346,17 @@ function schedule() {
     // ---- verse melody: a second, quieter tune in the second half of each verse
     if (sec.name === 'verse' && sec.bar >= 4 && !calm && !tr.arp) {
       const m = verseMelody[(bar % 2) * 16 + s];
-      if (m) synth(leadIn, t + swing, sixteenth * m.len * 0.9, tr.lead === 'chip' ? 'square' : 'triangle', mtof(m.n - 12 + lift), 0.05, 2600, 900, tr.lead === 'chip' ? 0 : 5);
+      if (m && tr.lead === 'pipes') pipeNote(t + swing, sixteenth * m.len * 0.9, m.n + lift, 0.05);
+      else if (m) synth(leadIn, t + swing, sixteenth * m.len * 0.9, tr.lead === 'chip' ? 'square' : 'triangle', mtof(m.n - 12 + lift), 0.05, 2600, 900, tr.lead === 'chip' ? 0 : 5);
     }
     // ---- lead melody (choruses always; quieter while calm; doubled an octave up in war)
     if (chorus || (brk && sec.bar >= 2)) {
       const m0 = melody[(bar % 2) * 16 + s], m = m0 && { ...m0, n: m0.n + lift };
       if (m) {
         const g = calm ? 0.05 : 0.075, len = sixteenth * m.len * 0.95;
+        if (tr.lead === 'pipes') pipeNote(t + swing, len, m.n, g);
         const ty = tr.lead === 'saw' || tr.lead === 'brass' ? 'sawtooth' : 'square';
-        synth(leadIn, t + swing, len, ty, mtof(m.n), g, tr.lead === 'pluck' ? 4500 : tr.lead === 'brass' ? 2200 : 3200, tr.lead === 'pluck' ? 500 : 1500, tr.lead === 'chip' ? 0 : tr.lead === 'brass' ? 10 : 6, tr.lead === 'brass' ? 0.04 : 0.005);
+        if (tr.lead !== 'pipes') synth(leadIn, t + swing, len, ty, mtof(m.n), g, tr.lead === 'pluck' ? 4500 : tr.lead === 'brass' ? 2200 : 3200, tr.lead === 'pluck' ? 500 : 1500, tr.lead === 'chip' ? 0 : tr.lead === 'brass' ? 10 : 6, tr.lead === 'brass' ? 0.04 : 0.005);
         if (tr.lead === 'brass') synth(leadIn, t + swing, len, 'sawtooth', mtof(m.n - 12), g * 0.6, 1600, 900, 8, 0.04); // brass section an octave below
         if (war) synth(leadIn, t, len, 'sawtooth', mtof(m.n + 12), 0.03, 4000, 1500, 9);
       }

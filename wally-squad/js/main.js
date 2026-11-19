@@ -269,7 +269,7 @@ function dailyChallenge() {
   const d = new Date(), date = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   let h = 2166136261; for (const ch of date) h = Math.imul(h ^ ch.charCodeAt(0), 16777619) >>> 0;
   const rnd = () => { h = Math.imul(h ^ (h >>> 15), 2246822519) >>> 0; h = (h + 0x6D2B79F5) >>> 0; return h / 4294967296; };
-  const maps = ['valley', 'frost', 'dunes', 'midnight', 'magma', 'isles', 'autumn', 'blossom'].filter(m => MAPS[m]);
+  const maps = ['valley', 'frost', 'dunes', 'midnight', 'magma', 'isles', 'autumn', 'blossom', 'highland'].filter(m => MAPS[m]);
   const muts = Object.keys(MUTATORS);
   const a = muts.splice(Math.floor(rnd() * muts.length), 1)[0], b = muts[Math.floor(rnd() * muts.length)];
   return { mode: 'skirmish', daily: date, map: maps[Math.floor(rnd() * maps.length)], faction: rnd() < 0.5 ? 'wally' : 'grim', difficulty: 'hard', daynight: true, weather: null, mut: [a, b] };
@@ -374,8 +374,8 @@ function optionCards(el, items, sel, onPick) {
     el.appendChild(d);
   }
 }
-const MAP_SWATCH = { blossom: 'linear-gradient(135deg,#ffb6d2,#f6e6ee 45%,#6a9a3e)', autumn: 'linear-gradient(135deg,#c0501e,#d9a02a 50%,#7a7a32)', isles: 'linear-gradient(135deg,#4f8f2e,#e6d49a 55%,#18a6ae)', magma: 'linear-gradient(135deg,#2a2624,#5e3f2d 55%,#ff5a14)', valley: 'linear-gradient(135deg,#4f7a2a,#76913a 50%,#1d4b63)', frost: 'linear-gradient(135deg,#f4f7fa,#a7b0b8 60%,#6f9fb8)', dunes: 'linear-gradient(135deg,#e8d29c,#b48a58 60%,#2a7d86)', midnight: 'linear-gradient(135deg,#0a1124,#1d2b4a 60%,#ffd27a)' };
-const THEME_SWATCH = { blossom: MAP_SWATCH.blossom, autumn: MAP_SWATCH.autumn, temperate: MAP_SWATCH.valley, snow: MAP_SWATCH.frost, desert: MAP_SWATCH.dunes, night: MAP_SWATCH.midnight };
+const MAP_SWATCH = { highland: 'linear-gradient(135deg,#55703a,#7a6488 50%,#1e3a48)', blossom: 'linear-gradient(135deg,#ffb6d2,#f6e6ee 45%,#6a9a3e)', autumn: 'linear-gradient(135deg,#c0501e,#d9a02a 50%,#7a7a32)', isles: 'linear-gradient(135deg,#4f8f2e,#e6d49a 55%,#18a6ae)', magma: 'linear-gradient(135deg,#2a2624,#5e3f2d 55%,#ff5a14)', valley: 'linear-gradient(135deg,#4f7a2a,#76913a 50%,#1d4b63)', frost: 'linear-gradient(135deg,#f4f7fa,#a7b0b8 60%,#6f9fb8)', dunes: 'linear-gradient(135deg,#e8d29c,#b48a58 60%,#2a7d86)', midnight: 'linear-gradient(135deg,#0a1124,#1d2b4a 60%,#ffd27a)' };
+const THEME_SWATCH = { highland: MAP_SWATCH.highland, blossom: MAP_SWATCH.blossom, autumn: MAP_SWATCH.autumn, temperate: MAP_SWATCH.valley, snow: MAP_SWATCH.frost, desert: MAP_SWATCH.dunes, night: MAP_SWATCH.midnight };
 const mapItems = () => Object.entries(MAPS).map(([id, m]) => ({ id, title: (m.custom ? '🗺 ' : '') + m.name, desc: m.desc, swatch: MAP_SWATCH[id] || THEME_SWATCH[m.theme] }));
 const facItems = [{ id: 'wally', title: 'Wally Squad', desc: 'Titan tanks, medics, Wally the hero, Sky Lance' }, { id: 'grim', title: 'Grimlock Legion', desc: 'Stealth tanks, Inferno tanks, Doom Missile' }];
 

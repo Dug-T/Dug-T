@@ -94,6 +94,7 @@ const _gm = new THREE.Vector3();
 export function rebuildHash() {
   for (const b of buckets) b.length = 0;
   G.shields = G.units.filter(u => u.def.shield && !u.dead && !u.boarded);
+  G.inspirers = G.units.filter(u => u.def.inspire && !u.dead && !u.boarded);
   for (const u of G.units) {
     if (u.dead || u.boarded) continue;
     const bx = clamp(Math.floor((u.x + HALF) / HS), 0, HN - 1), bz = clamp(Math.floor((u.z + HALF) / HS), 0, HN - 1);
@@ -124,6 +125,12 @@ export function aimPoint(e) {
 export const FACIDX = { wally: 1, grim: 2 };
 // a disguised Spy: enemies ignore him until he is right next to them, but Attack Dogs always smell him
 function hiddenSpy(u, from) { return !!u.def.spy && u.faction !== from.faction && from.type !== 'dog' && Math.hypot(u.x - from.x, u.z - from.z) > 3.5; }
+// within earshot of a friendly Bagpiper or War Drummer? (fire 25% faster)
+function inspired(u) {
+  if (!G.inspirers || !G.inspirers.length) return false;
+  for (const p of G.inspirers) if (p !== u && p.faction === u.faction && Math.hypot(p.x - u.x, p.z - u.z) <= p.def.inspire) return true;
+  return false;
+}
 function canTarget(w, e) {
   if (!alive(e)) return false;
   if (e.boarded) return false;
@@ -356,7 +363,7 @@ export class Unit {
     if (!(this.frenzyCD > 0) && (this.type === 'wallyman' || this.type === 'warlord') && G.players[this.faction]?.isAI) this.frenzy();
     const aimed = this.aimTurret(dt, t);
     if (aimed && this.cool <= 0 && canTarget(w, t)) {
-      this.cool = w.rof * (0.9 + srand() * 0.2) * (this.frenzyT > 0 ? 0.4 : 1);
+      this.cool = w.rof * (0.9 + srand() * 0.2) * (this.frenzyT > 0 ? 0.4 : 1) * (inspired(this) ? 0.75 : 1);
       fireWeapon(this, w, t, this.mesh.userData.muzzle, this.turret);
       if (w.twin) later(0.14, () => { if (alive(this) && alive(t)) fireWeapon(this, w, t, this.mesh.userData.muzzle2 || this.mesh.userData.muzzle, this.turret); });
     }
@@ -716,6 +723,11 @@ export class Unit {
       if (this.arm) { // catapult arm whips forward when it throws, then winds back down
         const k = G.time - (this.lastFire ?? -9);
         this.arm.rotation.x = k < 0.2 ? 0.55 - 2.3 * (k / 0.2) : k < 2.5 ? -1.75 + 2.3 * Math.min(1, (k - 0.2) / 2.3) : 0.55;
+      }
+      if (this.def.inspire && this.mesh.visible) { // music notes float up; now and then a few bars drift over the battlefield
+        this.tuneT = (this.tuneT || Math.random() * 6) - dt;
+        if (Math.random() < dt * 3) FX.sparkBurst(this.x + rr(-0.4, 0.4), this.y + 2.1, this.z + rr(-0.4, 0.4), 1, this.type === 'piper' ? [3, 3, 1, 1] : [4, 1.2, 0.6, 1]);
+        if (this.tuneT <= 0) { this.tuneT = 7 + Math.random() * 6; G.sfx?.play(this.type === 'piper' ? 'pipes' : 'wardrum', this.x, this.z); }
       }
       if (this.bubble) {
         this.shieldFlash = Math.max(0, (this.shieldFlash || 0) - dt * 3);
