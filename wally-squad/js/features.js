@@ -2,8 +2,8 @@
 // Everything that affects the game uses the seeded RNG so online games stay in sync.
 import * as THREE from 'three';
 import { G, srand, srr, emit } from './state.js';
-import { CELL, GRID, UNITS } from './config.js';
-import { T, idx, inGrid, cellOf, cellCenter, heightAt, BASES, revealAll, currentMap } from './terrain.js';
+import { CELL, GRID, UNITS, HALF } from './config.js';
+import { T, idx, inGrid, cellOf, cellCenter, heightAt, BASES, revealAll, currentMap, isWalkable } from './terrain.js';
 import { Unit, unitsNear, alive, damage, decay } from './entities.js';
 import { forcePlace } from './missions.js';
 import * as FX from './particles.js';
@@ -63,6 +63,41 @@ function pickUp(c, u) {
     msg = 'Supply crate: it was booby-trapped!';
   }
   if (mine) { G.announce?.(msg.replace('Supply crate: ', ''), G.player, 1); G.ui?.message(msg); G.sfx?.play('ready'); }
+}
+
+// ---- Bounty Convoy: every few minutes an armoured cash truck crosses the map from one edge to the other.
+// Whoever destroys it gets the bounty; if it reaches the far side it escapes. Runs in the sim (online-safe).
+let convoyT = 240, convoy = null;
+export function convoyActive() { return convoy && !convoy.dead ? convoy : null; }
+export function updateConvoy(dt) {
+  if (G.cfg.convoys === false || !['skirmish', 'mp', 'watch'].includes(G.cfg.mode) || G.over) return;
+  if (convoy) {
+    if (convoy.dead) { convoy = null; convoyT = srr(200, 300); return; }
+    if (Math.hypot(convoy.x - convoy.goal.x, convoy.z - convoy.goal.z) < 6) {
+      G.announce?.('The bounty convoy got away!', G.player, 2);
+      convoy.remove(); convoy = null; convoyT = srr(200, 300); return;
+    }
+    if (!convoy.order && !convoy.path) convoy.moveTo(convoy.goal.x, convoy.goal.z);
+    return;
+  }
+  convoyT -= dt;
+  if (convoyT > 0) return;
+  // pick the pair of opposite map edges that keeps furthest from both bases
+  // the map rim is often mountains, so walk each end inward until it reaches open ground
+  const E = HALF - 10, raw = [[0, -E, 0, E], [-E, 0, E, 0], [-E, -E, E, E], [-E, E, E, -E]];
+  const inward = (x, z) => { for (let k = 1; k >= 0.3; k -= 0.04) if (isWalkable(cellOf(x * k), cellOf(z * k))) return [x * k, z * k]; return null; };
+  const opts = [];
+  for (const [x, z, x2, z2] of raw) { const a = inward(x, z), b = inward(x2, z2); if (a && b) opts.push([...a, ...b], [...b, ...a]); }
+  const bases = Object.values(BASES), score = ([x, z, x2, z2]) => Math.min(...bases.map(b => Math.min(Math.hypot(b.x - x, b.z - z), Math.hypot(b.x - x2, b.z - z2))));
+  const ok = opts.filter(o => score(o) > 40 && Math.hypot(o[2] - o[0], o[3] - o[1]) > 90);
+  if (!ok.length) { convoyT = 60; return; }
+  const [x, z, x2, z2] = ok[Math.floor(srand() * ok.length)];
+  convoy = new Unit('convoy', 'neutral', x, z, Math.atan2(x2 - x, z2 - z));
+  convoy.goal = { x: x2, z: z2 };
+  convoy.stance = 'holdfire';
+  convoy.moveTo(x2, z2);
+  G.announce?.(`A bounty convoy is crossing the map! Destroy it for $${UNITS.convoy.bounty.toLocaleString()}`, G.player, 3);
+  G.alertAt = { x, z, t: G.time };
 }
 
 export function updateCrates(dt) {

@@ -326,6 +326,11 @@ export function casing(x, y, z, heading) {
   const side = heading + Math.PI / 2, s = rr(2, 3.5);
   add.spawn(x, y, z, Math.sin(side) * s, rr(2.5, 4), Math.cos(side) * s, rr(0.45, 0.65), 0.12, 0.09, [3.2, 2.3, 0.7, 1], [1.4, 0.9, 0.3, 0.6], 0.5, 14);
 }
+// a small water splash (fish, debris) - visual only
+export function splash(x, y, z, s = 1) {
+  if (!isVisibleAt(x, z)) return;
+  for (let i = 0; i < 14 * s; i++) { const a = Math.random() * 6.28, sp = rr(0.8, 2.2) * s; add.spawn(x, y + 0.05, z, Math.cos(a) * sp, rr(2.5, 4.5) * s, Math.sin(a) * sp, rr(0.4, 0.7), 0.16 * s, 0.05, [1.6, 1.8, 2, 0.9], [0.6, 0.7, 0.8, 0], 0.5, 12); }
+}
 // tyre / tread marks pressed into the ground behind vehicles: a ring buffer of flat quads that shrink away
 const TRACKS_MAX = 900;
 let tracks = null, trackN = 0;

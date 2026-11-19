@@ -12,6 +12,7 @@ export const POWERS = {
   recon:     { name: 'Recon Sweep', icon: '📡', req: ['radar'], charge: 75, desc: 'Reveals a large area for 20 seconds.' },
   paradrop:  { name: 'Paradrop', icon: '🪂', req: ['barracks', 'radar'], charge: 150, desc: 'A transport drops 7 troopers by parachute.' },
   airstrike: { name: 'Airstrike', icon: '✈', req: ['helipad'], charge: 210, desc: 'Bombers carpet-bomb a line through the target.' },
+  reinforce: { name: 'Reinforcements', icon: '🛬', req: ['factory', 'radar'], charge: 240, desc: 'A heavy transport parachutes two tanks onto the battlefield.' },
   emp:       { name: 'EMP Strike', icon: '⚡', req: ['tech'], charge: 180, desc: 'An electromagnetic pulse knocks out enemy vehicles, aircraft and defences in a wide area for 12 seconds.' },
 };
 
@@ -54,8 +55,9 @@ export function usePower(f, type, x, z) {
   if (type === 'recon') recon(f, x, z);
   else if (type === 'paradrop') paradrop(f, x, z);
   else if (type === 'emp') emp(f, x, z);
+  else if (type === 'reinforce') reinforce(f, x, z);
   else airstrike(f, x, z);
-  if (f !== G.player && type !== 'recon') { G.announce?.(type === 'airstrike' ? 'Warning: enemy aircraft approaching' : type === 'emp' ? 'Warning: enemy EMP strike!' : 'Enemy paratroopers detected', G.player, 3); G.alertAt = { x, z, t: G.time }; }
+  if (f !== G.player && type !== 'recon') { G.announce?.(type === 'airstrike' ? 'Warning: enemy aircraft approaching' : type === 'emp' ? 'Warning: enemy EMP strike!' : type === 'reinforce' ? 'Enemy tanks are being dropped in' : 'Enemy paratroopers detected', G.player, 3); G.alertAt = { x, z, t: G.time }; }
   return true;
 }
 
@@ -122,10 +124,24 @@ function paradrop(f, x, z) {
     });
   });
 }
+// Reinforcements: a big transport drops two tanks, each under a pair of parachutes
+function reinforce(f, x, z) {
+  if (f === G.player) G.announce?.('Reinforcements inbound', G.player, 1);
+  const { timeToTarget } = flyOver(f, x, z, true, 30);
+  const pair = f === 'wally' ? ['tank', 'tank'] : ['tank', 'inferno'];
+  later(timeToTarget, () => {
+    pair.forEach((type, i) => {
+      const u = new Unit(type, f, x + (i ? 3 : -3), z, 0);
+      u.dropH = 28 + i * 2;
+      u.chute = chuteMesh(f, 2); u.mesh.add(u.chute);
+    });
+  });
+}
 let chuteGeo = null;
-function chuteMesh(f) {
+function chuteMesh(f, n = 1) {
   if (!chuteGeo) chuteGeo = new THREE.SphereGeometry(1.4, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2.2);
   const g = new THREE.Group();
+  if (n > 1) { for (let k = 0; k < n; k++) { const c = chuteMesh(f); c.scale.setScalar(1.6); c.position.set((k - (n - 1) / 2) * 3.2, 0.5, 0); g.add(c); } return g; }
   const c = new THREE.Mesh(chuteGeo, new THREE.MeshStandardMaterial({ color: f === 'wally' ? 0xeeeeee : 0x5a2a20, roughness: 0.8, side: THREE.DoubleSide }));
   c.position.y = 3.2; c.scale.y = 0.7; c.castShadow = true; g.add(c);
   for (let i = 0; i < 4; i++) { const a = i * Math.PI / 2; const l = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.01, 2.3, 3), M().black); l.position.set(Math.cos(a) * 0.6, 2.2, Math.sin(a) * 0.6); l.rotation.set(Math.sin(a) * 0.45, 0, -Math.cos(a) * 0.45); g.add(l); }
@@ -181,6 +197,7 @@ export function aiUsePowers(f, target) {
     if (!s.ready || !target) continue;
     if (s.type === 'recon') usePower(f, 'recon', target.x, target.z);
     else if (s.type === 'airstrike' || s.type === 'emp') usePower(f, s.type, target.x, target.z);
+    else if (s.type === 'reinforce') { const home = BASES[f] || { x: 0, z: 0 }; usePower(f, 'reinforce', home.x + (target.x - home.x) * 0.35, home.z + (target.z - home.z) * 0.35); }
     else if (s.type === 'paradrop') {
       // drop beside the target, not on top of its defences
       const home = BASES[f] || { x: 0, z: 0 };

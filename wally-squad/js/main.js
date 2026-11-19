@@ -26,6 +26,7 @@ import { issue } from './cmd.js';
 import { registerCustomUnits, loadDesigns, buildDesigner } from './customunits.js';
 import { gfx, initGraphics, pixelRatio, autoTune, buildGraphicsPanel, maxAnisotropy, isTouch, shadowInterval } from './graphics.js';
 import { allMaterials } from './materials.js';
+import { updateConvoy } from './features.js';
 import { updateCrates, animateCrates, placeTechBuildings, placeBarrels, placeHouses, recordHistory, drawHistory } from './features.js';
 import { updatePowers } from './powers.js';
 import { updateHazards } from './hazards.js';
@@ -400,6 +401,7 @@ function setupMenus() {
   toggle('Starting armies', () => sk.army !== false, v => { sk.army = v; });
   toggle('🗿 Victory Monuments', () => sk.wonders !== false, v => { sk.wonders = v; });
   toggle('👑 King of the Hill', () => !!sk.koth, v => { sk.koth = v; });
+  toggle('💰 Bounty convoys', () => sk.convoys !== false, v => { sk.convoys = v; });
   // starting money cycles through a few amounts
   const money = [2500, 4000, 7500, 15000];
   const mb = document.createElement('button'); mb.className = 'btn on';
@@ -730,6 +732,7 @@ function simStep(dt) {
   cleanupDead();
   regrowOre(dt);
   updateCrates(dt);
+  updateConvoy(dt);
   updateHazards(dt);
   updateHill(dt);
   recordHistory(dt);

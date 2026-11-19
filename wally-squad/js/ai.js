@@ -2,6 +2,7 @@
 import { G, srr as rr, srand } from './state.js';
 import { BASES } from './terrain.js';
 import { hill } from './koth.js';
+import { convoyActive } from './features.js';
 import { DIFFICULTY, BUILDINGS, UNITS, CELL, GRID } from './config.js';
 import { enqueue, hasReqs, canPlace, placeBuilding, defOf, placeInstant } from './production.js';
 import { superState, fireSuperweapon, aiSuperTarget } from './superweapons.js';
@@ -38,6 +39,12 @@ export class AI {
     this.manageDefence();
     if (!this.opts.noAttack) this.manageAttack();
     if (srand() < 0.25) this.manageGarrison();
+    // a bounty convoy passing nearby? send a hunting party after it
+    const cv = convoyActive();
+    if (cv && srand() < 0.3 && !G.units.some(u => !u.dead && u.faction === this.f && u.target === cv)) {
+      const hunters = G.units.filter(u => !u.dead && !u.boarded && u.faction === this.f && u.weapon && u.type !== 'harvester' && !u.isInf && !this.attackers.has(u) && Math.hypot(u.x - cv.x, u.z - cv.z) < 60);
+      hunters.slice(0, 4).forEach(u => u.attack(cv));
+    }
     if (srand() < 0.2) aiGrabCrates(this.f);
     if (this.t > 240 && !this.opts.noAttack && srand() < 0.3) aiUsePowers(this.f, aiSuperTarget(this.f));
     if (!this.opts.noUnits) aiCaptureTech(this.f);

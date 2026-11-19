@@ -3,7 +3,8 @@
 import * as THREE from 'three';
 import { G } from './state.js';
 import { T, cellCenter, cellOf, groundY, isVisibleAt, BASES } from './terrain.js';
-import { GRID as GRID_CELLS } from './config.js';
+import { GRID as GRID_CELLS, WATER_LEVEL } from './config.js';
+import * as FX from './particles.js';
 
 const flocks = [];
 let birdGeo = null, birdMat = null, rainbow = null, rbT = 0, lastWeather = null;
@@ -20,7 +21,8 @@ function treeSpot() {
 export function initAmbient(scene, theme) {
   if (theme && theme.animals) initAnimals(scene, theme.animals);
   if (theme && theme.leaves) initLeaves(scene);
-  if (theme && !theme.lava && !theme.ice && !theme.trees.cactus) initFireflies(scene);
+  if (theme && !theme.lava && !theme.ice && !theme.trees.cactus) { initFireflies(scene); initButterflies(scene); }
+  if (theme && !theme.lava && !theme.ice) initFish(scene);
   if (theme && theme.lava) return; // nothing flies over the lava fields
   // a bird: two thin wings in a shallow V
   birdGeo = new THREE.BufferGeometry();
@@ -64,6 +66,91 @@ export function updateAmbient(dt) {
   updateAnimals(dt);
   updateLeaves(dt, t);
   updateFireflies(dt, t);
+  updateButterflies(dt, t);
+  updateFish(dt);
+}
+
+// ---- butterflies: by day, a few colourful butterflies flutter over the grass near the camera
+let bflies = null;
+const BF_N = 36, bfState = [];
+function initButterflies(scene) {
+  const g = new THREE.BufferGeometry();
+  // two wings hinged on the body line; the flap is done by squashing x
+  g.setAttribute('position', new THREE.BufferAttribute(new Float32Array([0, 0, 0.12, -0.22, 0.02, 0.16, -0.2, 0, -0.1, 0, 0, 0.12, 0, 0, -0.08, -0.2, 0, -0.1, 0, 0, 0.12, 0.2, 0, -0.1, 0.22, 0.02, 0.16, 0, 0, 0.12, 0, 0, -0.08, 0.2, 0, -0.1]), 3));
+  g.computeVertexNormals();
+  bflies = new THREE.InstancedMesh(g, new THREE.MeshBasicMaterial({ side: THREE.DoubleSide }), BF_N);
+  bflies.frustumCulled = false;
+  const cols = [0xffd23a, 0xff7a2a, 0x7ac8ff, 0xffffff, 0xff5aa8, 0xb07aff], c = new THREE.Color();
+  for (let i = 0; i < BF_N; i++) {
+    bflies.setColorAt(i, c.set(cols[i % cols.length]));
+    bfState.push({ x: (Math.random() - 0.5) * 60, z: (Math.random() - 0.5) * 60, h: 0.5 + Math.random() * 1.5, a: Math.random() * 6.28, ph: Math.random() * 6.28, sp: 1 + Math.random() });
+  }
+  scene.add(bflies);
+}
+const _bm = new THREE.Matrix4(), _bq = new THREE.Quaternion(), _be = new THREE.Euler(), _bp = new THREE.Vector3(), _bs = new THREE.Vector3();
+function updateButterflies(dt, t) {
+  if (!bflies) return;
+  const day = (G.nightLevel || 0) < 0.4 && !(G.weather && (G.weather.type === 'rain' || G.weather.type === 'storm'));
+  bflies.visible = day;
+  if (!day) return;
+  const cx = G.camera.x, cz = G.camera.z;
+  for (let i = 0; i < BF_N; i++) {
+    const b = bfState[i];
+    b.a += Math.sin(t * 0.8 + b.ph) * dt * 1.5;
+    b.x += Math.sin(b.a) * dt * b.sp; b.z += Math.cos(b.a) * dt * b.sp;
+    if (Math.abs(b.x) > 32 || Math.abs(b.z) > 32) { b.x = (Math.random() - 0.5) * 60; b.z = (Math.random() - 0.5) * 60; }
+    const wx = cx + b.x, wz = cz + b.z, gy = groundY(wx, wz);
+    const vis = gy > WATER_LEVEL + 0.1 && isVisibleAt(wx, wz);
+    _be.set(0, b.a, 0); _bq.setFromEuler(_be);
+    _bp.set(wx, gy + b.h + Math.sin(t * 3 + b.ph) * 0.25, wz);
+    const flap = vis ? 0.25 + Math.abs(Math.sin(t * 16 + b.ph)) * 1.1 : 0;
+    _bs.set(flap * 1.6, 1.6, 1.6);
+    bflies.setMatrixAt(i, _bm.compose(_bp, _bq, _bs));
+  }
+  bflies.instanceMatrix.needsUpdate = true;
+}
+
+// ---- fish: every so often a fish leaps out of a lake near the camera and splashes back in
+let fishMesh = null, fishT = 3;
+const fishList = [];
+function initFish(scene) {
+  const g = new THREE.SphereGeometry(0.22, 8, 6).scale(0.6, 0.7, 1.6);
+  const tail = new THREE.ConeGeometry(0.18, 0.3, 4).rotateX(Math.PI / 2).translate(0, 0, -0.42);
+  fishMesh = { scene, geos: [g, tail], mat: new THREE.MeshStandardMaterial({ color: 0x9ab0b8, metalness: 0.6, roughness: 0.35 }) };
+}
+function waterSpot() {
+  for (let k = 0; k < 40; k++) {
+    const x = G.camera.x + (Math.random() - 0.5) * 60, z = G.camera.z + (Math.random() - 0.5) * 60;
+    const cx = cellOf(x), cz = cellOf(z);
+    if (cx < 1 || cz < 1 || cx >= GRID_CELLS - 1 || cz >= GRID_CELLS - 1) continue;
+    if (T.water[cz * GRID_CELLS + cx] && T.water[cz * GRID_CELLS + cx + 1] && T.water[(cz + 1) * GRID_CELLS + cx] && isVisibleAt(x, z)) return { x, z };
+  }
+  return null;
+}
+function updateFish(dt) {
+  if (!fishMesh) return;
+  fishT -= dt;
+  if (fishT <= 0) {
+    fishT = 2 + Math.random() * 5;
+    const s = waterSpot();
+    if (s) {
+      const g = new THREE.Group();
+      for (const geo of fishMesh.geos) g.add(new THREE.Mesh(geo, fishMesh.mat));
+      const a = Math.random() * 6.28;
+      fishMesh.scene.add(g);
+      fishList.push({ g, x: s.x, z: s.z, dx: Math.sin(a), dz: Math.cos(a), t: 0, h: 1.2 + Math.random() * 1.2, dur: 0.9 + Math.random() * 0.4 });
+      FX.splash?.(s.x, WATER_LEVEL, s.z, 0.6);
+    }
+  }
+  for (let i = fishList.length - 1; i >= 0; i--) {
+    const f = fishList[i];
+    f.t += dt;
+    const k = f.t / f.dur;
+    if (k >= 1) { fishMesh.scene.remove(f.g); fishList.splice(i, 1); FX.splash?.(f.x + f.dx * 2, WATER_LEVEL, f.z + f.dz * 2, 0.7); continue; }
+    const px = f.x + f.dx * 2 * k, pz = f.z + f.dz * 2 * k, y = WATER_LEVEL + Math.sin(k * Math.PI) * f.h;
+    f.g.position.set(px, y, pz);
+    f.g.rotation.set(-Math.cos(k * Math.PI) * 1.1, Math.atan2(f.dx, f.dz), 0, 'YXZ');
+  }
 }
 
 // ---- fireflies: on warm maps after dark, little green-gold lights drift and blink near the camera
