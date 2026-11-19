@@ -124,6 +124,9 @@
   body.touch #sideToggle { display: block; }
   body.sideHidden { --side: 0px; }
   body.sideHidden #side { display: none !important; }
+  /* in a game, the pause / help / graphics / end screens fill only the battlefield, never the build menu */
+  body.ingame #pause, body.ingame #help, body.ingame #gfxScreen, body.ingame #end { right: var(--side); }
+  .screen > .card { max-width: calc(100% - 16px); box-sizing: border-box; }
   /* phones held sideways: slim sidebar, minimap beside the money/tabs, build list gets the rest of the height */
   @media (max-height: 520px) and (orientation: landscape) {
     :root { --side: 236px; }
