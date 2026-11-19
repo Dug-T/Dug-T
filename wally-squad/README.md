@@ -87,6 +87,10 @@ Both factions share the basic army: riflemen, rocket troopers, Scorchers, engine
 - **🔁 Repeat production:** a toggle above the Infantry, Vehicles and Air build menus. Each finished unit is queued again, so a factory keeps pumping out your army.
 - **🧙 Grimlock Shaman** (Grimlocks only): a hooded healer with a glowing skull staff who heals nearby infantry, like the Field Medic.
 - **☄ Meteor showers:** the Natural Disasters mutator now also rains burning meteors on the battlefield every couple of minutes, with a warning first.
+- **🐕 Attack Dog** (Barracks, both sides): cheap, fast and fierce. It has a big sight range for scouting, savages enemy infantry, and is useless against tanks. It wags its tail and barks.
+- **🏷 Nicknames:** when one of your units becomes a Veteran it earns a nickname, like "Sgt. Biscuit", "Sir Tanks-a-lot", "Iron Granny" or "Sir Barksalot" for dogs. The nickname shows in the selection panel, the battle log and the MVP.
+- **🌈 Ambient life:** flocks of birds wheel over the forests by day, and a rainbow arcs across the sky when rain or a storm clears.
+- **Loading screen** now reads "LOADING WALLY SQUAD…" and shows a random gameplay tip.
 - **🎯 Find enemy base** (🎯 in the top bar, "Find enemy" on touch screens, or `N`):
   - **Before the enemy is found:** the camera flies to where their base is, and a pulsing red beacon and a minimap ping mark the spot for 12 seconds. The fog stays, so it shows where to go, not what's there.
   - **Once their buildings have been seen:** each press jumps to the next one, HQ first.

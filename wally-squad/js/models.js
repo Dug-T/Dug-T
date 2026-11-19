@@ -669,6 +669,33 @@ export function makeWarlord(faction) {
   });
 }
 
+// Attack Dog: a stocky low-poly hound in a team-coloured harness, with a wagging tail
+export function makeDog(faction) {
+  return cached(`dog-${faction}`, () => {
+    const t = mats(faction), m = M();
+    const fur = faction === 'wally' ? new THREE.MeshStandardMaterial({ color: 0xb07a45, roughness: 0.9 }) : new THREE.MeshStandardMaterial({ color: 0x3a3330, roughness: 0.9 });
+    const root = new THREE.Group();
+    const b = new Builder();
+    b.box(fur, 0.34, 0.3, 0.75, 0, 0.55, 0);                       // body
+    b.box(t.team, 0.36, 0.12, 0.42, 0, 0.62, 0.04);                // harness
+    b.box(t.accent, 0.06, 0.06, 0.06, 0.19, 0.62, 0.15);
+    b.box(fur, 0.26, 0.26, 0.28, 0, 0.78, 0.45);                   // head
+    b.box(fur, 0.16, 0.13, 0.2, 0, 0.72, 0.65);                    // snout
+    b.box(m.black, 0.07, 0.05, 0.04, 0, 0.75, 0.76);               // nose
+    b.box(m.black, 0.04, 0.04, 0.02, -0.08, 0.84, 0.6); b.box(m.black, 0.04, 0.04, 0.02, 0.08, 0.84, 0.6); // eyes
+    b.box(fur, 0.07, 0.14, 0.05, -0.1, 0.96, 0.42, 0.2, 0, 0.3); b.box(fur, 0.07, 0.14, 0.05, 0.1, 0.96, 0.42, 0.2, 0, -0.3); // ears
+    b.box(m.lampRed, 0.08, 0.02, 0.06, 0, 0.66, 0.73);              // tongue
+    const body = b.build(); body.name = 'body'; root.add(body);
+    const tail = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, 0.3).translate(0, 0, -0.15), fur); tail.position.set(0, 0.66, -0.37); tail.rotation.x = -0.6; tail.name = 'tail'; root.add(tail);
+    for (const [x, z, anim] of [[-0.12, 0.28, true], [0.12, 0.28, false], [-0.12, -0.28, false], [0.12, -0.28, true]]) {
+      const lb = new Builder(); lb.box(fur, 0.09, 0.42, 0.09, 0, -0.21, 0); lb.box(m.black, 0.1, 0.05, 0.12, 0, -0.42, 0.02);
+      const leg = lb.build(); leg.position.set(x, 0.44, z); if (anim) leg.name = 'leg'; root.add(leg);
+    }
+    root.userData.muzzle = new THREE.Vector3(0, 0.72, 0.75);
+    return root;
+  });
+}
+
 export function makeWallyMan(faction) {
   return cached(`wallyman-${faction}`, () => {
     const m = M(), w = wallyManMats();
@@ -951,6 +978,7 @@ export function makeUnitModel(type, faction) {
     case 'stealth': return makeStealth(faction);
     case 'inferno': return makeInferno(faction);
     case 'wallyman': return makeWallyMan(faction);
+    case 'dog': return makeDog(faction);
     case 'warlord': return makeWarlord(faction);
     default: return type.startsWith('custom_') ? makeCustomModel(UNITS[type].design, faction) : makeInfantry(type, faction);
   }

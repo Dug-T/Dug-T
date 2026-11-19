@@ -31,6 +31,17 @@ function makeRing(r, color) {
 // ------------------------------------------------------------------ spatial hash
 const HS = 4, HN = Math.ceil(GRID * CELL / HS);
 const buckets = Array.from({ length: HN * HN }, () => []);
+// Veterans earn a nickname (cosmetic only, so ordinary randomness is fine here)
+const NICK_INF = ['Biscuit', 'Sparky', 'Ace', 'Tank', 'Noodles', 'Moose', 'Ziggy', 'Bubbles', 'Hammer', 'Pickles', 'Boots', 'Rocket', 'Waffles', 'Duke', 'Scruffy', 'Tiny', 'Banjo', 'Crumpet'];
+const NICK_VEH = ['Big Bertha', 'Old Rusty', 'Thunderpants', 'The Kettle', 'Mean Machine', 'Lucky', 'Bulldozer', 'Rumbles', 'Sir Tanks-a-lot', 'Iron Granny', 'The Toaster', 'Clanky'];
+const NICK_DOG = ['Rex', 'Fido', 'Chomper', 'Sir Barksalot', 'Muttley', 'Woofles', 'Fang', 'Biscuit'];
+function nickname(u) {
+  const pool = u.type === 'dog' ? NICK_DOG : u.isInf ? NICK_INF : NICK_VEH;
+  const used = new Set(G.units.filter(o => o.nick).map(o => o.nick));
+  const free = pool.filter(n => !used.has(n)), name = (free.length ? free : pool)[Math.floor(Math.random() * (free.length || pool.length))];
+  return u.isInf && u.type !== 'dog' ? `${['Pvt.', 'Cpl.', 'Sgt.'][Math.floor(Math.random() * 3)]} ${name}` : name;
+}
+
 // Units riding in an APC or garrisoning a bunker get out around the host.
 export function ejectPassengers(host, hurt = 0, killer = null) {
   const list = (host.passengers || []).filter(u => !u.dead);
@@ -120,6 +131,7 @@ export class Unit {
     this.rotor = this.mesh.getObjectByName('rotor');
     this.tailrotor = this.mesh.getObjectByName('tailrotor');
     this.legs = []; this.mesh.traverse(o => { if (o.name === 'leg') this.legs.push(o); });
+    this.tail = this.mesh.getObjectByName('tail');
     this.cape = this.mesh.getObjectByName('cape'); this.barrels = this.mesh.getObjectByName('barrels');
     this.loadMesh = this.mesh.getObjectByName('load');
     this.fans = this.mesh.getObjectByName('fans');
@@ -625,6 +637,7 @@ export class Unit {
       if (walking) this.walkPhase += dt * this.speedNow * 3.2;
       const sw = walking ? Math.sin(this.walkPhase) * 0.6 : 0;
       if (this.legs[0]) { this.legs[0].rotation.x = sw; this.legs[1].rotation.x = -sw; }
+      if (this.tail) this.tail.rotation.y = Math.sin(G.time * (walking ? 18 : 9) + this.id) * 0.6;
       if (this.cape) this.cape.rotation.x = 0.12 + Math.min(1, this.speedNow / 3) * 0.5 + Math.sin(G.time * 7 + this.id) * (walking ? 0.12 : 0.04);
       if (this.barrels) {
         const firing = G.time - (this.lastFire ?? -9) < 0.4;
@@ -679,8 +692,9 @@ export class Unit {
     if (this.refinery && this.refinery.dockedBy === this) this.refinery.dockedBy = null;
     if (killer && killer.kind === 'unit' && !killer.dead) {
       killer.kills++;
-      if (killer.faction === G.player && killer.kills > (G.mvp?.kills || 0)) G.mvp = { kills: killer.kills, name: killer.hero ? killer.def.name + ' (Hero)' : killer.def.name, type: killer.type };
+      if (killer.faction === G.player && killer.kills > (G.mvp?.kills || 0)) G.mvp = { kills: killer.kills, name: killer.hero ? killer.def.name + ' (Hero)' : killer.nick ? `${killer.nick} (${killer.def.name})` : killer.def.name, type: killer.type };
       const r = killer.kills >= 10 ? 3 : killer.kills >= 6 ? 2 : killer.kills >= 3 ? 1 : 0;
+      if (r >= 1 && !killer.nick && !killer.hero && killer.faction === G.player) { killer.nick = nickname(killer); G.ui?.message(`🏷 Your ${killer.def.name} has earned a nickname: "${killer.nick}"`); }
       if (r === 3 && killer.rank < 3) { FX.sparkBurst(killer.x, killer.y + 1.5, killer.z, 40, [4, 3.2, 0.8, 1]); if (killer.faction === G.player) G.announce?.(`${killer.def.name} is now HEROIC!`, G.player, 2); emit('heroic', killer); }
       if (r > killer.rank) { killer.rank = r; if (killer.faction === G.player) G.sfx?.play('promote', killer.x, killer.z); }
     }
@@ -1189,6 +1203,7 @@ export function fireWeapon(src, w, target, muzzleLocal, frame) {
   const vis = isVisibleAt(mz.x, mz.z) || isVisibleAt(tp.x, tp.z);
   if (vis) G.sfx?.play(w.sound, mz.x, mz.z);
   const kind = w.proj;
+  if (kind === 'melee') { hit(src, w, target, tp); if (vis) FX.smallHit(tp.x, tp.y, tp.z, 'bullet'); return; } // bites and punches
   if (kind === 'beam') {
     FX.beam(mz.x, mz.y, mz.z, tp.x, tp.y, tp.z);
     FX.smallHit(tp.x, tp.y, tp.z, 'plasma');

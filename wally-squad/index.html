@@ -96,6 +96,7 @@
   #loading { position: absolute; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; flex-direction: column; background: #050709; font: 700 22px 'Rajdhani'; color: var(--accent); }
   #loading .bar { width: 240px; height: 6px; background: #1a232c; margin-top: 12px; border-radius: 3px; overflow: hidden; }
   #loading .bar div { height: 100%; width: 0; background: var(--accent); transition: width 0.2s; }
+  #loadTip { margin-top: 14px; font: 600 15px 'Rajdhani', sans-serif; color: var(--dim); max-width: 86%; text-align: center; letter-spacing: 0.5px; }
   /* touch helpers */
   #touchBar { position: absolute; left: 58px; top: 46px; display: none; flex-direction: column; gap: 6px; z-index: 5; }
   #touchBar .btn { padding: 8px 10px; font-size: 13px; }
@@ -600,7 +601,17 @@
   <p>Wally Squad is played in landscape. Turn your phone sideways to continue.</p>
   <button class="btn big" id="bFullRotate">⛶ Play fullscreen</button>
 </div>
-<div id="loading">LOADING CRYSTAL VALLEY…<div class="bar"><div id="loadBar"></div></div></div>
+<div id="loading">LOADING WALLY SQUAD…<div class="bar"><div id="loadBar"></div></div><div id="loadTip"></div></div>
+<script>
+  // a random tip while the game loads
+  (function () {
+    var tips = ['Tip: Wally Man\'s Gatling Frenzy (G) shreds infantry.', 'Tip: tap 🎯 to find the enemy base.', 'Tip: Battle Bunkers keep your infantry safe while they shoot.',
+      'Tip: Recon Drones reveal cloaked Shade tanks.', 'Tip: Repeat production keeps your factories busy.', 'Tip: hovercraft can cross water and even lava!',
+      'Tip: a Victory Monument that stands for 5 minutes wins the game.', 'Tip: Engineers can capture enemy buildings.', 'Tip: blue crystal is worth double.',
+      'Tip: units that reach 10 kills become Heroic.', 'Tip: try the Daily Challenge for a new battle every day.', 'Tip: press ⏭ to skip to another tune.'];
+    var el = document.getElementById('loadTip'); if (el) el.textContent = tips[Math.floor(Math.random() * tips.length)];
+  })();
+</script>
 
 </div>
 <script type="module" src="./js/main.js"></script>
