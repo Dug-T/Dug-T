@@ -1,6 +1,7 @@
 // Computer opponent: builds a base, harvests, trains an army, defends and attacks in waves.
 import { G, srr as rr, srand } from './state.js';
 import { BASES } from './terrain.js';
+import { hill } from './koth.js';
 import { DIFFICULTY, BUILDINGS, UNITS, CELL, GRID } from './config.js';
 import { enqueue, hasReqs, canPlace, placeBuilding, defOf, placeInstant } from './production.js';
 import { superState, fireSuperweapon, aiSuperTarget } from './superweapons.js';
@@ -154,13 +155,14 @@ export class AI {
     }
     if (P.queues.air && P.queues.air.items.length < 1 && this.t > 360 && srand() < 0.15 && hasReqs(this.f, 'jet')) enqueue(this.f, 'jet');
     if (P.queues.vehicle.items.length < 2) {
-      const opts = ['tank', 'tank', 'buggy', 'arty', 'titan', 'titan', 'stealth', 'stealth', 'inferno', 'inferno', 'repair', 'hover'].filter(t => hasReqs(this.f, t));
+      const opts = ['tank', 'tank', 'buggy', 'arty', 'titan', 'titan', 'stealth', 'stealth', 'inferno', 'inferno', 'repair', 'hover', 'teslatruck'].filter(t => hasReqs(this.f, t));
       if (opts.length) enqueue(this.f, opts[Math.floor(srand() * opts.length)]);
     }
     if (P.credits > 2200 && !P.queues.research.items.length) {
       const opts = ['refining', 'armor', 'bodyarmor', 'shells', 'engines', 'optics'].filter(t => hasReqs(this.f, t));
       if (opts.length) enqueue(this.f, opts[Math.floor(srand() * opts.length)]);
     }
+    if (P.queues.air.items.length < 1 && hasReqs(this.f, 'wyvern') && this.count('wyvern') < 3 && srand() < 0.5) enqueue(this.f, 'wyvern'); // Grimlocks mix in Wyvern Riders
     if (P.queues.air.items.length < 1 && hasReqs(this.f, 'gunship') && this.count('gunship') < 4) enqueue(this.f, 'gunship');
   }
 
@@ -205,7 +207,8 @@ export class AI {
     const enemyB = G.buildings.filter(b => !b.dead && b.faction !== this.f && b.faction !== 'neutral' && !b.def.isMine && !b.def.isWall);
     if (!enemyB.length) return;
     const target0 = enemyB[0];
-    const rx = base.x + (target0.x - base.x) * 0.15, rz = base.z + (target0.z - base.z) * 0.15;
+    let rx = base.x + (target0.x - base.x) * 0.15, rz = base.z + (target0.z - base.z) * 0.15;
+    if (hill.on && this.t > 60) { rx = hill.x; rz = hill.z; } // King of the Hill: rally the army on the hill
     for (const u of idle) if (!u.order && !u.target && Math.hypot(u.x - rx, u.z - rz) > 14) u.moveTo(rx + rr(-6, 6), rz + rr(-6, 6), { attackMove: true });
 
     const waveSize = this.diff.waveBase + this.waveN * this.diff.waveGrow;

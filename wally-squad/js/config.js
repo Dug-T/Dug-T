@@ -68,6 +68,8 @@ export const WEAPONS = {
   flameTower: { warhead: 'flame', damage: 36, range: 10, rof: 0.3, proj: 'flame', air: false, ground: true, splash: 2.4, sound: 'flame', big: true },
   grenade:  { warhead: 'artillery', damage: 48, range: 12, minRange: 2.5, rof: 2.3, proj: 'artillery', lob: true, air: false, ground: true, splash: 2.4, sound: 'cannon' },
   boom:     { warhead: 'artillery', damage: 230, range: 1.9, rof: 1, proj: 'kamikaze', air: false, ground: true, splash: 3.6, sound: 'arty' },
+  wyvern:   { warhead: 'flame', damage: 30, range: 8, rof: 0.35, proj: 'flame', air: false, ground: true, splash: 2.2, sound: 'flame', big: true },
+  teslaGun: { warhead: 'beam', damage: 72, range: 11, rof: 2.4, proj: 'tesla', air: false, ground: true, sound: 'zap' },
   bite:     { warhead: 'bullet', damage: 24, range: 1.7, rof: 0.7, proj: 'melee', air: false, ground: true, sound: 'bite' },
   shadeRkt: { warhead: 'rocket', damage: 50, range: 13, rof: 2.2, proj: 'rocket', air: false, ground: true, sound: 'rocket', twin: true },
 };
@@ -123,6 +125,7 @@ export const UNITS = {
   buggy:    { name: 'Scout Buggy', cost: 400, time: 8, hp: 260, armor: 'light', speed: 10, sight: 16, radius: 1.0, weapon: 'mg', tab: 'vehicle', req: ['factory'], desc: 'Fast raider with a heavy machine gun.' },
   tank:     { name: 'Battle Tank', cost: 800, time: 12, hp: 560, armor: 'heavy', speed: 5.6, sight: 14, radius: 1.35, weapon: 'cannon', turnRate: 2.6, tab: 'vehicle', req: ['factory'], desc: 'Main battle tank.' },
   apc:      { name: 'Squad Carrier APC', cost: 700, time: 11, hp: 650, armor: 'heavy', speed: 7.2, sight: 13, radius: 1.35, weapon: 'mg', turnRate: 2.8, tab: 'vehicle', req: ['factory', 'barracks'], transport: 5, desc: 'Armoured carrier. Right-click it with infantry selected to load up to 5; Unload (U) drops them off.' },
+  teslatruck: { name: 'Tesla Truck', fac: 'wally', cost: 1000, time: 13, hp: 360, armor: 'light', speed: 6.8, sight: 15, radius: 1.1, weapon: 'teslaGun', turnRate: 3, tab: 'vehicle', req: ['factory', 'radar'], desc: 'Wally Squad only. A truck carrying a crackling Tesla coil. Its lightning arcs between up to three packed enemies.' },
   repair:   { name: 'Repair Truck', cost: 600, time: 9, hp: 420, armor: 'light', speed: 6.8, sight: 12, radius: 1.15, weapon: null, repairs: true, turnRate: 2.8, tab: 'vehicle', req: ['factory'], desc: 'Fixes nearby vehicles in the field. Park it behind your tanks.' },
   hover:    { name: 'Skimmer Hovercraft', cost: 650, time: 9, hp: 320, armor: 'light', speed: 9, sight: 14, radius: 1.2, weapon: 'hoverRkt', turnRate: 3.2, hover: true, tab: 'vehicle', req: ['factory', 'radar'], desc: 'Fast amphibious raider. Skims over water and even lava to flank the enemy. Twin rockets hit ground and air.' },
   harvester:{ name: 'Harvester', cost: 1200, time: 16, hp: 950, armor: 'heavy', speed: 4.6, sight: 9, radius: 1.5, weapon: null, turnRate: 2.0, tab: 'vehicle', req: ['factory', 'refinery'], desc: 'Gathers crystal for the refinery.' },
@@ -132,6 +135,7 @@ export const UNITS = {
   inferno:  { name: 'Inferno Tank', fac: 'grim', cost: 1000, time: 15, hp: 820, armor: 'heavy', speed: 4.6, sight: 12, radius: 1.4, weapon: 'inferno', turnRate: 2.2, tab: 'vehicle', req: ['factory', 'radar'], desc: 'Grimlock only. Heavy flamethrower tank that roasts infantry and buildings.' },
   hauler:   { name: 'Sky Hauler', cost: 900, time: 12, hp: 450, armor: 'air', speed: 11, sight: 14, radius: 1.7, weapon: null, air: true, transport: 6, tab: 'air', req: ['helipad'], desc: 'Twin-rotor transport helicopter. Carries 6 infantry over cliffs, water and lava. Right-click it with infantry selected to load; Unload (U) over solid ground.' },
   drone:    { name: 'Recon Drone', cost: 350, time: 6, hp: 110, armor: 'air', speed: 14, sight: 22, radius: 0.8, weapon: null, air: true, detector: 14, tab: 'air', req: ['helipad'], desc: 'Fast unarmed scout with a huge sight range. Reveals cloaked Shade tanks within 14 m.' },
+  wyvern:   { name: 'Wyvern Rider', fac: 'grim', cost: 1300, time: 16, hp: 430, armor: 'air', speed: 8.5, sight: 17, radius: 1.6, weapon: 'wyvern', air: true, altitude: 6, tab: 'air', req: ['helipad'], desc: 'Grimlock only. A goblin riding a fire-breathing wyvern. Swoops low to roast infantry and buildings. Shoot it down with rockets and SAMs.' },
   jet:      { name: 'Strike Jet', cost: 1100, time: 13, hp: 280, armor: 'air', speed: 19, sight: 17, radius: 1.5, weapon: 'jetMsl', air: true, tab: 'air', req: ['helipad', 'radar'], desc: 'Blisteringly fast jet with twin missiles that hit air and ground. Fragile - strike and get out.' },
   gunship:  { name: 'Hornet Gunship', cost: 1200, time: 16, hp: 360, armor: 'air', speed: 10, sight: 18, radius: 1.6, weapon: 'heliRkt', tab: 'air', req: ['helipad'], air: true, desc: 'Fast attack helicopter. Hit it with rockets and SAMs.' },
 };

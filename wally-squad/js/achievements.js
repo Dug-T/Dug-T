@@ -34,6 +34,7 @@ export const MEDALS = {
   squatter:     { icon: '🏠', name: 'Home Sweet Home', desc: 'Move troops into a civilian house.' },
   shock:        { icon: '🌩', name: 'Shocking!', desc: 'One Tesla Coil bolt strikes three enemies.' },
   autumn:       { icon: '🍂', name: 'Fall Guy', desc: 'Win a battle on Autumn Hollow.' },
+  koth:         { icon: '👑', name: 'King of the Hill', desc: 'Win a King of the Hill skirmish.' },
   epilogue:     { icon: '🗡', name: 'Into the Fire', desc: 'Defeat Warlord Grak in the final campaign mission.' },
 };
 
@@ -84,6 +85,7 @@ export function initAchievements(run) {
     if (run.mode === 'tutorial') unlock('bootcamp');
     if (run.map === 'magma') unlock('magma');
     if (run.map === 'autumn') unlock('autumn');
+    if (run.koth && run.mode === 'skirmish') unlock('koth');
     if (run.daily) unlock('daily');
     if (run.mode === 'skirmish' && run.mut && run.mut.length >= 2) unlock('mutant');
     if (run.mode === 'skirmish') {

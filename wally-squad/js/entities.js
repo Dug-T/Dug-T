@@ -123,7 +123,7 @@ export class Unit {
     this.weapon2 = this.def.weapon2 ? WEAPONS[this.def.weapon2] : null;
     this.isInf = this.def.armor === 'infantry';
     this.air = !!this.def.air;
-    this.altitude = this.air ? 9 : 0;
+    this.altitude = this.air ? (this.def.altitude || 9) : 0;
     // harvester
     this.load = 0; this.hState = 'seek'; this.hT = 0;
     this.mesh = makeUnitModel(type, faction);
@@ -137,6 +137,7 @@ export class Unit {
     this.loadMesh = this.mesh.getObjectByName('load');
     this.fans = this.mesh.getObjectByName('fans');
     this.rotor2 = this.mesh.getObjectByName('rotor2');
+    this.wingL = this.mesh.getObjectByName('wingL'); this.wingR = this.mesh.getObjectByName('wingR');
     if (!this.isInf && !this.air) { this.lights = makeHeadlights(this.def.radius); this.mesh.add(this.lights); }
     G.three.scene.add(this.mesh);
     this.ring = null;
@@ -627,8 +628,9 @@ export class Unit {
       if (this.rotor) this.rotor.rotation.y += dt * 28;
       if (this.rotor2) this.rotor2.rotation.y -= dt * 28;
       if (this.tailrotor) this.tailrotor.rotation.x += dt * 35;
+      if (this.wingL) { const fl = Math.sin(G.time * 5 + this.id) * 0.55; this.wingL.rotation.z = fl; this.wingR.rotation.z = -fl; }
       // rotor wash dust
-      if (Math.random() < 0.3 && this.y - gy < 12) FX.dust(this.x + rr(-2, 2), this.z + rr(-2, 2), 1.2);
+      if (!this.wingL && Math.random() < 0.3 && this.y - gy < 12) FX.dust(this.x + rr(-2, 2), this.z + rr(-2, 2), 1.2);
     } else if (this.isInf) {
       this.y = Math.max(gy, WATER_LEVEL - 0.6);
       // victory: your troops jump for joy
@@ -1279,9 +1281,9 @@ export function fireWeapon(src, w, target, muzzleLocal, frame) {
   }
   if (kind === 'flame') {
     // stream of fire: particles + damage over time
-    const dy = (tp.y - mz.y) / dl;
-    const reach = Math.min(1.7, Math.max(1, dl / 6.5));
-    for (let i = 0; i < 3; i++) FX.flame(mz.x, mz.y, mz.z, dx / dl, dy, dz / dl, reach);
+    const dy3 = tp.y - mz.y, d3 = Math.hypot(dx, dy3, dz) || 1; // aim in 3D, so flames from the air angle down
+    const reach = Math.min(1.7, Math.max(1, d3 / 6.5));
+    for (let i = 0; i < 3; i++) FX.flame(mz.x, mz.y, mz.z, dx / d3, dy3 / d3, dz / d3, reach);
     later(0.2, () => { if (alive(target)) hit(src, w, target, aimPoint(target)); });
     return;
   }

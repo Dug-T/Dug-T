@@ -87,6 +87,10 @@ Both factions share the basic army: riflemen, rocket troopers, Scorchers, engine
 - **🔁 Repeat production:** a toggle above the Infantry, Vehicles and Air build menus. Each finished unit is queued again, so a factory keeps pumping out your army.
 - **🧙 Grimlock Shaman** (Grimlocks only): a hooded healer with a glowing skull staff who heals nearby infantry, like the Field Medic.
 - **☄ Meteor showers:** the Natural Disasters mutator now also rains burning meteors on the battlefield every couple of minutes, with a warning first.
+- **👑 King of the Hill** (Skirmish → Battlefield option): a ring of glowing beacons and a crowned flag in the middle of the map. Keep troops on the hill with no enemies there to score time; the first side to hold it for 3 minutes in total wins. A score bar shows both clocks, and the AI fights for the hill too. Win one for the **King of the Hill** medal.
+- **🐉 Wyvern Rider** (Grimlocks only, Helipad): a goblin on a fire-breathing wyvern with flapping wings. It swoops low to roast infantry and buildings. Shoot it down with rockets and SAMs.
+- **⚡ Tesla Truck** (Wally Squad only, War Factory + Comms Center): a six-wheeled truck with a swivelling Tesla coil. Its lightning arcs between up to three packed enemies, and it doesn't need power.
+- **✨ Fireflies:** on green, autumn and jungle maps, glowing fireflies drift and blink near the ground after dark.
 - **💣 Grenadier** (Wally Squad only, Barracks + Refinery): lobs grenades in a short arc over walls and into crowds. Great against infantry, bunkers and garrisoned houses, but can't hit anything right next to him.
 - **🧨 Goblin Boomer** (Grimlocks only, Barracks + Refinery): a cackling goblin with a huge bomb on his back. He sprints at the enemy and blows himself up, wrecking everything nearby. One use only!
 - **🍂 Autumn Hollow** (new map): rolling hills of red, orange and gold woodland around four quiet ponds, with leaves drifting on the wind. Win there for the **Fall Guy** medal.
