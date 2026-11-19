@@ -37,7 +37,7 @@ import { registerCustomMaps, buildMapEditor } from './mapeditor.js';
 import { updateOrientation } from './orient.js';
 import { awardGame, profileCard } from './profile.js';
 import { initTipJar } from './tipjar.js';
-import { VERSION, isNewVersion, markSeen, buildNews } from './version.js';
+import { VERSION, isNewVersion, markSeen, buildNews, checkForUpdate, registerUpdater, updateNow } from './version.js';
 updateOrientation();
 import { initSurvival, updateSurvival, survivalPanel, saveBest, bestScores, survival } from './survival.js';
 
@@ -434,6 +434,15 @@ function setupMenus() {
   for (const el of document.querySelectorAll('.verNum')) el.textContent = VERSION;
   $('verLink').onclick = e => { e.preventDefault(); Audio.play('click'); showPanel('menuNews'); };
   $('bNewsOk').onclick = () => { markSeen(); Audio.initAudio(); Audio.play('click'); showPanel('menuMain'); };
+  // always fetch the newest game files, and offer an update if the server has a newer version than this one
+  registerUpdater();
+  if (run.mode === 'title') checkForUpdate().then(v => {
+    if (!v) return;
+    const bar = document.createElement('button'); bar.id = 'updateBar'; bar.className = 'btn big';
+    bar.innerHTML = `🆕 Version ${v} is available - tap to update`;
+    bar.onclick = () => { bar.textContent = 'Updating…'; updateNow(); };
+    $('menuMain').insertBefore(bar, $('menuMain').firstChild);
+  });
   initTipJar();
   // daily challenge
   const dc = dailyChallenge(), rec = dailyRecord();
