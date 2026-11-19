@@ -117,15 +117,22 @@ Both factions share the basic army: riflemen, rocket troopers, Scorchers, engine
   - Troops inside shoot out with +25% range and can't be hurt until the bunker falls; then they bail out wounded.
   - Evacuate (`U`) sends them back out. The computer builds and garrisons bunkers too.
 - **🔥 Kill streaks:** quick kills in a row get a banner and a shout (Double kill, Triple kill, Rampage, Unstoppable and more). The end screen shows your **MVP** unit and your best streak.
-- **Unit voices:** select the Scorcher for one of 12 "Wally Man" introductions ("Never fear, Wally Man is here!", "Did somebody say barbecue?"...), spoken in a female voice and never the same one twice in a row.
+- **Unit voices:** select the Scorcher for one of 24 "Wally Man" introductions ("Never fear, Wally Man is here!", "Did somebody say barbecue?"...), spoken in a female voice and never the same one twice in a row. Wally Man himself has 15 introductions.
 - **🚚 Squad Carrier APC** (War Factory, needs a Barracks): an armoured troop carrier with a machine gun. To load up to 5 infantry, select them and right-click (or tap) the APC. Press Unload (`U`) to drop them off. Green pips show how many are inside. If the APC is destroyed, its passengers bail out wounded.
-- **🎵 Soundtrack:** six original tunes, shuffled at random. A new one starts every minute and a half or so, and **⏭** in the top bar skips to another.
+- **🎵 Soundtrack:** twelve original tunes, shuffled at random. A new one starts every minute and a half or so, and **⏭** in the top bar skips to another.
   - **Wally Squad Assemble:** a heroic rock march.
   - **Grimlock Rising:** a dark, four-on-the-floor stomp.
   - **Crystal Rush:** fast drum & bass.
   - **Steel Thunder:** heavy half-time with a galloping bass.
   - **Lava Run:** an urgent chase.
   - **Victory Road:** an upbeat major-key march.
+  - **Neon Commander:** synthwave with pulsing bass.
+  - **Pixel Platoon:** 8-bit chiptune.
+  - **Skank Tank:** ska with off-beat chords and a brass lead.
+  - **Iron Grimlock:** metal with double-kick drums.
+  - **Funky Harvester:** syncopated funk with a popping bass.
+  - **Desert Shuffle:** a swinging blues shuffle with a walking bass.
+  - Every tune has a second melody in its verses and goes up a key for the final chorus.
   - Each tune has its own tempo, key, chords, drum groove, bass line and lead melody, arranged into an intro, verses, catchy choruses and a breakdown. It also has crashes and tom fills, sidechain pumping and an echoing lead.
   - **Dynamic:** the music follows the fighting. It is stripped back when calm, the full band in battle, and adds extra kicks, 16th-note hats and an octave-doubled lead in all-out war. The Music button shows the mood, and "♪ Now playing" names each new tune. Victory and defeat each play a short phrase.
 - **Unit stances:** in the selection panel, choose Aggressive (chase enemies), Hold Position (shoot only what's in range and never move) or Hold Fire (never shoot unless ordered, good for sneaking).
