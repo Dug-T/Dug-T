@@ -837,6 +837,6 @@ window.WS = {
 
 boot().catch(err => {
   console.error(err);
-  $('loading').innerHTML = `<div style="color:#ff6a5a;max-width:600px;text-align:center">Failed to start: ${err.message}<br><small>Your browser needs WebGL 2 support.</small></div>`;
+  $('loading').innerHTML = `<div style="color:#ff6a5a;max-width:600px;text-align:center">Failed to start: ${err.message}<br><small>Your browser needs WebGL 2 (3D graphics) support.<br><br>Things to try: update your phone and its browser, open the link in Chrome or Safari rather than inside an app (Facebook, Messenger, Instagram...), turn off battery saver, or <a href="#" onclick="location.reload();return false" style="color:#7fd4ff">tap here to reload</a>.</small></div>`;
 });
 void menuMode;

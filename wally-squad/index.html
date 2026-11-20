@@ -368,6 +368,8 @@
     #menuMain .copyright { font-size: 9.5px; margin-top: 4px; }
   }
 </style>
+<!-- older phones (e.g. iPhones before iOS 16.4) don't understand the import map below; this small MIT-licensed shim adds it, and does nothing where it isn't needed -->
+<script async src="./lib/es-module-shims.js"></script>
 <script type="importmap">
 { "imports": { "three": "./lib/three.module.min.js" } }
 </script>
@@ -659,9 +661,27 @@
       'Tip: units that reach 10 kills become Heroic.', 'Tip: try the Daily Challenge for a new battle every day.', 'Tip: press ⏭ to skip to another tune.'];
     var el = document.getElementById('loadTip'); if (el) el.textContent = tips[Math.floor(Math.random() * tips.length)];
   })();
+  // if the game can't start on this device, explain why on the loading screen (instead of hanging forever)
+  (function () {
+    var shown = false;
+    function fail(title, detail) {
+      var L = document.getElementById('loading');
+      if (shown || !L || L.style.display === 'none') return;
+      shown = true;
+      var d = document.createElement('div'); d.id = 'loadErr';
+      d.style.cssText = 'margin:16px auto 0;max-width:540px;padding:0 16px;font-size:14px;line-height:1.5;color:#ffd27a;letter-spacing:0;text-transform:none;font-weight:600';
+      d.innerHTML = '<b>' + title + '</b><br>' + detail + '<br><br>Things to try: update your phone and its browser, open the link in <b>Chrome</b> or <b>Safari</b> rather than inside an app (Facebook, Messenger, Instagram...), close other tabs, or <a href="#" onclick="location.reload();return false" style="color:#7fd4ff">tap here to reload</a>.';
+      L.appendChild(d);
+    }
+    try { var c = document.createElement('canvas'); if (!(c.getContext('webgl2') || c.getContext('webgl'))) fail('This browser can\'t show 3D graphics (WebGL is off or not supported).', 'Wally Squad needs WebGL to draw the battlefield.'); } catch (e) { /* ignore */ }
+    window.__wsLoadFail = fail; // also called if a game file fails to download (see the module script below)
+    window.addEventListener('error', function (e) { fail('Wally Squad hit a problem while loading on this device.', String((e && e.message) || '').slice(0, 160)); });
+    window.addEventListener('unhandledrejection', function (e) { var r = e && e.reason; fail('Wally Squad hit a problem while loading on this device.', String((r && r.message) || r || '').slice(0, 160)); });
+    setTimeout(function () { fail('This is taking a long time...', 'Older or busy phones can need a minute. If nothing happens, this browser may be too old for Wally Squad.'); }, 45000);
+  })();
 </script>
 
 </div>
-<script type="module" src="./js/main.js"></script>
+<script type="module" src="./js/main.js" onerror="window.__wsLoadFail &amp;&amp; window.__wsLoadFail('Part of the game could not be downloaded.', 'Check your internet connection and try again.')"></script>
 </body>
 </html>
