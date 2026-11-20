@@ -721,6 +721,36 @@ export function makeBurrower(faction) {
   });
 }
 
+// Medevac Copter: a white rescue helicopter with red crosses and a team-coloured stripe
+export function makeMedevac(faction) {
+  return cached(`medevac-${faction}`, () => {
+    const t = mats(faction), m = M();
+    const white = new THREE.MeshStandardMaterial({ color: 0xf2f2f0, roughness: 0.5 });
+    const root = new THREE.Group();
+    const b = new Builder();
+    b.sph(white, 0.85, 0, 0, 0.2, 1, 0.95, 1.8);                      // fuselage
+    b.sph(m.glass, 0.55, 0, 0.25, 1.35, 0.9, 0.8, 1.0);              // canopy
+    b.box(t.team, 1.72, 0.18, 2.2, 0, -0.1, 0.0);                     // team stripe
+    for (const s of [-1, 1]) { b.box(m.lampRed, 0.03, 0.55, 0.16, s * 0.86, 0.1, 0.0); b.box(m.lampRed, 0.03, 0.16, 0.55, s * 0.86, 0.1, 0.0); } // red crosses
+    b.box(m.lampRed, 0.55, 0.03, 0.16, 0, 0.82, -0.2); b.box(m.lampRed, 0.16, 0.03, 0.55, 0, 0.82, -0.2);
+    b.cyl(white, 0.2, 0.32, 3.0, 10, 0, 0.15, -2.1, Math.PI / 2, 0, 0);  // tail boom
+    b.box(white, 0.08, 0.85, 0.55, 0, 0.55, -3.5);
+    for (const s of [-1, 1]) { b.box(m.gun, 0.05, 0.4, 0.05, s * 0.55, -0.75, 0.5); b.box(m.gun, 0.05, 0.4, 0.05, s * 0.55, -0.75, -0.4); b.box(m.gun, 0.06, 0.06, 1.6, s * 0.55, -0.95, 0.05); }
+    b.box(m.lampRed, 0.12, 0.08, 0.12, 0, 0.95, 0.6); b.box(m.lampWhite, 0.12, 0.08, 0.12, 0, 0.95, 0.35);
+    b.cyl(m.darkMetal, 0.15, 0.25, 0.4, 10, 0, 0.85, 0.2);
+    root.add(b.build());
+    const rb = new Builder();
+    for (let i = 0; i < 4; i++) rb.box(m.black, 0.25, 0.03, 4.4, 0, 0, 0, 0, i * Math.PI / 4, 0);
+    const rotor = rb.build(false); rotor.position.set(0, 1.1, 0.2); rotor.name = 'rotor'; root.add(rotor);
+    const tr = new Builder(); tr.box(m.black, 0.04, 1.0, 0.12, 0, 0, 0); tr.box(m.black, 0.04, 0.12, 1.0, 0, 0, 0);
+    const trot = tr.build(false); trot.position.set(0.1, 0.55, -3.5); trot.name = 'tailrotor'; root.add(trot);
+    const disk = new THREE.Mesh(new THREE.CircleGeometry(2.2, 32).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0x111111, transparent: true, opacity: 0.18, depthWrite: false }));
+    disk.position.set(0, 1.12, 0.2); root.add(disk);
+    root.userData.muzzle = new THREE.Vector3(0, -0.5, 0.5);
+    return root;
+  });
+}
+
 export function makeJet(faction) {
   return cached(`jet-${faction}`, () => {
     const t = mats(faction), m = M();
@@ -1290,6 +1320,7 @@ export function makeUnitModel(type, faction) {
     case 'inferno': return makeInferno(faction);
     case 'wallyman': return makeWallyMan(faction);
     case 'dog': return makeDog(faction);
+    case 'medevac': return makeMedevac(faction);
     case 'burrower': return makeBurrower(faction);
     case 'catapult': return makeCatapult(faction);
     case 'shieldgen': return makeShieldGen(faction);

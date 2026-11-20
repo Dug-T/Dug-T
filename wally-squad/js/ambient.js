@@ -342,7 +342,19 @@ function updateRainbow(dt) {
 // lights shimmer over the snow maps (drawn as screen overlays, like the rainbow - the camera never sees the sky)
 let auroraEl = null, starT = 6, skyTheme = null;
 export function setSkyTheme(theme) { skyTheme = theme; }
+let bloodEl = null;
+function updateBloodMoonSky() {
+  if (!G.bloodMoon && !bloodEl) return;
+  if (!bloodEl) {
+    bloodEl = document.createElement('div'); bloodEl.id = 'bloodMoon';
+    bloodEl.style.cssText = 'position:absolute;inset:0;pointer-events:none;z-index:3;opacity:0;transition:opacity 3s;mix-blend-mode:multiply;' +
+      'background:radial-gradient(circle at 82% 10%, rgba(255,90,60,1) 0, rgba(255,60,40,1) 3.5%, rgba(255,120,100,.0) 9%), radial-gradient(ellipse at 50% 40%, rgba(255,200,190,1) 30%, rgba(170,40,40,1) 100%)';
+    (document.getElementById('view') || document.body).appendChild(bloodEl);
+  }
+  bloodEl.style.opacity = G.bloodMoon ? '0.55' : '0';
+}
 function updateNightSky(dt) {
+  updateBloodMoonSky();
   if (!skyTheme || skyTheme.lava) return;
   const W = G.weather, clear = !W || W.type === 'clear' || W.type === 'snow';
   const night = Math.max(0, Math.min(1, ((G.nightLevel || 0) - 0.55) * 3));

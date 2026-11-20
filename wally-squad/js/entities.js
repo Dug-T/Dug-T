@@ -285,6 +285,17 @@ export class Unit {
     if (this.boarded) { this.x = this.boarded.x; this.z = this.boarded.z; this.y = this.boarded.y; return; } // riding inside an APC
     if (this.order && this.order.type === 'board') { this.boardLogic(); }
     if (this.blinkCD > 0) this.blinkCD -= dt;
+    if (this.def.healAura) { // Medevac: heal every friendly unit beneath it
+      this.healT = (this.healT || 0) - dt;
+      if (this.healT <= 0) {
+        this.healT = 0.5;
+        for (const o of unitsNear(this.x, this.z, this.def.healAura, auraBuf)) {
+          if (o.dead || o === this || o.faction !== this.faction || o.hp >= o.maxHp) continue;
+          o.hp = Math.min(o.maxHp, o.hp + 7);
+          if (o.mesh.visible && Math.random() < 0.5) FX.sparkBurst(o.x, o.y + 1.2, o.z, 2, [1, 4, 1.5, 1]);
+        }
+      }
+    }
     if (this.def.burrow) this.burrowed = this.speedNow > 0.4; // underground while travelling, surfaces when it stops to fight
     if (this.def.regen && this.hp < this.maxHp) this.hp = Math.min(this.maxHp, this.hp + this.def.regen * dt); // trolls heal themselves
     if (this.def.selfRepair && this.hp < this.maxHp * 0.5) this.hp = Math.min(this.maxHp * 0.5, this.hp + 6 * dt);
@@ -1494,7 +1505,7 @@ function splash(src, w, x, z, r, faction, except) {
   }
 }
 
-const helpBuf = [];
+const helpBuf = [], auraBuf = [];
 // should u switch to attacking `src`, which just shot it (or a friend)?
 function retaliate(u, src) {
   if (u.dead || u.boarded || !u.weapon || u.stance === 'holdfire' || u.def.heals || u.def.repairs) return;
@@ -1521,6 +1532,7 @@ export function damage(target, amount, src, kind) {
   if (G.god && target.faction === G.player) return; // GODMODE cheat
   if (target.burrowed) return;
   if (hasMut(G.cfg, 'glass')) amount *= 1.75;
+  if (G.bloodMoon) amount *= 1.25; // Blood Moon night
   // inside a friendly Shield Projector's bubble: 40% less damage
   if (target.kind === 'unit' && G.shields && G.shields.length) for (const s of G.shields) {
     if (s.faction === target.faction && !s.dead && Math.hypot(s.x - target.x, s.z - target.z) <= s.def.shield) { amount *= 0.6; s.shieldFlash = 1; break; }

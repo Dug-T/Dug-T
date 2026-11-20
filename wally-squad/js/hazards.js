@@ -2,7 +2,8 @@
 // vehicles and buildings. Movement and damage use the seeded simulation RNG (online-safe); the
 // funnel mesh and dust are only visuals.
 import * as THREE from 'three';
-import { G, srand, srr, later } from './state.js';
+import { G, srand, srr, later, emit } from './state.js';
+import { timeOfDay } from './weather.js';
 import { HALF } from './config.js';
 import { groundY, isVisibleAt, blastTrees, currentMap } from './terrain.js';
 import { unitsNear, damage, distTo } from './entities.js';
@@ -126,8 +127,26 @@ function updateVolcano(dt) {
   }
 }
 
+// ---- Blood Moon: some nights (with the day-night cycle on) the moon turns red and every weapon hits 25% harder
+let wasNight = false;
+function updateBloodMoon() {
+  if (!G.cfg.daynight || !G.weather) return;
+  const tod = timeOfDay(), day = Math.max(0, Math.min(1, Math.sin((tod - 0.25) * Math.PI * 2) * 2 + 0.55));
+  const night = day < 0.4;
+  if (night && !wasNight) {
+    G.bloodMoon = srand() < 0.35;
+    if (G.bloodMoon) G.announce?.('A Blood Moon rises! Every weapon hits 25% harder tonight!', G.player, 8);
+  } else if (!night && wasNight && G.bloodMoon) {
+    G.bloodMoon = false;
+    G.announce?.('The Blood Moon has set.', G.player, 2);
+    emit('bloodmoon');
+  }
+  wasNight = night;
+}
+
 export function updateHazards(dt) {
   if (G.over) return;
+  updateBloodMoon();
   updateStrikes(dt);
   updateVolcano(dt);
   if (!(G.cfg.mut && G.cfg.mut.includes('disasters'))) return;

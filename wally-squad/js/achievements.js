@@ -41,6 +41,7 @@ export const MEDALS = {
   blossom:      { icon: '🌸', name: 'Petal Power', desc: 'Win a battle on Blossom Gardens.' },
   highland:     { icon: '🏴', name: 'Braveheart', desc: 'Win a battle on Highland Glen.' },
   hunt:         { icon: '🎯', name: 'Headhunter', desc: 'Win a Hero Hunt skirmish.' },
+  bloodmoon:    { icon: '🌕', name: 'Blood Moon Survivor', desc: 'Make it through a Blood Moon night.' },
   epilogue:     { icon: '🗡', name: 'Into the Fire', desc: 'Defeat Warlord Grak in the final campaign mission.' },
 };
 
@@ -83,6 +84,7 @@ export function initAchievements(run) {
   on('chain3', f => { if (f === G.player) unlock('shock'); });
   on('bounty', f => { if (f === G.player) unlock('bounty'); });
   on('infiltrate', f => { if (f === G.player) unlock('spy'); });
+  on('bloodmoon', () => { if (G.buildings.some(b => !b.dead && b.faction === G.player)) unlock('bloodmoon'); });
   on('heroic', u => { if (u.faction === G.player) unlock('heroic'); });
   on('crate', f => { if (f === G.player && ++session.crates >= 5) unlock('crates'); });
   on('capture', (b, f) => { if (f === G.player) unlock('capture'); });

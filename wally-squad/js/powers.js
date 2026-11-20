@@ -7,11 +7,13 @@ import { groundY, BASES, blastTrees } from './terrain.js';
 import { Unit, damage, unitsNear, decay, distTo } from './entities.js';
 import { mats, M } from './materials.js';
 import * as FX from './particles.js';
+import { dropCrate } from './features.js';
 
 export const POWERS = {
   recon:     { name: 'Recon Sweep', icon: '📡', req: ['radar'], charge: 75, desc: 'Reveals a large area for 20 seconds.' },
   paradrop:  { name: 'Paradrop', icon: '🪂', req: ['barracks', 'radar'], charge: 150, desc: 'A transport drops 7 troopers by parachute.' },
   airstrike: { name: 'Airstrike', icon: '✈', req: ['helipad'], charge: 210, desc: 'Bombers carpet-bomb a line through the target.' },
+  supply:    { name: 'Supply Drop', icon: '📦', req: ['refinery', 'radar'], charge: 200, desc: 'A cargo plane parachutes three supply crates onto the spot you pick. Grab them before the enemy does!' },
   reinforce: { name: 'Reinforcements', icon: '🛬', req: ['factory', 'radar'], charge: 240, desc: 'A heavy transport parachutes two tanks onto the battlefield.' },
   emp:       { name: 'EMP Strike', icon: '⚡', req: ['tech'], charge: 180, desc: 'An electromagnetic pulse knocks out enemy vehicles, aircraft and defences in a wide area for 12 seconds.' },
 };
@@ -56,8 +58,9 @@ export function usePower(f, type, x, z) {
   else if (type === 'paradrop') paradrop(f, x, z);
   else if (type === 'emp') emp(f, x, z);
   else if (type === 'reinforce') reinforce(f, x, z);
+  else if (type === 'supply') supplyDrop(f, x, z);
   else airstrike(f, x, z);
-  if (f !== G.player && type !== 'recon') { G.announce?.(type === 'airstrike' ? 'Warning: enemy aircraft approaching' : type === 'emp' ? 'Warning: enemy EMP strike!' : type === 'reinforce' ? 'Enemy tanks are being dropped in' : 'Enemy paratroopers detected', G.player, 3); G.alertAt = { x, z, t: G.time }; }
+  if (f !== G.player && type !== 'recon') { G.announce?.(type === 'airstrike' ? 'Warning: enemy aircraft approaching' : type === 'emp' ? 'Warning: enemy EMP strike!' : type === 'reinforce' ? 'Enemy tanks are being dropped in' : type === 'supply' ? 'The enemy is receiving a supply drop' : 'Enemy paratroopers detected', G.player, 3); G.alertAt = { x, z, t: G.time }; }
   return true;
 }
 
@@ -137,6 +140,11 @@ function reinforce(f, x, z) {
     });
   });
 }
+function supplyDrop(f, x, z) {
+  if (f === G.player) G.announce?.('Supply drop inbound', G.player, 1);
+  const { timeToTarget } = flyOver(f, x, z, true, 30);
+  later(timeToTarget + 1.5, () => { for (const [dx, dz] of [[-2.5, 0], [2.5, 0], [0, 2.5]]) dropCrate(x + dx, z + dz); });
+}
 let chuteGeo = null;
 function chuteMesh(f, n = 1) {
   if (!chuteGeo) chuteGeo = new THREE.SphereGeometry(1.4, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2.2);
@@ -197,6 +205,7 @@ export function aiUsePowers(f, target) {
     if (!s.ready || !target) continue;
     if (s.type === 'recon') usePower(f, 'recon', target.x, target.z);
     else if (s.type === 'airstrike' || s.type === 'emp') usePower(f, s.type, target.x, target.z);
+    else if (s.type === 'supply') { const home = BASES[f] || { x: 0, z: 0 }; usePower(f, 'supply', home.x + (target.x - home.x) * 0.15, home.z + (target.z - home.z) * 0.15); }
     else if (s.type === 'reinforce') { const home = BASES[f] || { x: 0, z: 0 }; usePower(f, 'reinforce', home.x + (target.x - home.x) * 0.35, home.z + (target.z - home.z) * 0.35); }
     else if (s.type === 'paradrop') {
       // drop beside the target, not on top of its defences
