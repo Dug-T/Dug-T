@@ -345,8 +345,11 @@ export function updateCamera(dt) {
     if (G.mouse.x < e) mx -= 1; if (G.mouse.x > W - e) mx += 1;
     if (G.mouse.y < e) mz -= 1; if (G.mouse.y > H - e) mz += 1;
   }
-  if (keys.KeyQ) C.yaw += dt * 1.5;
-  if (keys.KeyE) C.yaw -= dt * 1.5;
+  if (C.homeYaw === undefined) C.homeYaw = C.yaw;
+  if (keys.KeyQ) { C.yaw += dt * 1.5; C.yawTo = null; }
+  if (keys.KeyE) { C.yaw -= dt * 1.5; C.yawTo = null; }
+  if (C.yawTo != null) { const d = C.yawTo - C.yaw; C.yaw += d * Math.min(1, dt * 9); if (Math.abs(d) < 0.002) { C.yaw = C.yawTo; C.yawTo = null; } }
+  const cn = document.getElementById('compassN'); if (cn) cn.style.transform = `rotate(${C.yaw - C.homeYaw}rad)`; // points to the starting 'up' of the map
   if (mx || mz) {
     const c = Math.cos(C.yaw), s = Math.sin(C.yaw);
     C.x += (mx * c + mz * s) * sp; C.z += (-mx * s + mz * c) * sp;
@@ -587,7 +590,7 @@ function bindInput() {
       const dx = x - rmb.x, dy = y - rmb.y;
       if (Math.hypot(dx, dy) > 6) rmb.moved = true;
       if (rmb.moved) {
-        if (rmb.rotate) G.camera.yaw = rmb.yaw - dx * 0.006;
+        if (rmb.rotate) { G.camera.yaw = rmb.yaw - dx * 0.006; G.camera.yawTo = null; }
         else {
           // right-drag pans the map
           const k = G.camera.dist / H * 1.4, c = Math.cos(G.camera.yaw), s = Math.sin(G.camera.yaw);
@@ -810,7 +813,7 @@ function bindTouch(gl) {
       if (G.placing) { const g = screenToGround(p.x, p.y); if (g) { G.mouse.ground = g; if (BUILDINGS[G.placing].isWall) wallStart = placementCell(g.x, g.z); } }
     } else if (pts.size === 2) {
       const [a, b] = [...pts.values()];
-      pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), dist: G.camera.dist, cx: G.camera.x, cz: G.camera.z, mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2 };
+      pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), ang: Math.atan2(b.y - a.y, b.x - a.x), yaw: G.camera.yaw, dist: G.camera.dist, cx: G.camera.x, cz: G.camera.z, mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2 };
       start = null; drag = null;
     }
     clearTimeout(longT);
@@ -822,6 +825,9 @@ function bindTouch(gl) {
       const [a, b] = [...pts.values()];
       const d = Math.hypot(a.x - b.x, a.y - b.y);
       G.camera.targetDist = clamp(pinch.dist * pinch.d / d, 18, 130); G.camera.dist = G.camera.targetDist;
+      // twist two fingers to rotate the map (ignore tiny wobbles while pinching)
+      let da = Math.atan2(b.y - a.y, b.x - a.x) - pinch.ang; da = Math.atan2(Math.sin(da), Math.cos(da));
+      if (pinch.twist || Math.abs(da) > 0.12) { pinch.twist = true; G.camera.yaw = pinch.yaw + da; G.camera.yawTo = null; }
       const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
       const k = G.camera.dist / H * 1.4, c = Math.cos(G.camera.yaw), s = Math.sin(G.camera.yaw);
       const dx = mx - pinch.mx, dy = my - pinch.my;
@@ -886,6 +892,10 @@ function bindButtons() {
   $('tStop').onclick = () => issue({ t: 'stop', ids: myUnits().map(u => u.id) });
   $('tFind').onclick = () => findEnemyBase();
   $('bFind').onclick = () => findEnemyBase();
+  const turn = k => { const C = G.camera; C.yawTo = Math.round(((C.yawTo ?? C.yaw) + k * Math.PI / 4) / (Math.PI / 4)) * (Math.PI / 4); Audio.play('click'); };
+  $('bRotL').onclick = () => turn(1);
+  $('bRotR').onclick = () => turn(-1);
+  $('bNorth').onclick = () => { const C = G.camera; let d = (C.homeYaw ?? 0) - C.yaw; d = Math.atan2(Math.sin(d), Math.cos(d)); C.yawTo = C.yaw + d; Audio.play('click'); };
   $('tAM').onclick = () => { attackMoveArmed = !attackMoveArmed; $('tAM').classList.toggle('on', attackMoveArmed); };
   $('tBox').onclick = () => { touchBoxMode = !touchBoxMode; $('tBox').classList.toggle('on', touchBoxMode); };
 }

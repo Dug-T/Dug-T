@@ -26,6 +26,7 @@ const DEFAULT_LINES = {
   drummer: { select: ['BOOM. BOOM. BOOM.', 'War drums ready!', 'Grimlocks, march to the beat!'], move: ['Drum on!', 'Keep the beat!'], attack: ['Faster! FASTER!', 'Drums of war!'] },
   blink: { select: ['Blink Trooper, phase locked.', 'Now you see me...', 'Ready to jump.'], move: ['Blinking!', 'Zip!', 'See you there!'], attack: ['Laser online!', 'Surprise!'] },
   burrower: { select: ['Drill spinning!', 'Dig dig dig!', 'Tunnel Drill ready!'], move: ['Going under!', 'Diggin in!'], attack: ['DRILL THEM!', 'Bursting out!'] },
+  medevac: { select: ['Medevac standing by.', 'Who needs patching up?', 'Rescue chopper ready!'], move: ['On my way.', 'Inbound to the wounded.'], attack: ['I am a medic, not a gunship!', 'Holding over the troops.'] },
   rifle: { select: ['Rifleman reporting.', 'Ready for action!'], move: ['Moving out.', 'On my way.'], attack: ['Opening fire!', 'Engaging!'] },
   rocket: { select: ['Rockets loaded.', 'Anti-armour ready.'], move: ['Relocating.'], attack: ['Rocket away!', 'Tank spotted!'] },
   flamer: { select: [

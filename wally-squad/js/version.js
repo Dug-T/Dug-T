@@ -1,8 +1,15 @@
 // Version number and update notes. Bump VERSION and add a new entry at the top of CHANGELOG for every
 // update: players see a "What's New" screen the first time they load a new version.
-export const VERSION = '1.32.1';
+export const VERSION = '1.33';
 
 export const CHANGELOG = [
+  { v: '1.33', date: '2026-11-20', title: 'Turn the Tables', items: [
+    '🔄 Rotate the map! Twist two fingers on a phone, tap ⟲ / ⟳ to turn 45°, or tap the compass to snap back. (Q / E on a keyboard.)',
+    '🚑 Medevac Copter: an unarmed rescue helicopter that heals every unit beneath it.',
+    '📦 Supply Drop support power: three supply crates parachute onto the spot you pick.',
+    '🌕 Blood Moon nights: sometimes the moon turns red and every weapon hits 25% harder until dawn.',
+    '🎖 New medal: Blood Moon Survivor.',
+  ] },
   { v: '1.32.1', date: '2026-11-19', title: 'Works on more phones', items: [
     '📱 Wally Squad now loads on older phones (iPhones before iOS 16.4 and older Android browsers).',
     '🛟 If a phone really can\'t run the game, the loading screen now says why and what to try, instead of hanging.',

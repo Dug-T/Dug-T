@@ -98,6 +98,8 @@
   #loading .bar div { height: 100%; width: 0; background: var(--accent); transition: width 0.2s; }
   #loadTip { margin-top: 14px; font: 600 15px 'Rajdhani', sans-serif; color: var(--dim); max-width: 86%; text-align: center; letter-spacing: 0.5px; }
   /* touch helpers */
+  .rotBtn { min-width: 34px; padding-left: 6px !important; padding-right: 6px !important; }
+  #compassN { display: inline-block; color: #ff5a4a; transition: transform .08s linear; }
   #touchBar { position: absolute; left: 58px; top: 46px; display: none; flex-direction: column; gap: 6px; z-index: 5; }
   #touchBar .btn { padding: 8px 10px; font-size: 13px; }
   @media (max-width: 820px), (max-height: 520px) {
@@ -387,6 +389,9 @@
   <div id="fps" title="Frames per second (turn off in Graphics)"></div>
   <div class="spacer"></div>
   <button class="btn" id="bFull" title="Fullscreen">⛶</button>
+  <button class="btn rotBtn" id="bRotL" title="Rotate the map left (Q)">⟲</button>
+  <button class="btn rotBtn" id="bNorth" title="Compass - tap to reset the view"><span id="compassN">▲</span></button>
+  <button class="btn rotBtn" id="bRotR" title="Rotate the map right (E)">⟳</button>
   <button class="btn" id="bFind" title="Find the enemy base (N)">🎯</button>
   <button class="btn" id="bIdle" title="Idle units: select the next idle soldier or vehicle (. key)" style="display:none">💤 0</button>
   <button class="btn" id="bMusic" title="Toggle music">♪ Music</button>
@@ -593,6 +598,8 @@
       <li><b>Warlord Grak</b> (Grimlock hero): <kbd>G</kbd> = War Cry, nearby Grimlocks fire much faster.</li>
       <li><b>Idle units:</b> the 💤 button (or <kbd>.</kbd>) jumps to fighting units with nothing to do.</li>
       <li><b>Repair Truck</b> fixes vehicles in the field; the <b>Recon Drone</b> scouts and reveals cloaked tanks.</li>
+      <li><b>Rotate the map</b>: twist two fingers, tap ⟲ / ⟳ in the top bar, or tap the compass to reset (<kbd>Q</kbd> / <kbd>E</kbd> on a keyboard).</li>
+      <li><b>Medevac Copter</b> heals units beneath it; <b>Supply Drop</b> power parachutes in crates; beware the <b>Blood Moon</b> - every weapon hits harder!</li>
       <li><b>Hero Hunt</b> (skirmish option): protect your crowned champion and kill theirs. <b>Blink Trooper</b> teleports where you send him; the <b>Tunnel Drill</b> can't be hit while it's moving underground.</li>
       <li><b>Bagpiper</b> (Wally Squad) / <b>War Drummer</b> (Grimlocks): nearby allies fire 25% faster. Keep them behind your army!</li>
       <li><b>Shield Projector</b> (Wally Squad): units inside its bubble take 40% less damage. <b>Bone Catapult</b> (Grimlocks): long-range boulders that flatten buildings.</li>
@@ -655,7 +662,7 @@
 <script>
   // a random tip while the game loads
   (function () {
-    var tips = ['Tip: Wally Man\'s Gatling Frenzy (G) shreds infantry.', 'Tip: tap 🎯 to find the enemy base.', 'Tip: Battle Bunkers keep your infantry safe while they shoot.', 'Tip: move infantry into civilian houses to hold the middle of the map.', 'Tip: shoot Goblin Boomers before they reach your troops.', 'Tip: in King of the Hill, one enemy on the hill stops the other side scoring.', 'Tip: rockets and SAM sites bring down Wyvern Riders.', 'Tip: a bounty convoy is worth $1,500 - hunt it down before it escapes!', 'Tip: keep troops spread out in thunderstorms - lightning strikes!', 'Tip: guard your Refineries with Attack Dogs - they sniff out enemy spies.', 'Tip: keep your tanks inside a Shield Projector bubble.', 'Tip: a Bagpiper behind your army makes everyone fire faster.', 'Tip: Tunnel Drills can only be hit once they surface - guard your base!', 'Tip: Blink Troopers teleport - send them straight at enemy Refineries.', 'Tip: select Wally Man when it is raining...', 'Tip: rush Catapults - they can\'t hit anything close.', 'Tip: Cave Trolls heal over time, so focus fire to bring them down.', 'Tip: Grenadiers are perfect for clearing out garrisoned houses.', 'Tip: a Tesla Coil\'s lightning jumps between packed enemies.',
+    var tips = ['Tip: Wally Man\'s Gatling Frenzy (G) shreds infantry.', 'Tip: tap 🎯 to find the enemy base.', 'Tip: Battle Bunkers keep your infantry safe while they shoot.', 'Tip: move infantry into civilian houses to hold the middle of the map.', 'Tip: shoot Goblin Boomers before they reach your troops.', 'Tip: in King of the Hill, one enemy on the hill stops the other side scoring.', 'Tip: rockets and SAM sites bring down Wyvern Riders.', 'Tip: a bounty convoy is worth $1,500 - hunt it down before it escapes!', 'Tip: keep troops spread out in thunderstorms - lightning strikes!', 'Tip: guard your Refineries with Attack Dogs - they sniff out enemy spies.', 'Tip: keep your tanks inside a Shield Projector bubble.', 'Tip: a Bagpiper behind your army makes everyone fire faster.', 'Tip: Tunnel Drills can only be hit once they surface - guard your base!', 'Tip: twist two fingers to rotate the map.', 'Tip: park a Medevac Copter over your tanks between fights.', 'Tip: Blink Troopers teleport - send them straight at enemy Refineries.', 'Tip: select Wally Man when it is raining...', 'Tip: rush Catapults - they can\'t hit anything close.', 'Tip: Cave Trolls heal over time, so focus fire to bring them down.', 'Tip: Grenadiers are perfect for clearing out garrisoned houses.', 'Tip: a Tesla Coil\'s lightning jumps between packed enemies.',
       'Tip: Recon Drones reveal cloaked Shade tanks.', 'Tip: Repeat production keeps your factories busy.', 'Tip: hovercraft can cross water and even lava!',
       'Tip: a Victory Monument that stands for 5 minutes wins the game.', 'Tip: Engineers can capture enemy buildings.', 'Tip: blue crystal is worth double.',
       'Tip: units that reach 10 kills become Heroic.', 'Tip: try the Daily Challenge for a new battle every day.', 'Tip: press ⏭ to skip to another tune.'];

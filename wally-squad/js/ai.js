@@ -41,7 +41,7 @@ export class AI {
     if (srand() < 0.25) this.manageGarrison();
     // pipers and drummers tag along behind the army
     for (const p of G.units) {
-      if (p.dead || p.faction !== this.f || !p.def.inspire || (p.order && srand() < 0.9)) continue;
+      if (p.dead || p.faction !== this.f || !(p.def.inspire || p.def.healAura) || (p.order && srand() < 0.9)) continue;
       let best = null, bd = 1e9;
       for (const a of this.attackers) { if (!alive(a)) continue; const d = Math.hypot(a.x - p.x, a.z - p.z); if (d < bd) { bd = d; best = a; } }
       if (best && bd > 6) p.moveTo(best.x + rr(-3, 3), best.z + rr(-3, 3));
@@ -183,6 +183,7 @@ export class AI {
       const opts = ['refining', 'armor', 'bodyarmor', 'shells', 'engines', 'optics'].filter(t => hasReqs(this.f, t));
       if (opts.length) enqueue(this.f, opts[Math.floor(srand() * opts.length)]);
     }
+    if (P.queues.air.items.length < 1 && hasReqs(this.f, 'medevac') && this.count('medevac') < 1 && srand() < 0.3) enqueue(this.f, 'medevac');
     if (P.queues.air.items.length < 1 && hasReqs(this.f, 'wyvern') && this.count('wyvern') < 3 && srand() < 0.5) enqueue(this.f, 'wyvern'); // Grimlocks mix in Wyvern Riders
     if (P.queues.air.items.length < 1 && hasReqs(this.f, 'gunship') && this.count('gunship') < 4) enqueue(this.f, 'gunship');
   }

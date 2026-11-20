@@ -100,6 +100,15 @@ export function updateConvoy(dt) {
   G.alertAt = { x, z, t: G.time };
 }
 
+// Supply Drop support power: crates land at a chosen spot (anyone can grab them!)
+export function dropCrate(x, z) {
+  const c = { x, z, y: heightAt(x, z), mesh: crateMesh(), t: 0 };
+  c.mesh.position.set(x, c.y + 0.6, z);
+  G.three.scene.add(c.mesh);
+  crates.push(c);
+  FX.dust(x, z, 1.4);
+}
+
 export function updateCrates(dt) {
   if (G.cfg.crates === false) return;
   crateT -= dt;
