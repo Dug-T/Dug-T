@@ -347,11 +347,12 @@ function updateBloodMoonSky() {
   if (!G.bloodMoon && !bloodEl) return;
   if (!bloodEl) {
     bloodEl = document.createElement('div'); bloodEl.id = 'bloodMoon';
-    bloodEl.style.cssText = 'position:absolute;inset:0;pointer-events:none;z-index:3;opacity:0;transition:opacity 3s;mix-blend-mode:multiply;' +
-      'background:radial-gradient(circle at 82% 10%, rgba(255,90,60,1) 0, rgba(255,60,40,1) 3.5%, rgba(255,120,100,.0) 9%), radial-gradient(ellipse at 50% 40%, rgba(255,200,190,1) 30%, rgba(170,40,40,1) 100%)';
+    bloodEl.style.cssText = 'position:absolute;inset:0;pointer-events:none;z-index:3;opacity:0;transition:opacity 3s;' +
+      'background:radial-gradient(circle at 82% 11%, rgba(255,110,80,1) 0, rgba(230,40,30,.95) 3.2%, rgba(200,30,20,.45) 4.6%, rgba(200,30,20,0) 10%),' +
+      ' radial-gradient(ellipse at 50% 45%, rgba(140,0,0,0) 40%, rgba(150,10,10,.55) 100%), linear-gradient(rgba(170,20,20,.16), rgba(170,20,20,.16))';
     (document.getElementById('view') || document.body).appendChild(bloodEl);
   }
-  bloodEl.style.opacity = G.bloodMoon ? '0.55' : '0';
+  bloodEl.style.opacity = G.bloodMoon ? '1' : '0';
 }
 function updateNightSky(dt) {
   updateBloodMoonSky();
