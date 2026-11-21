@@ -158,6 +158,31 @@ export function updateDragon(dt) {
   G.alertAt = { x, z, t: G.time };
 }
 
+// ---- the Ice Cream Van: every few minutes it trundles across the map playing its jingle, healing everyone nearby
+let vanT = 300, van = null;
+export function updateIceCream(dt) {
+  if (!['skirmish', 'mp', 'watch', 'survival'].includes(G.cfg.mode) || G.over) return;
+  if (van) {
+    if (van.dead) { van = null; vanT = srr(360, 480); return; }
+    van.life -= dt;
+    if (van.life <= 0) { G.announce?.('The ice cream van has driven off. Bye bye!', G.player, 2); van.remove(); van = null; vanT = srr(300, 420); return; }
+    if (!van.order && !van.path) for (let k = 0; k < 6; k++) { const a = srand() * Math.PI * 2, r = 15 + srand() * 25, x = van.x + Math.cos(a) * r, z = van.z + Math.sin(a) * r; if (Math.abs(x) < HALF - 14 && Math.abs(z) < HALF - 14 && isWalkable(cellOf(x), cellOf(z))) { van.moveTo(x, z); break; } }
+    return;
+  }
+  vanT -= dt;
+  if (vanT > 0) return;
+  for (let k = 0; k < 40; k++) {
+    const x = srr(-HALF * 0.5, HALF * 0.5), z = srr(-HALF * 0.5, HALF * 0.5);
+    if (!isWalkable(cellOf(x), cellOf(z))) continue;
+    van = new Unit('icecream', 'neutral', x, z, srand() * 6.28);
+    van.stance = 'holdfire'; van.life = 90;
+    G.announce?.('Ding-a-ling! The ice cream van is here - it fixes up everyone nearby!', G.player, 3);
+    G.alertAt = { x, z, t: G.time };
+    return;
+  }
+  vanT = 30;
+}
+
 export function updateCrates(dt) {
   if (G.cfg.crates === false) return;
   crateT -= dt;

@@ -144,8 +144,24 @@ function updateBloodMoon() {
   wasNight = night;
 }
 
+// ---- Toxic Trooper gas clouds: hurt enemies standing inside for 6 seconds
+function updateClouds(dt) {
+  const C = G.clouds; if (!C || !C.length) return;
+  for (let i = C.length - 1; i >= 0; i--) {
+    const c = C[i];
+    c.t -= dt; c.tick -= dt;
+    if (Math.random() < dt * 12) FX.gas?.(c.x, groundY(c.x, c.z) + 0.3, c.z);
+    if (c.tick <= 0) {
+      c.tick = 0.5;
+      for (const u of unitsNear(c.x, c.z, c.r, buf)) if (!u.dead && !u.air && u.faction !== c.f && u.faction !== 'neutral') damage(u, (u.isInf ? 9 : 4), c.src && !c.src.dead ? c.src : null);
+    }
+    if (c.t <= 0) C.splice(i, 1);
+  }
+}
+
 export function updateHazards(dt) {
   if (G.over) return;
+  updateClouds(dt);
   updateBloodMoon();
   updateStrikes(dt);
   updateVolcano(dt);

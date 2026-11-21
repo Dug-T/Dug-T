@@ -83,6 +83,7 @@ const SOUNDS = {
   wardrum(o, t) { for (const d of [0, 0.18, 0.36, 0.72]) tone(o, t + d, 0.3, 'sine', 120, 45, 0.5); },
   oof(o, t) { vox(t, 0.22, 40 + Math.floor(Math.random() * 8), Math.random() < 0.5 ? 'u' : 'o', 0.32, true, o); },
   cheer(o, t) { for (let i = 0; i < 8; i++) vox(t + i * 0.04 + Math.random() * 0.05, 1.3, 57 + [0, 4, 7, 12, 9, 5, 2, 16][i], ['a', 'e', 'o', 'a'][i % 4], 0.05, true, o); env(noise(o, t, 1.8, 'bandpass', 2400, 0.6), t, 0.08, 0.22, 1.5); },
+  jingle(o, t) { const notes = [76, 79, 76, 72, 74, 76, 79, 84, 81, 79]; notes.forEach((n, i) => { tone(o, t + i * 0.16, 0.22, 'triangle', mtof(n), mtof(n), 0.09); tone(o, t + i * 0.16, 0.12, 'sine', mtof(n + 12), mtof(n + 12), 0.04); }); },
   bite(o, t) { env(noise(o, t, 0.12, 'bandpass', 900, 2), t, 0.002, 0.5, 0.1); tone(o, t, 0.25, 'sawtooth', 160, 90, 0.18); },
   zap(o, t) { tone(o, t, 0.9, 'sawtooth', 2400, 60, 0.35); tone(o, t + 0.05, 0.7, 'square', 180, 40, 0.25); env(noise(o, t, 0.8, 'bandpass', 4000, 3), t, 0.005, 0.5, 0.7); },
   scream(o, t) { tone(o, t, 0.35, 'sawtooth', 500 + Math.random() * 200, 250, 0.06); },

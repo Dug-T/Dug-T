@@ -1,8 +1,15 @@
 // Version number and update notes. Bump VERSION and add a new entry at the top of CHANGELOG for every
 // update: players see a "What's New" screen the first time they load a new version.
-export const VERSION = '1.36';
+export const VERSION = '1.37';
 
 export const CHANGELOG = [
+  { v: '1.37', date: '2026-11-21', title: 'Ice Cream & Poison Gas', items: [
+    '❄ Freeze Tank (Wally Squad): its cryo beam frosts enemies over and slows them to half speed.',
+    '☣ Toxic Trooper (Grimlocks): lobs gas canisters that leave poisonous green clouds.',
+    '🍦 The Ice Cream Van: every few minutes it trundles about playing its jingle and patching up everyone nearby. Only a monster would blow it up...',
+    '🏜 New map: Red Canyon - red-rock mesas, cactus and oases.',
+    '🎖 New medals: You Monster and Canyon Conqueror.',
+  ] },
   { v: '1.36', date: '2026-11-21', title: 'Here Be Dragons', items: [
     '🎤 A lot more vocals: lyrics every couple of bars, new verse lyrics for every tune, "Yeah! Woo!" ad-libs, louder singers with backing vocals, and a hype man who counts each tune in or tells you its name.',
     '🐉 Dragon attacks: from 15 minutes in, an Ancient Dragon swoops in and attacks both sides. Slay it for $5,000!',

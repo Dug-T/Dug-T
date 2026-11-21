@@ -295,12 +295,13 @@ export class Unit {
     if (this.boarded) { this.x = this.boarded.x; this.z = this.boarded.z; this.y = this.boarded.y; return; } // riding inside an APC
     if (this.order && this.order.type === 'board') { this.boardLogic(); }
     if (this.blinkCD > 0) this.blinkCD -= dt;
+    if (this.slowT > 0) { this.slowT -= dt; if (this.mesh.visible && Math.random() < dt * 10) FX.frost(this.x, this.y + 0.8, this.z); } // frosted by a Freeze Tank
     if (this.def.healAura) { // Medevac: heal every friendly unit beneath it
       this.healT = (this.healT || 0) - dt;
       if (this.healT <= 0) {
         this.healT = 0.5;
         for (const o of unitsNear(this.x, this.z, this.def.healAura, auraBuf)) {
-          if (o.dead || o === this || o.faction !== this.faction || o.hp >= o.maxHp) continue;
+          if (o.dead || o === this || (o.faction !== this.faction && this.faction !== 'neutral') || o.faction === 'neutral' || o.hp >= o.maxHp) continue;
           o.hp = Math.min(o.maxHp, o.hp + 7);
           if (o.mesh.visible && Math.random() < 0.5) FX.sparkBurst(o.x, o.y + 1.2, o.z, 2, [1, 4, 1.5, 1]);
         }
@@ -602,7 +603,7 @@ export class Unit {
 
   // ---------------------------------------------------- movement
   moveLogic(dt) {
-    const sp = this.def.speed * (this.rank >= 1 ? 1.05 : 1) * (this.isInf || this.air ? 1 : G.speedMult) * (this.frenzyT > 0 ? 1.35 : 1) * (!this.isInf && upg(this.faction, 'engines') ? 1.15 : 1);
+    const sp = this.def.speed * (this.slowT > 0 ? 0.5 : 1) * (this.rank >= 1 ? 1.05 : 1) * (this.isInf || this.air ? 1 : G.speedMult) * (this.frenzyT > 0 ? 1.35 : 1) * (!this.isInf && upg(this.faction, 'engines') ? 1.15 : 1);
     let moving = false;
     if (this.path && this.pi < this.path.length) {
       const wp = this.path[this.pi];
@@ -782,6 +783,11 @@ export class Unit {
         if (this.tuneT <= 0) { this.tuneT = 7 + Math.random() * 6; G.sfx?.play(this.type === 'piper' ? 'pipes' : 'wardrum', this.x, this.z); }
       }
       if (this.crown) this.crown.rotation.y += dt * 1.5;
+      if (this.type === 'icecream' && this.mesh.visible) { // ding-a-ling
+        this.jingleT = (this.jingleT ?? 1) - dt;
+        if (this.jingleT <= 0) { this.jingleT = 9; G.sfx?.play('jingle', this.x, this.z); }
+        if (Math.random() < dt * 2) FX.sparkBurst(this.x, this.y + 3.6, this.z, 1, [4, 2.4, 3, 1]);
+      }
       if (this.bubble) {
         this.shieldFlash = Math.max(0, (this.shieldFlash || 0) - dt * 3);
         this.bubble.material.opacity = 0.09 + Math.sin(G.time * 3 + this.id) * 0.03 + this.shieldFlash * 0.25;
@@ -1386,6 +1392,13 @@ export function fireWeapon(src, w, target, muzzleLocal, frame) {
     src.die(null);
     return;
   }
+  if (kind === 'cryo') {
+    // freezing beam: damage, then the target is frosted over and slowed
+    hit(src, w, target, tp);
+    if (target.kind === 'unit' && !target.dead) target.slowT = 3;
+    if (vis) FX.cryoBeam(mz.x, mz.y, mz.z, tp.x, tp.y, tp.z);
+    return;
+  }
   if (kind === 'tesla') {
     // lightning strikes the target, then arcs on to up to two more enemies close by
     const pts = [[mz.x, mz.y, mz.z], [tp.x, tp.y, tp.z]];
@@ -1497,7 +1510,7 @@ function impact(p) {
   else if (kind === 'shell') FX.explosion(p.tx, p.ty, p.tz, w.damage > 80 ? 0.75 : 0.6, { debris: false, sound: vis, ground: p.ty - groundY(p.tx, p.tz) < 1.5 });
   else if (kind === 'rocket' || kind === 'missile') FX.explosion(p.tx, p.ty, p.tz, 0.55, { debris: false, sound: vis, ground: p.ty - groundY(p.tx, p.tz) < 1.5 });
   else if (kind === 'artillery') FX.explosion(p.tx, p.ty, p.tz, w.lob ? 0.8 : 1.3, { sound: vis });
-  if (kind === 'artillery') { splash(p.src, w, p.tx, p.tz, w.splash, p.faction); return; }
+  if (kind === 'artillery') { splash(p.src, w, p.tx, p.tz, w.splash, p.faction); if (w.gas) (G.clouds = G.clouds || []).push({ x: p.tx, z: p.tz, r: 3, t: 6, f: p.faction, src: p.src, tick: 0 }); return; }
   if (alive(p.target)) hit(p.src, w, p.target, { x: p.tx, y: p.ty, z: p.tz });
 }
 

@@ -427,6 +427,23 @@ function updateBolts(dt) {
   }
 }
 
+// Freeze Tank: an icy beam and frost sparkles
+export function cryoBeam(x0, y0, z0, x1, y1, z1) {
+  const n = Math.ceil(Math.hypot(x1 - x0, z1 - z0) * 2.5);
+  for (let i = 0; i <= n; i++) { const k = i / n; add.spawn(x0 + (x1 - x0) * k + rr(-0.12, 0.12), y0 + (y1 - y0) * k + rr(-0.12, 0.12), z0 + (z1 - z0) * k + rr(-0.12, 0.12), rr(-0.3, 0.3), rr(-0.3, 0.3), rr(-0.3, 0.3), rr(0.25, 0.4), rr(0.35, 0.55), 0.1, [2.2, 3.4, 5, 1], [0.8, 1.4, 2.4, 0], 0.5); }
+  for (let i = 0; i < 18; i++) add.spawn(x1, y1, z1, rr(-3, 3), rr(-1, 3), rr(-3, 3), rr(0.4, 0.8), 0.25, 0.05, [3, 3.6, 4.5, 1], [1, 1.6, 2.4, 0], 1, 4);
+  flash(x1, y1, z1, 12, 0.2, 0x9fdcff, 10);
+}
+export function frost(x, y, z) {
+  if (!isVisibleAt(x, z)) return;
+  add.spawn(x + rr(-0.6, 0.6), y + rr(-0.3, 0.8), z + rr(-0.6, 0.6), 0, rr(0.2, 0.8), 0, rr(0.4, 0.8), 0.2, 0.05, [2.6, 3.2, 4, 1], [1, 1.5, 2.2, 0], 0.5, 0);
+}
+// Toxic Trooper gas: drifting green fumes
+export function gas(x, y, z) {
+  if (!isVisibleAt(x, z)) return;
+  smoke.spawn(x + rr(-1.5, 1.5), y + rr(0, 0.6), z + rr(-1.5, 1.5), rr(-0.3, 0.3), rr(0.2, 0.6), rr(-0.3, 0.3), rr(1.5, 2.5), 1.2, 3.2, [0.35, 0.85, 0.2, 0.5], [0.25, 0.6, 0.15, 0], 0.6, -0.05, rr(-0.5, 0.5));
+}
+
 export function beam(x0, y0, z0, x1, y1, z1) {
   const B = beams.find(b => b.t >= b.dur) || beams[0];
   const len = Math.hypot(x1 - x0, y1 - y0, z1 - z0);
