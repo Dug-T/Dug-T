@@ -8,6 +8,7 @@ export const CHANGELOG = [
     '🐾 A wild haggis sometimes scurries across the battlefield (especially on Highland Glen). Catch it for $500!',
     '😂 Fallen units sometimes say their last words ("Not the face!"), soldiers go "oof!", and a crowd cheers when you win.',
     '💃 Soldiers left standing around too long get bored and start dancing.',
+    '🎤 Every one of the 19 tunes now sings - in the verses as well as the choruses - with new scat ("doo-bah") and robot singers, harmonies, call-and-response and lots more sung lyric lines.',
     '🎉 New mutator: Party Hats - everyone wears a party hat.',
     '🎖 New medals: Haggis Hunter and Party Animal.',
   ] },

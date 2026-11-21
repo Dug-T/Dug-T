@@ -175,49 +175,43 @@ export function sting(win) {
 
 // chords: [root midi note, 'm' minor | 'M' major] one per bar
 const TRACKS = [
-  { name: 'Wally Squad Assemble', bpm: 128, key: 57, minor: true, drums: 'rock', bass: 'eighth', lead: 'square', arp: true, vox: 'choir', lyrics: ['Wally Squad, assemble!', 'Build it up and roll them out!'],
+  { name: 'Wally Squad Assemble', bpm: 128, key: 57, minor: true, drums: 'rock', bass: 'eighth', lead: 'square', arp: true, vox: 'choir', lyrics: ['Wally Squad, assemble!', 'Build it up and roll them out!', 'Harvest, build and fight!', 'Here we come, Grimlocks!'],
     verse: [[57, 'm'], [53, 'M'], [48, 'M'], [55, 'M']], chorus: [[53, 'M'], [55, 'M'], [57, 'm'], [57, 'm']], seed: 11 },
-  { name: 'Grimlock Rising', bpm: 140, key: 50, minor: true, drums: 'four', bass: 'octave', lead: 'saw', arp: false,
+  { name: 'Grimlock Rising', bpm: 140, key: 50, minor: true, drums: 'four', bass: 'octave', lead: 'saw', arp: false, vox: 'chant', lyrics: ['Grimlocks rising!', 'Hear the drums of war!', 'Bow before the Legion!'],
     verse: [[50, 'm'], [50, 'm'], [46, 'M'], [45, 'M']], chorus: [[46, 'M'], [48, 'M'], [50, 'm'], [45, 'M']], seed: 23 },
-  { name: 'Crystal Rush', bpm: 168, key: 52, minor: true, drums: 'dnb', bass: 'synco', lead: 'pluck', arp: true,
+  { name: 'Crystal Rush', bpm: 168, key: 52, minor: true, drums: 'dnb', bass: 'synco', lead: 'pluck', arp: true, vox: 'lead', lyrics: ['Faster, faster, crystal rush!', 'Shiny blue and worth a lot!', 'Harvesters, go go go!'],
     verse: [[52, 'm'], [48, 'M'], [55, 'M'], [50, 'M']], chorus: [[48, 'M'], [50, 'M'], [52, 'm'], [52, 'm']], seed: 37 },
-  { name: 'Steel Thunder', bpm: 112, key: 55, minor: true, drums: 'half', bass: 'gallop', lead: 'saw', arp: false,
+  { name: 'Steel Thunder', bpm: 112, key: 55, minor: true, drums: 'half', bass: 'gallop', lead: 'saw', arp: false, vox: 'shout', lyrics: ['Steel and thunder!', 'Roll out the tanks!', 'Hear the engines roar!'],
     verse: [[55, 'm'], [55, 'm'], [51, 'M'], [53, 'M']], chorus: [[51, 'M'], [53, 'M'], [55, 'm'], [50, 'M']], seed: 41 },
-  { name: 'Lava Run', bpm: 150, key: 54, minor: true, drums: 'four', bass: 'gallop', lead: 'square', arp: true,
+  { name: 'Lava Run', bpm: 150, key: 54, minor: true, drums: 'four', bass: 'gallop', lead: 'square', arp: true, vox: 'lead', lyrics: ['Run across the lava!', 'Mind your feet, it is hot!', 'Hot, hot, hot!'],
     verse: [[54, 'm'], [50, 'M'], [52, 'M'], [49, 'M']], chorus: [[50, 'M'], [52, 'M'], [54, 'm'], [54, 'm']], seed: 53 },
-  { name: 'Victory Road', bpm: 134, key: 48, minor: false, drums: 'march', bass: 'octave', lead: 'square', arp: true, vox: 'shout', lyrics: ['March on to victory!', 'Hup, two, three, four!'],
+  { name: 'Victory Road', bpm: 134, key: 48, minor: false, drums: 'march', bass: 'octave', lead: 'square', arp: true, vox: 'shout', lyrics: ['March on to victory!', 'Hup, two, three, four!', 'Left, right, left!'],
     verse: [[48, 'M'], [55, 'M'], [57, 'm'], [53, 'M']], chorus: [[53, 'M'], [55, 'M'], [48, 'M'], [48, 'M']], seed: 67 },
-  { name: 'Neon Commander', bpm: 104, key: 57, minor: true, drums: 'rock', bass: 'pulse', lead: 'saw', arp: true,
+  { name: 'Neon Commander', bpm: 104, key: 57, minor: true, drums: 'rock', bass: 'pulse', lead: 'saw', arp: true, vox: 'robot', lyrics: ['Commander online.', 'Neon lights, battle nights.', 'Executing victory.'],
     verse: [[57, 'm'], [53, 'M'], [48, 'M'], [55, 'M']], chorus: [[53, 'M'], [48, 'M'], [55, 'M'], [57, 'm']], seed: 71 },
-  { name: 'Pixel Platoon', bpm: 152, key: 48, minor: false, drums: 'chip', bass: 'pulse', lead: 'chip', arp: true,
+  { name: 'Pixel Platoon', bpm: 152, key: 48, minor: false, drums: 'chip', bass: 'pulse', lead: 'chip', arp: true, vox: 'robot', lyrics: ['Pixel platoon, ready!', 'Insert coin to continue!', 'Level up!'],
     verse: [[48, 'M'], [57, 'm'], [53, 'M'], [55, 'M']], chorus: [[53, 'M'], [55, 'M'], [52, 'm'], [57, 'm']], seed: 79 },
-  { name: 'Skank Tank', bpm: 160, key: 55, minor: false, drums: 'ska', bass: 'walk', lead: 'brass', arp: false, skank: true,
+  { name: 'Skank Tank', bpm: 160, key: 55, minor: false, drums: 'ska', bass: 'walk', lead: 'brass', arp: false, skank: true, vox: 'scat', lyrics: ['Skank tank, skank tank!', 'Rock steady, soldier!', 'Pick it up, pick it up!'],
     verse: [[55, 'M'], [48, 'M'], [50, 'M'], [48, 'M']], chorus: [[48, 'M'], [50, 'M'], [55, 'M'], [52, 'm']], seed: 83 },
-  { name: 'Iron Grimlock', bpm: 176, key: 52, minor: true, drums: 'metal', bass: 'gallop', lead: 'saw', arp: false,
+  { name: 'Iron Grimlock', bpm: 176, key: 52, minor: true, drums: 'metal', bass: 'gallop', lead: 'saw', arp: false, vox: 'chant', lyrics: ['Iron! Grimlock! Iron! Grimlock!', 'Metal and fury!', 'Smash! Crush! Destroy!'],
     verse: [[52, 'm'], [48, 'M'], [50, 'M'], [47, 'M']], chorus: [[48, 'M'], [50, 'M'], [52, 'm'], [47, 'M']], seed: 89 },
-  { name: 'Funky Harvester', bpm: 108, key: 52, minor: true, drums: 'funk', bass: 'funk', lead: 'pluck', arp: false, skank: true,
+  { name: 'Funky Harvester', bpm: 108, key: 52, minor: true, drums: 'funk', bass: 'funk', lead: 'pluck', arp: false, skank: true, vox: 'scat', lyrics: ['Get funky, harvester!', 'Shake that crystal!', 'Ooh, that is funky!'],
     verse: [[52, 'm'], [57, 'M'], [52, 'm'], [57, 'M']], chorus: [[55, 'M'], [57, 'M'], [59, 'm'], [59, 'm']], seed: 97 },
-  { name: 'Highland Charge', bpm: 112, key: 57, minor: false, drums: 'march', bass: 'drone', lead: 'pipes', arp: false,
+  { name: 'Highland Charge', bpm: 112, key: 57, minor: false, drums: 'march', bass: 'drone', lead: 'pipes', arp: false, vox: 'choir', lyrics: ['Charge, ye Highlanders!', 'Scotland the brave!', 'It is pishing doon, but we fight on!'],
     verse: [[57, 'M'], [55, 'M'], [57, 'M'], [52, 'm']], chorus: [[55, 'M'], [57, 'M'], [55, 'M'], [57, 'M']], seed: 107 },
-  { name: 'Wally Squad Anthem', bpm: 124, key: 55, minor: false, drums: 'rock', bass: 'octave', lead: 'brass', arp: false, vox: 'lead',
-    lyrics: ['Wally Squad! Wally Squad!', 'Never back down!', 'Stand together, hold the line!', 'Here comes Wally Man!'],
+  { name: 'Wally Squad Anthem', bpm: 124, key: 55, minor: false, drums: 'rock', bass: 'octave', lead: 'brass', arp: false, vox: 'lead', lyrics: ['Wally Squad! Wally Squad!', 'Never back down!', 'Stand together, hold the line!', 'Here comes Wally Man!'],
     verse: [[55, 'M'], [52, 'm'], [48, 'M'], [50, 'M']], chorus: [[48, 'M'], [50, 'M'], [55, 'M'], [55, 'M']], seed: 113 },
-  { name: 'Grimlock War Chant', bpm: 96, key: 50, minor: true, drums: 'half', bass: 'gallop', lead: 'saw', arp: false, vox: 'chant',
-    lyrics: ['Grim! Lock! Grim! Lock!', 'Crush them all!', 'For the Legion!'],
+  { name: 'Grimlock War Chant', bpm: 96, key: 50, minor: true, drums: 'half', bass: 'gallop', lead: 'saw', arp: false, vox: 'chant', lyrics: ['Grim! Lock! Grim! Lock!', 'Crush them all!', 'For the Legion!', 'Grak! Grak! Grak!'],
     verse: [[50, 'm'], [50, 'm'], [48, 'M'], [46, 'M']], chorus: [[46, 'M'], [48, 'M'], [50, 'm'], [50, 'm']], seed: 127 },
-  { name: 'Crystal Disco', bpm: 118, key: 53, minor: true, drums: 'disco', bass: 'octave', lead: 'pluck', arp: true, vox: 'choir',
-    lyrics: ['Dance on the crystal!', 'Harvest all night long!'],
+  { name: 'Crystal Disco', bpm: 118, key: 53, minor: true, drums: 'disco', bass: 'octave', lead: 'pluck', arp: true, vox: 'choir', lyrics: ['Dance on the crystal!', 'Harvest all night long!', 'Disco tanks, disco tanks!'],
     verse: [[53, 'm'], [49, 'M'], [51, 'M'], [48, 'M']], chorus: [[49, 'M'], [51, 'M'], [53, 'm'], [53, 'm']], seed: 131 },
-  { name: 'Reggae Recon', bpm: 84, key: 55, minor: false, drums: 'reggae', bass: 'walk', lead: 'square', arp: false, skank: true, vox: 'lead',
-    lyrics: ['Easy now, soldier.', 'Scout the valley, nice and slow.'],
+  { name: 'Reggae Recon', bpm: 84, key: 55, minor: false, drums: 'reggae', bass: 'walk', lead: 'square', arp: false, skank: true, vox: 'lead', lyrics: ['Easy now, soldier.', 'Scout the valley, nice and slow.', 'No worries, Wally Squad.'],
     verse: [[55, 'M'], [48, 'M'], [55, 'M'], [50, 'M']], chorus: [[48, 'M'], [50, 'M'], [55, 'M'], [55, 'M']], seed: 137 },
-  { name: 'Trap Tank', bpm: 140, key: 52, minor: true, drums: 'trap', bass: 'pulse', lead: 'pluck', arp: false, vox: 'shout',
-    lyrics: ['Tanks rolling in!', 'Boom! Boom! Boom!'],
+  { name: 'Trap Tank', bpm: 140, key: 52, minor: true, drums: 'trap', bass: 'pulse', lead: 'pluck', arp: false, vox: 'shout', lyrics: ['Tanks rolling in!', 'Boom! Boom! Boom!', 'Turn it up!'],
     verse: [[52, 'm'], [48, 'M'], [52, 'm'], [47, 'M']], chorus: [[48, 'M'], [50, 'M'], [52, 'm'], [47, 'M']], seed: 139 },
-  { name: 'Victory Gospel', bpm: 100, key: 53, minor: false, drums: 'shuffle', bass: 'walk', lead: 'brass', arp: false, vox: 'choir',
-    lyrics: ['Victory is near!', 'Sing it loud, Wally Squad!'],
+  { name: 'Victory Gospel', bpm: 100, key: 53, minor: false, drums: 'shuffle', bass: 'walk', lead: 'brass', arp: false, vox: 'choir', lyrics: ['Victory is near!', 'Sing it loud, Wally Squad!', 'Hallelujah, we won!'],
     verse: [[53, 'M'], [58, 'M'], [53, 'M'], [48, 'M']], chorus: [[58, 'M'], [60, 'M'], [53, 'M'], [53, 'M']], seed: 149 },
-  { name: 'Desert Shuffle', bpm: 122, key: 57, minor: false, drums: 'shuffle', bass: 'walk', lead: 'square', arp: false,
+  { name: 'Desert Shuffle', bpm: 122, key: 57, minor: false, drums: 'shuffle', bass: 'walk', lead: 'square', arp: false, vox: 'lead', lyrics: ['Sand in my boots!', 'Shuffle through the desert heat!', 'Hot sun, cool tunes!'],
     verse: [[57, 'M'], [50, 'M'], [57, 'M'], [52, 'M']], chorus: [[50, 'M'], [50, 'M'], [57, 'M'], [52, 'M']], seed: 101 },
 ];
 // song layout in bars
@@ -256,15 +250,15 @@ function buildMelody(tr) {
 let pump, leadIn, delay, fb, wet, musicStarted = false;
 // ---- vocals: a sawtooth voice through three vowel formant filters, with vibrato
 const VOWELS = { a: [730, 1090, 2440], o: [570, 840, 2410], u: [300, 870, 2240], e: [530, 1840, 2480], i: [270, 2290, 3010] };
-function vox(t, dur, n, vowel, gain, slide = 0, dest = null) {
+function vox(t, dur, n, vowel, gain, slide = 0, dest = null, robot = false) {
   const f0 = mtof(n), F = VOWELS[vowel] || VOWELS.a;
   const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(gain, t + Math.min(0.06, dur * 0.3));
   g.gain.setValueAtTime(gain, t + dur * 0.75); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
   const mix = ctx.createGain(); mix.gain.value = 1;
   F.forEach((fq, k) => { const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = fq; bp.Q.value = 9 + k * 3; const fg = ctx.createGain(); fg.gain.value = [1, 0.55, 0.28][k] * 3.2; mix.connect(bp); bp.connect(fg); fg.connect(g); });
-  const lfo = ctx.createOscillator(), lg = ctx.createGain(); lfo.frequency.value = 5.4; lg.gain.value = dur > 0.35 ? 14 : 4; lfo.connect(lg); // vibrato (cents)
+  const lfo = ctx.createOscillator(), lg = ctx.createGain(); lfo.frequency.value = 5.4; lg.gain.value = robot ? 0 : dur > 0.35 ? 14 : 4; lfo.connect(lg); // vibrato (cents)
   for (const d of [-6, 6]) {
-    const o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.setValueAtTime(slide ? f0 * 0.94 : f0, t); if (slide) o.frequency.exponentialRampToValueAtTime(f0, t + 0.08);
+    const o = ctx.createOscillator(); o.type = robot ? 'square' : 'sawtooth'; o.frequency.setValueAtTime(slide ? f0 * 0.94 : f0, t); if (slide) o.frequency.exponentialRampToValueAtTime(f0, t + 0.08);
     o.detune.value = d; lg.connect(o.detune); o.connect(mix); o.start(t); o.stop(t + dur + 0.05);
   }
   lfo.start(t); lfo.stop(t + dur + 0.05);
@@ -275,7 +269,7 @@ function shout(t, low) {
   vox(t, 0.16, low ? 45 : 52, 'e', 0.09, true);
   env(noise(leadIn, t, 0.12, 'bandpass', low ? 900 : 1600, 1.2), t, 0.004, 0.18, 0.1);
 }
-let lyricFn = null;
+let lyricFn = null, lyricN = 0;
 export function setLyricHandler(fn) { lyricFn = fn; }
 // a bagpipe chanter note: bright and reedy, with a quick grace note flicked in front of it
 function pipeNote(t, dur, n, gain) {
@@ -407,18 +401,34 @@ function schedule() {
         if (war) synth(leadIn, t, len, 'sawtooth', mtof(m.n + 12), 0.03, 4000, 1500, 9);
       }
     }
-    // ---- vocals
+    // ---- vocals (every tune sings: choruses, verses and breaks)
     if (tr.vox && !intro) {
-      const V = tr.vox, vg = calm ? 0.6 : 1; // vocals sing softer while things are calm
-      // choir: sustained 'aah' / 'ooh' chords in the chorus and break
-      if ((V === 'choir' || V === 'chant') && s === 0 && (chorus || brk)) for (const [k, n] of chord.entries()) vox(t, beat * 3.7, n + (V === 'chant' ? 0 : 12), V === 'chant' ? 'o' : ['a', 'o', 'u'][(bar + k) % 3], (V === 'chant' ? 0.05 : 0.035) * vg);
-      // lead singer: the chorus melody, on changing vowels
-      if (V === 'lead' && chorus) { const m0 = melody[(bar % 2) * 16 + s]; if (m0) vox(t + swing, sixteenth * m0.len * 0.95, m0.n + lift - 12, ['a', 'o', 'e', 'a', 'u'][(s + bar) % 5], 0.06 * vg, true); }
-      // gang shouts on the backbeat
-      if (!calm && (V === 'shout' || V === 'chant') && chorus && (s === 12 || (V === 'chant' && s === 4)) && bar % 2 === 1) shout(t, V === 'chant');
-      if (V === 'chant' && chorus && s % 4 === 0) vox(t, sixteenth * 1.6, root - 12, 'o', 0.05 * vg, true); // 'HO! HO!' chant on the beat
-      // a sung lyric line at the start of each chorus (text-to-speech, timed to the music)
-      if (chorus && sec.bar === 0 && s === 0 && tr.lyrics && lyricFn) { const line = tr.lyrics[(sec.i + bar) % tr.lyrics.length]; setTimeout(() => lyricFn(line, tr), Math.max(0, (t - ctx.currentTime) * 1000)); }
+      const V = tr.vox, vg = calm ? 0.7 : 1.25, verse = sec.name === 'verse';
+      const robot = V === 'robot';
+      // choir: 'aah' / 'ooh' chords - full in choruses and breaks, soft 'ooh' pads every other bar in verses
+      if ((V === 'choir' || V === 'chant') && s === 0 && (chorus || brk)) for (const [k, n] of chord.entries()) vox(t, beat * 3.7, n + (V === 'chant' ? 0 : 12), V === 'chant' ? 'o' : ['a', 'o', 'u'][(bar + k) % 3], (V === 'chant' ? 0.06 : 0.045) * vg);
+      if (V === 'choir' && verse && s === 0 && bar % 2 === 0) for (const n of chord) vox(t, beat * 7.4, n + 12, 'u', 0.025 * vg);
+      // lead / robot / scat singers: the chorus melody, and the verse melody in the second half of each verse
+      const singChorus = chorus && (V === 'lead' || V === 'robot' || V === 'scat' || V === 'shout');
+      const singVerse = verse && sec.bar >= 4 && V !== 'chant';
+      if (singChorus || singVerse) {
+        const m0 = (singChorus ? melody : verseMelody)[(bar % 2) * 16 + s];
+        if (m0) {
+          const vowel = V === 'scat' ? (s % 4 === 0 ? 'u' : 'a') : robot ? (s % 8 < 4 ? 'i' : 'e') : ['a', 'o', 'e', 'a', 'u'][(s + bar) % 5];
+          vox(t + swing, sixteenth * m0.len * (V === 'scat' ? 0.6 : 0.95), m0.n + lift - 12, vowel, (singChorus ? 0.075 : 0.05) * vg, !robot, null, robot);
+          if (singChorus && V === 'lead') vox(t + swing, sixteenth * m0.len * 0.95, m0.n + lift - 12 + (q === 'm' ? 3 : 4), 'o', 0.03 * vg); // harmony a third above
+        }
+      }
+      // call and response: the choir answers the lead at the end of every chorus bar
+      if (V === 'lead' && chorus && s === 14) vox(t, sixteenth * 2, chord[2], 'u', 0.04 * vg);
+      // gang shouts and the Grimlock chant
+      if (!calm && (V === 'shout' || V === 'chant') && (chorus || verse) && (s === 12 || (V === 'chant' && s === 4)) && (chorus || bar % 2 === 1)) shout(t, V === 'chant');
+      if (V === 'chant' && (chorus || (verse && sec.bar >= 4)) && s % 4 === 0) vox(t, sixteenth * 1.6, root - 12, 'o', 0.06 * vg, true);
+      // sung lyric lines: twice per chorus and once per verse (text-to-speech, timed to the music)
+      if (s === 0 && tr.lyrics && lyricFn && ((chorus && sec.bar % 4 === 0) || (verse && sec.bar === 4))) {
+        const line = tr.lyrics[lyricN++ % tr.lyrics.length];
+        setTimeout(() => lyricFn(line, tr), Math.max(0, (t - ctx.currentTime) * 1000));
+      }
     }
     next += sixteenth; step++;
   }

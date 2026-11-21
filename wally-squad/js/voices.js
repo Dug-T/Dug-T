@@ -207,7 +207,8 @@ export function singLine(text, track) {
   if (!settings.lyrics || !settings.tts || !('speechSynthesis' in window) || speechSynthesis.speaking) return;
   try {
     const u = new SpeechSynthesisUtterance(text);
-    u.pitch = track && track.vox === 'chant' ? 0.5 : 1.45; u.rate = track && track.bpm < 100 ? 0.9 : 1.05; u.volume = 0.75;
+    const V = track && track.vox;
+    u.pitch = V === 'chant' ? 0.5 : V === 'robot' ? 0.2 : V === 'scat' ? 1.7 : 1.45; u.rate = track && track.bpm < 100 ? 0.9 : V === 'robot' ? 0.85 : 1.05; u.volume = 0.8;
     const vs = english(); u.voice = clearVoice(vs);
     singing = true; u.onend = () => { singing = false; }; setTimeout(() => { singing = false; }, 6000);
     speechSynthesis.speak(u);
