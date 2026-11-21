@@ -10,7 +10,7 @@ import * as Voices from './voices.js';
 import { superState } from './superweapons.js';
 import { weatherLabel, clockString } from './weather.js';
 import { powerStates, POWERS } from './powers.js';
-import { makeUnitModel, makeBuildingModel, makeGhost } from './models.js';
+import { makeUnitModel, makeBuildingModel, makeGhost, makeUpgradeModel } from './models.js';
 import { formationSlots } from './pathfind.js';
 import { fogUniforms } from './materials.js';
 import * as Audio from './audio.js';
@@ -98,6 +98,9 @@ export function renderIcons(renderer) {
     const m = makeUnitModel(t, G.player);
     const r = UNITS[t].armor === 'infantry' ? 0.9 : UNITS[t].air ? 2.6 : t === 'titan' ? 2.6 : 2.0;
     doOne(t, m, r, UNITS[t].armor === 'infantry' ? 0.85 : 0.8);
+  }
+  for (const t in UPGRADES) {
+    try { doOne(t, makeUpgradeModel(t, G.player), t === 'bodyarmor' ? 1.5 : t === 'armor' ? 2.0 : 1.4, t === 'bodyarmor' ? 1.4 : 1.0); } catch (e) { /* keep the emoji fallback */ }
   }
   for (const t in BUILDINGS) {
     const m = makeBuildingModel(t, G.player);

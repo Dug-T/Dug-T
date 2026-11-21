@@ -839,6 +839,51 @@ export function makeIceCreamVan() {
   });
 }
 
+// Research upgrade pictures for the Tech tab (3D, so they look right on every device - emoji icons
+// were missing on some phones)
+export function makeUpgradeModel(type, faction) {
+  const t = mats(faction), m = M();
+  const root = new THREE.Group();
+  const b = new Builder();
+  const glow = (c, e, k = 2.2) => new THREE.MeshStandardMaterial({ color: c, emissive: e, emissiveIntensity: k, roughness: 0.3 });
+  const steel = new THREE.MeshStandardMaterial({ color: 0x9aa4ae, metalness: 0.85, roughness: 0.3 });
+  const brass = new THREE.MeshStandardMaterial({ color: 0xd8a23a, metalness: 0.9, roughness: 0.3 });
+  if (type === 'armor') {            // a tank with thick bolted armour plates
+    root.add(makeTank(faction));
+    for (const s of [-1, 1]) { b.box(steel, 0.12, 0.7, 3.0, s * 1.15, 0.85, 0); for (let i = 0; i < 4; i++) b.sph(m.darkMetal, 0.06, s * 1.22, 1.05, -1.1 + i * 0.75); }
+    b.box(steel, 1.6, 0.12, 0.9, 0, 1.75, 0.3, -0.3, 0, 0);
+  } else if (type === 'bodyarmor') { // a soldier in a bright armoured vest
+    const inf = makeInfantry('rifle', faction); inf.scale.setScalar(1.6); root.add(inf);
+    b.box(glow(0xffa21a, 0x6a3a00, 0.6), 0.85, 0.75, 0.55, 0, 1.6, 0); b.box(m.hazard, 0.87, 0.1, 0.57, 0, 1.45, 0);
+    b.box(steel, 0.3, 0.3, 0.05, 0, 1.68, 0.29);
+  } else if (type === 'shells') {    // a big glowing artillery shell
+    b.cyl(brass, 0.45, 0.45, 1.6, 20, 0, 0.8, 0);
+    b.cyl(m.lampRed, 0.47, 0.47, 0.18, 20, 0, 1.2, 0);
+    b.add(new THREE.ConeGeometry(0.45, 0.9, 20), glow(0xff7a2a, 0xff4a00, 2.5), 0, 2.05, 0);
+    b.cyl(steel, 0.5, 0.5, 0.15, 20, 0, 0.08, 0);
+    for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2; b.add(new THREE.ConeGeometry(0.08, 0.5, 4), glow(0xffd040, 0xff8000, 3), Math.cos(a) * 0.75, 2.2, Math.sin(a) * 0.75, Math.sin(a) * 0.8, 0, -Math.cos(a) * 0.8); }
+  } else if (type === 'refining') {  // a cluster of shining blue crystals on a refinery pad
+    b.cyl(m.concreteDark, 1.2, 1.3, 0.25, 16, 0, 0.12, 0);
+    const blue = glow(0x8fdcff, 0x2a8adf, 1.8);
+    for (const [x, z, h, r] of [[0, 0, 1.8, 0.4], [0.55, 0.2, 1.2, 0.3], [-0.5, 0.25, 1.1, 0.3], [0.1, -0.55, 1.0, 0.28], [-0.3, -0.4, 0.8, 0.22]]) b.add(new THREE.OctahedronGeometry(r, 0).scale(1, h / r / 1.6, 1), blue, x, 0.25 + h * 0.5, z);
+    b.box(brass, 0.3, 0.3, 0.3, 0.9, 0.4, -0.6);
+  } else if (type === 'engines') {   // a big steel gear with exhaust flames
+    const g = new Builder();
+    g.cyl(steel, 0.9, 0.9, 0.35, 24, 0, 0, 0, Math.PI / 2, 0, 0);
+    for (let i = 0; i < 10; i++) { const a = i / 10 * Math.PI * 2; g.box(steel, 0.32, 0.36, 0.35, Math.cos(a) * 1.0, Math.sin(a) * 1.0, 0, 0, 0, a); }
+    g.cyl(m.darkMetal, 0.3, 0.3, 0.4, 16, 0, 0, 0, Math.PI / 2, 0, 0);
+    const gear = g.build(); gear.position.set(0, 1.4, 0); gear.rotation.y = 0.5; root.add(gear);
+    for (const s of [-1, 1]) { b.cyl(m.darkMetal, 0.15, 0.18, 0.7, 10, s * 0.5, 0.35, -0.6, Math.PI / 2, 0, 0); b.add(new THREE.ConeGeometry(0.16, 0.7, 10).rotateX(-Math.PI / 2), glow(0x6ac8ff, 0x2a7aff, 3), s * 0.5, 0.35, -1.25); }
+  } else {                           // optics: a brass telescope on a tripod
+    b.cyl(brass, 0.2, 0.32, 2.2, 16, 0, 1.6, 0, 0.0, 0, -1.0);
+    b.cyl(m.darkMetal, 0.34, 0.34, 0.12, 16, 0.9, 2.2, 0, 0, 0, -1.0);
+    b.add(new THREE.CircleGeometry(0.3, 16).rotateY(Math.PI / 2).rotateZ(-1.0 + Math.PI / 2), glow(0x9fe8ff, 0x3ab0ff, 2), 0.97, 2.25, 0);
+    for (let i = 0; i < 3; i++) { const a = i / 3 * Math.PI * 2; b.cyl(m.darkMetal, 0.04, 0.05, 1.6, 6, Math.cos(a) * 0.35, 0.75, Math.sin(a) * 0.35, Math.sin(a) * 0.3, 0, -Math.cos(a) * 0.3); }
+  }
+  if (b.parts.size) root.add(b.build());
+  return root;
+}
+
 export function makeJet(faction) {
   return cached(`jet-${faction}`, () => {
     const t = mats(faction), m = M();
