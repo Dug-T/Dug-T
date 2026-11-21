@@ -467,10 +467,10 @@ export function makeRepairTruck(faction) {
 }
 
 // Wyvern Rider: a scaly winged beast with a goblin on its back. Wings flap (wingL / wingR).
-export function makeWyvern(faction) {
-  return cached(`wyvern-${faction}`, () => {
+export function makeWyvern(faction, skin = 0x3f5a2a) {
+  return cached(`wyvern-${faction}-${skin}`, () => {
     const t = mats(faction), m = M();
-    const scale = new THREE.MeshStandardMaterial({ color: 0x3f5a2a, roughness: 0.7, metalness: 0.1, flatShading: true });
+    const scale = new THREE.MeshStandardMaterial({ color: skin, roughness: 0.7, metalness: 0.1, flatShading: true });
     const belly = new THREE.MeshStandardMaterial({ color: 0xa08a5a, roughness: 0.8, flatShading: true });
     const root = new THREE.Group();
     const b = new Builder();
@@ -1345,6 +1345,7 @@ export function makeUnitModel(type, faction) {
     case 'inferno': return makeInferno(faction);
     case 'wallyman': return makeWallyMan(faction);
     case 'dog': return makeDog(faction);
+    case 'dragon': { const d = makeWyvern('neutral', 0x8a1a12); d.scale.setScalar(2.6); return d; }
     case 'haggis': return makeHaggis();
     case 'medevac': return makeMedevac(faction);
     case 'burrower': return makeBurrower(faction);

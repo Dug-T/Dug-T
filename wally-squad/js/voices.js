@@ -23,6 +23,7 @@ const DEFAULT_LINES = {
     hurt: ['Ah am pure wabbit!', 'Ma heid is nippin!', 'Somebody get me an Irn Bru!', 'Ah have hud better days!', 'Ow! That is gonnae leave a mark!', 'Medic! An a cup of tea!'],
     win: ['Ya dancer! We won!', 'Pure dead brilliant! Get the kettle oan!', 'That is them telt! Who is fur chips?', 'Haw! Victory! Ah am buyin the Irn Bru!'],
     lose: ['Aw naw... ah am gonnae greet.', 'We have been pumped, so we have.', 'Och, that is a right sair yin.'],
+    dragon: ['A dragon! Ah have seen bigger midgies!', 'Get it doon, lads!', 'Mon then, ya big lizard!'],
     haggis: ['Haggis fur tea!', 'Ah have been chasin that wee beastie fur years!', 'Haw! Caught the haggis!'],
   },
   dog: { select: ['Woof!', 'Arf arf!', 'Grrrr!'], move: ['Woof woof!', 'Arf!'], attack: ['GRRRR!', 'Bark bark bark!'] },
@@ -203,12 +204,12 @@ export function lastWords(unit) {
 
 // Sing a lyric line from the soundtrack (a cheerful, slightly sung-sounding computer voice)
 let singing = false;
-export function singLine(text, track) {
+export function singLine(text, track, kind) {
   if (!settings.lyrics || !settings.tts || !('speechSynthesis' in window) || speechSynthesis.speaking) return;
   try {
     const u = new SpeechSynthesisUtterance(text);
     const V = track && track.vox;
-    u.pitch = V === 'chant' ? 0.5 : V === 'robot' ? 0.2 : V === 'scat' ? 1.7 : 1.45; u.rate = track && track.bpm < 100 ? 0.9 : V === 'robot' ? 0.85 : 1.05; u.volume = 0.8;
+    u.pitch = kind === 'hype' ? 0.8 : kind === 'adlib' ? 1.8 : V === 'chant' ? 0.5 : V === 'robot' ? 0.2 : V === 'scat' ? 1.7 : 1.45; u.rate = track && track.bpm < 100 ? 0.9 : V === 'robot' ? 0.85 : 1.05; u.volume = 0.8;
     const vs = english(); u.voice = clearVoice(vs);
     singing = true; u.onend = () => { singing = false; }; setTimeout(() => { singing = false; }, 6000);
     speechSynthesis.speak(u);

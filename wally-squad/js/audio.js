@@ -269,7 +269,18 @@ function shout(t, low) {
   vox(t, 0.16, low ? 45 : 52, 'e', 0.09, true);
   env(noise(leadIn, t, 0.12, 'bandpass', low ? 900 : 1600, 1.2), t, 0.004, 0.18, 0.1);
 }
-let lyricFn = null, lyricN = 0;
+let lyricFn = null, lyricN = 0, verseN = 0;
+// verse lyrics, by the tune's theme (choruses use the tune's own lyrics)
+const VERSE_LYRICS = {
+  wally: ['Out across the valley, here we go!', 'Boots on the ground and our heads held high!', 'Build the base and gather crystal!', 'Grimlocks coming? Let them come!', 'Wally Man is leading the way!', 'Tanks in a row, rolling slow!', 'Nobody beats the Wally Squad!', 'Hold the line, hold the line!'],
+  grim: ['From the shadows, here we come!', 'Hear the war drums in the night!', 'Grak is hungry, Grak is mad!', 'Crush the Squad and take their crystal!', 'Burn it down, burn it all!', 'Goblins laughing, hehehe!'],
+  party: ['Everybody on the dance floor!', 'Tanks are dancing, soldiers too!', 'Turn it up, turn it up!', 'Feel the beat inside your boots!', 'Party in the battlefield!', 'Shake it, shake it, harvester!'],
+  robot: ['Beep boop, battle mode.', 'Systems online. Lasers ready.', 'Calculating victory.', 'Error: enemy not found. Searching.', 'Download complete: courage.'],
+  scots: ['Doon the glen the pipers play!', 'Haud the line, ye brave yins!', 'Through the heather, through the rain!', 'Gie it laldy, Wally Squad!'],
+};
+const THEME_OF = { 'Grimlock Rising': 'grim', 'Iron Grimlock': 'grim', 'Grimlock War Chant': 'grim', 'Neon Commander': 'robot', 'Pixel Platoon': 'robot', 'Crystal Disco': 'party', 'Skank Tank': 'party', 'Funky Harvester': 'party', 'Reggae Recon': 'party', 'Trap Tank': 'party', 'Highland Charge': 'scots' };
+const ADLIBS = ['Yeah!', 'Woo!', 'Come on!', 'Let\'s go!', 'Oh yeah!', 'Everybody!', 'Here we go!'];
+function sing(t, line, kind) { if (lyricFn) setTimeout(() => lyricFn(line, tr, kind), Math.max(0, (t - ctx.currentTime) * 1000)); }
 export function setLyricHandler(fn) { lyricFn = fn; }
 // a bagpipe chanter note: bright and reedy, with a quick grace note flicked in front of it
 function pipeNote(t, dur, n, gain) {
@@ -402,8 +413,10 @@ function schedule() {
       }
     }
     // ---- vocals (every tune sings: choruses, verses and breaks)
+    // the hype man: counts the tune in, or tells you its name
+    if (intro && sec.bar === 2 && s === 0) sing(t, bar % 2 ? 'One, two, three, four!' : `This one is called ${tr.name}!`, 'hype');
     if (tr.vox && !intro) {
-      const V = tr.vox, vg = calm ? 0.7 : 1.25, verse = sec.name === 'verse';
+      const V = tr.vox, vg = calm ? 0.85 : 1.6, verse = sec.name === 'verse';
       const robot = V === 'robot';
       // choir: 'aah' / 'ooh' chords - full in choruses and breaks, soft 'ooh' pads every other bar in verses
       if ((V === 'choir' || V === 'chant') && s === 0 && (chorus || brk)) for (const [k, n] of chord.entries()) vox(t, beat * 3.7, n + (V === 'chant' ? 0 : 12), V === 'chant' ? 'o' : ['a', 'o', 'u'][(bar + k) % 3], (V === 'chant' ? 0.06 : 0.045) * vg);
@@ -416,6 +429,7 @@ function schedule() {
         if (m0) {
           const vowel = V === 'scat' ? (s % 4 === 0 ? 'u' : 'a') : robot ? (s % 8 < 4 ? 'i' : 'e') : ['a', 'o', 'e', 'a', 'u'][(s + bar) % 5];
           vox(t + swing, sixteenth * m0.len * (V === 'scat' ? 0.6 : 0.95), m0.n + lift - 12, vowel, (singChorus ? 0.075 : 0.05) * vg, !robot, null, robot);
+          if (singChorus && !robot) vox(t + swing, sixteenth * m0.len * 0.95, m0.n + lift, 'u', 0.03 * vg, true); // backing vocal an octave up
           if (singChorus && V === 'lead') vox(t + swing, sixteenth * m0.len * 0.95, m0.n + lift - 12 + (q === 'm' ? 3 : 4), 'o', 0.03 * vg); // harmony a third above
         }
       }
@@ -425,10 +439,10 @@ function schedule() {
       if (!calm && (V === 'shout' || V === 'chant') && (chorus || verse) && (s === 12 || (V === 'chant' && s === 4)) && (chorus || bar % 2 === 1)) shout(t, V === 'chant');
       if (V === 'chant' && (chorus || (verse && sec.bar >= 4)) && s % 4 === 0) vox(t, sixteenth * 1.6, root - 12, 'o', 0.06 * vg, true);
       // sung lyric lines: twice per chorus and once per verse (text-to-speech, timed to the music)
-      if (s === 0 && tr.lyrics && lyricFn && ((chorus && sec.bar % 4 === 0) || (verse && sec.bar === 4))) {
-        const line = tr.lyrics[lyricN++ % tr.lyrics.length];
-        setTimeout(() => lyricFn(line, tr), Math.max(0, (t - ctx.currentTime) * 1000));
-      }
+      if (s === 0 && tr.lyrics && chorus && sec.bar % 2 === 0) sing(t, tr.lyrics[lyricN++ % tr.lyrics.length], 'lyric');
+      if (s === 0 && verse && sec.bar % 4 === 0) { const pool = VERSE_LYRICS[THEME_OF[tr.name] || 'wally']; sing(t, pool[verseN++ % pool.length], 'lyric'); }
+      if (chorus && sec.bar === sec.len - 1 && s === 8) sing(t, ADLIBS[(bar + lyricN) % ADLIBS.length], 'adlib');
+      if (brk && sec.bar === 1 && s === 0) sing(t, ['Break it down!', 'Everybody clap!', 'Here comes the drop!', 'Sing it with me!'][bar % 4], 'adlib');
     }
     next += sixteenth; step++;
   }

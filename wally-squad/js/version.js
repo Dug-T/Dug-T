@@ -1,8 +1,14 @@
 // Version number and update notes. Bump VERSION and add a new entry at the top of CHANGELOG for every
 // update: players see a "What's New" screen the first time they load a new version.
-export const VERSION = '1.35';
+export const VERSION = '1.36';
 
 export const CHANGELOG = [
+  { v: '1.36', date: '2026-11-21', title: 'Here Be Dragons', items: [
+    '🎤 A lot more vocals: lyrics every couple of bars, new verse lyrics for every tune, "Yeah! Woo!" ad-libs, louder singers with backing vocals, and a hype man who counts each tune in or tells you its name.',
+    '🐉 Dragon attacks: from 15 minutes in, an Ancient Dragon swoops in and attacks both sides. Slay it for $5,000!',
+    '🎯 Bonus objectives: every skirmish gives you three random side goals, each worth $1,000.',
+    '🎖 New medals: Dragonslayer and Overachiever.',
+  ] },
   { v: '1.35', date: '2026-11-21', title: 'Pure Dead Brilliant', items: [
     '🏴 Wally Man has loads more Scottish slang - and now talks when he gets a kill, when he is hurt, and when you win or lose. Try selecting him on a sunny day ("Taps aff!") or under a Blood Moon.',
     '🐾 A wild haggis sometimes scurries across the battlefield (especially on Highland Glen). Catch it for $500!',
