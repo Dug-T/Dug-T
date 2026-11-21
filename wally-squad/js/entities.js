@@ -825,8 +825,8 @@ export class Unit {
     if (this.passengers && this.passengers.length) ejectPassengers(this, 0.5, killer);
     if (this.def.bounty && killer && G.players[killer.faction] && killer.faction !== 'neutral') {
       G.players[killer.faction].credits += this.def.bounty;
-      const what = this.type === 'haggis' ? 'Haggis caught' : 'Convoy destroyed';
-      G.announce?.(killer.faction === G.player ? `${what}! +$${this.def.bounty.toLocaleString()} bounty` : `The enemy has claimed the ${this.type === 'haggis' ? 'haggis' : 'convoy'} bounty`, G.player, 3);
+      const what = this.type === 'haggis' ? 'Haggis caught' : this.type === 'dragon' ? 'The Ancient Dragon is slain' : 'Convoy destroyed';
+      G.announce?.(killer.faction === G.player ? `${what}! +$${this.def.bounty.toLocaleString()} bounty` : `The enemy has claimed the ${this.type === 'haggis' ? 'haggis' : this.type === 'dragon' ? 'dragon' : 'convoy'} bounty`, G.player, 3);
       FX.sparkBurst(this.x, this.y + 1.5, this.z, 50, [4, 3.2, 0.8, 1]);
       emit('bounty', killer.faction, this.type);
     }

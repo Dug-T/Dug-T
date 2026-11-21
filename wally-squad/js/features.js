@@ -136,6 +136,28 @@ export function updateHaggis(dt) {
   haggisT = 30;
 }
 
+// ---- an Ancient Dragon attacks both sides from 15 minutes in (then every 10 minutes while none is alive)
+let dragonT = 900, dragon = null;
+export function updateDragon(dt) {
+  if (G.cfg.dragons === false || !['skirmish', 'mp', 'watch'].includes(G.cfg.mode) || G.over) return;
+  if (dragon) {
+    if (dragon.dead) { dragon = null; dragonT = 600; return; }
+    dragon.roamT = (dragon.roamT || 0) - dt;
+    if (dragon.roamT <= 0 && !dragon.target) { // fly toward one of the bases to cause trouble
+      dragon.roamT = 25;
+      const bases = Object.values(BASES), b = bases[Math.floor(srand() * bases.length)];
+      dragon.moveTo(b.x + srr(-25, 25), b.z + srr(-25, 25), { attackMove: true });
+    }
+    return;
+  }
+  dragonT -= dt;
+  if (dragonT > 0) return;
+  const a = srand() * Math.PI * 2, x = Math.cos(a) * (HALF - 15), z = Math.sin(a) * (HALF - 15);
+  dragon = new Unit('dragon', 'neutral', x, z, a + Math.PI);
+  G.announce?.(`An Ancient Dragon is attacking! Slay it for $${UNITS.dragon.bounty.toLocaleString()}!`, G.player, 9);
+  G.alertAt = { x, z, t: G.time };
+}
+
 export function updateCrates(dt) {
   if (G.cfg.crates === false) return;
   crateT -= dt;

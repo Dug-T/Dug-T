@@ -26,7 +26,7 @@ import { issue } from './cmd.js';
 import { registerCustomUnits, loadDesigns, buildDesigner } from './customunits.js';
 import { gfx, initGraphics, pixelRatio, autoTune, buildGraphicsPanel, maxAnisotropy, isTouch, shadowInterval } from './graphics.js';
 import { allMaterials } from './materials.js';
-import { updateConvoy, updateHaggis } from './features.js';
+import { updateConvoy, updateHaggis, updateDragon } from './features.js';
 import { updateCrates, animateCrates, placeTechBuildings, placeBarrels, placeHouses, recordHistory, drawHistory } from './features.js';
 import { updatePowers } from './powers.js';
 import { updateHazards } from './hazards.js';
@@ -37,6 +37,7 @@ import { registerCustomMaps, buildMapEditor } from './mapeditor.js';
 import { updateOrientation } from './orient.js';
 import { awardGame, profileCard } from './profile.js';
 import { initTipJar } from './tipjar.js';
+import { initBonus } from './bonus.js';
 import { VERSION, isNewVersion, markSeen, buildNews, checkForUpdate, registerUpdater, updateNow } from './version.js';
 updateOrientation();
 import { initSurvival, updateSurvival, survivalPanel, saveBest, bestScores, survival } from './survival.js';
@@ -414,6 +415,7 @@ function setupMenus() {
   toggle('👑 King of the Hill', () => !!sk.koth, v => { sk.koth = v; });
   toggle('🎯 Hero Hunt', () => !!sk.hunt, v => { sk.hunt = v; });
   toggle('💰 Bounty convoys', () => sk.convoys !== false, v => { sk.convoys = v; });
+  toggle('🐉 Dragon attacks', () => sk.dragons !== false, v => { sk.dragons = v; });
   // starting money cycles through a few amounts
   const money = [2500, 4000, 7500, 15000];
   const mb = document.createElement('button'); mb.className = 'btn on';
@@ -563,7 +565,7 @@ function setupMenus() {
     const once = () => { window.removeEventListener('pointerup', once, true); if (!document.fullscreenElement) goFull(); };
     window.addEventListener('pointerup', once, true);
   }
-  Audio.setLyricHandler((line, track) => { if (G.started && !G.over && Audio.isMusicOn?.()) Voices.singLine(line, track); });
+  Audio.setLyricHandler((line, track, kind) => { if (G.started && !G.over && Audio.isMusicOn?.()) Voices.singLine(line, track, kind); });
   Audio.onTrackChange(name => { $('bMusic').title = `Now playing: ${name} - click to turn the music off`; if (G.started && !G.over) UI.message(`♪ Now playing: ${name}`); });
   // cheat codes (single player only; a cheating game earns no XP or medals)
   const CHEATS = {
@@ -656,6 +658,8 @@ function start() {
   // kill streaks: kills by your forces close together get a shout-out
   const streak = { n: 0, t: -99 };
   const SHOUT = { 2: 'Double kill!', 3: 'Triple kill!', 5: 'Rampage!', 8: 'Unstoppable!', 12: 'Wally Squad is on fire!', 20: 'Legendary!' };
+  initBonus(run, t => UI.message(t));
+  G.emitBonus3 = () => emit('bonus3');
   // voices: Wally Man's quips, and last words from your fallen units
   on('kill', (victim, killer) => {
     if (victim.kind === 'unit' && victim.faction === G.player && victim.type !== 'wallyman') Voices.lastWords(victim);
@@ -781,6 +785,7 @@ function simStep(dt) {
   updateCrates(dt);
   updateConvoy(dt);
   updateHaggis(dt);
+  updateDragon(dt);
   updateHazards(dt);
   updateHill(dt);
   recordHistory(dt);
