@@ -1,8 +1,11 @@
 // Version number and update notes. Bump VERSION and add a new entry at the top of CHANGELOG for every
 // update: players see a "What's New" screen the first time they load a new version.
-export const VERSION = '1.37';
+export const VERSION = '1.37.1';
 
 export const CHANGELOG = [
+  { v: '1.37.1', date: '2026-11-21', title: 'Tech pictures', items: [
+    '🖼 Fixed: the Tech tab upgrades showed no pictures on some phones. They now have proper 3D pictures - an armoured tank, a soldier in a vest, a glowing shell, crystals, a gear and a telescope.',
+  ] },
   { v: '1.37', date: '2026-11-21', title: 'Ice Cream & Poison Gas', items: [
     '❄ Freeze Tank (Wally Squad): its cryo beam frosts enemies over and slows them to half speed.',
     '☣ Toxic Trooper (Grimlocks): lobs gas canisters that leave poisonous green clouds.',
