@@ -81,6 +81,8 @@ const SOUNDS = {
   promote(o, t) { tone(o, t, 0.1, 'triangle', 523, 0, 0.3); tone(o, t + 0.1, 0.1, 'triangle', 659, 0, 0.3); tone(o, t + 0.2, 0.25, 'triangle', 784, 0, 0.3); },
   pipes(o, t) { tone(o, t, 1.1, 'sawtooth', 110, 110, 0.07); for (const [d, f] of [[0, 659], [0.22, 740], [0.44, 880], [0.7, 740]]) { tone(o, t + d, 0.24, 'sawtooth', f, f, 0.08); tone(o, t + d, 0.03, 'sawtooth', f * 1.78, f * 1.78, 0.06); } },
   wardrum(o, t) { for (const d of [0, 0.18, 0.36, 0.72]) tone(o, t + d, 0.3, 'sine', 120, 45, 0.5); },
+  oof(o, t) { vox(t, 0.22, 40 + Math.floor(Math.random() * 8), Math.random() < 0.5 ? 'u' : 'o', 0.32, true, o); },
+  cheer(o, t) { for (let i = 0; i < 8; i++) vox(t + i * 0.04 + Math.random() * 0.05, 1.3, 57 + [0, 4, 7, 12, 9, 5, 2, 16][i], ['a', 'e', 'o', 'a'][i % 4], 0.05, true, o); env(noise(o, t, 1.8, 'bandpass', 2400, 0.6), t, 0.08, 0.22, 1.5); },
   bite(o, t) { env(noise(o, t, 0.12, 'bandpass', 900, 2), t, 0.002, 0.5, 0.1); tone(o, t, 0.25, 'sawtooth', 160, 90, 0.18); },
   zap(o, t) { tone(o, t, 0.9, 'sawtooth', 2400, 60, 0.35); tone(o, t + 0.05, 0.7, 'square', 180, 40, 0.25); env(noise(o, t, 0.8, 'bandpass', 4000, 3), t, 0.005, 0.5, 0.7); },
   scream(o, t) { tone(o, t, 0.35, 'sawtooth', 500 + Math.random() * 200, 250, 0.06); },
@@ -254,7 +256,7 @@ function buildMelody(tr) {
 let pump, leadIn, delay, fb, wet, musicStarted = false;
 // ---- vocals: a sawtooth voice through three vowel formant filters, with vibrato
 const VOWELS = { a: [730, 1090, 2440], o: [570, 840, 2410], u: [300, 870, 2240], e: [530, 1840, 2480], i: [270, 2290, 3010] };
-function vox(t, dur, n, vowel, gain, slide = 0) {
+function vox(t, dur, n, vowel, gain, slide = 0, dest = null) {
   const f0 = mtof(n), F = VOWELS[vowel] || VOWELS.a;
   const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(gain, t + Math.min(0.06, dur * 0.3));
   g.gain.setValueAtTime(gain, t + dur * 0.75); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
@@ -266,7 +268,7 @@ function vox(t, dur, n, vowel, gain, slide = 0) {
     o.detune.value = d; lg.connect(o.detune); o.connect(mix); o.start(t); o.stop(t + dur + 0.05);
   }
   lfo.start(t); lfo.stop(t + dur + 0.05);
-  g.connect(leadIn);
+  g.connect(dest || leadIn);
 }
 // a gang shout: "HEY!" / "HUP!"
 function shout(t, low) {

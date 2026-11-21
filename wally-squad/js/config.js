@@ -141,6 +141,7 @@ export const UNITS = {
   catapult: { name: 'Bone Catapult', fac: 'grim', cost: 1000, time: 14, hp: 380, armor: 'light', speed: 3.6, sight: 13, radius: 1.3, weapon: 'boulder', turnRate: 2, tab: 'vehicle', req: ['factory', 'radar'], desc: 'Grimlock only. A creaking wooden siege engine that hurls flaming boulders a very long way. Wrecks buildings and clumps of troops, but can\'t hit anything close.' },
   shieldgen: { name: 'Shield Projector', fac: 'wally', cost: 1100, time: 14, hp: 420, armor: 'light', speed: 5.4, sight: 14, radius: 1.1, weapon: null, shield: 7.5, tab: 'vehicle', req: ['factory', 'radar'], desc: 'Wally Squad only. Unarmed truck that projects a shimmering energy bubble: your units inside it take 40% less damage. Keep it with your army.' },
   burrower: { name: 'Tunnel Drill', fac: 'grim', cost: 1100, time: 14, hp: 460, armor: 'heavy', speed: 6.2, sight: 12, radius: 1.2, weapon: 'drill', burrow: true, turnRate: 2.4, tab: 'vehicle', req: ['factory', 'radar'], desc: 'Grimlock only. Burrows underground while it moves - nothing can see or hit it - then bursts up to drill into vehicles and buildings.' },
+  haggis:   { name: 'Wild Haggis', cost: 0, time: 0, hp: 40, armor: 'infantry', speed: 6.5, sight: 8, radius: 0.5, weapon: null, bounty: 500, tab: 'none', req: ['none'], desc: 'A rare wild haggis! Its legs are longer on one side so it can run round hills. Catch it for a $500 bounty.' },
   repair:   { name: 'Repair Truck', cost: 600, time: 9, hp: 420, armor: 'light', speed: 6.8, sight: 12, radius: 1.15, weapon: null, repairs: true, turnRate: 2.8, tab: 'vehicle', req: ['factory'], desc: 'Fixes nearby vehicles in the field. Park it behind your tanks.' },
   hover:    { name: 'Skimmer Hovercraft', cost: 650, time: 9, hp: 320, armor: 'light', speed: 9, sight: 14, radius: 1.2, weapon: 'hoverRkt', turnRate: 3.2, hover: true, tab: 'vehicle', req: ['factory', 'radar'], desc: 'Fast amphibious raider. Skims over water and even lava to flank the enemy. Twin rockets hit ground and air.' },
   harvester:{ name: 'Harvester', cost: 1200, time: 16, hp: 950, armor: 'heavy', speed: 4.6, sight: 9, radius: 1.5, weapon: null, turnRate: 2.0, tab: 'vehicle', req: ['factory', 'refinery'], desc: 'Gathers crystal for the refinery.' },
@@ -197,6 +198,7 @@ export const MUTATORS = {
   veterans: { name: 'Veteran Armies', icon: '★', desc: 'Every unit starts as a Veteran.' },
   disasters: { name: 'Natural Disasters', icon: '🌪', desc: 'Tornadoes roam the battlefield, wrecking anything in their path.' },
   crates:   { name: 'Crate Rain', icon: '📦', desc: 'Supply crates drop four times as often.' },
+  party:    { name: 'Party Hats', icon: '🎉', desc: 'Every soldier, tank and aircraft wears a party hat. Completely pointless. Completely brilliant.' },
 };
 export const hasMut = (cfg, k) => !!(cfg && cfg.mut && cfg.mut.includes(k));
 export const HARVEST_CAPACITY = 700;
