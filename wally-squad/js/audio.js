@@ -156,6 +156,7 @@ export function duckMusic(sec) {
   clearTimeout(duckTimer);
   duckTimer = setTimeout(() => { if (musicOn && musicBus) musicBus.gain.setTargetAtTime(0.22, ctx.currentTime, 0.4); }, sec * 1000);
 }
+export function isMusicOn() { return musicOn; }
 export function toggleMusic() { musicOn = !musicOn; if (musicBus) musicBus.gain.value = musicOn ? 0.22 : 0; return musicOn; }
 let target = 0.15, level = 0.15;
 export function setIntensity(x) { target = Math.max(0, Math.min(1, x)); }
@@ -172,7 +173,7 @@ export function sting(win) {
 
 // chords: [root midi note, 'm' minor | 'M' major] one per bar
 const TRACKS = [
-  { name: 'Wally Squad Assemble', bpm: 128, key: 57, minor: true, drums: 'rock', bass: 'eighth', lead: 'square', arp: true,
+  { name: 'Wally Squad Assemble', bpm: 128, key: 57, minor: true, drums: 'rock', bass: 'eighth', lead: 'square', arp: true, vox: 'choir', lyrics: ['Wally Squad, assemble!', 'Build it up and roll them out!'],
     verse: [[57, 'm'], [53, 'M'], [48, 'M'], [55, 'M']], chorus: [[53, 'M'], [55, 'M'], [57, 'm'], [57, 'm']], seed: 11 },
   { name: 'Grimlock Rising', bpm: 140, key: 50, minor: true, drums: 'four', bass: 'octave', lead: 'saw', arp: false,
     verse: [[50, 'm'], [50, 'm'], [46, 'M'], [45, 'M']], chorus: [[46, 'M'], [48, 'M'], [50, 'm'], [45, 'M']], seed: 23 },
@@ -182,7 +183,7 @@ const TRACKS = [
     verse: [[55, 'm'], [55, 'm'], [51, 'M'], [53, 'M']], chorus: [[51, 'M'], [53, 'M'], [55, 'm'], [50, 'M']], seed: 41 },
   { name: 'Lava Run', bpm: 150, key: 54, minor: true, drums: 'four', bass: 'gallop', lead: 'square', arp: true,
     verse: [[54, 'm'], [50, 'M'], [52, 'M'], [49, 'M']], chorus: [[50, 'M'], [52, 'M'], [54, 'm'], [54, 'm']], seed: 53 },
-  { name: 'Victory Road', bpm: 134, key: 48, minor: false, drums: 'march', bass: 'octave', lead: 'square', arp: true,
+  { name: 'Victory Road', bpm: 134, key: 48, minor: false, drums: 'march', bass: 'octave', lead: 'square', arp: true, vox: 'shout', lyrics: ['March on to victory!', 'Hup, two, three, four!'],
     verse: [[48, 'M'], [55, 'M'], [57, 'm'], [53, 'M']], chorus: [[53, 'M'], [55, 'M'], [48, 'M'], [48, 'M']], seed: 67 },
   { name: 'Neon Commander', bpm: 104, key: 57, minor: true, drums: 'rock', bass: 'pulse', lead: 'saw', arp: true,
     verse: [[57, 'm'], [53, 'M'], [48, 'M'], [55, 'M']], chorus: [[53, 'M'], [48, 'M'], [55, 'M'], [57, 'm']], seed: 71 },
@@ -196,6 +197,24 @@ const TRACKS = [
     verse: [[52, 'm'], [57, 'M'], [52, 'm'], [57, 'M']], chorus: [[55, 'M'], [57, 'M'], [59, 'm'], [59, 'm']], seed: 97 },
   { name: 'Highland Charge', bpm: 112, key: 57, minor: false, drums: 'march', bass: 'drone', lead: 'pipes', arp: false,
     verse: [[57, 'M'], [55, 'M'], [57, 'M'], [52, 'm']], chorus: [[55, 'M'], [57, 'M'], [55, 'M'], [57, 'M']], seed: 107 },
+  { name: 'Wally Squad Anthem', bpm: 124, key: 55, minor: false, drums: 'rock', bass: 'octave', lead: 'brass', arp: false, vox: 'lead',
+    lyrics: ['Wally Squad! Wally Squad!', 'Never back down!', 'Stand together, hold the line!', 'Here comes Wally Man!'],
+    verse: [[55, 'M'], [52, 'm'], [48, 'M'], [50, 'M']], chorus: [[48, 'M'], [50, 'M'], [55, 'M'], [55, 'M']], seed: 113 },
+  { name: 'Grimlock War Chant', bpm: 96, key: 50, minor: true, drums: 'half', bass: 'gallop', lead: 'saw', arp: false, vox: 'chant',
+    lyrics: ['Grim! Lock! Grim! Lock!', 'Crush them all!', 'For the Legion!'],
+    verse: [[50, 'm'], [50, 'm'], [48, 'M'], [46, 'M']], chorus: [[46, 'M'], [48, 'M'], [50, 'm'], [50, 'm']], seed: 127 },
+  { name: 'Crystal Disco', bpm: 118, key: 53, minor: true, drums: 'disco', bass: 'octave', lead: 'pluck', arp: true, vox: 'choir',
+    lyrics: ['Dance on the crystal!', 'Harvest all night long!'],
+    verse: [[53, 'm'], [49, 'M'], [51, 'M'], [48, 'M']], chorus: [[49, 'M'], [51, 'M'], [53, 'm'], [53, 'm']], seed: 131 },
+  { name: 'Reggae Recon', bpm: 84, key: 55, minor: false, drums: 'reggae', bass: 'walk', lead: 'square', arp: false, skank: true, vox: 'lead',
+    lyrics: ['Easy now, soldier.', 'Scout the valley, nice and slow.'],
+    verse: [[55, 'M'], [48, 'M'], [55, 'M'], [50, 'M']], chorus: [[48, 'M'], [50, 'M'], [55, 'M'], [55, 'M']], seed: 137 },
+  { name: 'Trap Tank', bpm: 140, key: 52, minor: true, drums: 'trap', bass: 'pulse', lead: 'pluck', arp: false, vox: 'shout',
+    lyrics: ['Tanks rolling in!', 'Boom! Boom! Boom!'],
+    verse: [[52, 'm'], [48, 'M'], [52, 'm'], [47, 'M']], chorus: [[48, 'M'], [50, 'M'], [52, 'm'], [47, 'M']], seed: 139 },
+  { name: 'Victory Gospel', bpm: 100, key: 53, minor: false, drums: 'shuffle', bass: 'walk', lead: 'brass', arp: false, vox: 'choir',
+    lyrics: ['Victory is near!', 'Sing it loud, Wally Squad!'],
+    verse: [[53, 'M'], [58, 'M'], [53, 'M'], [48, 'M']], chorus: [[58, 'M'], [60, 'M'], [53, 'M'], [53, 'M']], seed: 149 },
   { name: 'Desert Shuffle', bpm: 122, key: 57, minor: false, drums: 'shuffle', bass: 'walk', lead: 'square', arp: false,
     verse: [[57, 'M'], [50, 'M'], [57, 'M'], [52, 'M']], chorus: [[50, 'M'], [50, 'M'], [57, 'M'], [52, 'M']], seed: 101 },
 ];
@@ -233,6 +252,29 @@ function buildMelody(tr) {
 
 // ---- voices
 let pump, leadIn, delay, fb, wet, musicStarted = false;
+// ---- vocals: a sawtooth voice through three vowel formant filters, with vibrato
+const VOWELS = { a: [730, 1090, 2440], o: [570, 840, 2410], u: [300, 870, 2240], e: [530, 1840, 2480], i: [270, 2290, 3010] };
+function vox(t, dur, n, vowel, gain, slide = 0) {
+  const f0 = mtof(n), F = VOWELS[vowel] || VOWELS.a;
+  const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(gain, t + Math.min(0.06, dur * 0.3));
+  g.gain.setValueAtTime(gain, t + dur * 0.75); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  const mix = ctx.createGain(); mix.gain.value = 1;
+  F.forEach((fq, k) => { const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = fq; bp.Q.value = 9 + k * 3; const fg = ctx.createGain(); fg.gain.value = [1, 0.55, 0.28][k] * 3.2; mix.connect(bp); bp.connect(fg); fg.connect(g); });
+  const lfo = ctx.createOscillator(), lg = ctx.createGain(); lfo.frequency.value = 5.4; lg.gain.value = dur > 0.35 ? 14 : 4; lfo.connect(lg); // vibrato (cents)
+  for (const d of [-6, 6]) {
+    const o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.setValueAtTime(slide ? f0 * 0.94 : f0, t); if (slide) o.frequency.exponentialRampToValueAtTime(f0, t + 0.08);
+    o.detune.value = d; lg.connect(o.detune); o.connect(mix); o.start(t); o.stop(t + dur + 0.05);
+  }
+  lfo.start(t); lfo.stop(t + dur + 0.05);
+  g.connect(leadIn);
+}
+// a gang shout: "HEY!" / "HUP!"
+function shout(t, low) {
+  vox(t, 0.16, low ? 45 : 52, 'e', 0.09, true);
+  env(noise(leadIn, t, 0.12, 'bandpass', low ? 900 : 1600, 1.2), t, 0.004, 0.18, 0.1);
+}
+let lyricFn = null;
+export function setLyricHandler(fn) { lyricFn = fn; }
 // a bagpipe chanter note: bright and reedy, with a quick grace note flicked in front of it
 function pipeNote(t, dur, n, gain) {
   synth(leadIn, t, 0.035, 'sawtooth', mtof(n + 10), gain * 0.9, 5200, 5000, 2, 0.002);
@@ -257,11 +299,12 @@ const hat = (t, v = 1, open = false) => env(noise(pump, t, open ? 0.3 : 0.05, 'h
 const tom = (t, f) => tone(musicBus, t, 0.3, 'sine', f, f * 0.55, 0.7);
 const crash = t => env(noise(musicBus, t, 1.8, 'highpass', 5000, 0.5), t, 0.002, 0.3, 1.6);
 
-let tr = null, melody = null, verseMelody = null, step = 0, next = 0, lastIdx = -1, onTrack = null;
+let tr = null, melody = null, verseMelody = null, step = 0, next = 0, lastIdx = -1, onTrack = null, bag = [];
 export function onTrackChange(fn) { onTrack = fn; }
 export function currentTrack() { return tr ? tr.name : ''; }
 function pickTrack(force) {
-  let i; do { i = Math.floor(Math.random() * TRACKS.length); } while (i === lastIdx && TRACKS.length > 1);
+  if (!bag.length) { bag = TRACKS.map((_, k) => k).sort(() => Math.random() - 0.5); if (bag[0] === lastIdx && bag.length > 1) bag.push(bag.shift()); }
+  let i = bag.shift();
   if (force !== undefined) i = force;
   lastIdx = i; tr = TRACKS[i]; melody = buildMelody(tr); verseMelody = buildMelody({ ...tr, seed: tr.seed * 7 + 3 }); step = 0;
   if (delay) delay.delayTime.setValueAtTime(60 / tr.bpm * 0.75, ctx.currentTime);
@@ -300,9 +343,9 @@ function schedule() {
     // ---- drums
     if (s === 0 && sec.bar === 0 && (chorus || sec.name === 'verse')) crash(t);
     const d = tr.drums;
-    const kickHit = d === 'four' ? s % 4 === 0 : d === 'dnb' ? s === 0 || s === 10 : d === 'half' ? s === 0 || s === 7 || (s === 10 && chorus) : d === 'march' ? s % 8 === 0 || s === 6
+    const kickHit = d === 'four' || d === 'disco' ? s % 4 === 0 : d === 'reggae' ? s === 8 : d === 'trap' ? s === 0 || s === 7 || s === 11 || (s === 14 && chorus) : d === 'dnb' ? s === 0 || s === 10 : d === 'half' ? s === 0 || s === 7 || (s === 10 && chorus) : d === 'march' ? s % 8 === 0 || s === 6
       : d === 'metal' ? (war || chorus ? s % 2 === 0 : s % 4 === 0 || s === 6) : d === 'funk' ? s === 0 || s === 3 || s === 10 : d === 'shuffle' ? s === 0 || s === 8 || s === 11 : d === 'ska' || d === 'chip' ? s === 0 || s === 8 : s === 0 || s === 8 || s === 10;
-    const snareHit = d === 'half' ? s === 8 : s === 4 || s === 12;
+    const snareHit = d === 'half' || d === 'trap' || d === 'reggae' ? s === 8 : s === 4 || s === 12;
     const swing = d === 'shuffle' && s % 2 === 1 ? sixteenth * 0.33 : 0; // shuffle: late off-beats
     if (lastBarOfSection && s >= 12 && !calm && !intro) { if (s % 2 === 0 || war) tom(t, [200, 170, 140, 110][(s - 12)] || 120); }
     else {
@@ -312,7 +355,8 @@ function schedule() {
       if (d === 'march' && full && (s === 14 || s === 15)) snare(t, 0.35);
       if (d === 'dnb' && full && (s === 7 || s === 15)) snare(t, 0.25); // ghost notes
       if (d === 'funk' && full && (s === 7 || s === 9 || s === 15)) snare(t, 0.2);
-      if (!brk && (intro || !calm) && (war ? true : d === 'dnb' || d === 'funk' || d === 'metal' ? s % 2 === 0 || d === 'funk' : d === 'shuffle' ? s % 4 === 0 || s % 4 === 3 : s % 2 === 1)) hat(t + swing, s % 4 === 2 ? 1 : 0.6, (d === 'four' || d === 'ska') && s % 4 === 2 && full);
+      if (!brk && (intro || !calm) && (war ? true : d === 'dnb' || d === 'funk' || d === 'metal' ? s % 2 === 0 || d === 'funk' : d === 'shuffle' ? s % 4 === 0 || s % 4 === 3 : s % 2 === 1)) hat(t + swing, s % 4 === 2 ? 1 : 0.6, (d === 'four' || d === 'ska' || d === 'disco') && s % 4 === 2 && full);
+      if (d === 'trap' && full && !brk) { hat(t, 0.5); if (s >= 12 && chorus) hat(t + sixteenth / 2, 0.4); } // trap hi-hat rolls
       if (calm && s % 4 === 2) hat(t, 0.4);
     }
 
@@ -360,6 +404,19 @@ function schedule() {
         if (tr.lead === 'brass') synth(leadIn, t + swing, len, 'sawtooth', mtof(m.n - 12), g * 0.6, 1600, 900, 8, 0.04); // brass section an octave below
         if (war) synth(leadIn, t, len, 'sawtooth', mtof(m.n + 12), 0.03, 4000, 1500, 9);
       }
+    }
+    // ---- vocals
+    if (tr.vox && !intro) {
+      const V = tr.vox, vg = calm ? 0.6 : 1; // vocals sing softer while things are calm
+      // choir: sustained 'aah' / 'ooh' chords in the chorus and break
+      if ((V === 'choir' || V === 'chant') && s === 0 && (chorus || brk)) for (const [k, n] of chord.entries()) vox(t, beat * 3.7, n + (V === 'chant' ? 0 : 12), V === 'chant' ? 'o' : ['a', 'o', 'u'][(bar + k) % 3], (V === 'chant' ? 0.05 : 0.035) * vg);
+      // lead singer: the chorus melody, on changing vowels
+      if (V === 'lead' && chorus) { const m0 = melody[(bar % 2) * 16 + s]; if (m0) vox(t + swing, sixteenth * m0.len * 0.95, m0.n + lift - 12, ['a', 'o', 'e', 'a', 'u'][(s + bar) % 5], 0.06 * vg, true); }
+      // gang shouts on the backbeat
+      if (!calm && (V === 'shout' || V === 'chant') && chorus && (s === 12 || (V === 'chant' && s === 4)) && bar % 2 === 1) shout(t, V === 'chant');
+      if (V === 'chant' && chorus && s % 4 === 0) vox(t, sixteenth * 1.6, root - 12, 'o', 0.05 * vg, true); // 'HO! HO!' chant on the beat
+      // a sung lyric line at the start of each chorus (text-to-speech, timed to the music)
+      if (chorus && sec.bar === 0 && s === 0 && tr.lyrics && lyricFn) { const line = tr.lyrics[(sec.i + bar) % tr.lyrics.length]; setTimeout(() => lyricFn(line, tr), Math.max(0, (t - ctx.currentTime) * 1000)); }
     }
     next += sixteenth; step++;
   }

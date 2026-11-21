@@ -111,7 +111,7 @@ let db = null;
 const clips = new Map();        // key -> [Blob]
 const urls = new Map();         // Blob -> objectURL
 let lastSay = 0;
-export const settings = { voices: true, tts: true };
+export const settings = { voices: true, tts: true, lyrics: true };
 try { Object.assign(settings, JSON.parse(localStorage.getItem('ws_voice_settings') || '{}')); } catch { /* ignore */ }
 export function saveSettings() { try { localStorage.setItem('ws_voice_settings', JSON.stringify(settings)); } catch { /* ignore */ } }
 
@@ -174,9 +174,23 @@ export function sayLine(text, type) {
   } catch { /* ignore */ }
 }
 
+// Sing a lyric line from the soundtrack (a cheerful, slightly sung-sounding computer voice)
+let singing = false;
+export function singLine(text, track) {
+  if (!settings.lyrics || !settings.tts || !('speechSynthesis' in window) || speechSynthesis.speaking) return;
+  try {
+    const u = new SpeechSynthesisUtterance(text);
+    u.pitch = track && track.vox === 'chant' ? 0.5 : 1.45; u.rate = track && track.bpm < 100 ? 0.9 : 1.05; u.volume = 0.75;
+    const vs = english(); u.voice = clearVoice(vs);
+    singing = true; u.onend = () => { singing = false; }; setTimeout(() => { singing = false; }, 6000);
+    speechSynthesis.speak(u);
+  } catch { /* ignore */ }
+}
+
 // Called by the game when the player selects or commands a unit
 export function say(type, ev, force = false) {
   if (!settings.voices) return;
+  if (singing && 'speechSynthesis' in window) { speechSynthesis.cancel(); singing = false; } // units talk over the song
   const now = performance.now();
   if (!force && now - lastSay < 1100) return;
   lastSay = now;
