@@ -501,6 +501,8 @@ function setupMenus() {
   $('vOn').checked = Voices.settings.voices; $('vTts').checked = Voices.settings.tts;
   $('vOn').onchange = () => { Voices.settings.voices = $('vOn').checked; Voices.saveSettings(); };
   $('vTts').onchange = () => { Voices.settings.tts = $('vTts').checked; Voices.saveSettings(); };
+  $('vLyrics').checked = Voices.settings.lyrics !== false;
+  $('vLyrics').onchange = () => { Voices.settings.lyrics = $('vLyrics').checked; Voices.saveSettings(); };
   $('bExport').onclick = () => Voices.exportPack(prompt('Name your voice pack:', 'my-squad-voices') || 'my-squad-voices');
   $('importFile').onchange = async e => {
     const f = e.target.files[0]; if (!f) return;
@@ -561,6 +563,7 @@ function setupMenus() {
     const once = () => { window.removeEventListener('pointerup', once, true); if (!document.fullscreenElement) goFull(); };
     window.addEventListener('pointerup', once, true);
   }
+  Audio.setLyricHandler((line, track) => { if (G.started && !G.over && Audio.isMusicOn?.()) Voices.singLine(line, track); });
   Audio.onTrackChange(name => { $('bMusic').title = `Now playing: ${name} - click to turn the music off`; if (G.started && !G.over) UI.message(`♪ Now playing: ${name}`); });
   // cheat codes (single player only; a cheating game earns no XP or medals)
   const CHEATS = {

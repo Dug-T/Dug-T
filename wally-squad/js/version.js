@@ -1,8 +1,14 @@
 // Version number and update notes. Bump VERSION and add a new entry at the top of CHANGELOG for every
 // update: players see a "What's New" screen the first time they load a new version.
-export const VERSION = '1.33';
+export const VERSION = '1.34';
 
 export const CHANGELOG = [
+  { v: '1.34', date: '2026-11-21', title: 'Sing It Loud', items: [
+    '🎤 The soundtrack now has vocals: sung "ooh" and "aah" choirs, a lead singer, "HEY!" gang shouts and a Grimlock war chant.',
+    '🗣 Choruses sing a lyric line, like "Wally Squad! Never back down!" (turn it off in the Voice Studio).',
+    '🎶 Six new tunes: Wally Squad Anthem, Grimlock War Chant, Crystal Disco, Reggae Recon, Trap Tank and Victory Gospel - 19 in all.',
+    '🔀 Tunes now play in a random shuffle: you hear every tune before any repeats.',
+  ] },
   { v: '1.33', date: '2026-11-20', title: 'Turn the Tables', items: [
     '🔄 Rotate the map! Twist two fingers on a phone, tap ⟲ / ⟳ to turn 45°, or tap the compass to snap back. (Q / E on a keyboard.)',
     '🚑 Medevac Copter: an unarmed rescue helicopter that heals every unit beneath it.',
