@@ -42,6 +42,8 @@ export const MEDALS = {
   highland:     { icon: '🏴', name: 'Braveheart', desc: 'Win a battle on Highland Glen.' },
   hunt:         { icon: '🎯', name: 'Headhunter', desc: 'Win a Hero Hunt skirmish.' },
   bloodmoon:    { icon: '🌕', name: 'Blood Moon Survivor', desc: 'Make it through a Blood Moon night.' },
+  haggis:       { icon: '🐾', name: 'Haggis Hunter', desc: 'Catch a wild haggis.' },
+  partyhat:     { icon: '🎉', name: 'Party Animal', desc: 'Win a skirmish with the Party Hats mutator.' },
   epilogue:     { icon: '🗡', name: 'Into the Fire', desc: 'Defeat Warlord Grak in the final campaign mission.' },
 };
 
@@ -82,7 +84,7 @@ export function initAchievements(run) {
   });
   on('house', (b, f) => { if (f === G.player) unlock('squatter'); });
   on('chain3', f => { if (f === G.player) unlock('shock'); });
-  on('bounty', f => { if (f === G.player) unlock('bounty'); });
+  on('bounty', (f, type) => { if (f === G.player) unlock(type === 'haggis' ? 'haggis' : 'bounty'); });
   on('infiltrate', f => { if (f === G.player) unlock('spy'); });
   on('bloodmoon', () => { if (G.buildings.some(b => !b.dead && b.faction === G.player)) unlock('bloodmoon'); });
   on('heroic', u => { if (u.faction === G.player) unlock('heroic'); });
@@ -102,6 +104,7 @@ export function initAchievements(run) {
     if (run.hunt && run.mode === 'skirmish') unlock('hunt');
     if (run.daily) unlock('daily');
     if (run.mode === 'skirmish' && run.mut && run.mut.length >= 2) unlock('mutant');
+    if (run.mode === 'skirmish' && run.mut && run.mut.includes('party')) unlock('partyhat');
     if (run.mode === 'skirmish') {
       if (run.difficulty === 'hard') unlock('commander');
       if (G.time < 15 * 60) unlock('blitz');

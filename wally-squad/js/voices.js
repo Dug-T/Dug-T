@@ -8,10 +8,23 @@ import { G } from './state.js';
 export const EVENTS = { select: 'Selected', move: 'Move order', attack: 'Attack order' };
 const DEFAULT_LINES = {
   warlord: { select: ['Grak hungers.', 'Who dares summon the Warlord?', 'Grimlock, to me!'], move: ['Grak marches!', 'Out of my way.'], attack: ['WAAAR!', 'Crush them all!', 'Feel the cannon of Grak!'] },
-  wallyman: { select: ['Wally Man is here, ya dancer!', 'Nae bother, Wally Man is oan it!', 'Haw! Who called fur a hero?', 'Och aye, cape oan, specs oan!',
-    'Wally Man, reportin fur duty!', 'Gatling is birlin, Wally Man is ready!', 'Ah am here tae save the day, so ah am!', 'Grimlocks, yer in fur it noo!',
-    'Mon then, let us huv ye!', 'Wally Man never misses, by the way!', 'Pure dead brilliant, a hero!', 'Gonnae gie them laldy!', 'Wally Man, at yer service!',
-    'Away an bile yer heid, Grimlocks!', 'Haud oan, Wally Man is comin!'], move: ['Up, up an awa!', 'Tae the rescue!', 'Ah am aff!', 'Shift yersel!'], attack: ['Gie it laldy!', 'Taste the Gatling, ya numpties!', 'Get it right up ye!', 'Wally Man, open fire!'] },
+  wallyman: {
+    select: ['Wally Man is here, ya dancer!', 'Nae bother, Wally Man is oan it!', 'Haw! Who called fur a hero?', 'Och aye, cape oan, specs oan!',
+      'Wally Man, reportin fur duty!', 'Gatling is birlin, Wally Man is ready!', 'Ah am here tae save the day, so ah am!', 'Grimlocks, yer in fur it noo!',
+      'Mon then, let us huv ye!', 'Wally Man never misses, by the way!', 'Pure dead brilliant, a hero!', 'Gonnae gie them laldy!', 'Wally Man, at yer service!',
+      'Away an bile yer heid, Grimlocks!', 'Haud oan, Wally Man is comin!', 'Awright pal? Wally Man here!', 'Haud yer wheesht, the hero has arrived!',
+      'Gonnae no dae that, Grimlocks!', 'Ah am pure buzzin fur a scrap!', 'Whit is the craic?', 'Ya wee dancer!', 'Ah am no feart!',
+      'Ah could murder a fish supper.', 'Is that you or the Irn Bru talkin?', 'Ma maw says ah am the best hero in the toon.', 'Dinnae fash yersel, Wally Man is here!',
+      'Braw day fur a battle!', 'Ah am a pure belter, so ah am!', 'Whit are ye lookin at? Ah am gorgeous!', 'Och, ma cape is aw crumpled.',
+      'Gie us a minute, ah am eatin ma piece.', 'Haw! Ah have goat ma specs oan an everything!', 'Who is a hero? Me! Ah am a hero!', 'Ah am that fast ah can catch a haggis!'],
+    move: ['Up, up an awa!', 'Tae the rescue!', 'Ah am aff!', 'Shift yersel!', 'Ah am awa!', 'Hink ah will go fur a wee wander.', 'Gaun yersel!', 'Shift, shift, shift!', 'Ah am oan ma way, keep the kettle oan!', 'Haud oan, ah am comin!'],
+    attack: ['Gie it laldy!', 'Taste the Gatling, ya numpties!', 'Get it right up ye!', 'Wally Man, open fire!', 'Ya beauty!', 'Get tore in!', 'Ye have had it noo!', 'Ah will skelp ye!', 'Gie them pelters!', 'Mon then, square go!', 'Taste ma Gatling, ya bampots!'],
+    kill: ['Ya dancer!', 'That is you telt!', 'Pure dead brilliant!', 'Away ye go!', 'Hasta la vista, bampot!', 'Ah am gonnae need a bigger kilt.', 'Another wan bites the dust!', 'Haw! Did ye see that?', 'Sorted!'],
+    hurt: ['Ah am pure wabbit!', 'Ma heid is nippin!', 'Somebody get me an Irn Bru!', 'Ah have hud better days!', 'Ow! That is gonnae leave a mark!', 'Medic! An a cup of tea!'],
+    win: ['Ya dancer! We won!', 'Pure dead brilliant! Get the kettle oan!', 'That is them telt! Who is fur chips?', 'Haw! Victory! Ah am buyin the Irn Bru!'],
+    lose: ['Aw naw... ah am gonnae greet.', 'We have been pumped, so we have.', 'Och, that is a right sair yin.'],
+    haggis: ['Haggis fur tea!', 'Ah have been chasin that wee beastie fur years!', 'Haw! Caught the haggis!'],
+  },
   dog: { select: ['Woof!', 'Arf arf!', 'Grrrr!'], move: ['Woof woof!', 'Arf!'], attack: ['GRRRR!', 'Bark bark bark!'] },
   grenadier: { select: ['Grenadier ready.', 'Who ordered the fireworks?', 'Pins out, sir!', 'Got a pocket full of boom.'], move: ['Moving. Keep your heads down.', 'On it.', 'Relocating.'], attack: ['Fire in the hole!', 'Grenade out!', 'Catch!'] },
   boomer: { select: ['Hehehe! Boom time?', 'Gimme something to blow up!', 'Ooh, shiny fuse!', 'Me go big bang!'], move: ['Running, running!', 'Hehehehe!', 'Outta my way!'], attack: ['KABOOOOM!', 'For the Legion! Hehehe!', 'Here comes the BANG!'] },
@@ -174,13 +187,28 @@ export function sayLine(text, type) {
   } catch { /* ignore */ }
 }
 
+const LAST_WORDS = {
+  inf: ['Tell my mum I was brave!', 'Not the face!', 'I only had two days to retirement!', 'Worth it!', 'Was it something I said?', 'Avenge me... or not, whatever.', 'I regret nothing!', 'Mummy!', 'I should have been a baker!', 'Is it lunch time yet?', 'Ow, ow, ow!', 'I left the oven on!'],
+  veh: ['Engine failure! And also everything else!', 'Who parked that there?!', 'I told you to check the oil!', 'Tell the mechanic it was not my fault!', 'That is going to void the warranty!', 'Abandon ship! Wait, this is a tank!'],
+  grim: ['Grak will avenge... ow.', 'Worth it! Hehe... urk.', 'Tell the Legion... I tried...', 'Not fair! Not fair!'],
+};
+let lastWordsT = 0;
+export function lastWords(unit) {
+  if (!settings.voices || !settings.tts || !('speechSynthesis' in window) || speechSynthesis.speaking) return;
+  const now = performance.now(); if (now - lastWordsT < 9000 || Math.random() > 0.2) return;
+  lastWordsT = now;
+  const pool = unit.faction === 'grim' && unit.isInf ? LAST_WORDS.grim : unit.isInf ? LAST_WORDS.inf : LAST_WORDS.veh;
+  sayLine(pool[Math.floor(Math.random() * pool.length)], unit.type);
+}
+
 // Sing a lyric line from the soundtrack (a cheerful, slightly sung-sounding computer voice)
 let singing = false;
 export function singLine(text, track) {
   if (!settings.lyrics || !settings.tts || !('speechSynthesis' in window) || speechSynthesis.speaking) return;
   try {
     const u = new SpeechSynthesisUtterance(text);
-    u.pitch = track && track.vox === 'chant' ? 0.5 : 1.45; u.rate = track && track.bpm < 100 ? 0.9 : 1.05; u.volume = 0.75;
+    const V = track && track.vox;
+    u.pitch = V === 'chant' ? 0.5 : V === 'robot' ? 0.2 : V === 'scat' ? 1.7 : 1.45; u.rate = track && track.bpm < 100 ? 0.9 : V === 'robot' ? 0.85 : 1.05; u.volume = 0.8;
     const vs = english(); u.voice = clearVoice(vs);
     singing = true; u.onend = () => { singing = false; }; setTimeout(() => { singing = false; }, 6000);
     speechSynthesis.speak(u);
@@ -202,6 +230,9 @@ export function say(type, ev, force = false) {
   const wt = G.weather && G.weather.type;
   if (type === 'wallyman' && ev === 'select' && (wt === 'rain' || wt === 'storm')) lines = ["It's pishing doon!"];
   else if (type === 'wallyman' && ev === 'select' && (wt === 'snow' || wt === 'blizzard') && Math.random() < 0.5) lines = ["It's Baltic oot here!"];
+  else if (type === 'wallyman' && ev === 'select' && G.bloodMoon && Math.random() < 0.5) lines = ["Thon moon is a pure funny colour...", "Whit is up wi the moon? It looks like a tomato!"];
+  else if (type === 'wallyman' && ev === 'select' && (G.nightLevel || 0) > 0.7 && Math.random() < 0.2) lines = ["It is gey dark, int it?", "Who turned the lights aff?"];
+  else if (type === 'wallyman' && ev === 'select' && wt === 'clear' && (G.nightLevel || 0) < 0.3 && Math.random() < 0.2) lines = ["Taps aff! It is roastin!", "Phew, it is a scorcher the day!"];
   if (!lines) return;
   // pick a line, never the same one twice in a row for this unit
   const key = type + ':' + ev;

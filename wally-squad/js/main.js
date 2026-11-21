@@ -26,7 +26,7 @@ import { issue } from './cmd.js';
 import { registerCustomUnits, loadDesigns, buildDesigner } from './customunits.js';
 import { gfx, initGraphics, pixelRatio, autoTune, buildGraphicsPanel, maxAnisotropy, isTouch, shadowInterval } from './graphics.js';
 import { allMaterials } from './materials.js';
-import { updateConvoy } from './features.js';
+import { updateConvoy, updateHaggis } from './features.js';
 import { updateCrates, animateCrates, placeTechBuildings, placeBarrels, placeHouses, recordHistory, drawHistory } from './features.js';
 import { updatePowers } from './powers.js';
 import { updateHazards } from './hazards.js';
@@ -656,6 +656,19 @@ function start() {
   // kill streaks: kills by your forces close together get a shout-out
   const streak = { n: 0, t: -99 };
   const SHOUT = { 2: 'Double kill!', 3: 'Triple kill!', 5: 'Rampage!', 8: 'Unstoppable!', 12: 'Wally Squad is on fire!', 20: 'Legendary!' };
+  // voices: Wally Man's quips, and last words from your fallen units
+  on('kill', (victim, killer) => {
+    if (victim.kind === 'unit' && victim.faction === G.player && victim.type !== 'wallyman') Voices.lastWords(victim);
+    if (killer && killer.kind === 'unit' && killer.type === 'wallyman' && killer.faction === G.player && victim.faction !== G.player && Math.random() < 0.35) Voices.say('wallyman', victim.type === 'haggis' ? 'haggis' : 'kill');
+  });
+  const hurtSaid = new Set();
+  setInterval(() => {
+    if (!G.started || G.over) return;
+    for (const u of G.units) if (u.type === 'wallyman' && u.faction === G.player && !u.dead) {
+      if (u.hp < u.maxHp * 0.35 && !hurtSaid.has(u.id)) { hurtSaid.add(u.id); Voices.say('wallyman', 'hurt', true); }
+      else if (u.hp > u.maxHp * 0.7) hurtSaid.delete(u.id);
+    }
+  }, 1000);
   on('kill', (victim, killer) => {
     if (!killer || killer.faction !== G.player || victim.faction === G.player || victim.faction === 'neutral') return;
     streak.n = G.time - streak.t < 4 ? streak.n + 1 : 1; streak.t = G.time;
@@ -679,6 +692,8 @@ function endGame(win, text, winner) {
   emit('end', win);
   Audio.announce(win ? 'Mission accomplished' : 'Mission failed');
   Audio.sting(win);
+  if (win && run.mode !== 'watch') setTimeout(() => Audio.play('cheer'), 600);
+  if (G.player === 'wally' && run.mode !== 'watch') setTimeout(() => Voices.say('wallyman', win ? 'win' : 'lose', true), 1500);
   // victory: fireworks over your base and cheering troops
   if (win) {
     G.won = run.mode !== 'watch';
@@ -765,6 +780,7 @@ function simStep(dt) {
   regrowOre(dt);
   updateCrates(dt);
   updateConvoy(dt);
+  updateHaggis(dt);
   updateHazards(dt);
   updateHill(dt);
   recordHistory(dt);

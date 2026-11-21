@@ -109,6 +109,33 @@ export function dropCrate(x, z) {
   FX.dust(x, z, 1.4);
 }
 
+// ---- a wild haggis sometimes scurries across the battlefield (more often on Highland Glen). Catch it for $500!
+let haggisT = 200, haggis = null;
+export function updateHaggis(dt) {
+  if (!['skirmish', 'mp', 'watch'].includes(G.cfg.mode) || G.over) return;
+  if (haggis) {
+    if (haggis.dead) { haggis = null; haggisT = srr(180, 300); return; }
+    haggis.life -= dt;
+    if (haggis.life <= 0) { G.announce?.('The wild haggis escaped into the heather!', G.player, 2); haggis.remove(); haggis = null; haggisT = srr(180, 300); return; }
+    if (!haggis.order && !haggis.path) {   // scurry about
+      for (let k = 0; k < 6; k++) { const a = srand() * Math.PI * 2, r = 10 + srand() * 18, x = haggis.x + Math.cos(a) * r, z = haggis.z + Math.sin(a) * r; if (Math.abs(x) < HALF - 12 && Math.abs(z) < HALF - 12 && isWalkable(cellOf(x), cellOf(z))) { haggis.moveTo(x, z); break; } }
+    }
+    return;
+  }
+  haggisT -= dt * (currentMap()?.theme === 'highland' ? 2 : 1);
+  if (haggisT > 0) return;
+  for (let k = 0; k < 40; k++) {
+    const x = srr(-HALF * 0.6, HALF * 0.6), z = srr(-HALF * 0.6, HALF * 0.6);
+    if (!isWalkable(cellOf(x), cellOf(z)) || Object.values(BASES).some(b => Math.hypot(b.x - x, b.z - z) < 40)) continue;
+    haggis = new Unit('haggis', 'neutral', x, z, srand() * 6.28);
+    haggis.stance = 'holdfire'; haggis.life = 100;
+    G.announce?.(`A wild haggis has appeared! Catch it for $${UNITS.haggis.bounty}!`, G.player, 3);
+    G.alertAt = { x, z, t: G.time };
+    return;
+  }
+  haggisT = 30;
+}
+
 export function updateCrates(dt) {
   if (G.cfg.crates === false) return;
   crateT -= dt;

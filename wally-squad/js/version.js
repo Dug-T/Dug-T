@@ -1,8 +1,17 @@
 // Version number and update notes. Bump VERSION and add a new entry at the top of CHANGELOG for every
 // update: players see a "What's New" screen the first time they load a new version.
-export const VERSION = '1.34';
+export const VERSION = '1.35';
 
 export const CHANGELOG = [
+  { v: '1.35', date: '2026-11-21', title: 'Pure Dead Brilliant', items: [
+    '🏴 Wally Man has loads more Scottish slang - and now talks when he gets a kill, when he is hurt, and when you win or lose. Try selecting him on a sunny day ("Taps aff!") or under a Blood Moon.',
+    '🐾 A wild haggis sometimes scurries across the battlefield (especially on Highland Glen). Catch it for $500!',
+    '😂 Fallen units sometimes say their last words ("Not the face!"), soldiers go "oof!", and a crowd cheers when you win.',
+    '💃 Soldiers left standing around too long get bored and start dancing.',
+    '🎤 Every one of the 19 tunes now sings - in the verses as well as the choruses - with new scat ("doo-bah") and robot singers, harmonies, call-and-response and lots more sung lyric lines.',
+    '🎉 New mutator: Party Hats - everyone wears a party hat.',
+    '🎖 New medals: Haggis Hunter and Party Animal.',
+  ] },
   { v: '1.34', date: '2026-11-21', title: 'Sing It Loud', items: [
     '🎤 The soundtrack now has vocals: sung "ooh" and "aah" choirs, a lead singer, "HEY!" gang shouts and a Grimlock war chant.',
     '🗣 Choruses sing a lyric line, like "Wally Squad! Never back down!" (turn it off in the Voice Studio).',

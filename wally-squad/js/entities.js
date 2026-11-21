@@ -171,6 +171,16 @@ export class Unit {
     this.rotor2 = this.mesh.getObjectByName('rotor2');
     this.wingL = this.mesh.getObjectByName('wingL'); this.wingR = this.mesh.getObjectByName('wingR');
     this.arm = this.mesh.getObjectByName('arm');
+    if (hasMut(G.cfg, 'party') && faction !== 'neutral') { // Party Hats mutator
+      const top = new THREE.Box3().setFromObject(this.mesh).max.y, sc = this.isInf ? 1 : 1.7;
+      const hat = new THREE.Group();
+      const col = new THREE.Color().setHSL(Math.random(), 0.85, 0.55);
+      const cone = new THREE.Mesh(new THREE.ConeGeometry(0.16 * sc, 0.45 * sc, 12), new THREE.MeshStandardMaterial({ color: col, roughness: 0.6 }));
+      cone.position.y = 0.22 * sc; hat.add(cone);
+      const pom = new THREE.Mesh(new THREE.SphereGeometry(0.07 * sc, 8, 6), new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0x444444 }));
+      pom.position.y = 0.47 * sc; hat.add(pom);
+      hat.position.y = top - 0.05; hat.rotation.z = 0.15; this.mesh.add(hat);
+    }
     if (this.def.shield) { // shimmering bubble around a Shield Projector
       const mat = new THREE.MeshBasicMaterial({ color: new THREE.Color(0.35, 0.8, 1.6), transparent: true, opacity: 0.12, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending });
       this.bubble = new THREE.Mesh(new THREE.SphereGeometry(1, 28, 14, 0, Math.PI * 2, 0, Math.PI / 2), mat);
@@ -711,6 +721,13 @@ export class Unit {
       m.position.set(this.x, this.y + cheer, this.z);
       m.rotation.set(0, this.heading, 0);
       const walking = this.speedNow > 0.3;
+      // bored soldiers left standing around long enough start to dance (purely for fun)
+      this.stillT = !walking && !this.target && !this.order && !this.boarded ? (this.stillT || 0) + dt : 0;
+      if (this.stillT > 25 && this.mesh.visible) {
+        const k = G.time * 6 + this.id;
+        m.position.y += Math.abs(Math.sin(k)) * 0.22;
+        m.rotation.set(0, this.heading + Math.sin(k * 0.5) * 1.3, Math.sin(k) * 0.12);
+      }
       if (walking) this.walkPhase += dt * this.speedNow * 3.2;
       const sw = walking ? Math.sin(this.walkPhase) * 0.6 : 0;
       if (this.legs[0]) { this.legs[0].rotation.x = sw; this.legs[1].rotation.x = -sw; }
@@ -808,9 +825,10 @@ export class Unit {
     if (this.passengers && this.passengers.length) ejectPassengers(this, 0.5, killer);
     if (this.def.bounty && killer && G.players[killer.faction] && killer.faction !== 'neutral') {
       G.players[killer.faction].credits += this.def.bounty;
-      G.announce?.(killer.faction === G.player ? `Convoy destroyed! +$${this.def.bounty.toLocaleString()} bounty` : 'The enemy has claimed the convoy bounty', G.player, 3);
+      const what = this.type === 'haggis' ? 'Haggis caught' : 'Convoy destroyed';
+      G.announce?.(killer.faction === G.player ? `${what}! +$${this.def.bounty.toLocaleString()} bounty` : `The enemy has claimed the ${this.type === 'haggis' ? 'haggis' : 'convoy'} bounty`, G.player, 3);
       FX.sparkBurst(this.x, this.y + 1.5, this.z, 50, [4, 3.2, 0.8, 1]);
-      emit('bounty', killer.faction);
+      emit('bounty', killer.faction, this.type);
     }
     this.dead = true;
     this.setSelected(false);
@@ -830,7 +848,7 @@ export class Unit {
     if (this.isInf) {
       FX.smallHit(this.x, this.y + 1, this.z, 'bullet');
       FX.dust(this.x, this.z, 1);
-      G.sfx?.play('scream', this.x, this.z);
+      G.sfx?.play(Math.random() < 0.5 ? 'oof' : 'scream', this.x, this.z);
       let t = 0; const fall = rr(0.8, 1.4) * (Math.random() < 0.5 ? -1 : 1);
       if (this.legs[0]) { this.legs[0].rotation.x = 0; this.legs[1].rotation.x = 0; }
       decay.push({ update: dt => {

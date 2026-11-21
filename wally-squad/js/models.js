@@ -751,6 +751,31 @@ export function makeMedevac(faction) {
   });
 }
 
+// Wild Haggis: a furry ball in a tartan bonnet. Its left legs are longer than its right ones, for running round hills.
+export function makeHaggis() {
+  return cached('haggis', () => {
+    const m = M();
+    const fur = new THREE.MeshStandardMaterial({ color: 0x7a5232, roughness: 1, flatShading: true });
+    const tartan = new THREE.MeshStandardMaterial({ color: 0x2a5a3a, roughness: 0.85 });
+    const root = new THREE.Group();
+    const b = new Builder();
+    b.sph(fur, 0.42, 0, 0.62, 0, 1.1, 0.85, 1.2);
+    b.sph(fur, 0.22, 0, 0.75, 0.42);                                   // head
+    b.sph(m.black, 0.04, 0.08, 0.8, 0.6); b.sph(m.black, 0.04, -0.08, 0.8, 0.6); // eyes
+    b.sph(m.lampRed, 0.035, 0, 0.72, 0.64);                            // nose
+    b.cyl(tartan, 0.2, 0.2, 0.05, 12, 0, 0.97, 0.38);                  // tam o' shanter
+    b.cyl(m.lampRed, 0.21, 0.21, 0.02, 12, 0, 0.95, 0.38);
+    b.sph(m.lampRed, 0.06, 0, 1.03, 0.38);                             // bobble
+    root.add(b.build());
+    for (const [x, z, len] of [[0.22, 0.18, 0.5], [0.22, -0.18, 0.5], [-0.22, 0.18, 0.3], [-0.22, -0.18, 0.3]]) {
+      const lb = new Builder(); lb.box(fur, 0.09, len, 0.09, 0, -len / 2, 0); lb.box(m.black, 0.1, 0.05, 0.12, 0, -len, 0.02);
+      const leg = lb.build(); leg.position.set(x, 0.42, z); leg.name = 'leg'; root.add(leg);
+    }
+    root.userData.muzzle = new THREE.Vector3(0, 0.7, 0.5);
+    return root;
+  });
+}
+
 export function makeJet(faction) {
   return cached(`jet-${faction}`, () => {
     const t = mats(faction), m = M();
@@ -1320,6 +1345,7 @@ export function makeUnitModel(type, faction) {
     case 'inferno': return makeInferno(faction);
     case 'wallyman': return makeWallyMan(faction);
     case 'dog': return makeDog(faction);
+    case 'haggis': return makeHaggis();
     case 'medevac': return makeMedevac(faction);
     case 'burrower': return makeBurrower(faction);
     case 'catapult': return makeCatapult(faction);
