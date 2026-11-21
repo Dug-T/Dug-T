@@ -10,7 +10,7 @@ const saveMaps = list => { try { localStorage.setItem(KEY, JSON.stringify(list))
 
 const WEATHER_BY_THEME = {
   temperate: ['clear', 'clear', 'rain', 'fog', 'storm'], snow: ['snow', 'snow', 'clear', 'fog', 'blizzard'],
-  desert: ['clear', 'clear', 'sandstorm', 'clear'], autumn: ['clear', 'clear', 'rain', 'fog', 'storm'], blossom: ['clear', 'clear', 'rain', 'fog'], highland: ['rain', 'rain', 'fog', 'clear', 'storm'], night: ['clear', 'rain', 'fog', 'storm'],
+  desert: ['clear', 'clear', 'sandstorm', 'clear'], autumn: ['clear', 'clear', 'rain', 'fog', 'storm'], blossom: ['clear', 'clear', 'rain', 'fog'], highland: ['rain', 'rain', 'fog', 'clear', 'storm'], canyon: ['clear', 'clear', 'sandstorm', 'clear', 'fog'], night: ['clear', 'rain', 'fog', 'storm'],
 };
 const rnd = () => Math.round((Math.random() - 0.5) * 200);
 
@@ -144,7 +144,7 @@ export function buildMapEditor(el, onPlay) {
     if (tool === 'road') { const b = document.createElement('button'); b.className = 'btn chip'; b.textContent = '+ New road'; b.onclick = () => { if (d.roads.length < 4) d.roads.push([]); renderControls(); }; $('#meTools').appendChild(b); }
     $('#meHint').textContent = HINTS[tool];
     $('#meTheme').innerHTML = '';
-    for (const t of ['temperate', 'autumn', 'blossom', 'highland', 'snow', 'desert', 'night']) { const b = document.createElement('button'); b.className = 'btn chip' + (d.theme === t ? ' on' : ''); b.textContent = { temperate: '🌳 Green', autumn: '🍂 Autumn', blossom: '🌸 Blossom', highland: '🏴 Highland', snow: '❄ Snow', desert: '🏜 Desert', night: '🌙 Night' }[t]; b.onclick = () => { d.theme = t; renderControls(); schedulePreview(); }; $('#meTheme').appendChild(b); }
+    for (const t of ['temperate', 'autumn', 'blossom', 'highland', 'canyon', 'snow', 'desert', 'night']) { const b = document.createElement('button'); b.className = 'btn chip' + (d.theme === t ? ' on' : ''); b.textContent = { temperate: '🌳 Green', autumn: '🍂 Autumn', blossom: '🌸 Blossom', highland: '🏴 Highland', canyon: '🏜 Canyon', snow: '❄ Snow', desert: '🏜 Desert', night: '🌙 Night' }[t]; b.onclick = () => { d.theme = t; renderControls(); schedulePreview(); }; $('#meTheme').appendChild(b); }
     $('#meSize').value = size; $('#meSizeV').textContent = size;
     $('#meRidge').value = d.ridge; $('#meRidgeV').textContent = d.ridge < 35 ? 'few' : d.ridge < 65 ? 'some' : 'lots';
     $('#meForest').value = Math.round((0.4 - d.forest) / 0.4 * 100); $('#meForestV').textContent = d.forest > 0.25 ? 'few' : d.forest > 0.08 ? 'some' : 'lots';

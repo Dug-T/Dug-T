@@ -103,6 +103,23 @@ export const MAPS = {
     ridge: 55, forest: 0.07,
     theme: 'volcanic', weather: ['clear', 'ashfall', 'clear', 'fog', 'ashfall'],
   },
+  canyon: {
+    name: 'Red Canyon', desc: 'Towering red-rock mesas, winding canyon roads, cactus and two shady oases. Watch out for sandstorms.',
+    seed: [-12, 47, 83, -31],
+    slots: [{ x: -100, z: 40 }, { x: 100, z: -40 }],
+    lanes: [
+      [[-100, 40], [0, 0], [100, -40]],
+      [[-100, 40], [-60, -40], [20, -90], [100, -40]],
+      [[-100, 40], [-20, 90], [60, 40], [100, -40]],
+    ],
+    ore: [
+      { x: -118, z: 8, r: 10 }, { x: -108, z: 82, r: 9 }, { x: 118, z: -8, r: 10 }, { x: 108, z: -82, r: 9 },
+      { x: 0, z: 0, r: 8, rich: 1 }, { x: 0, z: -55, r: 7 }, { x: 0, z: 55, r: 7 },
+    ],
+    lakes: [{ x: -40, z: -22, r: 9 }, { x: 40, z: 22, r: 9 }],
+    ridge: 62, forest: 0.06,
+    theme: 'canyon', weather: ['clear', 'clear', 'sandstorm', 'clear', 'fog'],
+  },
   highland: {
     name: 'Highland Glen', desc: 'A misty Scottish glen of heather, pines and dark lochs, with shaggy Highland cows. Bring a brolly - it is usually pishing doon.',
     seed: [17, 88, -29, 40],
@@ -158,6 +175,12 @@ export const MAPS = {
 
 // Visual themes
 export const THEMES = {
+  canyon: {
+    grass1: 0xc0703a, grass2: 0xd8905a, dirt: 0xa0522d, rock: 0x8a3a20, sand: 0xe0a070, mud: 0x6a3a20, base: 0xb08060,
+    oreTint: 0x9a7a4a, water: 0x2a7a8a,
+    skyTop: 0x4a7ab8, horizon: 0xf0c8a0, skyBottom: 0x9a5a3a, sun: 0xffe0b8, sunI: 3.4, hemiSky: 0xffe2c8, hemiGround: 0x8a4a2a, hemiI: 0.8,
+    trees: { cactus: 0.65, dead: 0.35 }, rockTint: [0.03, 0.5, 0.4],
+  },
   highland: {
     grass1: 0x6a8c44, grass2: 0x94709e, dirt: 0x7a6a52, rock: 0x8a8076, sand: 0xb8a888, mud: 0x3e3a30, base: 0x8a8478,
     oreTint: 0x5a6a48, water: 0x1e3a48, animals: 'highland',

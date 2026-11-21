@@ -41,6 +41,8 @@ const DEFAULT_LINES = {
   blink: { select: ['Blink Trooper, phase locked.', 'Now you see me...', 'Ready to jump.'], move: ['Blinking!', 'Zip!', 'See you there!'], attack: ['Laser online!', 'Surprise!'] },
   burrower: { select: ['Drill spinning!', 'Dig dig dig!', 'Tunnel Drill ready!'], move: ['Going under!', 'Diggin in!'], attack: ['DRILL THEM!', 'Bursting out!'] },
   medevac: { select: ['Medevac standing by.', 'Who needs patching up?', 'Rescue chopper ready!'], move: ['On my way.', 'Inbound to the wounded.'], attack: ['I am a medic, not a gunship!', 'Holding over the troops.'] },
+  freezetank: { select: ['Freeze Tank, chilled and ready.', 'Stay frosty!', 'Ice to meet you!'], move: ['Rolling, nice and cool.', 'Brrr, moving out.'], attack: ['Freeze!', 'Chill out!', 'Ice ice, baby!'] },
+  toxic: { select: ['Smells funny, hehe!', 'Toxic Trooper, ready to stink!', 'Who wants a whiff?'], move: ['Stinking along.', 'Pee-yew, moving.'], attack: ['Gas them!', 'Breathe deep, hehe!', 'Smell THIS!'] },
   rifle: { select: ['Rifleman reporting.', 'Ready for action!'], move: ['Moving out.', 'On my way.'], attack: ['Opening fire!', 'Engaging!'] },
   rocket: { select: ['Rockets loaded.', 'Anti-armour ready.'], move: ['Relocating.'], attack: ['Rocket away!', 'Tank spotted!'] },
   flamer: { select: [

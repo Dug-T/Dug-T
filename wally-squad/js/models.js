@@ -162,6 +162,12 @@ export function makeInfantry(type, faction) {
       b.box(glow, 0.24, 0.07, 0.05, 0, 1.45, 0.16);
       b.add(new THREE.TorusGeometry(0.17, 0.035, 6, 16), glow, 0, 1.08, -0.3);
     }
+    if (type === 'toxic') { // gas mask and two green toxin tanks
+      const tox = new THREE.MeshStandardMaterial({ color: 0x7adc3a, emissive: 0x2a6a10, roughness: 0.5 });
+      b.sph(m.darkMetal, 0.12, 0, 1.4, 0.14, 1, 0.8, 0.7);
+      b.cyl(m.black, 0.05, 0.05, 0.1, 8, 0, 1.33, 0.22, Math.PI / 2, 0, 0);
+      for (const s2 of [-1, 1]) b.cyl(tox, 0.09, 0.09, 0.48, 10, s2 * 0.1, 1.05, -0.28);
+    }
     if (type === 'grenadier') { // bandolier of grenades
       b.box(m.cloth, 0.08, 0.62, 0.05, 0, 1.02, 0.15, 0, 0, 0.75);
       for (let i = 0; i < 4; i++) b.sph(m.gun, 0.05, -0.15 + i * 0.1, 0.88 + i * 0.11, 0.19);
@@ -181,6 +187,8 @@ export function makeInfantry(type, faction) {
       b.cyl(m.darkMetal, 0.07, 0.07, 0.1, 10, 0.05, 0.98, 0.8, Math.PI / 2, 0, 0);
     } else if (type === 'blink') {
       b.box(m.gun, 0.07, 0.12, 0.8, 0.05, 1.0, 0.5); b.box(new THREE.MeshStandardMaterial({ color: 0x9fe8ff, emissive: 0x40d8ff, emissiveIntensity: 2.4 }), 0.05, 0.05, 0.3, 0.05, 1.08, 0.55); // laser rifle
+    } else if (type === 'toxic') {
+      b.cyl(m.gun, 0.08, 0.1, 0.6, 10, 0.05, 1.02, 0.5, Math.PI / 2, 0, 0); b.cyl(new THREE.MeshStandardMaterial({ color: 0x7adc3a, emissive: 0x2a6a10 }), 0.06, 0.06, 0.05, 10, 0.05, 1.02, 0.82, Math.PI / 2, 0, 0);
     } else if (type === 'piper' || type === 'drummer') {
       // hands busy with the music - no gun
     } else if (type === 'grenadier') {
@@ -776,6 +784,61 @@ export function makeHaggis() {
   });
 }
 
+// Freeze Tank: a pale armoured tank whose turret carries a frosty cryo emitter
+export function makeFreezeTank(faction) {
+  return cached(`freezetank-${faction}`, () => {
+    const t = mats(faction), m = M();
+    const ice = new THREE.MeshStandardMaterial({ color: 0xbfe8ff, emissive: 0x3a9adf, emissiveIntensity: 1.6, roughness: 0.25 });
+    const pale = new THREE.MeshStandardMaterial({ color: 0xe6eef4, roughness: 0.6 });
+    const root = new THREE.Group();
+    const hull = new Builder();
+    trackUnit(hull, -1, 3.3, 0.7, 0.6, 0.38, faction);
+    trackUnit(hull, 1, 3.3, 0.7, 0.6, 0.38, faction);
+    hull.box(pale, 1.9, 0.55, 3.0, 0, 0.75, 0);
+    hull.box(t.team, 1.95, 0.12, 3.05, 0, 1.06, 0);
+    hull.box(m.darkMetal, 0.8, 0.3, 0.6, 0, 1.0, -1.3);
+    root.add(hull.build());
+    const tb = new Builder();
+    tb.cyl(pale, 0.75, 0.9, 0.45, 10, 0, 0, 0);
+    tb.box(t.team, 0.9, 0.12, 0.9, 0, 0.25, -0.1);
+    for (const s of [-1, 1]) tb.cyl(m.metal, 0.12, 0.12, 0.8, 8, s * 0.45, 0.1, -0.3, Math.PI / 2, 0, 0); // coolant tanks
+    tb.cyl(m.darkMetal, 0.14, 0.2, 1.7, 10, 0, 0.05, 1.2, Math.PI / 2, 0, 0);
+    for (let i = 0; i < 3; i++) tb.add(new THREE.TorusGeometry(0.2, 0.04, 6, 12), ice, 0, 0.05, 0.7 + i * 0.4);
+    tb.sph(ice, 0.17, 0, 0.05, 2.1);
+    const tur = tb.build(); tur.position.set(0, 1.35, 0); tur.name = 'turret';
+    root.add(tur);
+    root.userData.muzzle = new THREE.Vector3(0, 0.05, 2.2);
+    return root;
+  });
+}
+
+// Ice Cream Van: pastel van with a giant cone on the roof
+export function makeIceCreamVan() {
+  return cached('icecream', () => {
+    const m = M();
+    const pink = new THREE.MeshStandardMaterial({ color: 0xffb6d2, roughness: 0.5 });
+    const cream = new THREE.MeshStandardMaterial({ color: 0xfff4dc, roughness: 0.5 });
+    const cone = new THREE.MeshStandardMaterial({ color: 0xd89a4a, roughness: 0.8 });
+    const root = new THREE.Group();
+    const b = new Builder();
+    for (const z of [1.0, -1.0]) for (const x of [-0.85, 0.85]) wheel(b, m.metal, x, 0.42, z, 0.42, 0.3);
+    b.box(cream, 1.7, 1.5, 3.3, 0, 1.3, 0);
+    b.box(pink, 1.72, 0.45, 3.32, 0, 0.75, 0);
+    for (let i = 0; i < 5; i++) b.box(pink, 0.3, 0.12, 0.02, -0.6 + i * 0.3, 2.0, 1.66); // scalloped trim
+    b.box(m.glass, 1.4, 0.5, 0.04, 0, 1.55, 1.66);
+    b.box(m.glass, 0.04, 0.6, 1.2, 0.86, 1.45, -0.2);               // serving hatch
+    b.box(pink, 0.06, 0.08, 1.3, 0.9, 1.1, -0.2);
+    b.add(new THREE.ConeGeometry(0.35, 0.9, 10).rotateX(Math.PI), cone, 0, 2.55, -0.4);  // giant cone
+    b.sph(new THREE.MeshStandardMaterial({ color: 0xfff8f0, roughness: 0.6 }), 0.38, 0, 3.05, -0.4);
+    b.sph(new THREE.MeshStandardMaterial({ color: 0xff6aa8, roughness: 0.6 }), 0.28, 0, 3.4, -0.4);
+    b.sph(m.lampRed, 0.08, 0, 3.7, -0.4);                              // cherry on top
+    b.box(m.lampWhite, 0.2, 0.1, 0.04, 0.55, 0.9, 1.66); b.box(m.lampWhite, 0.2, 0.1, 0.04, -0.55, 0.9, 1.66);
+    root.add(b.build());
+    root.userData.muzzle = new THREE.Vector3(0, 1.5, 1.7);
+    return root;
+  });
+}
+
 export function makeJet(faction) {
   return cached(`jet-${faction}`, () => {
     const t = mats(faction), m = M();
@@ -1345,6 +1408,8 @@ export function makeUnitModel(type, faction) {
     case 'inferno': return makeInferno(faction);
     case 'wallyman': return makeWallyMan(faction);
     case 'dog': return makeDog(faction);
+    case 'freezetank': return makeFreezeTank(faction);
+    case 'icecream': return makeIceCreamVan();
     case 'dragon': { const d = makeWyvern('neutral', 0x8a1a12); d.scale.setScalar(2.6); return d; }
     case 'haggis': return makeHaggis();
     case 'medevac': return makeMedevac(faction);

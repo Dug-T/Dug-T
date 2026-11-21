@@ -46,6 +46,8 @@ export const MEDALS = {
   partyhat:     { icon: '🎉', name: 'Party Animal', desc: 'Win a skirmish with the Party Hats mutator.' },
   dragon:       { icon: '🐉', name: 'Dragonslayer', desc: 'Slay an Ancient Dragon.' },
   bonus3:       { icon: '🎯', name: 'Overachiever', desc: 'Complete all three bonus objectives in one skirmish.' },
+  monster:      { icon: '🍦', name: 'You Monster', desc: 'Blow up the ice cream van.' },
+  canyon:       { icon: '🏜', name: 'Canyon Conqueror', desc: 'Win a battle on Red Canyon.' },
   epilogue:     { icon: '🗡', name: 'Into the Fire', desc: 'Defeat Warlord Grak in the final campaign mission.' },
 };
 
@@ -90,6 +92,7 @@ export function initAchievements(run) {
   on('infiltrate', f => { if (f === G.player) unlock('spy'); });
   on('bloodmoon', () => { if (G.buildings.some(b => !b.dead && b.faction === G.player)) unlock('bloodmoon'); });
   on('bonus3', () => unlock('bonus3'));
+  on('monster', () => unlock('monster'));
   on('heroic', u => { if (u.faction === G.player) unlock('heroic'); });
   on('crate', f => { if (f === G.player && ++session.crates >= 5) unlock('crates'); });
   on('capture', (b, f) => { if (f === G.player) unlock('capture'); });
@@ -103,6 +106,7 @@ export function initAchievements(run) {
     if (run.map === 'autumn') unlock('autumn');
     if (run.map === 'blossom') unlock('blossom');
     if (run.map === 'highland') unlock('highland');
+    if (run.map === 'canyon') unlock('canyon');
     if (run.koth && run.mode === 'skirmish') unlock('koth');
     if (run.hunt && run.mode === 'skirmish') unlock('hunt');
     if (run.daily) unlock('daily');
