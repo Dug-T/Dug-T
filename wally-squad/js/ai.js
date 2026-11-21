@@ -115,6 +115,11 @@ export class AI {
     this.saving = false;
     // low power? build power first
     if (P.powerUse > P.powerProd - 10 && hasReqs(this.f, 'power') && P.credits > 300) { enqueue(this.f, 'power'); return; }
+    // a navy, on maps with enough water near the base
+    if (G.navalMap && this.t > 240 && this.count('factory') && !this.count('shipyard') && available(this.f, 'shipyard') && hasReqs(this.f, 'shipyard') && P.credits > 300 && (this.navalCheckT || 0) < this.t) {
+      this.navalCheckT = this.t + 120;
+      if (this.findSpot('shipyard')) { enqueue(this.f, 'shipyard'); return; }
+    }
     const need = {};
     for (const t of BUILD_ORDER) {
       if (!available(this.f, t)) continue;
@@ -131,6 +136,16 @@ export class AI {
 
   findSpot(type) {
     const d = BUILDINGS[type];
+    if (d.naval) { // search the shoreline near the base
+      const b0 = this.base; if (!b0) return null;
+      const cx0 = cellOf(b0.x), cz0 = cellOf(b0.z);
+      let best = null, bs = 1e9;
+      for (let j = -24; j <= 24; j += 1) for (let i = -24; i <= 24; i += 1) {
+        const r = Math.hypot(i, j); if (r > 24 || r >= bs) continue;
+        if (canPlace(this.f, type, cx0 + i, cz0 + j)) { bs = r; best = { x: cx0 + i, z: cz0 + j }; }
+      }
+      return best;
+    }
     const base = this.base;
     const cx0 = cellOf(base.x), cz0 = cellOf(base.z);
     const defensive = !!d.weapon;
@@ -179,6 +194,11 @@ export class AI {
         if (t === 'engineer' && srand() < 0.7) t = 'rifle';
         enqueue(this.f, t);
       }
+    }
+    if (P.queues.naval && !P.queues.naval.items.length && this.count('shipyard') && srand() < 0.5) {
+      const navy = G.units.filter(u => u.faction === this.f && !u.dead && u.def.naval).length;
+      const opts = ['gunboat', 'gunboat', 'destroyer', 'destroyer', 'submarine', 'battleship'].filter(t => hasReqs(this.f, t));
+      if (navy < 6 && opts.length) enqueue(this.f, opts[Math.floor(srand() * opts.length)]);
     }
     if (P.queues.air && P.queues.air.items.length < 1 && this.t > 360 && srand() < 0.15 && hasReqs(this.f, 'jet')) enqueue(this.f, 'jet');
     if (P.queues.vehicle.items.length < 2) {

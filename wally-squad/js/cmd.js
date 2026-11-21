@@ -8,9 +8,11 @@ import { formationSlots } from './pathfind.js';
 import { T, cellOf, idx, cellCenter } from './terrain.js';
 import { fireSuperweapon } from './superweapons.js';
 import { usePower } from './powers.js';
+import { recordCommand } from './replay.js';
 
 export function issue(c) {
   c.f = c.f || G.player;
+  if (G.replay) return; // watching a replay: the recorded commands drive the battle
   if (G.net) { if (G.net.active) G.net.queue(c); return; } // online: nothing runs until the match starts
   execute(c);
 }
@@ -21,6 +23,7 @@ const myUnits = c => (c.ids || []).map(id => mine(c, id)).filter(e => e && e.kin
 export function execute(c) {
   const P = G.players[c.f];
   if (!P) return;
+  recordCommand(c);
   switch (c.t) {
     case 'move': {
       let units = myUnits(c);
@@ -66,7 +69,7 @@ export function execute(c) {
     case 'super': fireSuperweapon(c.f, c.x, c.z); break;
     case 'power': usePower(c.f, c.type, c.x, c.z); break;
     case 'surrender': G.surrendered = c.f; break;
-    case 'repeat': { const q = P.queues[c.q]; if (q && ['infantry', 'vehicle', 'air'].includes(c.q)) q.repeat = !!c.on; break; }
+    case 'repeat': { const q = P.queues[c.q]; if (q && ['infantry', 'vehicle', 'air', 'naval'].includes(c.q)) q.repeat = !!c.on; break; }
     case 'spawn': if (G.cfg.mode === 'sandbox' && UNITS[c.type]) for (let i = 0; i < (c.n || 1); i++) { const a = i * 2.4, r = i ? 1.6 + i * 0.5 : 0; new Unit(c.type, c.side, c.x + Math.cos(a) * r, c.z + Math.sin(a) * r, Math.PI); } break;
   }
 }

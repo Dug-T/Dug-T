@@ -137,6 +137,7 @@ function canTarget(w, e) {
   if (e.cloaked) return false;
   if (e.burrowed) return false; // a Tunnel Drill underground can't be hit
   if (e.kind === 'building' && e.def.isMine) return false;
+  if (w.navalOnly && !(e.kind === 'unit' && e.def.naval)) return false; // torpedoes only hit ships
   const air = e.kind === 'unit' && e.def.air;
   return air ? w.air : w.ground;
 }
@@ -168,6 +169,7 @@ export class Unit {
     this.cape = this.mesh.getObjectByName('cape'); this.barrels = this.mesh.getObjectByName('barrels');
     this.loadMesh = this.mesh.getObjectByName('load');
     this.fans = this.mesh.getObjectByName('fans');
+    this.prop = this.mesh.getObjectByName('prop');
     this.rotor2 = this.mesh.getObjectByName('rotor2');
     this.wingL = this.mesh.getObjectByName('wingL'); this.wingR = this.mesh.getObjectByName('wingR');
     this.arm = this.mesh.getObjectByName('arm');
@@ -283,7 +285,7 @@ export class Unit {
 
   requestPath(x, z, ignoreId = 0) {
     if (this.air) { this.path = [{ x, z }]; this.pi = 0; return; }
-    this.path = findPath(this.x, this.z, x, z, { ignoreId, gate: FACIDX[this.faction], hover: !!this.def.hover });
+    this.path = findPath(this.x, this.z, x, z, { ignoreId, gate: FACIDX[this.faction], hover: !!this.def.hover, naval: !!this.def.naval });
     this.pi = 0; this.stuckT = 0;
     this.pathGoal = { x, z, ignoreId };
   }
@@ -686,6 +688,7 @@ export class Unit {
     const cx = cellOf(x), cz = cellOf(z);
     if (!inGrid(cx, cz)) return false;
     const i = idx(cx, cz);
+    if (this.def.naval) return !!T.water[i] && !T.tree[i] && !T.bld[i];
     if (T.blocked[i] && !(this.def.hover && T.water[i] && !T.tree[i])) return false;
     const b = T.bld[i];
     if (b) {
@@ -740,16 +743,20 @@ export class Unit {
         this.barrels.rotation.z += this.spin * dt;
       }
     } else {
-      this.y = this.def.hover ? Math.max(gy, WATER_LEVEL) + 0.15 + Math.sin(G.time * 3 + this.id) * 0.06 : gy; // hovercraft float over water and lava
+      this.y = this.def.naval ? WATER_LEVEL - (this.type === 'submarine' && this.cloaked ? 1.1 : 0.05) + Math.sin(G.time * 1.6 + this.id) * 0.08 // ships ride the waves; a submerged submarine sinks out of sight
+        : this.def.hover ? Math.max(gy, WATER_LEVEL) + 0.15 + Math.sin(G.time * 3 + this.id) * 0.06 : gy; // hovercraft float over water and lava
       if (this.fans) for (const f of this.fans.children) f.rotation.z += dt * 30;
+      if (this.prop) this.prop.rotation.z += dt * (2 + this.speedNow * 4);
       // tread / tyre tracks behind ground vehicles
-      if (!this.def.hover && !this.def.walker && this.speedNow > 0.5 && this.mesh.visible) {
+      if (this.def.naval && this.speedNow > 1 && Math.random() < dt * 6 * (this.speedNow / this.def.speed) && this.mesh.visible && !(this.type === 'submarine' && this.cloaked)) FX.splash(this.x - Math.sin(this.heading) * this.def.radius, WATER_LEVEL, this.z - Math.cos(this.heading) * this.def.radius, 0.35); // bow wake
+      if (!this.def.hover && !this.def.walker && !this.def.naval && this.speedNow > 0.5 && this.mesh.visible) {
         this.trackD = (this.trackD || 0) + this.speedNow * dt;
         if (this.trackD > 0.55) { this.trackD = 0; FX.trackMark(this.x - Math.sin(this.heading) * this.def.radius * 0.7, this.z - Math.cos(this.heading) * this.def.radius * 0.7, this.heading, this.def.radius * 0.55); }
       }
       if (this.def.hover && this.speedNow > 1 && Math.random() < dt * 8 && this.mesh.visible) FX.dust(this.x - Math.sin(this.heading) * 1.5, this.z - Math.cos(this.heading) * 1.5, 0.6);
       m.position.set(this.x, this.y, this.z);
       normalAt(this.x, this.z, _n);
+      if (this.def.naval) _n.set(Math.sin(G.time * 1.3 + this.id) * 0.03, 1, Math.cos(G.time * 1.1 + this.id) * 0.03).normalize(); // gentle roll on the swell
       if (!this.sn) this.sn = _n.clone();
       this.sn.lerp(_n, Math.min(1, dt * 6)).normalize();
       _q1.setFromUnitVectors(UP, this.sn);

@@ -120,6 +120,24 @@ export const MAPS = {
     ridge: 62, forest: 0.06,
     theme: 'canyon', weather: ['clear', 'clear', 'sandstorm', 'clear', 'fog'],
   },
+  loch: {
+    name: 'Kelpie Loch', desc: 'A great sea loch splits the glen in two. Build a Shipyard on the shore and rule the waves - or march round the long way by land.',
+    seed: [52, -17, 73, -8],
+    slots: [{ x: -100, z: 0 }, { x: 100, z: 0 }],
+    lanes: [
+      [[-100, 0], [-84, 70], [-40, 104], [40, 104], [84, 70], [100, 0]],
+      [[-100, 0], [-84, -70], [-40, -104], [40, -104], [84, -70], [100, 0]],
+    ],
+    ore: [
+      { x: -112, z: 56, r: 10 }, { x: -112, z: -56, r: 10 }, { x: 112, z: 56, r: 10 }, { x: 112, z: -56, r: 10 },
+      { x: 0, z: 0, r: 7, rich: 1 }, { x: 0, z: 104, r: 7 }, { x: 0, z: -104, r: 7 },
+    ],
+    lakes: [{ x: 0, z: -62, r: 30 }, { x: 0, z: -24, r: 32 }, { x: 0, z: 24, r: 32 }, { x: 0, z: 62, r: 30 },
+      { x: -36, z: 0, r: 18 }, { x: -58, z: 0, r: 17 }, { x: 36, z: 0, r: 18 }, { x: 58, z: 0, r: 17 },
+      { x: -30, z: -60, r: 16 }, { x: 30, z: 60, r: 16 }],
+    ridge: 40, forest: 0.12,
+    theme: 'highland', weather: ['rain', 'fog', 'clear', 'rain', 'storm'],
+  },
   highland: {
     name: 'Highland Glen', desc: 'A misty Scottish glen of heather, pines and dark lochs, with shaggy Highland cows. Bring a brolly - it is usually pishing doon.',
     seed: [17, 88, -29, 40],

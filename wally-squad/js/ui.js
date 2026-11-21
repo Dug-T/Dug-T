@@ -129,17 +129,19 @@ export function message(text, warn = false) {
 function buildTabs() {
   const tabs = $('tabs'); tabs.innerHTML = '';
   for (const t of TABS) {
+    if (t.id === 'naval' && !G.navalMap) continue; // no NAVY tab on maps without open water
     const el = document.createElement('div');
     el.className = 'tab' + (t.id === curTab ? ' active' : ''); el.textContent = t.label; el.dataset.tab = t.id;
     el.onclick = () => { curTab = t.id; Audio.play('click'); buildGrid(); [...tabs.children].forEach(c => c.classList.toggle('active', c.dataset.tab === curTab)); };
     tabs.appendChild(el);
   }
+  const n = tabs.children.length; tabs.style.setProperty('--nt', n); tabs.style.setProperty('--nt2', Math.ceil(n / 2)); tabs.classList.toggle('many', n > 6);
 }
 let gridItems = [];
 function buildQueueOpts() {
   const box = $('qOpts'); if (!box) return;
   const qn = QUEUE_OF[curTab];
-  if (!['infantry', 'vehicle', 'air'].includes(qn) || !G.players[G.player]) { box.style.display = 'none'; return; }
+  if (!['infantry', 'vehicle', 'air', 'naval'].includes(qn) || !G.players[G.player]) { box.style.display = 'none'; return; }
   const q = G.players[G.player].queues[qn];
   box.style.display = 'block';
   box.innerHTML = '';

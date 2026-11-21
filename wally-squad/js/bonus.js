@@ -1,6 +1,6 @@
 // Bonus objectives: three random side goals in each single-player skirmish, each worth $1,000.
 // (They're picked on this device only, so they're off in online battles.)
-import { G, on } from './state.js';
+import { G, on, srand } from './state.js';
 
 const POOL = [
   { id: 'inf', text: 'Defeat 15 enemy infantry', goal: 15 },
@@ -18,7 +18,8 @@ export const bonus = { list: [], done: 0 };
 
 export function initBonus(run, message) {
   if (run.mode !== 'skirmish') return;
-  const pick = [...POOL].sort(() => Math.random() - 0.5).slice(0, 3);
+  const pool = [...POOL], pick = []; // seeded, so replays (and both players online) get the same objectives
+  while (pick.length < 3 && pool.length) pick.push(pool.splice(Math.floor(srand() * pool.length), 1)[0]);
   bonus.list = pick.map(p => ({ ...p, n: 0, done: false }));
   const add = (id, k = 1) => {
     for (const b of bonus.list) if (b.id === id && !b.done) {
