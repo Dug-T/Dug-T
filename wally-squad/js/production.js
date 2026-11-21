@@ -21,13 +21,14 @@ export const upg = (f, k) => !!(G.players[f] && G.players[f].upgrades && G.playe
 export const isBuildingType = type => !!BUILDINGS[type];
 
 export function updatePower() {
-  for (const f in G.players) { const P = G.players[f]; P.powerProd = 0; P.powerUse = 0; P.owned = {}; }
+  for (const f in G.players) { const P = G.players[f]; P.powerProd = 0; P.powerUse = 0; P.owned = {}; P.lvl2 = {}; }
   for (const b of G.buildings) {
     if (b.dead) continue;
     const P = G.players[b.faction];
     P.owned[b.type] = (P.owned[b.type] || 0) + 1;
+    if (b.level === 2) P.lvl2[b.type] = (P.lvl2[b.type] || 0) + 1;
     const pw = b.def.power;
-    if (pw > 0) P.powerProd += pw * (0.5 + 0.5 * b.hp / b.maxHp); else P.powerUse -= pw;
+    if (pw > 0) P.powerProd += pw * (b.level === 2 ? 1.6 : 1) * (0.5 + 0.5 * b.hp / b.maxHp); else P.powerUse -= pw;
   }
   for (const u of G.units) if (!u.dead) { const P = G.players[u.faction]; P.owned[u.type] = (P.owned[u.type] || 0) + 1; }
   for (const f in G.players) { const P = G.players[f]; if (P.blackoutUntil > G.time) P.powerProd = 0; } // a spy blacked out the grid
@@ -90,8 +91,10 @@ export function updateProduction(dt) {
       const type = q.items[0];
       const d = defOf(type);
       if (!hasReqsSoft(f, type)) continue;
-      const producers = PRODUCERS[d.tab].reduce((n, p) => n + (P.owned[p] || 0), 0);
+      let producers = PRODUCERS[d.tab].reduce((n, p) => n + (P.owned[p] || 0), 0);
       if (!producers) continue;
+      // an upgraded (level 2) producer works like one and a half buildings
+      producers += PRODUCERS[d.tab].reduce((n, p) => n + (P.lvl2?.[p] || 0), 0);
       const mult = (1 + (producers - 1) * 0.5) * pf * (P.buildMult || 1) * (hasMut(G.cfg, 'turbo') ? 2 : 1);
       let dp = dt * mult;
       if (q.progress + dp > d.time) dp = d.time - q.progress;

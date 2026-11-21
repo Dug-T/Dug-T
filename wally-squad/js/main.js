@@ -36,6 +36,8 @@ import { initAchievements, checkAchievements, buildMedals } from './achievements
 import { registerCustomMaps, buildMapEditor } from './mapeditor.js';
 import { updateOrientation } from './orient.js';
 import { awardGame, profileCard } from './profile.js';
+import { endBoard, fetchTop, boardHTML, playerName } from './leaderboard.js';
+import { SKINS, getSkin, setSkin, skinUnlocked, skinRankName } from './skins.js';
 import { initTipJar } from './tipjar.js';
 import { initBonus } from './bonus.js';
 import { VERSION, isNewVersion, markSeen, buildNews, checkForUpdate, registerUpdater, updateNow } from './version.js';
@@ -73,6 +75,7 @@ G.cfg = run;
 G.player = run.faction === 'grim' ? 'grim' : 'wally';
 G.enemy = G.player === 'wally' ? 'grim' : 'wally';
 // your army colour (not in online games, where both players must agree on colours)
+G.skin = run.mode === 'title' ? null : getSkin();
 { let col = run.color; try { col = col || localStorage.getItem('ws_color'); } catch { /* ignore */ } if (col && run.mode !== 'mp' && run.mode !== 'title') applyTeamColor(G.player, col); }
 G.difficulty = DIFFICULTY[run.difficulty] ? run.difficulty : 'normal';
 
@@ -260,7 +263,7 @@ function setupBase(faction, pos) {
 }
 
 // ---------------------------------------------------------------- menus
-const panels = ['menuNews', 'menuMain', 'menuCampaign', 'menuSkirmish', 'menuOnline', 'menuVoices', 'menuDesigner', 'menuGraphics', 'menuSurvival', 'menuMedals', 'menuEditor', 'menuSandbox', 'menuWatch'];
+const panels = ['menuNews', 'menuWorld', 'menuMain', 'menuCampaign', 'menuSkirmish', 'menuOnline', 'menuVoices', 'menuDesigner', 'menuGraphics', 'menuSurvival', 'menuMedals', 'menuEditor', 'menuSandbox', 'menuWatch'];
 function showPanel(id) {
   for (const p of panels) $(p).style.display = p === id ? 'block' : 'none';
   document.body.classList.toggle('newsOpen', id === 'menuNews'); // keep the roaming tip jar off the What's New screen
@@ -268,8 +271,21 @@ function showPanel(id) {
   if (id === 'menuDesigner') buildDesigner($('designer'), { faction: 'wally' });
   if (id === 'menuGraphics') buildGraphicsPanel($('gfxPanel'));
   if (id === 'menuMedals') buildMedals($('medals'));
+  if (id === 'menuWorld') buildWorld();
   if (id === 'menuNews') buildNews($('news'));
   if (id === 'menuEditor') buildMapEditor($('editor'), (mode, map) => startWith({ mode, map, faction: 'wally', difficulty: localStorage.getItem('ws_diff') || 'normal', daynight: true, weather: null }));
+}
+// ---------------------------------------------------------------- world leaderboard (menu)
+function buildWorld() {
+  const tabs = $('worldTabs'), daily = dailyChallenge();
+  const boards = [['daily:' + daily.daily, `📅 Today's Daily (${MAPS[daily.map].name})`, 'Daily Challenge']].concat(['valley', 'frost', 'dunes', 'midnight', 'isles', 'magma', 'autumn', 'blossom', 'highland', 'canyon'].filter(m => MAPS[m]).map(m => ['survival:' + m, '☠ ' + MAPS[m].name, 'Survival']));
+  tabs.innerHTML = '';
+  const show = async (b, btn) => {
+    for (const o of tabs.children) o.classList.toggle('on', o === btn);
+    $('worldBoard').innerHTML = '<div class="lbNote">Loading…</div>';
+    $('worldBoard').innerHTML = boardHTML(b[0], await fetchTop(b[0], 15), playerName());
+  };
+  boards.forEach((b, i) => { const btn = document.createElement('button'); btn.className = 'btn'; btn.textContent = b[1]; btn.onclick = () => { Audio.play('click'); show(b, btn); }; tabs.appendChild(btn); if (!i) show(b, btn); });
 }
 // ---------------------------------------------------------------- daily challenge
 // Same map, faction and two mutators for everyone on a given day; beat it as fast as you can.
@@ -321,6 +337,47 @@ function setupTaunts() {
     }
     if (victim.kind === 'unit' && victim.def && (victim.type === 'wallyman' || victim.type === 'warlord') && victim.faction === G.player) taunt('hero', true);
   });
+}
+
+// ---------------------------------------------------------------- your own taunts (💬 button)
+const MY_TAUNTS = {
+  wally: { voice: 'wallyman', lines: ['Is that all ye\'ve got?', 'Ye couldnae hit a coo\'s backside wi\' a banjo!', 'Away an\' bile yer heid!', 'Wally Squad never retreats!', 'Get it up ye, Grimlocks!', 'Ah\'ve seen scarier haggis!', 'Gonnae no\' dae that? Naw? Fine then!', 'Your base is mince, pal!'] },
+  grim: { voice: 'warlord', lines: ['Grak is coming for you!', 'Your squad smells of fear!', 'Hide behind your little walls!', 'Crystals for the Legion!', 'Grak has eaten bigger snacks than you!', 'Run, tiny soldiers, RUN!', 'Your tanks are made of tinfoil!', 'Grimlocks never surrender!'] },
+};
+const RETORTS = {
+  grim: ['Grak is not listening! LA LA LA!', 'Big words from a tiny commander!', 'Grak will remember that!', 'Your mother was a harvester!', 'Silence! Grak is trying to think!'],
+  wally: ['Aye, very funny, big man.', 'Is that a threat? Cute.', 'Talk is cheap, Grak. Crystal isn\'t!', 'Haud yer wheesht, ya big lump!', 'We\'ll see who\'s laughing in five minutes!'],
+};
+let myTauntT = -99;
+function setupMyTaunts() {
+  const pop = $('tauntPop'), btn = $('bTaunt');
+  if (run.mode === 'watch' || run.mode === 'title') { btn.style.display = 'none'; return; }
+  const close = () => { pop.style.display = 'none'; };
+  btn.onclick = e => {
+    e.stopPropagation(); Audio.play('click');
+    if (pop.style.display !== 'none') return close();
+    pop.innerHTML = '';
+    for (const line of MY_TAUNTS[G.player].lines) {
+      const b = document.createElement('button'); b.className = 'btn'; b.textContent = '💬 ' + line;
+      b.onclick = ev => { ev.stopPropagation(); close(); sendTaunt(line); };
+      pop.appendChild(b);
+    }
+    pop.style.display = 'flex';
+  };
+  addEventListener('pointerdown', e => { if (pop.style.display !== 'none' && !pop.contains(e.target) && e.target !== btn) close(); });
+}
+function sendTaunt(line) {
+  const now = performance.now() / 1000;
+  if (now - myTauntT < 6) { UI.message('Give them a moment to recover from the last one!'); return; }
+  myTauntT = now;
+  UI.message(`💬 You: "${line}"`);
+  Voices.sayLine(line, MY_TAUNTS[G.player].voice);
+  G.stats.taunts = (G.stats.taunts || 0) + 1;
+  if (run.mode === 'mp') { lockstep?.chat('💬 ' + line); return; }
+  if (run.mode === 'sandbox' || (mission && mission.tutorial) || G.over) return;
+  // the enemy commander answers back
+  const T = TAUNTS[G.enemy], list = RETORTS[G.enemy];
+  setTimeout(() => { if (G.over) return; const r = list[Math.floor(Math.random() * list.length)]; UI.message(`💬 ${T.who}: "${r}"`, true); Voices.sayLine(r, T.voice); }, 3200);
 }
 
 function setupFeed() {
@@ -437,6 +494,19 @@ function setupMenus() {
       row.appendChild(b); };
     mk('default', 'linear-gradient(135deg,#3d8bff 50%,#ff4a3d 50%)', 'Faction colour (blue Wally Squad, red Grimlocks)');
     for (const [k, c] of Object.entries(TEAM_COLORS)) mk(k, c.css, c.name);
+  }
+  // army skins (armour patterns unlocked by rank)
+  for (const row of document.querySelectorAll('.skinRow')) {
+    for (const [k, s] of Object.entries(SKINS)) {
+      const b = document.createElement('button'); const ok = skinUnlocked(k);
+      b.className = 'btn skinBtn' + (getSkin() === k ? ' on' : '') + (ok ? '' : ' locked'); b.dataset.k = k;
+      b.textContent = (ok ? s.icon + ' ' : '🔒 ') + s.name; b.title = ok ? s.desc : `Reach the rank of ${skinRankName(k)} to unlock. ${s.desc}`;
+      b.onclick = () => {
+        if (!skinUnlocked(k)) { Audio.play('click'); UI.message?.(`🔒 ${s.name} unlocks at the rank of ${skinRankName(k)}`); b.animate?.([{ transform: 'translateX(-4px)' }, { transform: 'translateX(4px)' }, { transform: 'none' }], 200); return; }
+        setSkin(k); for (const o of document.querySelectorAll('.skinRow .skinBtn')) o.classList.toggle('on', o.dataset.k === k); Audio.play('click');
+      };
+      row.appendChild(b);
+    }
   }
   $('bStart').onclick = () => startWith(sk);
   $('profile').innerHTML = profileCard();
@@ -648,6 +718,7 @@ function start() {
   }
   setupFeed();
   setupTaunts();
+  setupMyTaunts();
   if (run.mode === 'survival') { renderObjectives(); UI.message('Survival: build defences fast - the first wave arrives in 75 seconds!'); }
   if (mission) renderObjectives();
   const fname = FACTIONS[G.player].name;
@@ -724,6 +795,10 @@ function endGame(win, text, winner) {
     const t = Math.floor(G.time);
     $('endStats').innerHTML = `<span>Mission time</span><span>${Math.floor(t / 60)}m ${t % 60}s</span>${run.mode === 'mp' ? '' : `<span>Difficulty</span><span>${DIFFICULTY[G.difficulty].label}</span>`}<span>Enemies destroyed</span><span>${G.stats.killed}</span><span>Units lost</span><span>${G.stats.lost}</span><span>Structures built</span><span>${G.stats.built}</span><span>Credits harvested</span><span>${Math.round(G.stats.harvested)}</span>${G.mvp ? `<span>MVP</span><span>🏅 ${G.mvp.name} · ${G.mvp.kills} kills</span>` : ''}${G.bestStreak > 1 ? `<span>Best kill streak</span><span>${G.bestStreak}</span>` : ''}${run.daily && win ? `<span>Daily Challenge</span><span>${dailyNote}</span>` : ''}${award ? `<span>Experience</span><span>+${award.xp} XP · ${award.rank.icon} ${award.rank.name}${award.promoted ? ' · <b style="color:var(--accent)">PROMOTED!</b>' : ''}</span>` : ''}`;
     recordHistory(99); drawHistory($('endGraph'));
+    // post the score to the world leaderboard (Survival, and winning Daily Challenges)
+    const eb = $('endBoard'); eb.innerHTML = '';
+    if (!G.cheated && run.mode === 'survival') endBoard(eb, 'survival:' + run.map, survival.score, `wave ${survival.wave}`, `Survival · ${MAPS[run.map].name}`);
+    else if (!G.cheated && run.daily && win) endBoard(eb, 'daily:' + run.daily, Math.floor(G.time), MAPS[run.map].name, `Daily Challenge ${run.daily}`);
     $('bNext').style.display = mission && win && (mission.tutorial || run.mission < campaignList(run.camp).length - 1) ? '' : 'none';
     $('bAgain').style.display = run.mode === 'mp' ? 'none' : '';
     $('end').style.display = 'flex';
@@ -752,7 +827,7 @@ function checkEnd(dt) {
   const won = G.buildings.find(b => !b.dead && b.def.wonder && (b.wonderT || 0) >= 300);
   if (won) { endGame(run.mode === 'watch' ? true : won.faction === G.player, `${FACTIONS[won.faction].name}'s Victory Monument stood for 5 minutes!`, won.faction); return; }
   const pAlive = hasStructures(G.player);
-  if (mission) { if (!pAlive) mctx.fail('All our buildings have been destroyed. Mission failed.'); return; }
+  if (mission) { if (!pAlive && !mission.noBase) mctx.fail('All our buildings have been destroyed. Mission failed.'); return; }
   if (run.mode === 'survival') {
     if (!pAlive) {
       const { prev, isNew } = saveBest(run.map);

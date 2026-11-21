@@ -1,5 +1,5 @@
 // Terrain: heightfield, water, forests, rocks, crystal fields and the fog of war.
-import * as THREE from 'three';
+import { DTHREE as THREE, detailLevel } from './detail.js';
 import { CELL, GRID, WORLD, HALF, WATER_LEVEL, ORE_MAX } from './config.js';
 import { G, fbm, noise2, mulberry32, clamp, lerp, srand } from './state.js';
 import { fogify, fogUniforms, M } from './materials.js';
@@ -255,7 +255,7 @@ function treeKinds() {
   for (let k = 0; k < 3; k++) pineParts.push(new THREE.ConeGeometry(1.5 - k * 0.38, 2.0, 8).translate(0, 2.0 + k * 1.15, 0));
   const trunkG = new THREE.CylinderGeometry(0.16, 0.26, 2.2, 6).translate(0, 1.1, 0);
   K.pine = [[trunkG, trunkM], [mergeSimple(pineParts), std({ color: 0x2c4a22, roughness: 0.9, flatShading: true }), true]];
-  const leafG = new THREE.IcosahedronGeometry(1.4, 1);
+  const leafG = new THREE.IcosahedronGeometry(1.4, detailLevel() >= 1.7 ? 2 : 1); // rounder, lumpier canopies on High / Ultra
   const lp = leafG.attributes.position;
   for (let i = 0; i < lp.count; i++) { const s = 1 + noise2(lp.getX(i) * 2, lp.getZ(i) * 2 + lp.getY(i)) * 0.35; lp.setXYZ(i, lp.getX(i) * s, lp.getY(i) * s * 0.85 + 3.0, lp.getZ(i) * s); }
   leafG.computeVertexNormals();
@@ -546,7 +546,7 @@ export function updateVision(dt) {
     fogTimer = 0.2;
     T.visible.fill(0); T.enemyVisible.fill(0);
     for (const u of G.units) if (!u.dead) stamp(u.faction === G.player ? T.visible : T.enemyVisible, u.x, u.z, u.def.sight * G.sightMult);
-    for (const b of G.buildings) if (!b.dead && b.faction !== 'neutral') stamp(b.faction === G.player ? T.visible : T.enemyVisible, b.x, b.z, b.def.sight + Math.max(b.def.w, b.def.h));
+    for (const b of G.buildings) if (!b.dead && b.faction !== 'neutral') stamp(b.faction === G.player ? T.visible : T.enemyVisible, b.x, b.z, b.def.sight * (b.level === 2 ? (b.type === 'radar' ? 1.6 : 1.2) : 1) + Math.max(b.def.w, b.def.h));
     if (G.visionPings) {
       G.visionPings = G.visionPings.filter(p => p.until > G.time);
       for (const p of G.visionPings) stamp(p.f === G.player ? T.visible : T.enemyVisible, p.x, p.z, p.r);

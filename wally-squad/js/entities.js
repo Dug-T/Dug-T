@@ -88,7 +88,7 @@ export function ejectPassengers(host, hurt = 0, killer = null) {
   if (host.def.civil && host.hp > 0 && host.faction !== 'neutral') host.occupy('neutral'); // empty houses go back to the civilians
   return list.length;
 }
-export const capacityOf = e => (e && e.def && (e.def.transport || e.def.garrison)) || 0;
+export const capacityOf = e => (e && e.def && (e.def.transport || (e.def.garrison ? e.def.garrison + (e.level === 2 ? 1 : 0) : 0))) || 0;
 
 const _gm = new THREE.Vector3();
 export function rebuildHash() {
@@ -588,7 +588,7 @@ export class Unit {
         const amt = Math.min(this.load, 50);
         this.load -= amt;
         const P = G.players[this.faction];
-        const gain = amt * (P.incomeMult || 1) * (upg(this.faction, 'refining') ? 1.25 : 1) * (hasMut(G.cfg, 'rich') ? 2 : 1);
+        const gain = amt * (P.incomeMult || 1) * (upg(this.faction, 'refining') ? 1.25 : 1) * (r.level === 2 ? 1.25 : 1) * (hasMut(G.cfg, 'rich') ? 2 : 1);
         P.credits += gain; P.harvested = (P.harvested || 0) + gain;
         if (this.faction === G.player) G.stats.harvested += gain;
         FX.sparkBurst(r.x + 1.8, r.baseY + 1.5, r.z + 1.3, 3, [1, 4, 2, 1]);
@@ -603,7 +603,7 @@ export class Unit {
 
   // ---------------------------------------------------- movement
   moveLogic(dt) {
-    const sp = this.def.speed * (this.slowT > 0 ? 0.5 : 1) * (this.rank >= 1 ? 1.05 : 1) * (this.isInf || this.air ? 1 : G.speedMult) * (this.frenzyT > 0 ? 1.35 : 1) * (!this.isInf && upg(this.faction, 'engines') ? 1.15 : 1);
+    const sp = this.def.speed * (this.slowT > 0 ? 0.5 : 1) * (this.rank >= 1 ? 1.05 : 1) * (this.isInf || this.air ? 1 : G.speedMult) * (this.frenzyT > 0 ? 1.35 : 1) * (this.speedMult || 1) * (!this.isInf && upg(this.faction, 'engines') ? 1.15 : 1);
     let moving = false;
     if (this.path && this.pi < this.path.length) {
       const wp = this.path[this.pi];
@@ -1006,6 +1006,31 @@ export function findOre(x, z, harv, maxR = 60) {
 }
 
 // ================================================================== BUILDING
+// ---- base upgrades: most buildings can be upgraded once to a gold-starred level 2
+export const UPGRADE_TIME = 12;
+export function canUpgrade(b) {
+  const d = b && b.def;
+  return !!d && b.kind === 'building' && !b.dead && (b.level || 1) < 2 && !b.upgT && b.buildAnim >= 1 && d.cost > 0 && !d.instant && !d.tech && !d.civil && !d.wonder && !d.explosive && !d.superweapon;
+}
+export const upgradeCost = b => Math.max(300, Math.round(b.def.cost * 0.5 / 50) * 50);
+export function upgradePerk(d) {
+  if (d.power > 0) return '+60% power output';
+  if (d.weapon) return 'fires 40% faster';
+  if (d.garrison) return 'garrison gets +1 slot';
+  if (d.isGate) return '';
+  if (d.isWall) return '';
+  return { refinery: 'Harvesters unload 25% more credits', barracks: 'trains infantry 50% faster', factory: 'builds vehicles 50% faster', helipad: 'builds aircraft 50% faster', conyard: 'builds structures 50% faster', radar: 'radar sees 60% further', tech: 'research 50% faster' }[Object.keys(BUILDINGS).find(k => BUILDINGS[k] === d)] || '';
+}
+// start an upgrade (pays for it); returns true if it began
+export function startUpgrade(b) {
+  if (!canUpgrade(b)) return false;
+  const P = G.players[b.faction], c = upgradeCost(b);
+  if (!P || P.credits < c) return false;
+  P.credits -= c; b.upgT = UPGRADE_TIME;
+  if (b.faction === G.player) G.sfx?.play('build', b.x, b.z);
+  return true;
+}
+
 export class Building {
   constructor(type, faction, cx, cz, instant = false) {
     this.id = nextId(); this.kind = 'building'; this.type = type; this.def = BUILDINGS[type]; this.faction = faction;
@@ -1063,6 +1088,21 @@ export class Building {
     }
     if (this.ring) this.ring.visible = on;
   }
+  // gold stars floating above an upgraded building
+  addBadge() {
+    if (this.badge || !this.mesh) return;
+    const box = new THREE.Box3().setFromObject(this.model);
+    const top = isFinite(box.max.y) ? box.max.y - this.baseY : 3;
+    const gold = new THREE.MeshStandardMaterial({ color: 0xffcf3a, emissive: 0xb07a00, emissiveIntensity: 0.9, metalness: 0.8, roughness: 0.3 });
+    const star = new THREE.Shape();
+    for (let i = 0; i < 10; i++) { const a = i / 10 * Math.PI * 2 + Math.PI / 2, r = i % 2 ? 0.22 : 0.5; i ? star.lineTo(Math.cos(a) * r, Math.sin(a) * r) : star.moveTo(Math.cos(a) * r, Math.sin(a) * r); }
+    const geo = new THREE.ExtrudeGeometry(star, { depth: 0.14, bevelEnabled: true, bevelSize: 0.05, bevelThickness: 0.05, bevelSegments: 2 }).translate(0, 0, -0.07);
+    const g = new THREE.Group();
+    for (const s of [-0.62, 0.62]) { const m = new THREE.Mesh(geo, gold); m.position.x = s; m.scale.setScalar(0.75); g.add(m); }
+    const m = new THREE.Mesh(geo, gold); m.position.y = 0.25; g.add(m);
+    this.badgeY = top + 1.3; g.position.y = this.badgeY;
+    this.badge = g; this.mesh.add(g);
+  }
   dockPoint() { return { x: this.x + 1.8, z: this.z + 1.3 }; }
   exitPoint() {
     const z = this.z + this.def.h * CELL / 2 + 1.5;
@@ -1106,6 +1146,18 @@ export class Building {
       if (Math.random() < 0.8) FX.buildSparks(this.x + rr(-1, 1) * this.def.w, this.baseY + k * 3, this.z + rr(-1, 1) * this.def.h);
       if (Math.random() < 0.3) FX.dust(this.x + rr(-1, 1) * this.def.w, this.z + rr(-1, 1) * this.def.h, 1.5);
     }
+    if (this.upgT > 0) {
+      this.upgT -= dt;
+      if (Math.random() < 0.5 && this.mesh.visible) FX.buildSparks(this.x + rr(-1, 1) * this.def.w, this.baseY + rr(1, 4), this.z + rr(-1, 1) * this.def.h);
+      if (this.upgT <= 0) {
+        this.upgT = 0; this.level = 2;
+        this.maxHp = Math.round(this.def.hp * 1.5); this.hp = Math.min(this.maxHp, this.hp + this.def.hp * 0.5);
+        this.addBadge();
+        if (this.faction === G.player) { G.announce?.(`${this.def.name} upgraded to level 2 ★`, G.player); G.sfx?.play('jingle'); }
+        emit('upgraded', this.faction, this.type);
+      }
+    }
+    if (this.badge) { this.badge.rotation.y += dt * 1.2; this.badge.position.y = this.badgeY + Math.sin(G.time * 2) * 0.15; }
     const t = G.time;
     if (this.def.isMine) { this.mineLogic(dt); return; }
     if (this.gateDoor) {
@@ -1192,7 +1244,7 @@ export class Building {
       aimed = Math.abs(d) < 0.1;
     }
     if (aimed && this.cool <= 0) {
-      this.cool = w.rof;
+      this.cool = w.rof * (this.level === 2 ? 0.6 : 1);
       const mz = this.parts.muzzle || new THREE.Vector3(0, 2, 0);
       fireWeapon(this, w, t, mz, this.turret || this.model);
       if (w.twin && this.parts.muzzle2) later(0.16, () => { if (alive(this) && alive(t)) fireWeapon(this, w, t, this.parts.muzzle2, this.turret || this.model); });

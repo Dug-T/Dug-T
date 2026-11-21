@@ -1,7 +1,7 @@
 // King of the Hill (skirmish option): a glowing ring in the middle of the map. Whoever has troops on the
 // hill with no enemies contesting it scores time; the first side to hold it for 3 minutes in total wins.
 // Scoring runs in the simulation (online-safe); the ring, flag and score bar are only visuals.
-import * as THREE from 'three';
+import { DTHREE as THREE } from './detail.js';
 import { G } from './state.js';
 import { FACTIONS } from './config.js';
 import { currentMap, groundY } from './terrain.js';

@@ -1,5 +1,5 @@
 // Superweapons: the Wally Squad's Sky Lance orbital strike and the Grimlock Doom Missile.
-import * as THREE from 'three';
+import { DTHREE as THREE } from './detail.js';
 import { G, later, rr, emit } from './state.js';
 import { SUPERWEAPONS, FACTIONS } from './config.js';
 import { groundY, heightAt } from './terrain.js';

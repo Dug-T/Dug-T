@@ -1,8 +1,16 @@
 // Version number and update notes. Bump VERSION and add a new entry at the top of CHANGELOG for every
 // update: players see a "What's New" screen the first time they load a new version.
-export const VERSION = '1.37.1';
+export const VERSION = '1.38';
 
 export const CHANGELOG = [
+  { v: '1.38', date: '2026-11-21', title: 'Gold Stars & Tartan Tanks', items: [
+    '🔷 More polygons: on Medium, High and Ultra graphics, wheels, gun barrels, domes, tanks and trees are built from many more polygons, so they look smoother.',
+    '★ Base upgrades: select a building and press ★ Upgrade to make it level 2. Every upgrade gives +50% armour, plus: power plants make +60% power, barracks, factories and helipads build 50% faster, refineries pay 25% more, defences fire 40% faster, and bunkers hold one more soldier. Upgraded buildings show gold stars, and the enemy AI upgrades too.',
+    '🏴 Army skins: Woodland Camo, Tiger Stripes, Tartan, Digital Camo, Chrome, Gold Trim, Carbon Fibre and Legend. Each one unlocks at a higher Commander rank. Pick one under Army skin in the Skirmish, Survival and Sandbox menus.',
+    '💬 Taunts: tap 💬 during a battle to shout at the enemy (Wally Man has plenty of Scottish insults). The enemy commander shouts back, and in online battles your opponent sees your taunt.',
+    '🎖 Three new campaign missions: Operation Haggis Supper (rescue four kidnapped scientists with a commando team), Road to Glen Crystal (escort supply trucks through ambushes) and The Dragon\'s Lair (a boss fight against Auld Scorchie, the Ancient Dragon, and its wyverns).',
+    '🌍 World leaderboard: post your Survival scores and Daily Challenge times and compare them with commanders around the world (main menu → World Leaderboard). It goes live once the scores table is set up.',
+  ] },
   { v: '1.37.1', date: '2026-11-21', title: 'Tech pictures', items: [
     '🖼 Fixed: the Tech tab upgrades showed no pictures on some phones. They now have proper 3D pictures - an armoured tank, a soldier in a vest, a glowing shell, crystals, a gear and a telescope.',
   ] },

@@ -7,7 +7,7 @@ Play it by opening `wally-squad/index.html` from any web server (GitHub Pages wo
 ## Game modes
 
 - **🎓 Boot Camp:** an interactive tutorial. Step by step, it teaches you to move the camera, select and move troops, build a Power Plant, Refinery and Barracks, train riflemen, use an APC and attack an outpost. Each step shows mouse or touch instructions.
-- **Campaign:** five story missions in which the hero **Wally Man** leads the squad against the Grimlock Warlord. Every mission lets you train infantry and vehicles, and every mission is lost if Wally Man falls. Each mission has a briefing, objectives and scripted events, and completing one unlocks the next.
+- **Campaign:** eight story missions in which the hero **Wally Man** leads the squad against the Grimlock Warlord. Every mission lets you train infantry and vehicles, and every mission is lost if Wally Man falls. Each mission has a briefing, objectives and scripted events, and completing one unlocks the next.
   1. **First Contact** – a small field base and a strike team. Destroy an outpost and keep Wally Man alive.
   2. **Hold the Line** – fortify Frostbite Pass against seven waves until reinforcements arrive.
   3. **Crystal Rush** – out-harvest the enemy in the Dune Sea and burn down its refineries.
@@ -83,6 +83,11 @@ Both factions share the basic army: riflemen, rocket troopers, Scorchers, engine
 - **💬 Enemy taunts:** the enemy commander (Warlord Grak, or Commander Wally when you play the Grimlocks) taunts you during skirmishes and campaigns. Taunts come at the start, when you destroy their buildings or they destroy yours, when a hero falls and when they're nearly beaten. They are spoken aloud, with at least 35 seconds between them.
 - **🎆 Victory celebration:** win and fireworks burst over the battlefield while your infantry jump for joy.
 - **🕹 Cheat codes** (type them into the box in the pause menu; single player only, and a cheating game earns no XP or medals): `WALLYCASH` (+$10,000), `SHOWMETHEMAP`, `INSTABUILD`, `BIGBOOM` (superweapon charged), `POWERUP` (support powers ready), `GODMODE` (your forces can't be hurt) and `HEROES` (a hero and a Titan arrive).
+- **🔷 Detail scales with graphics quality:** Medium, High and Ultra build units, buildings and trees from more polygons. Only the look changes, so online players with different settings stay in sync.
+- **★ Base upgrades:** select one of your buildings and press **★ Upgrade** (half its price, 12 seconds) for a level-2 building with +50% armour and a bonus: power plants +60% power; barracks, factories, helipads and the HQ build 50% faster; the Tech Lab researches 50% faster; refineries +25% credits; defences fire 40% faster; bunkers and houses hold one more soldier; the Comms Center's radar sees further. Gold stars float over upgraded buildings. The AI upgrades too.
+- **🏴 Army skins:** armour patterns painted over your army colour, each unlocked by Commander rank. In rank order: Woodland Camo, Tiger Stripes, Tartan, Digital Camo, Chrome, Gold Trim, Carbon Fibre and Legend.
+- **💬 Taunts:** the 💬 button opens a list of insults. The enemy commander answers back, and online opponents see your taunt in their message log.
+- **🌍 World leaderboard:** Survival scores (one board per map) and Daily Challenge times, stored in Supabase. To switch it on, run `leaderboard.sql` once in the Supabase SQL editor. Until then the game says the leaderboard isn't set up yet.
 - **🎨 Army colours** (Skirmish, Survival and Sandbox menus): paint your side Blue, Red, Green, Purple, Gold, Orange, Teal, Pink or Steel. Your choice is remembered. If you pick a colour close to the enemy's, they switch to your faction's usual colour so the sides stay easy to tell apart.
 - **🔁 Repeat production:** a toggle above the Infantry, Vehicles and Air build menus. Each finished unit is queued again, so a factory keeps pumping out your army.
 - **🧙 Grimlock Shaman** (Grimlocks only): a hooded healer with a glowing skull staff who heals nearby infantry, like the Field Medic.

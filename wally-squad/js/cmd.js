@@ -1,7 +1,7 @@
 // Command layer: every player order goes through issue(). In single player it runs at once;
 // in multiplayer it is sent to the lockstep scheduler so both machines run it on the same tick.
 import { G } from './state.js';
-import { byId, alive, capacityOf, ejectPassengers, Unit } from './entities.js';
+import { byId, alive, capacityOf, ejectPassengers, Unit, startUpgrade } from './entities.js';
 import { UNITS } from './config.js';
 import { enqueue, dequeue, placeBuilding, placeInstant } from './production.js';
 import { formationSlots } from './pathfind.js';
@@ -59,6 +59,7 @@ export function execute(c) {
     case 'place': placeBuilding(c.f, c.type, c.cx, c.cz); break;
     case 'inst': placeInstant(c.f, c.type, c.cells); break;
     case 'sell': { const b = mine(c, c.id); if (b && b.kind === 'building') b.sell(); break; }
+    case 'upg': { const b = mine(c, c.id); if (b && b.kind === 'building') startUpgrade(b); break; }
     case 'rep': { const b = mine(c, c.id); if (b && b.kind === 'building') b.repairing = c.on; break; }
     case 'rally': { const b = mine(c, c.id); if (b) b.rally = { x: c.x, z: c.z }; break; }
     case 'prim': { const b = mine(c, c.id); if (b) { for (const o of G.buildings) if (o.type === b.type && o.faction === c.f) o.primary = false; b.primary = true; } break; }

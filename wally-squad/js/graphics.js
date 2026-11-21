@@ -2,6 +2,7 @@
 // automatic quality. Saved in the browser and applied live.
 import * as THREE from 'three';
 import { appSize } from './orient.js';
+import { setDetailPreset } from './detail.js';
 
 export const PRESETS = {
   low:    { label: 'Low',    maxDpr: 1,   scale: 0.85, shadows: 'off',  bloom: false, samples: 0, cinematic: false },
@@ -89,7 +90,7 @@ export function buildGraphicsPanel(el) {
     const presetRow = document.createElement('div'); presetRow.className = 'row';
     for (const [k, p] of Object.entries(PRESETS)) {
       const b = document.createElement('button'); b.className = 'btn' + (gfx.preset === k ? ' on' : ''); b.textContent = p.label;
-      b.onclick = () => { Object.assign(gfx, PRESETS[k], { preset: k }); save(); apply(); render(); };
+      b.onclick = () => { Object.assign(gfx, PRESETS[k], { preset: k }); save(); apply(); render(); setDetailPreset(k); import('./models.js').then(m => m.clearModelCache()); };
       presetRow.appendChild(b);
     }
     el.append(label('Quality preset'), presetRow);
@@ -115,7 +116,7 @@ export function buildGraphicsPanel(el) {
     toggle('Bloom glow', 'bloom'); toggle('🎬 Cinematic filter', 'cinematic'); toggle('Anti-aliasing', 'aa'); toggle('Auto-adjust for smooth play', 'auto'); toggle('Show FPS', 'fps');
     el.append(label('Options'), tg);
     const note = document.createElement('p'); note.style.cssText = 'text-align:center;color:var(--dim);font-size:13px';
-    note.textContent = 'Tip: if the game stutters, choose a lower preset or turn on auto-adjust. Ultra looks best on a powerful computer.';
+    note.textContent = 'Tip: if the game stutters, choose a lower preset or turn on auto-adjust. Higher presets also give units, buildings and trees more polygons (new models use it straight away; the scenery updates next battle). Ultra looks best on a powerful phone or computer.';
     el.appendChild(note);
   };
   render();

@@ -1,6 +1,8 @@
 // Shared materials. Every lit material is patched so the fog-of-war texture darkens it.
 import * as THREE from 'three';
 import { FACTIONS, WORLD } from './config.js';
+import { G } from './state.js';
+import { applySkin } from './skins.js';
 import { panelTexture, metalTexture, concreteTexture, hazardTexture, windowTexture, treadTexture } from './textures.js';
 
 export const fogUniforms = {
@@ -50,6 +52,7 @@ export function mats(faction) {
     accent: std({ color: F.accent, map: panel, roughness: 0.45, metalness: 0.4 }),
     glow: std({ color: F.light, emissive: F.light, emissiveIntensity: 2.2, roughness: 0.3 }),
   };
+  if (faction === G.player && G.skin) applySkin(m, G.skin); // your own army's armour pattern
   return (factionMats[faction] = m);
 }
 

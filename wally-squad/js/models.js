@@ -1,6 +1,6 @@
 // Procedural, detailed 3D models for every building and unit.
 // Each model is assembled from many primitives, then merged per material so it renders cheaply.
-import * as THREE from 'three';
+import { DTHREE as THREE } from './detail.js';
 import { mergeGeometries } from '../lib/utils/BufferGeometryUtils.js';
 import { mats, M, fogify } from './materials.js';
 import { CELL, UNITS } from './config.js';
@@ -42,6 +42,7 @@ class Builder {
 
 // Cache geometry groups per (type, faction); clones share geometry.
 const cache = new Map();
+export function clearModelCache() { cache.clear(); }
 function cached(key, fn) {
   if (!cache.has(key)) cache.set(key, fn());
   return cloneTree(cache.get(key));
