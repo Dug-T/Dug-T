@@ -746,7 +746,7 @@ export class Unit {
       }
     } else {
       this.y = this.def.naval ? WATER_LEVEL - (this.type === 'submarine' && this.cloaked ? 1.1 : 0.05) + Math.sin(G.time * 1.6 + this.id) * 0.08 // ships ride the waves; a submerged submarine sinks out of sight
-        : this.def.hover ? Math.max(gy, WATER_LEVEL) + 0.15 + Math.sin(G.time * 3 + this.id) * 0.06 : gy; // hovercraft float over water and lava
+        : this.def.hover ? Math.max(gy, WATER_LEVEL) + (this.def.hoverHeight || 0.15) + Math.sin(G.time * 3 + this.id) * (this.def.hoverHeight ? 0.2 : 0.06) : gy; // hovercraft float over water and lava; rocketeers fly a little higher
       if (this.fans) for (const f of this.fans.children) f.rotation.z += dt * 30;
       if (this.prop) this.prop.rotation.z += dt * (2 + this.speedNow * 4);
       // tread / tyre tracks behind ground vehicles
@@ -755,6 +755,7 @@ export class Unit {
         this.trackD = (this.trackD || 0) + this.speedNow * dt;
         if (this.trackD > 0.55) { this.trackD = 0; FX.trackMark(this.x - Math.sin(this.heading) * this.def.radius * 0.7, this.z - Math.cos(this.heading) * this.def.radius * 0.7, this.heading, this.def.radius * 0.55); }
       }
+      if (this.def.hoverHeight && Math.random() < dt * 14 && this.mesh.visible) FX.trail(this.x - Math.sin(this.heading) * 0.25, this.y + 0.7, this.z - Math.cos(this.heading) * 0.25, false); // rocket-pack exhaust
       if (this.def.hover && this.speedNow > 1 && Math.random() < dt * 8 && this.mesh.visible) FX.dust(this.x - Math.sin(this.heading) * 1.5, this.z - Math.cos(this.heading) * 1.5, 0.6);
       m.position.set(this.x, this.y, this.z);
       normalAt(this.x, this.z, _n);
@@ -1408,6 +1409,7 @@ function projMesh(kind) {
   let g, m;
   if (!projMats[kind]) {
     if (kind === 'bullet' || kind === 'sniper') { g = new THREE.BoxGeometry(0.06, 0.06, 1.4); m = new THREE.MeshBasicMaterial({ color: kind === 'sniper' ? new THREE.Color(3, 3, 4) : new THREE.Color(4, 3, 1.2), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }); }
+    else if (kind === 'caberlog') { g = new THREE.CylinderGeometry(0.16, 0.2, 2.4, 8).rotateX(Math.PI / 2); m = new THREE.MeshStandardMaterial({ color: 0x6b4a2e, roughness: 0.9 }); }
     else if (kind === 'haggis') { g = new THREE.SphereGeometry(0.32, 10, 8); g.scale(1, 0.8, 1.3); m = new THREE.MeshStandardMaterial({ color: 0x7a4a2a, roughness: 0.8 }); }
     else if (kind === 'shell' || kind === 'artillery') { g = new THREE.SphereGeometry(kind === 'artillery' ? 0.22 : 0.15, 8, 6); g.scale(1, 1, 2.2); m = new THREE.MeshBasicMaterial({ color: new THREE.Color(4, 2.4, 0.8) }); }
     else { // rocket / missile
@@ -1511,7 +1513,7 @@ export function fireWeapon(src, w, target, muzzleLocal, frame) {
     p.arc = w.lob ? 2.5 + dl * 0.3 : 6 + dl * 0.45;
   }
   if (kind === 'rocket' || kind === 'missile') { p.wob = srand() * 6; p.vy = 4 + srand() * 3; }
-  p.meshKind = w.haggis ? 'haggis' : kind === 'missile' ? 'rocket' : kind;
+  p.meshKind = w.caber ? 'caberlog' : w.haggis ? 'haggis' : kind === 'missile' ? 'rocket' : kind;
   p.mesh = getProj(p.meshKind);
   p.mesh.position.set(p.x, p.y, p.z);
   p.mesh.visible = vis;

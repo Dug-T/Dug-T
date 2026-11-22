@@ -80,6 +80,15 @@ function fallingRock(x, z) {
   requestAnimationFrame(step);
 }
 
+// ---- hailstorm: hailstones sting infantry caught out in the open (not inside vehicles or buildings)
+let hailT = 0;
+function updateHail(dt) {
+  const W = G.weather;
+  if (!W || W.type !== 'hail' || W.k < 0.5) return;
+  hailT -= dt; if (hailT > 0) return; hailT = 1;
+  for (const u of G.units) if (!u.dead && u.isInf && !u.boarded && u.faction !== 'neutral' && u.hp > u.maxHp * 0.5 && srand() < 0.35) damage(u, 1, null); // it stings, but never takes anyone below half health
+}
+
 // ---- lightning strikes: during a thunderstorm, bolts sometimes hit the ground near troops
 let strikeT = 10;
 function updateStrikes(dt) {
@@ -161,6 +170,7 @@ function updateClouds(dt) {
 }
 
 export function updateHazards(dt) {
+  updateHail(dt);
   if (G.over) return;
   updateClouds(dt);
   updateBloodMoon();

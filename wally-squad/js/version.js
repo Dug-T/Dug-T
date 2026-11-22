@@ -1,8 +1,15 @@
 // Version number and update notes. Bump VERSION and add a new entry at the top of CHANGELOG for every
 // update: players see a "What's New" screen the first time they load a new version.
-export const VERSION = '1.41.1';
+export const VERSION = '1.42';
 
 export const CHANGELOG = [
+  { v: '1.42', date: '2026-11-22', title: 'Crack, Boom, Rumble', items: [
+    '⚡ Brand-new thunder, built from a model of a real lightning bolt. Every bit of the jagged, kilometre-long bolt sends out a shock wave: the closest part reaches you first as an ear-splitting CRACK, then the rest rolls in as a deep, grumbling rumble that can last several seconds. Close strikes crack and boom; far-off storms just roll and grumble.',
+    '🧊 Hailstorms on the Highland, frost and valley maps: hailstones clatter down and sting infantry caught in the open (never below half health).',
+    '🪵 Caber Tosser (Wally Squad): a kilted Highland Games champion who hurls whole tree trunks. TIMBERRR!',
+    '🚀 Goblin Rocketeer (Grimlocks): a cackling goblin with a rocket pack who zooms over water and lava firing rockets.',
+    '🌌 Northern lights: on clear nights on the frosty and Highland maps, the aurora ripples across the sky.',
+  ] },
   { v: '1.41.1', date: '2026-11-22', title: 'Every button in reach', items: [
     '📱 Fixed: on phones and smaller screens, the Menu button (and sometimes Help and Next tune) was hidden behind the build menu. The top bar now always fits beside the build menu: when space runs out, the least-used buttons (Next tune, Rotate, Ping, Taunt...) move into a ⋯ menu.',
   ] },

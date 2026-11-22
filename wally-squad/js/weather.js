@@ -14,10 +14,11 @@ export const WEATHER = {
   snow:      { label: '🌨 Snow', sight: 0.9, speed: 0.92, fog: 0.6, dark: 0.15, snow: 1 },
   blizzard:  { label: '❄ Blizzard', sight: 0.65, speed: 0.8, fog: 0.3, dark: 0.3, snow: 2.5 },
   sandstorm: { label: '🌪 Sandstorm', sight: 0.6, speed: 0.9, fog: 0.25, dark: 0.2, sand: 1, tint: 0xc9965a },
+  hail:      { label: '🧊 Hailstorm', sight: 0.85, speed: 0.88, fog: 0.6, dark: 0.32, rain: 1.4, hail: true },
   ashfall:   { label: '🌋 Ashfall', sight: 0.75, speed: 1, fog: 0.35, dark: 0.3, sand: 0.7, tint: 0x5a4038 },
 };
 
-let theme, map, sky, stars, rain, snow, sand, bolt, rainbow;
+let theme, map, sky, stars, rain, snow, sand, bolt, rainbow, hail, aurora, hailSoundT = 0;
 const W = { type: 'clear', prev: 'clear', k: 1, next: 120 };
 const DAY_LENGTH = 720; // seconds of game time for a full day
 
@@ -53,6 +54,17 @@ export function initWeather(scene, mapDef, th) {
     m.frustumCulled = false; m.visible = false; scene.add(m); return m;
   };
   snow = mkPts(4000, 0xffffff, 0.45);
+  hail = mkPts(2200, 0xf2f8ff, 0.32);
+  // aurora (northern lights): glowing curtains that ripple across the night sky on cold and Highland maps
+  if (['snow', 'highland'].includes(map.theme)) {
+    aurora = new THREE.Mesh(new THREE.PlaneGeometry(1, 1, 96, 1), new THREE.ShaderMaterial({
+      transparent: true, depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
+      uniforms: { uTime: { value: 0 }, uAlpha: { value: 0 } },
+      vertexShader: 'varying vec2 vUv; uniform float uTime; void main(){ vUv = uv; vec3 p = position; p.y += sin(uv.x * 9.0 + uTime * 0.35) * 0.05 + sin(uv.x * 23.0 - uTime * 0.6) * 0.02; gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0); }',
+      fragmentShader: 'varying vec2 vUv; uniform float uTime; uniform float uAlpha; void main(){ float band = 0.55 + 0.45 * sin(vUv.x * 31.0 + uTime * 0.8) * sin(vUv.x * 7.0 - uTime * 0.25); float v = vUv.y; vec3 green = vec3(0.2, 1.0, 0.55), purple = vec3(0.7, 0.25, 1.0); vec3 c = mix(green, purple, smoothstep(0.35, 1.0, v)); float a = smoothstep(0.0, 0.18, v) * (1.0 - smoothstep(0.55, 1.0, v)) * band * smoothstep(0.0, 0.08, vUv.x) * (1.0 - smoothstep(0.92, 1.0, vUv.x)); gl_FragColor = vec4(c * a * uAlpha, a * uAlpha); }',
+    }));
+    aurora.frustumCulled = false; aurora.renderOrder = 8; aurora.visible = false; scene.add(aurora);
+  }
   sand = mkPts(4000, th.lava ? 0x9a8c86 : 0xd8a868, 0.7); // grey ash on volcanic maps
   bolt = new THREE.Line(new THREE.BufferGeometry().setFromPoints(Array.from({ length: 12 }, () => new THREE.Vector3())), new THREE.LineBasicMaterial({ color: new THREE.Color(4, 4, 6), transparent: true, opacity: 0 }));
   bolt.frustumCulled = false; scene.add(bolt);
@@ -207,6 +219,24 @@ export function updateWeatherFX(dt, real) {
     rain.geometry.attributes.position.needsUpdate = true;
   }
   drift(snow, lerp(wa.snow || 0, wb.snow || 0, W.k), 5, 1.2, 0.85, real, cx, cy, cz);
+  const hailK = (wb.hail ? W.k : 0) + (wa.hail ? 1 - W.k : 0);
+  drift(hail, hailK * 2.2, 42, 3, 0.95, real, cx, cy, cz);
+  rain.material.color.set(hailK > 0.3 ? 0xe8f2ff : 0xaac4dd);
+  if (hailK > 0.3 && (hailSoundT -= real) <= 0) { hailSoundT = 0.12; G.sfx?.play?.('hail'); } // the clatter of hailstones
+  // aurora on clear, cold nights
+  if (aurora) {
+    const want = (G.nightLevel || 0) > 0.55 && !wb.rain && !wb.snow && !wb.hail ? Math.min(1, ((G.nightLevel || 0) - 0.55) * 4) * W.k : 0;
+    const cur = aurora.material.uniforms.uAlpha.value, a = cur + (want - cur) * Math.min(1, real * 0.5);
+    aurora.material.uniforms.uAlpha.value = a; aurora.material.uniforms.uTime.value += real;
+    aurora.visible = a > 0.01;
+    if (aurora.visible) { // a wide curtain across the top of the view, facing the camera
+      const cam = T3.camera, D = 180;
+      const fwd = tmpV.set(0, 0, -1).applyQuaternion(cam.quaternion), up = tmpV2.set(0, 1, 0).applyQuaternion(cam.quaternion);
+      aurora.position.copy(cam.position).addScaledVector(fwd, D).addScaledVector(up, D * 0.22);
+      aurora.quaternion.copy(cam.quaternion); aurora.scale.set(D * 2.4, D * 0.5, 1);
+      aurora.material.uniforms.uAlpha.value = a; aurora.material.opacity = 0.45;
+    }
+  }
   drift(sand, lerp(wa.sand || 0, wb.sand || 0, W.k), 1.5, 18, 0.6, real, cx, cy, cz);
 }
 
