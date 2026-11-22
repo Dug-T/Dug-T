@@ -47,6 +47,10 @@ export const WARHEADS = {
 
 export const WEAPONS = {
   rifle:    { warhead: 'bullet', damage: 13, range: 11, rof: 0.75, proj: 'bullet', air: true, ground: true, sound: 'rifle' },
+  boatGun:  { warhead: 'bullet', damage: 13, range: 13, rof: 0.15, proj: 'bullet', air: true, ground: true, sound: 'mg', twin: true },
+  navalCannon: { warhead: 'shell', damage: 78, range: 16, rof: 1.7, proj: 'shell', air: false, ground: true, sound: 'bigcannon', twin: true },
+  torpedo:  { warhead: 'shell', damage: 210, range: 12, rof: 2.8, proj: 'shell', air: false, ground: true, navalOnly: true, sound: 'cannon' },
+  navalArty: { warhead: 'artillery', damage: 130, range: 30, minRange: 7, rof: 4.2, proj: 'artillery', air: false, ground: true, splash: 4, sound: 'arty' },
   mg:       { warhead: 'bullet', damage: 11, range: 12, rof: 0.16, proj: 'bullet', air: true, ground: true, sound: 'mg', burst: 1 },
   bazooka:  { warhead: 'rocket', damage: 60, range: 14, rof: 2.6, proj: 'rocket', air: true, ground: true, sound: 'rocket' },
   sniper:   { warhead: 'sniper', damage: 140, range: 18, rof: 1.6, proj: 'sniper', air: false, ground: true, sound: 'sniper' },
@@ -106,6 +110,7 @@ export const BUILDINGS = {
   derrick:  { name: 'Crystal Derrick', cost: 1000, time: 0, hp: 900, w: 2, h: 2, power: 0, sight: 8, req: ['none'], tab: 'none', tech: true, desc: 'Neutral tech. Capture it with an Engineer for a steady flow of credits.' },
   hospital: { name: 'Field Hospital', cost: 1000, time: 0, hp: 900, w: 2, h: 2, power: 0, sight: 8, req: ['none'], tab: 'none', tech: true, desc: 'Neutral tech. Capture it with an Engineer to heal nearby infantry.' },
   depot:    { name: 'Repair Depot', cost: 1000, time: 0, hp: 900, w: 2, h: 2, power: 0, sight: 8, req: ['none'], tab: 'none', tech: true, desc: 'Neutral tech. Capture it with an Engineer to repair nearby vehicles.' },
+  shipyard: { name: 'Shipyard', cost: 1000, time: 14, hp: 1200, w: 3, h: 3, power: -20, sight: 12, req: ['barracks'], tab: 'build', key: 'Y', naval: true, desc: 'Builds warships. Must be built on the shore, next to open water (only on maps with lakes or sea).' },
   turret:   { name: 'Gun Turret', cost: 600, time: 10, hp: 750, w: 1, h: 1, power: -20, sight: 16, req: ['barracks'], tab: 'defense', weapon: 'turretGun', desc: 'Anti-vehicle cannon emplacement.' },
   wonder:   { name: 'Victory Monument', cost: 5000, time: 60, hp: 3200, w: 3, h: 3, power: -40, sight: 12, req: ['tech'], tab: 'build', wonder: true, limit: 1, desc: 'A giant monument to your army. If it stands for 5 minutes after it is finished, you WIN. The enemy will throw everything at it.' },
   xbarrel:  { name: 'Fuel Barrels', cost: 0, time: 0, hp: 70, w: 1, h: 1, power: 0, sight: 0, req: [], explosive: true, desc: 'Explosive! Shoot them to blow up anything nearby.' },
@@ -136,6 +141,10 @@ export const UNITS = {
   wallyman: { name: 'Wally Man', fac: 'wally', cost: 800, time: 12, hp: 300, armor: 'infantry', speed: 3.6, sight: 15, radius: 0.5, weapon: 'gatling', tab: 'infantry', req: ['barracks', 'radar'], desc: 'Wally Squad only. Caped super-soldier with a spinning Gatling gun that shreds infantry.' },
   engineer: { name: 'Engineer', cost: 500, time: 8, hp: 70, armor: 'infantry', speed: 3.4, sight: 10, radius: 0.45, weapon: null, tab: 'infantry', req: ['barracks'], desc: 'Captures enemy buildings or fully repairs your own.' },
   wally:    { name: 'Wally (Hero)', fac: 'wally', cost: 1500, time: 25, hp: 320, armor: 'infantry', speed: 4.2, sight: 19, radius: 0.5, weapon: 'sniper', tab: 'infantry', req: ['barracks', 'tech'], limit: 1, desc: 'Elite sniper. One-shots infantry and plants C4 on buildings.' },
+  gunboat:  { name: 'Gunboat', cost: 500, time: 8, hp: 380, armor: 'light', speed: 8.5, sight: 15, radius: 1.3, weapon: 'boatGun', turnRate: 2.6, naval: true, tab: 'naval', req: ['shipyard'], desc: 'Fast patrol boat with twin machine guns. Good against infantry, light boats and aircraft.' },
+  destroyer: { name: 'Destroyer', cost: 1100, time: 14, hp: 980, armor: 'heavy', speed: 6, sight: 17, radius: 1.8, weapon: 'navalCannon', turnRate: 1.8, naval: true, detector: 14, tab: 'naval', req: ['shipyard', 'radar'], desc: 'Armoured warship with twin cannons. Its sonar finds submarines and cloaked units nearby.' },
+  submarine: { name: 'Submarine', cost: 1000, time: 13, hp: 560, armor: 'heavy', speed: 6.4, sight: 14, radius: 1.5, weapon: 'torpedo', turnRate: 2.0, naval: true, stealth: true, tab: 'naval', req: ['shipyard', 'radar'], desc: 'Dives out of sight and sinks ships with huge torpedoes. Torpedoes only hit ships. Destroyers can find it with sonar.' },
+  battleship: { name: 'Dreadnought', cost: 2200, time: 24, hp: 1900, armor: 'heavy', speed: 4.4, sight: 18, radius: 2.4, weapon: 'navalArty', turnRate: 1.2, naval: true, tab: 'naval', req: ['shipyard', 'tech'], desc: 'Huge battleship with long-range guns that shell anything near the shore. Can\'t hit targets right next to it.' },
   buggy:    { name: 'Scout Buggy', cost: 400, time: 8, hp: 260, armor: 'light', speed: 10, sight: 16, radius: 1.0, weapon: 'mg', tab: 'vehicle', req: ['factory'], desc: 'Fast raider with a heavy machine gun.' },
   tank:     { name: 'Battle Tank', cost: 800, time: 12, hp: 560, armor: 'heavy', speed: 5.6, sight: 14, radius: 1.35, weapon: 'cannon', turnRate: 2.6, tab: 'vehicle', req: ['factory'], desc: 'Main battle tank.' },
   apc:      { name: 'Squad Carrier APC', cost: 700, time: 11, hp: 650, armor: 'heavy', speed: 7.2, sight: 13, radius: 1.35, weapon: 'mg', turnRate: 2.8, tab: 'vehicle', req: ['factory', 'barracks'], transport: 5, desc: 'Armoured carrier. Right-click it with infantry selected to load up to 5; Unload (U) drops them off.' },
@@ -170,6 +179,7 @@ export const TABS = [
   { id: 'infantry', label: 'INFANTRY' },
   { id: 'vehicle', label: 'VEHICLES' },
   { id: 'air', label: 'AIR' },
+  { id: 'naval', label: 'NAVY' },
   { id: 'research', label: 'TECH' },
 ];
 
@@ -184,9 +194,9 @@ export const UPGRADES = {
 };
 
 // Which building types act as producers for which queue
-export const PRODUCERS = { build: ['conyard'], defense: ['conyard'], infantry: ['barracks'], vehicle: ['factory'], air: ['helipad'], research: ['conyard', 'barracks', 'factory', 'refinery', 'radar', 'tech'] };
+export const PRODUCERS = { build: ['conyard'], defense: ['conyard'], infantry: ['barracks'], vehicle: ['factory'], air: ['helipad'], naval: ['shipyard'], research: ['conyard', 'barracks', 'factory', 'refinery', 'radar', 'tech'] };
 // Structures + defences share a single queue, like the classics
-export const QUEUE_OF = { build: 'build', defense: 'build', infantry: 'infantry', vehicle: 'vehicle', air: 'air', research: 'research' };
+export const QUEUE_OF = { build: 'build', defense: 'build', infantry: 'infantry', vehicle: 'vehicle', air: 'air', naval: 'naval', research: 'research' };
 
 export const DIFFICULTY = {
   easy:   { label: 'Recruit', aiIncome: 0.75, aiBuild: 0.7, firstWave: 260, waveBase: 4, waveGrow: 1, waveGap: 150 },

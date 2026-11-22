@@ -10,7 +10,9 @@ export const TICK = 1 / 30, TICKS_PER_TURN = 6, DELAY = 3;
 export class Lockstep {
   constructor(cfg, onStart) {
     this.cfg = cfg; this.role = cfg.mp.role; this.room = cfg.mp.room;
-    this.me = G.player; this.them = G.enemy;
+    // inboxes are keyed by role, so co-op partners on the same side work too
+    this.coop = !!cfg.mp.coop;
+    this.me = this.role; this.them = this.role === 'host' ? 'guest' : 'host';
     this.net = createNet();
     this.active = false; this.started = false;
     this.turn = 0; this.tick = 0; this.acc = 0;
@@ -38,7 +40,7 @@ export class Lockstep {
 
   handshake() {
     if (this.role === 'host') {
-      this.show(`<div class="card"><h2>WAITING FOR OPPONENT</h2><p style="text-align:center">Give your friend this room code:</p><div class="roomcode">${this.room}</div><p style="text-align:center;color:var(--dim)">They choose <b>Online battle → Join</b> and type it in.</p><div class="row"><button class="btn" onclick="location.href=location.pathname">Cancel</button></div></div>`);
+      this.show(`<div class="card"><h2>${this.coop ? 'WAITING FOR YOUR TEAMMATE' : 'WAITING FOR OPPONENT'}</h2><p style="text-align:center">Give your friend this room code:</p><div class="roomcode">${this.room}</div><p style="text-align:center;color:var(--dim)">They choose <b>Online battle → Join</b> and type it in.</p><div class="row"><button class="btn" onclick="location.href=location.pathname">Cancel</button></div></div>`);
     } else {
       this.show(`<div class="card"><h2>JOINING ${this.room}</h2><p style="text-align:center">Waiting for the host…</p></div>`);
       const ping = () => { if (!this.started) { this.net.send('ready', {}); setTimeout(ping, 1000); } };
@@ -60,14 +62,14 @@ export class Lockstep {
     } else if (ev === 'need') {
       for (let n = p.n; n < p.n + 4; n++) if (this.sent.has(n)) this.net.send('turn', this.sent.get(n));
     } else if (ev === 'bye') {
-      this.show(`<div class="card"><h2>OPPONENT LEFT</h2><p style="text-align:center">Your opponent has left the battle.</p><div class="row"><button class="btn big" onclick="location.href=location.pathname">Main menu</button></div></div>`);
+      this.show(`<div class="card"><h2>${this.coop ? 'TEAMMATE LEFT' : 'OPPONENT LEFT'}</h2><p style="text-align:center">${this.coop ? 'Your teammate' : 'Your opponent'} has left the battle.</p><div class="row"><button class="btn big" onclick="location.href=location.pathname">Main menu</button></div></div>`);
       G.over = true;
     } else if (ev === 'chat') {
-      G.ui?.message(`Opponent: ${String(p.text).slice(0, 80)}`);
+      G.ui?.message(`${this.coop ? 'Teammate' : 'Opponent'}: ${String(p.text).slice(0, 80)}`);
     }
   }
 
-  publicCfg() { const c = { ...this.cfg, customUnits: this.cfg.customUnits || [] }; c.mp = { room: this.room, role: 'guest', seed: this.cfg.mp.seed, hostFaction: this.cfg.faction }; c.faction = this.cfg.faction === 'wally' ? 'grim' : 'wally'; return c; }
+  publicCfg() { const c = { ...this.cfg, customUnits: this.cfg.customUnits || [] }; c.mp = { room: this.room, role: 'guest', seed: this.cfg.mp.seed, hostFaction: this.cfg.faction }; c.faction = this.cfg.mp.coop ? this.cfg.faction : this.cfg.faction === 'wally' ? 'grim' : 'wally'; c.mp.coop = !!this.cfg.mp.coop; return c; }
 
   begin() {
     this.started = true; this.active = true;
@@ -94,8 +96,7 @@ export class Lockstep {
         }
         this.setWaiting(false); this.waitT = 0;
         // host commands first, then guest: identical order on both machines
-        const hostF = this.role === 'host' ? this.me : this.them;
-        const order = hostF === this.me ? [mine, theirs] : [theirs, mine];
+        const order = this.role === 'host' ? [mine, theirs] : [theirs, mine];
         for (const list of order) for (const c of list) execute(c);
         this.inbox[this.me].delete(this.turn); this.inbox[this.them].delete(this.turn);
         // send our commands for a future turn
@@ -116,7 +117,7 @@ export class Lockstep {
   setWaiting(on) {
     if (on === this.waiting) return;
     this.waiting = on;
-    this.show(on ? `<div class="card" style="width:auto"><h2 style="margin:0">Waiting for opponent…</h2></div>` : '');
+    this.show(on ? `<div class="card" style="width:auto"><h2 style="margin:0">Waiting for ${this.coop ? 'your teammate' : 'opponent'}…</h2></div>` : '');
   }
 
   checkHash(n, h) {
@@ -128,7 +129,7 @@ export class Lockstep {
     this.hashes.delete(n - 100);
   }
 
-  surrender() { G.surrendered = this.me; this.queue({ t: 'surrender', f: this.me }); }
+  surrender() { G.surrendered = G.player; this.queue({ t: 'surrender', f: G.player }); }
   chat(text) { this.net.send('chat', { text }); }
 }
 

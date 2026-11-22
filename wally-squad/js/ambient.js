@@ -1,6 +1,6 @@
 // Ambient life (visual only - never touches the simulation): flocks of birds wheeling over the forests by
 // day, and a rainbow when a rain storm clears.
-import * as THREE from 'three';
+import { DTHREE as THREE } from './detail.js';
 import { G } from './state.js';
 import { T, cellCenter, cellOf, groundY, isVisibleAt, BASES } from './terrain.js';
 import { GRID as GRID_CELLS, WATER_LEVEL } from './config.js';

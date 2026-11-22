@@ -8,7 +8,7 @@ import { enqueue, hasReqs, canPlace, placeBuilding, defOf, placeInstant } from '
 import { superState, fireSuperweapon, aiSuperTarget } from './superweapons.js';
 import { aiGrabCrates, aiCaptureTech } from './features.js';
 import { aiUsePowers } from './powers.js';
-import { alive, distTo } from './entities.js';
+import { alive, distTo, capacityOf, canUpgrade, upgradeCost, startUpgrade } from './entities.js';
 import { cellOf, T, idx } from './terrain.js';
 
 const BUILD_ORDER = ['power', 'refinery', 'barracks', 'power', 'factory', 'turret', 'refinery', 'radar', 'power', 'turret', 'bunker', 'tesla', 'flametower', 'sam', 'power', 'tech', 'helipad', 'power', 'plasma', 'turret', 'power', 'uplink', 'silo', 'sam', 'power', 'plasma', 'factory', 'barracks', 'power'];
@@ -67,6 +67,12 @@ export class AI {
     if (!this.opts.noBuild && this.t > 400 && P.credits > 1500 && srand() < 0.08) this.layMines();
     // repair damaged buildings when rich
     for (const b of G.buildings) if (b.faction === this.f && !b.dead && b.hp < b.maxHp * 0.7 && P.credits > 800) b.repairing = true;
+    // upgrade buildings when rich: power and production first, then defences
+    if (!this.opts.noBuild && this.t > 360 && P.credits > 300 && srand() < 0.25) {
+      const order = ['power', 'factory', 'barracks', 'refinery', 'plasma', 'tesla', 'flametower', 'turret', 'sam', 'bunker', 'conyard', 'helipad'];
+      const pick = G.buildings.filter(b => b.faction === this.f && canUpgrade(b) && order.includes(b.type)).sort((a, b) => order.indexOf(a.type) - order.indexOf(b.type))[0];
+      if (pick && P.credits >= upgradeCost(pick) + (pick.type === 'power' ? 0 : 200)) startUpgrade(pick);
+    }
   }
 
   ownCombat() { let n = 0; for (const u of G.units) if (!u.dead && !u.boarded && u.faction === this.f && u.weapon) n++; return n; }
@@ -75,7 +81,7 @@ export class AI {
   manageGarrison() {
     for (const b of G.buildings) {
       if (b.dead || b.faction !== this.f || !b.def.garrison || b.buildAnim < 1) continue;
-      const room = b.def.garrison - (b.passengers || []).length;
+      const room = capacityOf(b) - (b.passengers || []).length;
       if (room <= 0) continue;
       const pick = G.units.filter(u => !u.dead && !u.boarded && u.faction === this.f && u.isInf && u.weapon && !u.hero && !u.order && !u.target && !this.attackers.has(u) && distTo(b, u.x, u.z) < 30);
       pick.slice(0, room).forEach(u => u.board(b));
@@ -109,6 +115,11 @@ export class AI {
     this.saving = false;
     // low power? build power first
     if (P.powerUse > P.powerProd - 10 && hasReqs(this.f, 'power') && P.credits > 300) { enqueue(this.f, 'power'); return; }
+    // a navy, on maps with enough water near the base
+    if (G.navalMap && this.t > 240 && this.count('factory') && !this.count('shipyard') && available(this.f, 'shipyard') && hasReqs(this.f, 'shipyard') && P.credits > 300 && (this.navalCheckT || 0) < this.t) {
+      this.navalCheckT = this.t + 120;
+      if (this.findSpot('shipyard')) { enqueue(this.f, 'shipyard'); return; }
+    }
     const need = {};
     for (const t of BUILD_ORDER) {
       if (!available(this.f, t)) continue;
@@ -125,6 +136,16 @@ export class AI {
 
   findSpot(type) {
     const d = BUILDINGS[type];
+    if (d.naval) { // search the shoreline near the base
+      const b0 = this.base; if (!b0) return null;
+      const cx0 = cellOf(b0.x), cz0 = cellOf(b0.z);
+      let best = null, bs = 1e9;
+      for (let j = -24; j <= 24; j += 1) for (let i = -24; i <= 24; i += 1) {
+        const r = Math.hypot(i, j); if (r > 24 || r >= bs) continue;
+        if (canPlace(this.f, type, cx0 + i, cz0 + j)) { bs = r; best = { x: cx0 + i, z: cz0 + j }; }
+      }
+      return best;
+    }
     const base = this.base;
     const cx0 = cellOf(base.x), cz0 = cellOf(base.z);
     const defensive = !!d.weapon;
@@ -173,6 +194,11 @@ export class AI {
         if (t === 'engineer' && srand() < 0.7) t = 'rifle';
         enqueue(this.f, t);
       }
+    }
+    if (P.queues.naval && !P.queues.naval.items.length && this.count('shipyard') && srand() < 0.5) {
+      const navy = G.units.filter(u => u.faction === this.f && !u.dead && u.def.naval).length;
+      const opts = ['gunboat', 'gunboat', 'destroyer', 'destroyer', 'submarine', 'battleship'].filter(t => hasReqs(this.f, t));
+      if (navy < 6 && opts.length) enqueue(this.f, opts[Math.floor(srand() * opts.length)]);
     }
     if (P.queues.air && P.queues.air.items.length < 1 && this.t > 360 && srand() < 0.15 && hasReqs(this.f, 'jet')) enqueue(this.f, 'jet');
     if (P.queues.vehicle.items.length < 2) {

@@ -1,9 +1,10 @@
 // Campaign: Wally's squad against the Grimlock Warlord. Each mission sets up the map, forces and
 // objectives, then a tick() checks for victory or defeat and runs scripted events.
-import { G, later } from './state.js';
+import { G, later, srand, srr } from './state.js';
 import { BUILDINGS, CELL, GRID } from './config.js';
 import { Unit, Building, alive } from './entities.js';
-import { T, idx, inGrid, cellOf, heightAt, BASES, revealCircle, groundY } from './terrain.js';
+import { T, idx, inGrid, cellOf, cellCenter, heightAt, BASES, revealCircle, groundY } from './terrain.js';
+import { nearestFree, findPath } from './pathfind.js';
 import * as THREE from 'three';
 
 const ALL_BASIC = ['power', 'refinery', 'barracks', 'factory', 'radar', 'turret', 'sam', 'wall', 'gate', 'mine', 'rifle', 'rocket', 'flamer', 'engineer', 'medic', 'buggy', 'tank', 'harvester', 'arty'];
@@ -193,6 +194,170 @@ export const MISSIONS = [
       if (!G.buildings.some(b => b.faction === G.enemy && !b.dead && !b.def.isMine && !b.def.isWall)) ctx.complete('all');
       if (ctx.done('grak') && ctx.done('all')) return ctx.win();
       if (!G.buildings.some(b => b.faction === G.player && !b.dead && !b.def.isMine && !b.def.isWall) && !G.units.some(u => u.faction === G.player && !u.dead && u.weapon)) return ctx.fail('Our base has fallen.');
+    },
+  },
+  {
+    id: 'm7', title: 'Operation Haggis Supper', map: 'highland', difficulty: 'normal', noBase: true,
+    story: [
+      'Bad news, commander. While we were busy with Grak, a Grimlock raiding party snatched four of our crystal scientists. They are locked up in a prison camp on the far side of the Highlands.',
+      'This is a commando job - no base, no reinforcements. Wally Man leads a small strike team. Reach the scientists (walk any of your soldiers right up to them to set them free), then bring at least three of them home to the green evac beacon.',
+      'Tip: the APC can carry the scientists home safely. Blink Troopers can teleport past guards. Keep the medics close.',
+    ],
+    objectives: [{ id: 'free', text: 'Free the 4 captured scientists', progress: () => `${G.missionFreed || 0}/4` }, { id: 'evac', text: 'Bring at least 3 scientists to the evac beacon', progress: () => `${G.missionSaved || 0}/3` }, { id: 'hero', text: 'Wally Man must survive' }],
+    allowed: [],
+    setup(ctx) {
+      const s = BASES[G.player], e = BASES[G.enemy];
+      G.missionFreed = 0; G.missionSaved = 0;
+      ctx.hero(G.player, s.x + 6, s.z - 6);
+      ctx.squad(G.player, s.x + 9, s.z - 9, [['wally', 1], ['rifle', 5], ['rocket', 2], ['medic', 2], ['blink', 2], ['apc', 1]]);
+      ctx.credits(G.player, 0);
+      // the prison camp
+      ctx.base(G.enemy, e, ['barracks', 'power', 'bunker', 'turret', 'turret', 'sam']);
+      const cx = e.x * 0.85, cz = e.z * 0.85;
+      ctx.state.captives = ctx.squad('neutral', cx, cz, [['engineer', 4]]);
+      for (const u of ctx.state.captives) { u.stance = 'holdfire'; u.captive = true; }
+      ctx.squad(G.enemy, cx + 4, cz + 4, [['rifle', 5], ['flamer', 2], ['dog', 2]], true);
+      // guard posts along the way
+      for (const k of [0.3, 0.55]) ctx.squad(G.enemy, s.x + (e.x - s.x) * k + 8, s.z + (e.z - s.z) * k - 8, [['rifle', 4], ['rocket', 1], ['dog', 1]], true);
+      ctx.squad(G.enemy, s.x + (e.x - s.x) * 0.45 - 10, s.z + (e.z - s.z) * 0.45 + 10, [['tank', 1], ['rifle', 2]], true);
+      ctx.ai({ noBuild: true, noUnits: true, noAttack: true });
+      ctx.state.evac = { x: s.x, z: s.z };
+      ctx.state.beacon = beacon(s.x, s.z);
+      revealCircle(s.x, s.z, 30); revealCircle(cx, cz, 14);
+      G.alertAt = { x: cx, z: cz, t: G.time };
+    },
+    tick(ctx) {
+      const st = ctx.state, mine = G.units.filter(u => u.faction === G.player && !u.dead);
+      if (st.beacon) st.beacon.userData.ring.scale.setScalar(1 + 0.12 * Math.sin(G.time * 5));
+      for (let i = 0; i < st.captives.length; i++) {
+        const c = st.captives[i];
+        if (!c || c.dead) continue;
+        if (mine.some(u => !u.boarded && Math.hypot(u.x - c.x, u.z - c.z) < 6)) { // set free: they join your side
+          const free = new Unit('engineer', G.player, c.x, c.z, c.yaw || 0);
+          free.scientist = true; free.nick = ['Dr. McTavish', 'Prof. Bairn', 'Dr. Haggerty', 'Dr. Wee Jean'][i];
+          c.remove(); st.captives[i] = null;
+          G.missionFreed++; G.ui?.message(`${free.nick} has been freed! Get them to the evac beacon.`); G.sfx?.play('ready');
+          if (G.missionFreed >= 4) ctx.complete('free');
+        }
+      }
+      for (const u of mine) if (u.scientist && !u.boarded && Math.hypot(u.x - st.evac.x, u.z - st.evac.z) < 8) {
+        u.remove(); G.missionSaved++; G.ui?.message(`${u.nick} is safe! (${G.missionSaved} rescued)`); G.sfx?.play('jingle');
+      }
+      const lost = 4 - G.missionSaved - st.captives.filter(c => c && !c.dead).length - G.units.filter(u => u.scientist && !u.dead).length;
+      if (G.missionSaved >= 3) { ctx.complete('evac'); if (!ctx.done('free') && G.missionFreed >= 3) ctx.complete('free'); return ctx.win(); }
+      if (lost > 1) return ctx.fail('Too many scientists were lost.');
+      if (!mine.some(u => !u.scientist)) return ctx.fail('Our strike team has been wiped out.');
+    },
+  },
+  {
+    id: 'm8', title: 'Road to Glen Crystal', map: 'canyon', difficulty: 'normal',
+    story: [
+      'The outpost at Glen Crystal is running out of everything - fuel, shells and, worst of all, tea. Three armoured supply trucks are ready to roll from our base.',
+      'The trucks drive themselves along the canyon road. Your job is to keep them alive: scout ahead, clear the ambushes and escort them all the way to the outpost. At least two must make it.',
+      'Tip: Grimlock ambushes come from the side canyons. Send buggies ahead to spot them, and keep a Repair Truck with the convoy.',
+    ],
+    objectives: [{ id: 'escort', text: 'Get at least 2 supply trucks to the outpost', progress: () => `${G.missionArrived || 0}/2` }, { id: 'hero', text: 'Wally Man must survive' }],
+    allowed: FIELD_BASE.concat(['repair', 'apc', 'radar', 'sam', 'drone']),
+    setup(ctx) {
+      const s = BASES[G.player], e = BASES[G.enemy];
+      G.missionArrived = 0;
+      ctx.base(G.player, s, ['conyard', 'power', 'power', 'refinery', 'barracks', 'factory']);
+      ctx.hero(G.player, s.x + 10, s.z + 4);
+      ctx.squad(G.player, s.x + 12, s.z + 8, [['tank', 3], ['buggy', 2], ['rifle', 4], ['rocket', 2], ['repair', 1]]);
+      ctx.credits(G.player, 4000);
+      // the outpost: the far corner of the map that isn't the Grimlock base
+      const goal = [[e.x, s.z], [s.x, e.z], [-s.x, -s.z * 0.2]].map(([x, z]) => ({ x: x * 0.85, z: z * 0.85 })).find(p => Math.hypot(p.x - e.x, p.z - e.z) > 60 && Math.hypot(p.x - s.x, p.z - s.z) > 80) || { x: e.x * 0.7, z: -e.z * 0.7 };
+      const f = nearestFree(cellOf(goal.x), cellOf(goal.z), 20); if (f) { goal.x = cellCenter(f.x); goal.z = cellCenter(f.z); }
+      { const p = findPath(s.x + 6, s.z + 12, goal.x, goal.z, { maxIter: 80000 }); const end = p && p[p.length - 1]; if (end) { goal.x = end.x; goal.z = end.z; } } // somewhere the trucks can actually drive to
+      G.missionGoal = goal; ctx.state.goal = goal; ctx.state.beacon = beacon(goal.x, goal.z);
+      ctx.state.trucks = ctx.squad(G.player, s.x + 6, s.z + 12, [['convoy', 3]]);
+      ctx.state.trucks.forEach((t, i) => { t.stance = 'holdfire'; t.speedMult = 0.7; t.nick = ['Tea Wagon', 'Shell Shock', 'Big Bertha'][i]; t.wait = i * 4; });
+      ctx.base(G.enemy, e, ['conyard', 'power', 'power', 'refinery', 'barracks', 'factory', 'turret', 'turret']);
+      ctx.credits(G.enemy, 3000);
+      ctx.ai({ noAttack: true });
+      // ambushes along the road, each one sprung as the convoy gets close
+      ctx.state.ambush = [0.25, 0.45, 0.62, 0.8].map((k, i) => ({ k, x: s.x + (goal.x - s.x) * k, z: s.z + (goal.z - s.z) * k, sprung: false,
+        list: [[['rifle', 4], ['rocket', 2]], [['tank', 2], ['flamer', 3], ['buggy', 1]], [['stealth', 2], ['rocket', 3], ['rifle', 3]], [['tank', 3], ['inferno', 1], ['arty', 1], ['rocket', 3]]][i] }));
+      revealCircle(s.x, s.z, 40); revealCircle(goal.x, goal.z, 14);
+      later(6, () => G.ui?.message('The convoy is rolling out! Keep those trucks safe.', true));
+    },
+    tick(ctx) {
+      const st = ctx.state;
+      if (st.beacon) st.beacon.userData.ring.scale.setScalar(1 + 0.12 * Math.sin(G.time * 5));
+      for (const t of st.trucks) {
+        if (t.dead || t.arrived) continue;
+        if (Math.hypot(t.x - st.goal.x, t.z - st.goal.z) < 9) { t.arrived = true; G.missionArrived++; G.ui?.message(`${t.nick} made it to Glen Crystal!`); G.sfx?.play('jingle'); t.stop(); continue; }
+        if (G.time < 6 + t.wait) continue;
+        // trucks stop and wait while enemies are close by, then roll on once the road is clear
+        const threat = G.units.some(u => u.faction === G.enemy && !u.dead && !u.air && Math.hypot(u.x - t.x, u.z - t.z) < 18);
+        if (threat) { if (!t.halted) { t.halted = true; t.stop(); if (!st.haltMsgT || G.time - st.haltMsgT > 20) { st.haltMsgT = G.time; G.ui?.message(`${t.nick} has stopped under fire - clear the road!`, true); } } continue; }
+        if (t.halted) { t.halted = false; t.path = null; t.order = null; }
+        if (!t.order && !t.path) t.moveTo(st.goal.x + (t.wait - 4) * 0.8, st.goal.z);
+      }
+      // spring an ambush when the leading truck gets near it
+      const lead = st.trucks.filter(t => !t.dead && !t.arrived);
+      for (const a of st.ambush) if (!a.sprung && lead.some(t => Math.hypot(t.x - a.x, t.z - a.z) < 34)) {
+        a.sprung = true;
+        const side = srand() < 0.5 ? 1 : -1, dx = st.goal.x - a.x, dz = st.goal.z - a.z, l = Math.hypot(dx, dz) || 1;
+        const ax = a.x - dz / l * 22 * side, az = a.z + dx / l * 22 * side;
+        const us = ctx.squad(G.enemy, ax, az, a.list);
+        const tgt = lead[0];
+        for (const u of us) u.attack(tgt);
+        G.ui?.message('Ambush! Protect the trucks!', true); G.alertAt = { x: ax, z: az, t: G.time };
+      }
+      if (G.missionArrived >= 2 && !lead.length || G.missionArrived >= 3) { ctx.complete('escort'); return ctx.win(); }
+      if (G.missionArrived + lead.length < 2) return ctx.fail('Too many supply trucks were destroyed.');
+    },
+  },
+  {
+    id: 'm9', title: "The Dragon's Lair", map: 'magma', difficulty: 'hard',
+    story: [
+      'Something has woken up beneath the Magma Rift. Something BIG. An Ancient Dragon - older than the valley itself - has claimed the crystal fields, and a Grimlock cult worships it from a camp on the far bank.',
+      'It will come for our base, and it will bring its brood of wyverns. Build anti-air - SAM Sites, Rocket Troopers, Hornets - and slay the beast. Wally Man insists on being there. Of course he does.',
+      'Tip: the dragon gets angrier the more you hurt it. Keep plenty of rockets near your Command HQ, and repair your SAMs between attacks.',
+    ],
+    objectives: [{ id: 'dragon', text: 'Slay the Ancient Dragon', progress: () => G.missionBoss && !G.missionBoss.dead ? `${Math.ceil(G.missionBoss.hp / G.missionBoss.maxHp * 100)}% health` : '' }, { id: 'hq', text: 'Protect the Command HQ' }, { id: 'hero', text: 'Wally Man must survive' }],
+    allowed: null,
+    setup(ctx) {
+      const s = BASES[G.player], e = BASES[G.enemy];
+      ctx.base(G.player, s, ['conyard', 'power', 'power', 'refinery', 'barracks', 'factory', 'radar', 'sam']);
+      ctx.hero(G.player, s.x + 10, s.z + 6);
+      ctx.squad(G.player, s.x + 12, s.z + 9, [['rocket', 6], ['rifle', 4], ['tank', 2]]);
+      ctx.credits(G.player, 7000);
+      ctx.base(G.enemy, e, ['conyard', 'power', 'power', 'refinery', 'barracks', 'helipad', 'turret', 'sam']);
+      ctx.credits(G.enemy, 2000);
+      ctx.ai({ noAttack: true });
+      const lx = e.x * 0.55, lz = -e.z * 0.3;
+      const d = new Unit('dragon', 'neutral', lx, lz, 0);
+      d.maxHp = d.hp = 16000; d.rank = 3; d.nick = 'Auld Scorchie'; d.boss = true;
+      G.missionBoss = d; ctx.state.d = d; ctx.state.phase = 0; ctx.state.wakeT = 50;
+      revealCircle(s.x, s.z, 42);
+      later(4, () => G.ui?.message('The ground is shaking... Build anti-air while you still can!', true));
+    },
+    tick(ctx) {
+      const st = ctx.state, d = st.d, s = BASES[G.player];
+      if (!G.buildings.some(b => b.faction === G.player && b.type === 'conyard' && !b.dead)) return ctx.fail('The Command HQ has been destroyed.');
+      if (d.dead) { ctx.complete('dragon'); G.announce?.('Auld Scorchie has been slain! The Highlands are safe!'); return ctx.win(); }
+      st.wakeT -= 0.5;
+      if (st.wakeT <= 0) { // swoop on the player's base every so often
+        st.wakeT = 28;
+        const mineB = G.buildings.filter(b => b.faction === G.player && !b.dead && !b.def.isWall && !b.def.isMine);
+        const t = mineB.length ? mineB[Math.floor(srand() * mineB.length)] : s;
+        d.moveTo(t.x + srr(-6, 6), t.z + srr(-6, 6), { attackMove: true });
+        if (!st.warned) { st.warned = true; G.announce?.('The Ancient Dragon is awake - and it is heading for our base!', G.player, 9); }
+        G.alertAt = { x: d.x, z: d.z, t: G.time };
+      }
+      // brood of wyverns as it gets hurt, and it grows angrier (heals a little, flies faster)
+      const f = d.hp / d.maxHp;
+      const phases = [[0.75, 2], [0.5, 3], [0.25, 4]];
+      if (st.phase < phases.length && f < phases[st.phase][0]) {
+        const n = phases[st.phase][1]; st.phase++;
+        const us = ctx.squad(G.enemy, d.x, d.z, [['wyvern', n]]);
+        for (const u of us) u.moveTo(s.x, s.z, { attackMove: true });
+        d.hp = Math.min(d.maxHp, d.hp + d.maxHp * 0.04); d.speedMult = 1 + st.phase * 0.15;
+        const lines = ['The dragon roars - its brood is coming!', 'The dragon is ENRAGED! More wyverns incoming!', 'Auld Scorchie is nearly finished - and absolutely furious!'];
+        G.announce?.(lines[st.phase - 1], G.player, 9); G.sfx?.play('wardrum');
+      }
     },
   },
 ];

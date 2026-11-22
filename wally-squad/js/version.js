@@ -1,8 +1,23 @@
 // Version number and update notes. Bump VERSION and add a new entry at the top of CHANGELOG for every
 // update: players see a "What's New" screen the first time they load a new version.
-export const VERSION = '1.37.1';
+export const VERSION = '1.39';
 
 export const CHANGELOG = [
+  { v: '1.39', date: '2026-11-21', title: 'Rule the Waves', items: [
+    '⚓ Naval battles: build a Shipyard on the shore, then launch Gunboats, Destroyers (their sonar finds submarines), Submarines (they dive out of sight and torpedo ships) and the mighty Dreadnought (long-range guns that shell the coast). Find them in the new NAVY tab.',
+    '🌊 New map: Kelpie Loch - a great sea loch splits the glen in two. Rule the waves, or march the long way round by land. (Ships need a proper sea, so the NAVY tab only appears on maps with enough open water.)',
+    '🤝 Online co-op: team up with a friend against the computer. Under Online Battle, choose 🤝 Co-op or 🤝 Co-op Hard. You share one base, one bank account and one army.',
+    '🎬 Battle replays: after a Skirmish, Survival or Campaign battle, press 🎬 Watch replay to see the whole battle again from any angle at up to 8× speed. Your last battle is also on the main menu.',
+    '🤖 The computer now builds a navy on water maps.',
+  ] },
+  { v: '1.38', date: '2026-11-21', title: 'Gold Stars & Tartan Tanks', items: [
+    '🔷 More polygons: on Medium, High and Ultra graphics, wheels, gun barrels, domes, tanks and trees are built from many more polygons, so they look smoother.',
+    '★ Base upgrades: select a building and press ★ Upgrade to make it level 2. Every upgrade gives +50% armour, plus: power plants make +60% power, barracks, factories and helipads build 50% faster, refineries pay 25% more, defences fire 40% faster, and bunkers hold one more soldier. Upgraded buildings show gold stars, and the enemy AI upgrades too.',
+    '🏴 Army skins: Woodland Camo, Tiger Stripes, Tartan, Digital Camo, Chrome, Gold Trim, Carbon Fibre and Legend. Each one unlocks at a higher Commander rank. Pick one under Army skin in the Skirmish, Survival and Sandbox menus.',
+    '💬 Taunts: tap 💬 during a battle to shout at the enemy (Wally Man has plenty of Scottish insults). The enemy commander shouts back, and in online battles your opponent sees your taunt.',
+    '🎖 Three new campaign missions: Operation Haggis Supper (rescue four kidnapped scientists with a commando team), Road to Glen Crystal (escort supply trucks through ambushes) and The Dragon\'s Lair (a boss fight against Auld Scorchie, the Ancient Dragon, and its wyverns).',
+    '🌍 World leaderboard: post your Survival scores and Daily Challenge times and compare them with commanders around the world (main menu → World Leaderboard). It goes live once the scores table is set up.',
+  ] },
   { v: '1.37.1', date: '2026-11-21', title: 'Tech pictures', items: [
     '🖼 Fixed: the Tech tab upgrades showed no pictures on some phones. They now have proper 3D pictures - an armoured tank, a soldier in a vest, a glowing shell, crystals, a gear and a telescope.',
   ] },

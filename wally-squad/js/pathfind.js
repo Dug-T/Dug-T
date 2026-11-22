@@ -32,12 +32,13 @@ export function findPath(sx, sz, tx, tz, opts = {}) {
   const walk = (cx, cz) => {
     if (!inGrid(cx, cz)) return false;
     const i = idx(cx, cz);
+    if (opts.naval) return !!T.water[i] && !T.tree[i] && !T.bld[i]; // ships stay on the water
     if (T.blocked[i] && !(opts.hover && T.water[i] && !T.tree[i])) return false;
     if (T.bld[i] && T.bld[i] !== opts.ignoreId && !(opts.gate && T.gate[i] === opts.gate)) return false;
     return true;
   };
   if (!walk(s.x, s.z)) { const f = nearestFree(s.x, s.z, 4, walk); if (f) s = f; }
-  if (!walk(t.x, t.z)) { const f = nearestFree(t.x, t.z, 10, walk); if (!f) return null; t = f; }
+  if (!walk(t.x, t.z)) { const f = nearestFree(t.x, t.z, opts.naval ? 30 : 10, walk); if (!f) return null; t = f; }
   gen++;
   const start = idx(s.x, s.z), goal = idx(t.x, t.z);
   const h = (cx, cz) => { const dx = Math.abs(cx - t.x), dz = Math.abs(cz - t.z); return (dx + dz) + (1.4142 - 2) * Math.min(dx, dz); };

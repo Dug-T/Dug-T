@@ -1,7 +1,7 @@
 // Online transport: Supabase Realtime "broadcast" channels (same project as Goffichick's online play).
 // Players in the same room pass small JSON messages through Supabase's websocket server.
-const SUPABASE_URL = 'https://rlebmmqfmkpyvnxyhqeb.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable__YdLXvcL6uns_n2hu54bXw_0KZqA_ly';
+export const SUPABASE_URL = 'https://rlebmmqfmkpyvnxyhqeb.supabase.co';
+export const SUPABASE_ANON_KEY = 'sb_publishable__YdLXvcL6uns_n2hu54bXw_0KZqA_ly';
 
 // Same-device loopback (two browser tabs) for testing: add ?loopnet to the URL.
 function createLoopNet() {

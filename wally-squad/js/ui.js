@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { G, clamp, lerp } from './state.js';
 import { BUILDINGS, UNITS, UPGRADES, TABS, CELL, HALF, WORLD, GRID, FACTIONS, QUEUE_OF, HARVEST_CAPACITY } from './config.js';
 import { T, heightAt, cellOf, cellCenter, idx, isVisibleAt, isExploredAt, BASES } from './terrain.js';
-import { Unit, Building, alive, byId } from './entities.js';
+import { Unit, Building, alive, byId, capacityOf, canUpgrade, upgradeCost, upgradePerk, UPGRADE_TIME } from './entities.js';
 import { hasReqs, canPlace, defOf, isBuildingType, powerFactor, lineCells } from './production.js';
 import { issue, oreCellAt } from './cmd.js';
 import * as Voices from './voices.js';
@@ -129,17 +129,19 @@ export function message(text, warn = false) {
 function buildTabs() {
   const tabs = $('tabs'); tabs.innerHTML = '';
   for (const t of TABS) {
+    if (t.id === 'naval' && !G.navalMap) continue; // no NAVY tab on maps without open water
     const el = document.createElement('div');
     el.className = 'tab' + (t.id === curTab ? ' active' : ''); el.textContent = t.label; el.dataset.tab = t.id;
     el.onclick = () => { curTab = t.id; Audio.play('click'); buildGrid(); [...tabs.children].forEach(c => c.classList.toggle('active', c.dataset.tab === curTab)); };
     tabs.appendChild(el);
   }
+  const n = tabs.children.length; tabs.style.setProperty('--nt', n); tabs.style.setProperty('--nt2', Math.ceil(n / 2)); tabs.classList.toggle('many', n > 6);
 }
 let gridItems = [];
 function buildQueueOpts() {
   const box = $('qOpts'); if (!box) return;
   const qn = QUEUE_OF[curTab];
-  if (!['infantry', 'vehicle', 'air'].includes(qn) || !G.players[G.player]) { box.style.display = 'none'; return; }
+  if (!['infantry', 'vehicle', 'air', 'naval'].includes(qn) || !G.players[G.player]) { box.style.display = 'none'; return; }
   const q = G.players[G.player].queues[qn];
   box.style.display = 'block';
   box.innerHTML = '';
@@ -925,7 +927,7 @@ function refreshSelPanel(force) {
     panel.style.opacity = age > INFO_TIME - 1000 ? String(Math.max(0, (INFO_TIME - age) / 1000)) : ''; // fade out over the last second
   } else panel.style.opacity = '';
   panel.style.display = 'block';
-  const sig = sel.map(s => s.id).join(',') + '|' + sel.map(s => Math.ceil(s.frenzyCD || 0) + ':' + (s.passengers ? s.passengers.length : 0)).join(',') + (force ? Math.random() : '');
+  const sig = sel.map(s => s.id).join(',') + '|' + sel.map(s => Math.ceil(s.frenzyCD || 0) + ':' + (s.passengers ? s.passengers.length : 0) + ':' + (s.level || 1) + (s.upgT > 0 ? 'u' : '')).join(',') + (force ? Math.random() : '');
   const first = sel[0];
   if (sel.length === 1) {
     const e = first; const d = e.def;
@@ -935,7 +937,9 @@ function refreshSelPanel(force) {
       if (e.kills) sub += ` · Kills ${e.kills}`;
       if (e.type === 'harvester') sub += ` · Load ${Math.round(e.load)}/${HARVEST_CAPACITY} · ${({ seek: 'Searching', toOre: 'To crystal', mine: 'Harvesting', return: 'Returning', toDock: 'Docking', unload: 'Unloading', manual: 'Moving' })[e.hState] || ''}`;
     } else {
-      if (d.power) sub += ` · Power ${d.power > 0 ? '+' : ''}${d.power}`;
+      if (e.level === 2) sub += ' · Level 2 ★';
+      if (e.upgT > 0) sub += ` · Upgrading ${Math.round((1 - e.upgT / UPGRADE_TIME) * 100)}%`;
+      if (d.power) sub += ` · Power ${d.power > 0 ? '+' : ''}${Math.round(d.power * (e.level === 2 && d.power > 0 ? 1.6 : 1))}`;
       if (e.repairing) sub += ' · Repairing';
       if (d.weapon && WEAPONSneedsPower(d) && !e.powered) sub += ' · OFFLINE (low power)';
     }
@@ -995,10 +999,17 @@ function refreshSelPanel(force) {
     } else {
       addBtn(first.repairing ? '🔧 Stop repair' : '🔧 Repair', () => { issue({ t: 'rep', id: first.id, on: !first.repairing }); selSig = ''; setTimeout(() => refreshSelPanel(true), 300); });
       addBtn('$ Sell', () => issue({ t: 'sell', id: first.id }));
+      if (first.faction === G.player && canUpgrade(first)) {
+        const c = upgradeCost(first), perk = upgradePerk(first.def);
+        addBtn(`★ Upgrade $${c}`, () => {
+          if (G.players[G.player].credits < c) { message('Not enough credits to upgrade'); return; }
+          issue({ t: 'upg', id: first.id }); Audio.play('click'); message(`Upgrading ${first.def.name}...`); setTimeout(() => refreshSelPanel(true), 200);
+        }, `Level 2: +50% armour${perk ? ', ' + perk : ''}. Takes ${UPGRADE_TIME} seconds.`);
+      }
       if (first.def.garrison) {
         const n = (first.passengers || []).length;
-        if (n) addBtn(`⏏ Evacuate (${n}/${first.def.garrison}) (U)`, () => { issue({ t: 'unload', ids: [first.id] }); Audio.play('ack'); setTimeout(() => refreshSelPanel(true), 150); }, 'Send the garrison back outside.');
-        const s = document.createElement('div'); s.className = 'sub'; s.style.width = '100%'; s.textContent = `Garrison ${n}/${first.def.garrison}: select infantry and right-click (or tap) the bunker to send them in.`; cmds.appendChild(s);
+        if (n) addBtn(`⏏ Evacuate (${n}/${capacityOf(first)}) (U)`, () => { issue({ t: 'unload', ids: [first.id] }); Audio.play('ack'); setTimeout(() => refreshSelPanel(true), 150); }, 'Send the garrison back outside.');
+        const s = document.createElement('div'); s.className = 'sub'; s.style.width = '100%'; s.textContent = `Garrison ${n}/${capacityOf(first)}: select infantry and right-click (or tap) the bunker to send them in.`; cmds.appendChild(s);
       }
       if (['barracks', 'factory', 'helipad'].includes(first.type)) {
         addBtn(first.primary ? '★ Primary' : '☆ Set primary', () => { issue({ t: 'prim', id: first.id }); selSig = ''; refreshSelPanel(true); });
@@ -1114,7 +1125,7 @@ export function drawOverlay() {
     if (off) { octx.fillStyle = Math.sin(now * 8) > 0 ? '#ff4a3d' : '#ffc23a'; octx.fillText('⚡ NO POWER', p.x, p.y - 4); }
     if (b.primary && b.faction === G.player) { octx.fillStyle = '#ffc23a'; octx.fillText('PRIMARY', p.x, p.y + 16); }
     if (b.def.wonder && b.buildAnim >= 1) { const left = Math.max(0, 300 - (b.wonderT || 0)); octx.font = 'bold 15px Rajdhani'; octx.fillStyle = b.faction === G.player ? '#ffd34a' : '#ff6a5a'; octx.fillText(`🗿 ${Math.floor(left / 60)}:${String(Math.floor(left % 60)).padStart(2, '0')}`, p.x, p.y - 8); }
-    if (b.def.garrison && b.faction === G.player) for (let i = 0; i < b.def.garrison; i++) { octx.fillStyle = i < gar ? '#7dff9a' : 'rgba(0,0,0,0.5)'; octx.fillRect(p.x - 12 + i * 6, p.y - 9, 4, 4); }
+    if (b.def.garrison && b.faction === G.player) for (let i = 0; i < capacityOf(b); i++) { octx.fillStyle = i < gar ? '#7dff9a' : 'rgba(0,0,0,0.5)'; octx.fillRect(p.x - 12 + i * 6, p.y - 9, 4, 4); }
     if (b.selected && b.rally && b.faction === G.player) {
       const r = project(b.rally.x, heightAt(b.rally.x, b.rally.z) + 0.2, b.rally.z);
       const s = project(b.x, b.baseY + 0.5, b.z);

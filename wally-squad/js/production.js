@@ -8,7 +8,7 @@ import * as FX from './particles.js';
 export function initPlayer(faction, isAI) {
   G.players[faction] = {
     faction, isAI, credits: START_CREDITS, powerProd: 0, powerUse: 0,
-    queues: { build: newQueue(), infantry: newQueue(), vehicle: newQueue(), air: newQueue(), research: newQueue() },
+    queues: { build: newQueue(), infantry: newQueue(), vehicle: newQueue(), air: newQueue(), naval: newQueue(), research: newQueue() },
     upgrades: {},
     incomeMult: 1, buildMult: 1, owned: {},
   };
@@ -21,13 +21,14 @@ export const upg = (f, k) => !!(G.players[f] && G.players[f].upgrades && G.playe
 export const isBuildingType = type => !!BUILDINGS[type];
 
 export function updatePower() {
-  for (const f in G.players) { const P = G.players[f]; P.powerProd = 0; P.powerUse = 0; P.owned = {}; }
+  for (const f in G.players) { const P = G.players[f]; P.powerProd = 0; P.powerUse = 0; P.owned = {}; P.lvl2 = {}; }
   for (const b of G.buildings) {
     if (b.dead) continue;
     const P = G.players[b.faction];
     P.owned[b.type] = (P.owned[b.type] || 0) + 1;
+    if (b.level === 2) P.lvl2[b.type] = (P.lvl2[b.type] || 0) + 1;
     const pw = b.def.power;
-    if (pw > 0) P.powerProd += pw * (0.5 + 0.5 * b.hp / b.maxHp); else P.powerUse -= pw;
+    if (pw > 0) P.powerProd += pw * (b.level === 2 ? 1.6 : 1) * (0.5 + 0.5 * b.hp / b.maxHp); else P.powerUse -= pw;
   }
   for (const u of G.units) if (!u.dead) { const P = G.players[u.faction]; P.owned[u.type] = (P.owned[u.type] || 0) + 1; }
   for (const f in G.players) { const P = G.players[f]; if (P.blackoutUntil > G.time) P.powerProd = 0; } // a spy blacked out the grid
@@ -42,7 +43,8 @@ export function hasReqs(faction, type) {
   if (d.wonder && (G.cfg.wonders === false || !['skirmish', 'mp'].includes(G.cfg.mode))) return false; // wonders: skirmish & online only
   if (d.research && (P.upgrades[type] || P.queues.research.items.includes(type))) return false;
   if (G.allowed && !d.research && !G.allowed.includes(type)) return false; // campaign tech restrictions
-  if (hasMut(G.cfg, 'infantry') && (d.tab === 'vehicle' || d.tab === 'air') && type !== 'harvester' && type !== 'apc') return false;
+  if (type === 'shipyard' && !G.navalMap) return false; // no open water on this map
+  if (hasMut(G.cfg, 'infantry') && (d.tab === 'vehicle' || d.tab === 'air' || d.tab === 'naval') && type !== 'harvester' && type !== 'apc') return false;
   if (!d.req.every(r => P.owned[r] > 0)) return false;
   const q = QUEUE_OF[d.tab];
   if (!PRODUCERS[d.tab].some(p => P.owned[p] > 0)) return false;
@@ -90,8 +92,10 @@ export function updateProduction(dt) {
       const type = q.items[0];
       const d = defOf(type);
       if (!hasReqsSoft(f, type)) continue;
-      const producers = PRODUCERS[d.tab].reduce((n, p) => n + (P.owned[p] || 0), 0);
+      let producers = PRODUCERS[d.tab].reduce((n, p) => n + (P.owned[p] || 0), 0);
       if (!producers) continue;
+      // an upgraded (level 2) producer works like one and a half buildings
+      producers += PRODUCERS[d.tab].reduce((n, p) => n + (P.lvl2?.[p] || 0), 0);
       const mult = (1 + (producers - 1) * 0.5) * pf * (P.buildMult || 1) * (hasMut(G.cfg, 'turbo') ? 2 : 1);
       let dp = dt * mult;
       if (q.progress + dp > d.time) dp = d.time - q.progress;
@@ -130,11 +134,13 @@ function spawnFromProducer(faction, type) {
   const b = list.find(x => x.primary) || list[0];
   let x, z, heading = 0;
   if (d.air) { x = b.x; z = b.z; }
+  else if (d.naval) { const w = waterNear(b); if (!w) return false; x = w.x; z = w.z; heading = Math.atan2(w.x - b.x, w.z - b.z); }
   else { const e = b.exitPoint(); x = e.x; z = b.z + b.def.h * CELL / 2 - 0.5; if (b.type === 'barracks') z += 0.5; heading = 0; void e; }
   if (b.door) b.doorOpen = 2.5;
   const u = new Unit(type, faction, x, z, heading);
   if (d.air) { u.y = b.baseY + 0.5; }
   if (b.rally) u.moveTo(b.rally.x + rr(-1.5, 1.5), b.rally.z + rr(-1.5, 1.5), { attackMove: false });
+  else if (d.naval) { const w = waterNear(b); u.moveTo(w.x + (w.x - b.x) * 0.6, w.z + (w.z - b.z) * 0.6); }
   else if (type !== 'harvester') { const e = b.exitPoint(); u.moveTo(e.x + rr(-2, 2), e.z + rr(1, 4)); }
   if (type === 'harvester') u.hState = 'seek';
   if (type === 'rifle' && faction === G.player) G.tutorialTrained = (G.tutorialTrained || 0) + 1;
@@ -165,8 +171,9 @@ export function canPlace(faction, type, cx, cz, ignoreUnits = false) {
   let lo = 1e9, hi = -1e9;
   for (let j = 0; j <= d.h; j++) for (let i = 0; i <= d.w; i++) { const h = heightAt(x0 + i * CELL, z0 + j * CELL); lo = Math.min(lo, h); hi = Math.max(hi, h); }
   if (hi - lo > 2.2) return false;
-  // must be near an existing structure
-  const R = d.isWall || d.isGate ? 8 : 5;
+  if (d.naval && !nearWater(cx, cz, d)) return false;
+  // must be near an existing structure (a shipyard may reach further, to find the shore)
+  const R = d.isWall || d.isGate ? 8 : d.naval ? 12 : 5;
   for (const b of G.buildings) {
     if (b.dead || b.faction !== faction || b.def.isMine) continue;
     if (cx + d.w + R > b.cx && cx - R < b.cx + b.def.w && cz + d.h + R > b.cz && cz - R < b.cz + b.def.h) { nearOwn = true; break; }
@@ -180,6 +187,28 @@ export function canPlace(faction, type, cx, cz, ignoreUnits = false) {
     }
   }
   return true;
+}
+
+// a shipyard needs open water right next to it (and not lava!)
+export function nearWater(cx, cz, d) {
+  if (G.navalMap === false) return false;
+  let n = 0;
+  for (let j = -2; j <= d.h + 1; j++) for (let i = -2; i <= d.w + 1; i++) {
+    if (i >= 0 && j >= 0 && i < d.w && j < d.h) continue;
+    const X = cx + i, Z = cz + j;
+    if (inGrid(X, Z) && T.water[idx(X, Z)] && !T.tree[idx(X, Z)]) n++;
+  }
+  return n >= 5;
+}
+// the open-water cell nearest to a building, where its ships are launched
+export function waterNear(b) {
+  const ok = (X, Z) => inGrid(X, Z) && T.water[idx(X, Z)] && !T.tree[idx(X, Z)];
+  const c0 = cellOf(b.x), z0 = cellOf(b.z);
+  for (let r = 1; r < 12; r++) for (let j = -r; j <= r; j++) for (let i = -r; i <= r; i++) {
+    if (Math.max(Math.abs(i), Math.abs(j)) !== r) continue;
+    if (ok(c0 + i, z0 + j)) return { x: cellCenter(c0 + i), z: cellCenter(z0 + j) };
+  }
+  return null;
 }
 
 export function placeBuilding(faction, type, cx, cz) {

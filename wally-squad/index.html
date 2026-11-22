@@ -44,8 +44,9 @@
   #minimapWrap { margin: 0 8px; position: relative; border: 2px solid var(--line2); background: #000; aspect-ratio: 1; }
   #minimap { width: 100%; height: 100%; image-rendering: pixelated; cursor: pointer; }
   #radarOff { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 12px; color: var(--dim); pointer-events: none; padding: 10px; }
-  #tabs { display: grid; grid-template-columns: repeat(6, 1fr); gap: 2px; margin: 8px 8px 4px; }
+  #tabs { display: grid; grid-template-columns: repeat(var(--nt, 6), 1fr); gap: 2px; margin: 8px 8px 4px; }
   .tab { font: 700 10.5px 'Rajdhani'; padding: 5px 0; text-align: center; background: #16212b; border: 1px solid var(--line); color: var(--dim); cursor: pointer; border-radius: 3px; letter-spacing: 0.3px; position: relative; }
+  #tabs.many .tab { font-size: 9px; letter-spacing: 0; }
   .tab.active { color: #fff; border-color: var(--accent); background: #2a2410; }
   .tab.ready::after { content: ''; position: absolute; top: 2px; right: 2px; width: 6px; height: 6px; border-radius: 50%; background: var(--green); box-shadow: 0 0 6px var(--green); }
   #grid { flex: 1; overflow-y: auto; display: grid; grid-template-columns: 1fr 1fr; gap: 5px; padding: 4px 8px; align-content: start; }
@@ -140,7 +141,7 @@
     #minimapWrap { grid-area: map; width: 80px; height: 80px; max-height: none; margin: 0 0 0 4px; align-self: start; }
     #radarOff { font-size: 7.5px; padding: 2px; }
     #superRow { grid-area: super; margin: 2px 6px 2px 0; padding: 3px; font-size: 10px; }
-    #tabs { grid-area: tabs; grid-template-columns: repeat(3, 1fr); margin: 2px 6px 2px 0; gap: 2px; }
+    #tabs { grid-area: tabs; grid-template-columns: repeat(var(--nt2, 3), 1fr); margin: 2px 6px 2px 0; gap: 2px; }
     .tab { font-size: 8px; padding: 3px 0; }
     #grid { grid-area: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; padding: 3px 5px; }
     .item { aspect-ratio: 1.25; }
@@ -233,6 +234,13 @@
   .cheatRow input { background: #0d1520; color: #fff; border: 1px solid var(--line2); border-radius: 4px; font: 600 15px Rajdhani, sans-serif; padding: 6px 10px; width: 220px; text-transform: uppercase; letter-spacing: 1px; }
   #qOpts { display: none; padding: 0 6px 4px; } #qOpts .btn { width: 100%; padding: 3px 6px; font-size: 12px; }
   #qOpts .btn.on { background: rgba(255,194,58,0.2); border-color: var(--accent); color: var(--accent); }
+  #endBoard { margin: 6px auto; max-width: 520px; } #endBoard input, #worldBoard input { background: #0008; color: #fff; border: 1px solid #fff4; border-radius: 6px; padding: 6px 8px; font: inherit; }
+  table.lb { width: 100%; border-collapse: collapse; margin: 6px 0; font-size: 14px; } table.lb td { padding: 4px 6px; border-bottom: 1px solid #ffffff14; } table.lb tr.me td { color: var(--accent); font-weight: 700; } .lbNote { text-align: center; opacity: 0.8; padding: 8px; font-size: 13px; }
+  #replayBar { position: fixed; top: 52px; left: 50%; transform: translateX(-50%); z-index: 35; gap: 6px; align-items: center; background: rgba(12,18,28,0.9); border: 1px solid rgba(255,255,255,0.2); border-radius: 10px; padding: 5px 10px; font-size: 13px; }
+  #replayBar .btn { padding: 4px 8px; font-size: 12px; } body.replaying #tabs, body.replaying #grid, body.replaying #bTaunt { pointer-events: none; opacity: 0.45; }
+  .skinBtn { font-size: 12px; padding: 5px 8px; } .skinBtn.locked { opacity: 0.45; }
+  #tauntPop { position: fixed; top: 52px; right: 260px; z-index: 40; background: rgba(12,18,28,0.95); border: 1px solid rgba(255,255,255,0.2); border-radius: 10px; padding: 8px; display: flex; flex-direction: column; gap: 5px; max-width: 320px; }
+  #tauntPop .btn { text-align: left; font-size: 13px; }
   .swatch { width: 30px; height: 30px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.25); cursor: pointer; padding: 0; } .swatch.on { border-color: #fff; box-shadow: 0 0 0 2px var(--accent); }
   #feed { position: absolute; right: calc(var(--side, 260px) + 10px); top: 46px; z-index: 4; pointer-events: none; display: flex; flex-direction: column; align-items: flex-end; gap: 3px; max-width: 360px; }
   #feed .fl { background: rgba(8,12,18,0.72); border: 1px solid rgba(255,255,255,0.08); border-radius: 4px; padding: 2px 8px; font-size: 13px; color: #dfe8f2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 360px; transition: opacity 0.6s; }
@@ -382,6 +390,8 @@
   <canvas id="gl"></canvas>
   <canvas id="overlay"></canvas><div id="streak"></div>
 </div>
+<div id="tauntPop" style="display:none"></div>
+<div id="replayBar" style="display:none"><b>🎬 REPLAY</b><span id="rpTime"></span><button class="btn" id="rpPause">❚❚</button><button class="btn on" data-sp="1">1×</button><button class="btn" data-sp="2">2×</button><button class="btn" data-sp="4">4×</button><button class="btn" data-sp="8">8×</button><button class="btn" id="rpExit">✖ Exit</button></div>
 <div id="topbar">
   <div class="brand">WALLY SQUAD</div>
   <div id="clock" style="font-weight:700;color:var(--dim)">00:00</div>
@@ -393,6 +403,7 @@
   <button class="btn rotBtn" id="bNorth" title="Compass - tap to reset the view"><span id="compassN">▲</span></button>
   <button class="btn rotBtn" id="bRotR" title="Rotate the map right (E)">⟳</button>
   <button class="btn" id="bFind" title="Find the enemy base (N)">🎯</button>
+  <button class="btn" id="bTaunt" title="Taunt the enemy">💬</button>
   <button class="btn" id="bIdle" title="Idle units: select the next idle soldier or vehicle (. key)" style="display:none">💤 0</button>
   <button class="btn" id="bMusic" title="Toggle music">♪ Music</button>
   <button class="btn" id="bNextTune" title="Skip to another tune">⏭</button>
@@ -453,6 +464,8 @@
       <button class="btn big" data-panel="menuEditor">🗺 MAP EDITOR</button>
       <button class="btn big" data-panel="menuVoices">🎙 VOICE STUDIO</button>
       <button class="btn big" data-panel="menuMedals">🎖 MEDALS</button>
+      <button class="btn big" data-panel="menuWorld">🌍 WORLD LEADERBOARD</button>
+      <button class="btn big" id="bLastReplay" style="display:none">🎬 REPLAY LAST BATTLE</button>
       <button class="btn big" data-panel="menuGraphics">⚙ GRAPHICS</button>
       <button class="btn" id="bHow">How to play</button>
     </div>
@@ -472,6 +485,7 @@
     <div class="label">Map</div><div id="mapList" class="cardList maps"></div>
     <div class="label">Your faction</div><div class="row" id="facRow"></div>
     <div class="label">Army colour</div><div class="row colRow"></div>
+    <div class="label">Army skin <span class="sub">(unlock more by ranking up)</span></div><div class="row skinRow"></div>
     <div class="label">Enemy difficulty</div><div class="row" id="diffRow"></div>
     <div class="label">Battlefield</div><div class="row" id="optRow"></div>
       <div class="label">Mutators (optional rule changes)</div>
@@ -484,6 +498,7 @@
     <div class="label">Map</div><div id="mapListSv" class="cardList maps"></div>
     <div class="label">Your faction</div><div class="row" id="facRowSv"></div>
     <div class="label">Army colour</div><div class="row colRow"></div>
+    <div class="label">Army skin <span class="sub">(unlock more by ranking up)</span></div><div class="row skinRow"></div>
     <div class="label">Wave strength</div><div class="row" id="diffRowSv"></div>
     <div class="row"><button class="btn" data-panel="menuMain">◀ Back</button><button class="btn big" id="bStartSv">▶ START SURVIVAL</button></div>
   </div>
@@ -499,14 +514,16 @@
     <p style="text-align:center">No rules, unlimited money and super-fast building. Spawn any unit for either side anywhere on the map and stage your own battles. The enemy AI starts switched off.</p>
     <div class="label">Map</div><div id="mapListSb" class="cardList maps"></div>
     <div class="label">Army colour</div><div class="row colRow"></div>
+    <div class="label">Army skin <span class="sub">(unlock more by ranking up)</span></div><div class="row skinRow"></div>
     <div class="row"><button class="btn" data-panel="menuMain">◀ Back</button><button class="btn big" id="bStartSb">▶ START SANDBOX</button></div>
   </div>
   <div class="card wide" id="menuOnline" style="display:none">
     <h2>ONLINE BATTLE</h2>
-    <p style="text-align:center">Play 1 v 1 against a friend over the internet. One of you hosts and shares the room code.</p>
+    <p style="text-align:center">Play against a friend over the internet - or team up with them against the computer. One of you hosts and shares the room code.</p>
     <div class="twoCol">
       <div><div class="label">Host a battle</div>
         <div class="label small">Map</div><div id="mapListMp" class="cardList maps small"></div>
+        <div class="label small">Battle type</div><div class="row" id="kindRowMp"></div>
         <div class="label small">Your faction</div><div class="row" id="facRowMp"></div>
         <div class="row"><button class="btn big" id="bHost">Create room</button></div></div>
       <div><div class="label">Join a battle</div>
@@ -532,6 +549,13 @@
     <h2>🆕 WHAT'S NEW</h2>
     <div id="news"></div>
     <div class="row"><button class="btn big" id="bNewsOk">▶ LET'S PLAY!</button></div>
+  </div>
+  <div class="card wide" id="menuWorld" style="display:none">
+    <h2>WORLD LEADERBOARD</h2>
+    <p class="sub" style="text-align:center">The best Survival scores and Daily Challenge times from commanders all over the world. Post yours from the end-of-battle screen.</p>
+    <div class="row" id="worldTabs"></div>
+    <div id="worldBoard"></div>
+    <div class="row"><button class="btn" data-panel="menuMain">◀ Back</button></div>
   </div>
   <div class="card wide" id="menuMedals" style="display:none">
     <h2>MEDALS</h2>
@@ -647,8 +671,9 @@
     <h1 class="logo" id="endTitle">VICTORY</h1>
     <div class="tag" id="endSub"></div>
     <div class="stats" id="endStats"></div>
+    <div id="endBoard"></div>
     <canvas id="endGraph" width="520" height="150" style="width:100%;max-width:520px;display:block;margin:4px auto"></canvas>
-    <div class="row"><button class="btn big" id="bNext" style="display:none">Next mission ▶</button><button class="btn big" id="bAgain">Play again</button><button class="btn big" id="bWatch">Keep watching</button></div>
+    <div class="row"><button class="btn big" id="bNext" style="display:none">Next mission ▶</button><button class="btn big" id="bAgain">Play again</button><button class="btn big" id="bWatch">Keep watching</button><button class="btn big" id="bReplay" style="display:none">🎬 Watch replay</button></div>
     <div class="row"><button class="btn" onclick="location.href=location.pathname">Main menu</button></div>
   </div>
 </div>
