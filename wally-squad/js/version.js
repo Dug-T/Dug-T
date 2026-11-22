@@ -1,8 +1,15 @@
 // Version number and update notes. Bump VERSION and add a new entry at the top of CHANGELOG for every
 // update: players see a "What's New" screen the first time they load a new version.
-export const VERSION = '1.40';
+export const VERSION = '1.41';
 
 export const CHANGELOG = [
+  { v: '1.41', date: '2026-11-22', title: 'Flags, Haggis & Midges', items: [
+    '🚩 Capture the Flag (Skirmish option): grab the enemy flag with any ground unit and bring it home to your own flag. First to 3 captures wins. If the carrier falls the flag drops, and the computer raids your flag too!',
+    '🥘 Haggis Launcher (Wally Squad): a truck with a giant mortar that lobs piping-hot haggis across the battlefield. Now and then a haggis survives the landing and runs off - catch it for a bounty!',
+    '🎈 Goblin Zeppelin (Grimlocks): a slow, tough airship that drops bombs on whatever is underneath it. Shoot it down before it reaches your base.',
+    '🦟 Midge Swarm support power: unleash a cloud of Highland midges. Enemy infantry inside are slowed, itch so much they can barely shoot straight, and get nibbled.',
+    '🎖 New medals: Monster Hunter (defeat Nessie), Flag Bearer, Wee Beasties and Flying Haggis.',
+  ] },
   { v: '1.40', date: '2026-11-22', title: 'Thunder & Monsters', items: [
     '⚡ Real thunder: a nearby strike now tears the air with a sharp, sizzling CRACK and a BOOM, then a deep rumble rolls round the hills for several seconds. Far-off storms just grumble softly, and the thunder arrives a moment after the flash, like the real thing.',
     '🦕 Nessie! On maps with a sea, the Loch Ness Monster surfaces now and then, bites ships and anyone standing on the shore, then dives away again. Defeat her for a $3,000 bounty.',

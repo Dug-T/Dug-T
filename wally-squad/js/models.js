@@ -1044,6 +1044,63 @@ export function makeNessie() {
   });
 }
 
+// Haggis Launcher: a tartan-trimmed truck with a fat mortar and a pile of haggis on the back
+export function makeHaggisLauncher(faction) {
+  return cached(`haggislauncher-${faction}`, () => {
+    const t = mats(faction), m = M(), root = new THREE.Group(), b = new Builder();
+    for (const z of [1.1, -0.1, -1.1]) for (const x of [-0.85, 0.85]) wheel(b, m.metal, x, 0.42, z, 0.42, 0.3);
+    b.box(m.darkMetal, 1.6, 0.3, 3.2, 0, 0.62, 0);
+    b.box(t.team, 1.55, 1.0, 1.0, 0, 1.15, 1.25);                       // cab
+    b.box(m.glass, 1.35, 0.4, 0.04, 0, 1.4, 1.76);
+    b.box(t.teamDark, 1.6, 0.5, 2.1, 0, 0.98, -0.5);                    // bed
+    const tartan = new THREE.MeshStandardMaterial({ color: 0x1f3a7a, roughness: 0.8 });
+    const red = new THREE.MeshStandardMaterial({ color: 0xb02020, roughness: 0.8 });
+    for (const s of [-1, 1]) { b.box(tartan, 0.04, 0.3, 2.0, s * 0.81, 1.0, -0.5); for (let i = 0; i < 5; i++) b.box(red, 0.05, 0.3, 0.06, s * 0.82, 1.0, -1.35 + i * 0.42); b.box(red, 0.05, 0.05, 2.0, s * 0.82, 1.05, -0.5); }
+    const haggis = new THREE.MeshStandardMaterial({ color: 0x7a4a2a, roughness: 0.85 });
+    for (const [x, z] of [[-0.45, -1.2], [0, -1.3], [0.45, -1.2], [-0.2, -1.0], [0.25, -1.0]]) b.sph(haggis, 0.22, x, 1.38, z, 1, 0.8, 1.3);
+    for (const s of [-1, 1]) b.box(m.darkMetal, 0.3, 0.5, 0.3, s * 0.8, 0.55, -1.7);  // stabilisers
+    // the mortar: a short, fat barrel on a turntable
+    const g = new Builder();
+    g.cyl(m.darkMetal, 0.55, 0.6, 0.3, 16, 0, -0.2, 0);
+    g.cyl(m.gun, 0.32, 0.38, 1.7, 16, 0, 0.1, 0.6, Math.PI / 2, 0, 0);
+    g.cyl(m.gun, 0.4, 0.4, 0.2, 16, 0, 0.1, 1.45, Math.PI / 2, 0, 0);
+    g.cyl(t.accent, 0.39, 0.39, 0.12, 16, 0, 0.1, 0.4, Math.PI / 2, 0, 0);
+    const tur = g.build(); tur.rotation.x = -0.7; tur.name = 'barrel';
+    const pitch = new THREE.Group(); pitch.position.set(0, 1.5, -0.2); pitch.add(tur); pitch.userData.barrel = tur; pitch.name = 'turret';
+    root.add(pitch);
+    // a wee saltire flag on the cab
+    b.cyl(m.gun, 0.02, 0.02, 0.9, 4, 0.6, 2.0, 1.0);
+    b.box(new THREE.MeshStandardMaterial({ color: 0x1e5ad6, roughness: 0.8 }), 0.02, 0.32, 0.5, 0.6, 2.3, 0.75);
+    b.box(m.medic, 0.025, 0.05, 0.56, 0.6, 2.3, 0.75, 0.55, 0, 0); b.box(m.medic, 0.025, 0.05, 0.56, 0.6, 2.3, 0.75, -0.55, 0, 0);
+    root.add(b.build());
+    root.userData.muzzle = new THREE.Vector3(0, 0.1, 1.6);
+    return root;
+  });
+}
+// Goblin Zeppelin: a patched-up airship with a rickety gondola full of bombs
+export function makeZeppelin(faction) {
+  return cached(`zeppelin-${faction}`, () => {
+    const t = mats(faction), m = M(), root = new THREE.Group(), b = new Builder();
+    const canvas = new THREE.MeshStandardMaterial({ color: 0xb8a888, roughness: 0.9 });
+    b.sph(canvas, 1.6, 0, 2.2, 0, 1, 0.95, 2.6);                            // envelope
+    for (let i = -3; i <= 3; i++) b.add(new THREE.TorusGeometry(1.58 * Math.sqrt(Math.max(0.05, 1 - (i * 0.55 / 2.6) ** 2)), 0.05, 6, 32), t.team, 0, 2.2, i * 0.55, 0, 0, 0, 1, 0.95, 1); // team-colour bands
+    b.box(t.accent, 0.04, 0.8, 1.2, 1.55, 2.3, 0.6); b.box(t.accent, 0.04, 0.8, 1.2, -1.55, 2.3, 0.6); // painted emblem
+    for (const [x, y, z] of [[0.9, 2.9, -1.2], [-1.1, 2.0, 1.6], [0.3, 3.5, 1.0]]) b.box(m.wood, 0.5, 0.04, 0.4, x, y, z, 0.3, 0.4, 0.2); // patches
+    for (const [rx, rz] of [[0, 0], [0, Math.PI / 2], [0, Math.PI], [0, -Math.PI / 2]]) b.box(t.teamDark, 0.06, 1.0, 0.9, Math.sin(rz) * 0.0, 2.2 + Math.cos(rz) * 0.9, -3.9, 0, 0, rz); // tail fins
+    b.box(m.wood, 0.9, 0.5, 2.0, 0, 0.35, 0.2);                              // gondola
+    b.box(m.darkMetal, 0.95, 0.06, 2.05, 0, 0.62, 0.2);
+    for (let i = 0; i < 4; i++) for (const s of [-1, 1]) b.cyl(m.gun, 0.015, 0.015, 1.2, 4, s * 0.4, 1.15, -0.5 + i * 0.5); // ropes
+    for (const z of [-0.3, 0.3]) b.sph(m.black, 0.18, 0, 0.0, z);                 // bombs hanging underneath
+    b.box(m.lampRed, 0.1, 0.1, 0.1, 0, 0.45, 1.25);
+    const pb = new Builder();
+    for (let i = 0; i < 3; i++) pb.box(m.wood, 0.1, 0.8, 0.04, 0, 0, 0, 0, 0, i / 3 * Math.PI * 2);
+    const prop = pb.build(); prop.position.set(0, 0.4, -0.9); prop.name = 'prop'; root.add(prop);
+    root.add(b.build());
+    root.userData.muzzle = new THREE.Vector3(0, 0, 0.2);
+    return root;
+  });
+}
+
 export function makeJet(faction) {
   return cached(`jet-${faction}`, () => {
     const t = mats(faction), m = M();
@@ -1602,6 +1659,8 @@ export function makeUnitModel(type, faction) {
     case 'destroyer': return makeDestroyer(faction);
     case 'submarine': return makeSubmarine(faction);
     case 'battleship': return makeBattleship(faction);
+    case 'haggislauncher': return makeHaggisLauncher(faction);
+    case 'zeppelin': return makeZeppelin(faction);
     case 'landingcraft': return makeLandingCraft(faction);
     case 'nessie': return makeNessie();
     case 'titan': return makeTitan(faction);

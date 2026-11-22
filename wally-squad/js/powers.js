@@ -15,6 +15,7 @@ export const POWERS = {
   airstrike: { name: 'Airstrike', icon: '✈', req: ['helipad'], charge: 210, desc: 'Bombers carpet-bomb a line through the target.' },
   supply:    { name: 'Supply Drop', icon: '📦', req: ['refinery', 'radar'], charge: 200, desc: 'A cargo plane parachutes three supply crates onto the spot you pick. Grab them before the enemy does!' },
   reinforce: { name: 'Reinforcements', icon: '🛬', req: ['factory', 'radar'], charge: 240, desc: 'A heavy transport parachutes two tanks onto the battlefield.' },
+  midges:    { name: 'Midge Swarm', icon: '🦟', req: ['barracks', 'refinery'], charge: 160, desc: 'Releases a huge cloud of Highland midges. For 15 seconds, enemy infantry in the area are slowed, itch so much they can barely shoot straight, and get nibbled.' },
   emp:       { name: 'EMP Strike', icon: '⚡', req: ['tech'], charge: 180, desc: 'An electromagnetic pulse knocks out enemy vehicles, aircraft and defences in a wide area for 12 seconds.' },
 };
 
@@ -33,7 +34,44 @@ export function powerStates(f) {
   return out;
 }
 
+// ---------------------------------------------------------------- midge swarm
+const midgeBuf = [];
+function midges(f, x, z) {
+  G.midges = G.midges || [];
+  G.midges.push({ f, x, z, r: 14, until: G.time + 15, tick: 0 });
+  if (f === G.player) G.announce?.('Midge swarm released', G.player, 1);
+  // a buzzing black cloud (visual only)
+  const N = 420, pos = new Float32Array(N * 3), seed = [];
+  for (let i = 0; i < N; i++) seed.push([Math.random() * 6.28, Math.random() * 14, Math.random() * 3, Math.random() * 4 + 1]);
+  const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  const pts = new THREE.Points(geo, new THREE.PointsMaterial({ color: 0x111111, size: 0.16, transparent: true, opacity: 0.85, depthWrite: false }));
+  pts.frustumCulled = false; G.three.scene.add(pts);
+  const gy = groundY(x, z); let t = 0;
+  decay.push({ update: dt => {
+    t += dt;
+    for (let i = 0; i < N; i++) { const s = seed[i], a = s[0] + t * s[3]; pos[i * 3] = x + Math.cos(a) * s[1] + Math.sin(t * 7 + i) * 0.4; pos[i * 3 + 1] = gy + 0.6 + s[2] + Math.sin(t * 9 + i * 1.7) * 0.3; pos[i * 3 + 2] = z + Math.sin(a) * s[1] + Math.cos(t * 6 + i) * 0.4; }
+    geo.attributes.position.needsUpdate = true;
+    pts.material.opacity = 0.85 * Math.min(1, t * 2, Math.max(0, (15 - t) / 2));
+    if (t > 15) { G.three.scene.remove(pts); geo.dispose(); return false; }
+    return true;
+  } });
+}
+function updateMidges(dt) {
+  if (!G.midges || !G.midges.length) return;
+  for (let i = G.midges.length - 1; i >= 0; i--) {
+    const c = G.midges[i];
+    if (G.time > c.until) { G.midges.splice(i, 1); continue; }
+    c.tick -= dt; if (c.tick > 0) continue; c.tick = 0.5;
+    for (const u of unitsNear(c.x, c.z, c.r, midgeBuf)) {
+      if (u.dead || !u.isInf || u.faction === c.f || u.faction === 'neutral' || u.boarded) continue;
+      u.slowT = Math.max(u.slowT || 0, 0.8); u.itchT = 0.8;
+      damage(u, 2, null);
+    }
+  }
+}
+
 export function updatePowers(dt) {
+  updateMidges(dt);
   for (const f in G.players) {
     if (f === 'neutral') continue;
     const P = G.players[f];
@@ -58,9 +96,10 @@ export function usePower(f, type, x, z) {
   else if (type === 'paradrop') paradrop(f, x, z);
   else if (type === 'emp') emp(f, x, z);
   else if (type === 'reinforce') reinforce(f, x, z);
+  else if (type === 'midges') midges(f, x, z);
   else if (type === 'supply') supplyDrop(f, x, z);
   else airstrike(f, x, z);
-  if (f !== G.player && type !== 'recon') { G.announce?.(type === 'airstrike' ? 'Warning: enemy aircraft approaching' : type === 'emp' ? 'Warning: enemy EMP strike!' : type === 'reinforce' ? 'Enemy tanks are being dropped in' : type === 'supply' ? 'The enemy is receiving a supply drop' : 'Enemy paratroopers detected', G.player, 3); G.alertAt = { x, z, t: G.time }; }
+  if (f !== G.player && type !== 'recon') { G.announce?.(type === 'airstrike' ? 'Warning: enemy aircraft approaching' : type === 'emp' ? 'Warning: enemy EMP strike!' : type === 'reinforce' ? 'Enemy tanks are being dropped in' : type === 'supply' ? 'The enemy is receiving a supply drop' : type === 'midges' ? 'Midges! The enemy has released a midge swarm!' : 'Enemy paratroopers detected', G.player, 3); G.alertAt = { x, z, t: G.time }; }
   return true;
 }
 
