@@ -193,6 +193,57 @@ function randomWater() {
   return null;
 }
 
+// ---- the castle pays its holder $15 a second
+export function updateCastle(dt) {
+  for (const b of G.buildings) if (b.def.castle && !b.dead && b.faction !== 'neutral' && G.players[b.faction]) G.players[b.faction].credits += 15 * dt;
+}
+
+// ---- Highland coo stampede: on Highland maps a herd of shaggy cattle now and then thunders straight
+// across the battlefield, trampling any soldiers in the way (and dinging vehicles)
+let stampedeT = 360;
+const herd = [], trampled = new Set();
+export function updateStampede(dt) {
+  const map = currentMap();
+  if (!map || map.theme !== 'highland' || G.cfg.mode === 'campaign' || G.cfg.mode === 'tutorial' || G.over) return;
+  if (herd.length) {
+    for (let i = herd.length - 1; i >= 0; i--) {
+      const c = herd[i];
+      if (c.dead) { herd.splice(i, 1); continue; }
+      if (Math.hypot(c.x - c.goal.x, c.z - c.goal.z) < 6 || (G.time - c.born > 60)) { c.remove(); herd.splice(i, 1); continue; }
+      if (!c.order && !c.path) c.moveTo(c.goal.x, c.goal.z);
+      for (const u of unitsNear(c.x, c.z, 1.8, stampBuf)) {
+        if (u.dead || u === c || u.type === 'coo' || u.air || u.boarded || u.def.naval) continue;
+        const key = c.id + ':' + u.id; if (trampled.has(key)) continue; trampled.add(key);
+        u.trampledN = (u.trampledN || 0) + 1; if (u.trampledN > 2) continue; // knocked flat twice at most - painful, rarely fatal
+        damage(u, u.isInf ? 28 : 15, null);
+        if (u.isInf) { u.x += Math.sin(c.heading) * 1.5; u.z += Math.cos(c.heading) * 1.5; }
+      }
+    }
+    if (!herd.length) { trampled.clear(); for (const u of G.units) u.trampledN = 0; stampedeT = srr(300, 480); }
+    return;
+  }
+  stampedeT -= dt;
+  if (stampedeT > 0) return;
+  // run across the middle of the map, side to side, away from both bases' cores
+  const a = srand() * Math.PI * 2, R = HALF - 18;
+  let sx = Math.cos(a) * R, sz = Math.sin(a) * R, gx = -sx, gz = -sz;
+  const s = nearFree(sx, sz), g = nearFree(gx, gz);
+  if (!s || !g) { stampedeT = 60; return; }
+  for (let i = 0; i < 9; i++) {
+    const c = new Unit('coo', 'neutral', s.x + srr(-5, 5), s.z + srr(-5, 5), Math.atan2(g.x - s.x, g.z - s.z));
+    c.stance = 'holdfire'; c.goal = { x: g.x + srr(-6, 6), z: g.z + srr(-6, 6) }; c.born = G.time;
+    c.moveTo(c.goal.x, c.goal.z); herd.push(c);
+  }
+  G.announce?.('STAMPEDE! A herd of Highland coos is charging across the glen - get your troops out of the way!', G.player, 9);
+  G.alertAt = { x: s.x, z: s.z, t: G.time };
+  G.sfx?.play('wardrum');
+}
+const stampBuf = [];
+function nearFree(x, z) {
+  for (let k = 1; k >= 0.3; k -= 0.05) if (isWalkable(cellOf(x * k), cellOf(z * k))) return { x: x * k, z: z * k };
+  return null;
+}
+
 // ---- the Ice Cream Van: every few minutes it trundles across the map playing its jingle, healing everyone nearby
 let vanT = 300, van = null;
 export function updateIceCream(dt) {
@@ -273,6 +324,7 @@ export function placeBarrels() {
 // a couple of civilian houses beside each lane, waiting to be garrisoned
 export function placeHouses() {
   const map = currentMap(); if (!map || G.cfg.mode === 'tutorial') return;
+  if (map.castle) forcePlace('neutral', 'castle', 0, 0); // Castle Rock: the keep on the crag in the middle
   map.lanes.forEach(lane => {
     let len = 0; const segs = [];
     for (let k = 0; k < lane.length - 1; k++) { const l = Math.hypot(lane[k + 1][0] - lane[k][0], lane[k + 1][1] - lane[k][1]); segs.push(l); len += l; }

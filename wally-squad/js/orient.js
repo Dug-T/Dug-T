@@ -3,6 +3,7 @@
 // the phone, exactly as if the screen were locked sideways. These helpers convert touch/mouse
 // positions into the turned layout.
 
+let lastW = 0, lastH = 0; // the visible size, kept up to date by updateViewportVars()
 export const isRot = () => document.body.classList.contains('rot');
 const coarse = matchMedia('(pointer: coarse)');
 
@@ -15,11 +16,12 @@ export function elemPos(el, e) {
 }
 // Position in #app coordinates (for things placed with position: fixed inside the app)
 export function appPos(e) {
-  return isRot() ? { x: e.clientY, y: window.innerWidth - e.clientX } : { x: e.clientX, y: e.clientY };
+  return isRot() ? { x: e.clientY, y: (lastW || window.innerWidth) - e.clientX } : { x: e.clientX, y: e.clientY };
 }
 // Size of the app area as the game sees it
 export function appSize() {
-  return isRot() ? { w: window.innerHeight, h: window.innerWidth } : { w: window.innerWidth, h: window.innerHeight };
+  const w = lastW || window.innerWidth, h = lastH || window.innerHeight;
+  return isRot() ? { w: h, h: w } : { w, h };
 }
 
 let rulesCopied = false;
@@ -49,9 +51,13 @@ function copyLandscapeRules() {
 }
 
 // the real visible size, for CSS (--vw / --vh): 100vh/100dvh are wrong in some in-app browsers
-let lastW = 0, lastH = 0;
 function updateViewportVars() {
-  const w = window.innerWidth, h = window.innerHeight;
+  // the visible area: on phones the browser's own bars can make innerWidth/innerHeight a little bigger
+  // than what you can actually see, which cut off the edge of the game after turning the phone
+  const vv = window.visualViewport;
+  const useVV = vv && Math.abs(vv.scale - 1) < 0.01 && vv.width > 50 && vv.height > 50;
+  const w = Math.round(useVV ? Math.min(window.innerWidth, vv.width) : window.innerWidth);
+  const h = Math.round(useVV ? Math.min(window.innerHeight, vv.height) : window.innerHeight);
   if (w === lastW && h === lastH) return;
   lastW = w; lastH = h;
   const s = document.documentElement.style;
@@ -63,7 +69,7 @@ window.visualViewport?.addEventListener('resize', updateViewportVars);
 
 export function updateOrientation() {
   updateViewportVars();
-  const rot = coarse.matches && window.innerHeight > window.innerWidth;
+  const rot = coarse.matches && lastH > lastW;
   if (rot) copyLandscapeRules();
   if (rot !== isRot()) document.body.classList.toggle('rot', rot);
   return rot;
@@ -110,3 +116,24 @@ document.addEventListener('touchend', () => {
   const step = () => { if (Math.abs(v) < 0.4) { coast = null; return; } box.scrollTop += v; v *= 0.93; coast = requestAnimationFrame(step); };
   coast = requestAnimationFrame(step);
 }, { passive: true });
+
+// ---- turning the phone: browsers report the new size late (sometimes with no resize event at all),
+// and can leave the page scrolled or half laid-out. So after any orientation or size change we
+// re-measure several times over the next second and a half, put the page back at the top, and
+// tell the game to resize its 3D view.
+let onSettle = null;
+export function onLayoutChange(fn) { onSettle = fn; }
+function settle() {
+  updateOrientation();
+  if (window.scrollX || window.scrollY) window.scrollTo(0, 0);
+  document.documentElement.scrollTop = 0; document.body.scrollTop = 0;
+  const app = document.getElementById('app'); if (app && (app.scrollTop || app.scrollLeft)) { app.scrollTop = 0; app.scrollLeft = 0; }
+  onSettle?.();
+}
+function settleSoon() { for (const t of [0, 80, 200, 400, 700, 1100, 1700]) setTimeout(settle, t); }
+window.addEventListener('orientationchange', settleSoon);
+window.addEventListener('resize', settleSoon);
+window.visualViewport?.addEventListener('resize', settleSoon);
+screen.orientation?.addEventListener?.('change', settleSoon);
+document.addEventListener('fullscreenchange', settleSoon);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) settleSoon(); });

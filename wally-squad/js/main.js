@@ -27,7 +27,7 @@ import { startRecording, recordStep, saveReplay, loadReplay, replayInfo, beginPl
 import { registerCustomUnits, loadDesigns, buildDesigner } from './customunits.js';
 import { gfx, initGraphics, pixelRatio, autoTune, buildGraphicsPanel, maxAnisotropy, isTouch, shadowInterval } from './graphics.js';
 import { allMaterials } from './materials.js';
-import { updateConvoy, updateHaggis, updateDragon, updateIceCream, updateNessie } from './features.js';
+import { updateConvoy, updateHaggis, updateDragon, updateIceCream, updateNessie, updateCastle, updateStampede } from './features.js';
 import { updateCrates, animateCrates, placeTechBuildings, placeBarrels, placeHouses, recordHistory, drawHistory } from './features.js';
 import { updatePowers } from './powers.js';
 import { updateHazards } from './hazards.js';
@@ -36,7 +36,7 @@ import { initCTF, updateCTF, animateCTF, ctfWinner } from './ctf.js';
 import { initAmbient, updateAmbient } from './ambient.js';
 import { initAchievements, checkAchievements, buildMedals } from './achievements.js';
 import { registerCustomMaps, buildMapEditor } from './mapeditor.js';
-import { updateOrientation } from './orient.js';
+import { updateOrientation, onLayoutChange } from './orient.js';
 import { awardGame, profileCard } from './profile.js';
 import { endBoard, fetchTop, boardHTML, playerName } from './leaderboard.js';
 import { SKINS, getSkin, setSkin, skinUnlocked, skinRankName } from './skins.js';
@@ -171,6 +171,7 @@ async function boot() {
   composer.addPass(new OutputPass());
   G.onResize = (w, h) => {
     renderer.setSize(w, h, false);
+    composer.setPixelRatio(renderer.getPixelRatio()); // keep the effects at the same resolution as the screen (it changes when auto-quality kicks in)
     composer.setSize(w, h);
     // on phones the glow is computed at quarter resolution - it is a blur anyway
     if (isTouch) { const pr = renderer.getPixelRatio(); bloom.setSize(Math.round(w * pr / 2), Math.round(h * pr / 2)); }
@@ -242,6 +243,7 @@ async function boot() {
 
   UI.initUI();
   initGraphics({ renderer, sun, bloom, composer, scene, resize: () => UI.resize() });
+  onLayoutChange(() => { UI.resize(); UI.fitTopbar?.(true); });
   // sharpest possible texture filtering at glancing angles
   const aniso = maxAnisotropy();
   for (const m of allMaterials) for (const k of ['map', 'normalMap', 'emissiveMap']) if (m[k]) { m[k].anisotropy = aniso; m[k].needsUpdate = true; }
@@ -284,7 +286,7 @@ function setupBase(faction, pos) {
 }
 
 // ---------------------------------------------------------------- menus
-const panels = ['menuNews', 'menuWorld', 'menuMain', 'menuCampaign', 'menuSkirmish', 'menuOnline', 'menuVoices', 'menuDesigner', 'menuGraphics', 'menuSurvival', 'menuMedals', 'menuEditor', 'menuSandbox', 'menuWatch'];
+const panels = ['menuNews', 'menuHeroes', 'menuWorld', 'menuMain', 'menuCampaign', 'menuSkirmish', 'menuOnline', 'menuVoices', 'menuDesigner', 'menuGraphics', 'menuSurvival', 'menuMedals', 'menuEditor', 'menuSandbox', 'menuWatch'];
 function showPanel(id) {
   for (const p of panels) $(p).style.display = p === id ? 'block' : 'none';
   document.body.classList.toggle('newsOpen', id === 'menuNews'); // keep the roaming tip jar off the What's New screen
@@ -293,6 +295,7 @@ function showPanel(id) {
   if (id === 'menuGraphics') buildGraphicsPanel($('gfxPanel'));
   if (id === 'menuMedals') buildMedals($('medals'));
   if (id === 'menuWorld') buildWorld();
+  if (id === 'menuHeroes') buildHeroes();
   if (id === 'menuNews') buildNews($('news'));
   if (id === 'menuEditor') buildMapEditor($('editor'), (mode, map) => startWith({ mode, map, faction: 'wally', difficulty: localStorage.getItem('ws_diff') || 'normal', daynight: true, weather: null }));
 }
@@ -309,10 +312,38 @@ function updateReplayBar() {
   const el = $('rpTime'); if (!el) return;
   el.textContent = `${fmtTime(G.time)} / ${fmtTime(playback.total || 0)}${playback.done ? ' · finished' : ''}`;
 }
+// ---------------------------------------------------------------- Hall of Heroes: your best units, kept across games
+const HERO_KEY = 'ws_heroes';
+const loadHeroes = () => { try { return JSON.parse(localStorage.getItem(HERO_KEY) || '[]'); } catch { return []; } };
+function saveHeroes(result) {
+  const book = [...(G.heroBook || new Map()).values()].filter(h => h.kills >= 3).sort((a, b) => b.kills - a.kills).slice(0, 3);
+  if (!book.length) return [];
+  const date = new Date().toISOString().slice(0, 10), mapName = MAPS[run.map] ? MAPS[run.map].name : run.map;
+  const all = loadHeroes().concat(book.map(h => ({ ...h, map: mapName, date, result }))).sort((a, b) => b.kills - a.kills).slice(0, 30);
+  try { localStorage.setItem(HERO_KEY, JSON.stringify(all)); } catch { /* ignore */ }
+  return book;
+}
+function buildHeroes() {
+  const list = loadHeroes(), el = $('heroes');
+  if (!list.length) { el.innerHTML = '<p class="sub" style="text-align:center">No heroes yet. Win some fights - any unit with 3 or more kills in a battle is remembered here.</p>'; return; }
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+  el.innerHTML = list.map((h, i) => `<div class="heroRow"><span style="width:26px;text-align:center">${['🥇', '🥈', '🥉'][i] || i + 1}</span><img src="${UI.icons[h.type] || ''}" alt=""><div><b>${esc(h.name)}</b> ${'★'.repeat(h.rank || 0)}${h.alive === false ? ' <span title="Fell in battle">✝</span>' : ''}<div class="sub">${esc(UNITS[h.type] ? UNITS[h.type].name : h.type)} · ${esc(h.map)} · ${esc(h.date)} · ${esc(h.result)}</div></div><span class="k">${h.kills} kills</span></div>`).join('');
+}
+// ---------------------------------------------------------------- live scoreboard (pause menu)
+function drawScoreboard() {
+  const el = $('scoreBoard'); if (!el) return;
+  const sides = [G.player, G.enemy];
+  const row = (label, fn) => `<tr><td>${label}</td>${sides.map(f => `<td>${fn(f)}</td>`).join('')}</tr>`;
+  const units = f => G.units.filter(u => !u.dead && u.faction === f && !u.boarded).length;
+  const army = f => G.units.filter(u => !u.dead && u.faction === f).reduce((a, u) => a + (u.def.cost || 0), 0);
+  const blds = f => G.buildings.filter(b => !b.dead && b.faction === f && !b.def.isWall && !b.def.isMine).length;
+  const K = G.killsBy || {}, L = G.lostBy || {};
+  el.innerHTML = `<table><tr><th></th>${sides.map(f => `<th style="color:${FACTIONS[f].css}">${f === G.player ? 'YOU' : 'ENEMY'}</th>`).join('')}</tr>${row('Units', units)}${row('Army value', f => '$' + army(f).toLocaleString())}${row('Buildings', blds)}${row('Kills', f => K[f] || 0)}${row('Losses', f => L[f] || 0)}</table>`;
+}
 // ---------------------------------------------------------------- world leaderboard (menu)
 function buildWorld() {
   const tabs = $('worldTabs'), daily = dailyChallenge();
-  const boards = [['daily:' + daily.daily, `📅 Today's Daily (${MAPS[daily.map].name})`, 'Daily Challenge']].concat(['valley', 'frost', 'dunes', 'midnight', 'isles', 'magma', 'autumn', 'blossom', 'highland', 'canyon', 'loch'].filter(m => MAPS[m]).map(m => ['survival:' + m, '☠ ' + MAPS[m].name, 'Survival']));
+  const boards = [['daily:' + daily.daily, `📅 Today's Daily (${MAPS[daily.map].name})`, 'Daily Challenge']].concat(['valley', 'frost', 'dunes', 'midnight', 'isles', 'magma', 'autumn', 'blossom', 'highland', 'canyon', 'loch', 'castle'].filter(m => MAPS[m]).map(m => ['survival:' + m, '☠ ' + MAPS[m].name, 'Survival']));
   tabs.innerHTML = '';
   const show = async (b, btn) => {
     for (const o of tabs.children) o.classList.toggle('on', o === btn);
@@ -327,7 +358,7 @@ function dailyChallenge() {
   const d = new Date(), date = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   let h = 2166136261; for (const ch of date) h = Math.imul(h ^ ch.charCodeAt(0), 16777619) >>> 0;
   const rnd = () => { h = Math.imul(h ^ (h >>> 15), 2246822519) >>> 0; h = (h + 0x6D2B79F5) >>> 0; return h / 4294967296; };
-  const maps = ['valley', 'frost', 'dunes', 'midnight', 'magma', 'isles', 'autumn', 'blossom', 'highland', 'canyon', 'loch'].filter(m => MAPS[m]);
+  const maps = ['valley', 'frost', 'dunes', 'midnight', 'magma', 'isles', 'autumn', 'blossom', 'highland', 'canyon', 'loch', 'castle'].filter(m => MAPS[m]);
   const muts = Object.keys(MUTATORS);
   const a = muts.splice(Math.floor(rnd() * muts.length), 1)[0], b = muts[Math.floor(rnd() * muts.length)];
   return { mode: 'skirmish', daily: date, map: maps[Math.floor(rnd() * maps.length)], faction: rnd() < 0.5 ? 'wally' : 'grim', difficulty: 'hard', daynight: true, weather: null, mut: [a, b] };
@@ -487,7 +518,7 @@ function optionCards(el, items, sel, onPick) {
     el.appendChild(d);
   }
 }
-const MAP_SWATCH = { loch: 'linear-gradient(135deg,#55703a,#1e4a64 45%,#2a6a88 60%,#7a6488)', canyon: 'linear-gradient(135deg,#8a3a20,#d8905a 50%,#2a7a8a)', highland: 'linear-gradient(135deg,#55703a,#7a6488 50%,#1e3a48)', blossom: 'linear-gradient(135deg,#ffb6d2,#f6e6ee 45%,#6a9a3e)', autumn: 'linear-gradient(135deg,#c0501e,#d9a02a 50%,#7a7a32)', isles: 'linear-gradient(135deg,#4f8f2e,#e6d49a 55%,#18a6ae)', magma: 'linear-gradient(135deg,#2a2624,#5e3f2d 55%,#ff5a14)', valley: 'linear-gradient(135deg,#4f7a2a,#76913a 50%,#1d4b63)', frost: 'linear-gradient(135deg,#f4f7fa,#a7b0b8 60%,#6f9fb8)', dunes: 'linear-gradient(135deg,#e8d29c,#b48a58 60%,#2a7d86)', midnight: 'linear-gradient(135deg,#0a1124,#1d2b4a 60%,#ffd27a)' };
+const MAP_SWATCH = { castle: 'linear-gradient(135deg,#6a6a62,#55703a 45%,#7a6488)', loch: 'linear-gradient(135deg,#55703a,#1e4a64 45%,#2a6a88 60%,#7a6488)', canyon: 'linear-gradient(135deg,#8a3a20,#d8905a 50%,#2a7a8a)', highland: 'linear-gradient(135deg,#55703a,#7a6488 50%,#1e3a48)', blossom: 'linear-gradient(135deg,#ffb6d2,#f6e6ee 45%,#6a9a3e)', autumn: 'linear-gradient(135deg,#c0501e,#d9a02a 50%,#7a7a32)', isles: 'linear-gradient(135deg,#4f8f2e,#e6d49a 55%,#18a6ae)', magma: 'linear-gradient(135deg,#2a2624,#5e3f2d 55%,#ff5a14)', valley: 'linear-gradient(135deg,#4f7a2a,#76913a 50%,#1d4b63)', frost: 'linear-gradient(135deg,#f4f7fa,#a7b0b8 60%,#6f9fb8)', dunes: 'linear-gradient(135deg,#e8d29c,#b48a58 60%,#2a7d86)', midnight: 'linear-gradient(135deg,#0a1124,#1d2b4a 60%,#ffd27a)' };
 const THEME_SWATCH = { canyon: MAP_SWATCH.canyon, highland: MAP_SWATCH.highland, blossom: MAP_SWATCH.blossom, autumn: MAP_SWATCH.autumn, temperate: MAP_SWATCH.valley, snow: MAP_SWATCH.frost, desert: MAP_SWATCH.dunes, night: MAP_SWATCH.midnight };
 const mapItems = () => Object.entries(MAPS).map(([id, m]) => ({ id, title: (m.custom ? '🗺 ' : '') + m.name, desc: m.desc, swatch: MAP_SWATCH[id] || THEME_SWATCH[m.theme] }));
 const facItems = [{ id: 'wally', title: 'Wally Squad', desc: 'Titan tanks, medics, Wally the hero, Sky Lance' }, { id: 'grim', title: 'Grimlock Legion', desc: 'Stealth tanks, Inferno tanks, Doom Missile' }];
@@ -786,6 +817,14 @@ function start() {
   const streak = { n: 0, t: -99 };
   const SHOUT = { 2: 'Double kill!', 3: 'Triple kill!', 5: 'Rampage!', 8: 'Unstoppable!', 12: 'Wally Squad is on fire!', 20: 'Legendary!' };
   initBonus(run, t => UI.message(t));
+  // tallies for the scoreboard and the Hall of Heroes
+  G.killsBy = {}; G.lostBy = {}; G.heroBook = new Map();
+  on('kill', (victim, killer) => {
+    if (victim.kind === 'unit' && victim.faction !== 'neutral') G.lostBy[victim.faction] = (G.lostBy[victim.faction] || 0) + 1;
+    if (killer && killer.faction && killer.faction !== 'neutral' && victim.faction !== killer.faction && victim.faction !== 'neutral') G.killsBy[killer.faction] = (G.killsBy[killer.faction] || 0) + 1;
+    if (killer && killer.kind === 'unit' && killer.faction === G.player && killer.kills) G.heroBook.set(killer.id, { name: killer.hero ? killer.def.name : killer.nick || killer.def.name, type: killer.type, kills: killer.kills, rank: killer.rank || 0, alive: true });
+    if (victim.kind === 'unit' && G.heroBook.has(victim.id)) G.heroBook.get(victim.id).alive = false;
+  });
   G.emitBonus3 = () => emit('bonus3');
   // voices: Wally Man's quips, and last words from your fallen units
   on('kill', (victim, killer) => {
@@ -814,6 +853,7 @@ function togglePause(force) {
   if (!G.started || G.over) return;
   const want = force !== undefined ? force : $('pause').style.display !== 'flex';
   $('pause').style.display = want ? 'flex' : 'none';
+  if (want) drawScoreboard();
   if (!lockstep) G.paused = want; // online games keep running while the menu is open
 }
 
@@ -821,6 +861,7 @@ function endGame(win, text, winner) {
   if (G.over) return;
   if (G.replay) { G.over = true; Audio.announce(win ? 'Mission accomplished' : 'Mission failed'); UI.message(`🎬 The battle ended here: ${win ? 'VICTORY' : 'DEFEAT'}. ${text || ''}`, true); return; }
   if (!G.cheated && !(mission && mission.tutorial)) saveReplay(win ? 'Victory' : 'Defeat');
+  const newHeroes = !G.cheated && run.mode !== 'watch' && run.mode !== 'sandbox' ? saveHeroes(win ? 'Victory' : 'Defeat') : [];
   G.over = true;
   if (run.mode === 'watch') G.watchWinner = winner;
   emit('end', win);
@@ -851,7 +892,7 @@ function endGame(win, text, winner) {
     $('endTitle').style.color = win ? 'var(--accent)' : 'var(--red)';
     $('endSub').textContent = text || (win ? (mission ? `${mission.title}: mission complete.` : `The ${FACTIONS[G.enemy].name} has been crushed!`) : 'Our forces have fallen. Regroup, commander.');
     const t = Math.floor(G.time);
-    $('endStats').innerHTML = `<span>Mission time</span><span>${Math.floor(t / 60)}m ${t % 60}s</span>${run.mode === 'mp' ? '' : `<span>Difficulty</span><span>${DIFFICULTY[G.difficulty].label}</span>`}<span>Enemies destroyed</span><span>${G.stats.killed}</span><span>Units lost</span><span>${G.stats.lost}</span><span>Structures built</span><span>${G.stats.built}</span><span>Credits harvested</span><span>${Math.round(G.stats.harvested)}</span>${G.mvp ? `<span>MVP</span><span>🏅 ${G.mvp.name} · ${G.mvp.kills} kills</span>` : ''}${G.bestStreak > 1 ? `<span>Best kill streak</span><span>${G.bestStreak}</span>` : ''}${run.daily && win ? `<span>Daily Challenge</span><span>${dailyNote}</span>` : ''}${award ? `<span>Experience</span><span>+${award.xp} XP · ${award.rank.icon} ${award.rank.name}${award.promoted ? ' · <b style="color:var(--accent)">PROMOTED!</b>' : ''}</span>` : ''}`;
+    $('endStats').innerHTML = `<span>Mission time</span><span>${Math.floor(t / 60)}m ${t % 60}s</span>${run.mode === 'mp' ? '' : `<span>Difficulty</span><span>${DIFFICULTY[G.difficulty].label}</span>`}<span>Enemies destroyed</span><span>${G.stats.killed}</span><span>Units lost</span><span>${G.stats.lost}</span><span>Structures built</span><span>${G.stats.built}</span><span>Credits harvested</span><span>${Math.round(G.stats.harvested)}</span>${G.mvp ? `<span>MVP</span><span>🏅 ${G.mvp.name} · ${G.mvp.kills} kills</span>` : ''}${newHeroes.length ? `<span>Hall of Heroes</span><span>🏛 ${newHeroes.length} new entr${newHeroes.length > 1 ? 'ies' : 'y'}</span>` : ''}${G.bestStreak > 1 ? `<span>Best kill streak</span><span>${G.bestStreak}</span>` : ''}${run.daily && win ? `<span>Daily Challenge</span><span>${dailyNote}</span>` : ''}${award ? `<span>Experience</span><span>+${award.xp} XP · ${award.rank.icon} ${award.rank.name}${award.promoted ? ' · <b style="color:var(--accent)">PROMOTED!</b>' : ''}</span>` : ''}`;
     recordHistory(99); drawHistory($('endGraph'));
     // post the score to the world leaderboard (Survival, and winning Daily Challenges)
     const eb = $('endBoard'); eb.innerHTML = '';
@@ -925,6 +966,8 @@ function simStep(dt) {
   updateHaggis(dt);
   updateDragon(dt);
   updateNessie(dt);
+  updateCastle(dt);
+  updateStampede(dt);
   updateIceCream(dt);
   updateHazards(dt);
   updateHill(dt);

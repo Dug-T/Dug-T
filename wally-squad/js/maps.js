@@ -120,6 +120,23 @@ export const MAPS = {
     ridge: 62, forest: 0.06,
     theme: 'canyon', weather: ['clear', 'clear', 'sandstorm', 'clear', 'fog'],
   },
+  castle: {
+    name: 'Castle Rock', desc: 'An ancient castle stands on a crag in the middle of the glen. Hold it with your infantry for income and a commanding view - if you can keep it.',
+    seed: [91, -55, 14, 72], castle: true,
+    slots: [{ x: -96, z: 70 }, { x: 96, z: -70 }],
+    lanes: [
+      [[-96, 70], [-40, 30], [0, 0], [40, -30], [96, -70]],
+      [[-96, 70], [-100, -40], [-30, -100], [60, -96], [96, -70]],
+      [[-96, 70], [-60, 100], [30, 100], [100, 40], [96, -70]],
+    ],
+    ore: [
+      { x: -116, z: 36, r: 10 }, { x: -70, z: 108, r: 9 }, { x: 116, z: -36, r: 10 }, { x: 70, z: -108, r: 9 },
+      { x: -40, z: -60, r: 8, rich: 1 }, { x: 40, z: 60, r: 8, rich: 1 },
+    ],
+    lakes: [{ x: -26, z: -26, r: 11 }, { x: 26, z: 26, r: 11 }, { x: 70, z: 20, r: 9 }, { x: -70, z: -20, r: 9 }],
+    ridge: 52, forest: 0.12,
+    theme: 'highland', weather: ['rain', 'fog', 'clear', 'rain', 'storm', 'hail'],
+  },
   loch: {
     name: 'Kelpie Loch', desc: 'A great sea loch splits the glen in two. Build a Shipyard on the shore and rule the waves - or march round the long way by land.',
     seed: [52, -17, 73, -8],

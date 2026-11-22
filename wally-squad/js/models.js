@@ -1118,6 +1118,23 @@ export function makeZeppelin(faction) {
   });
 }
 
+// a shaggy Highland coo, big enough to see from the battlefield camera
+export function makeCoo() {
+  return cached('coo', () => {
+    const root = new THREE.Group(), b = new Builder();
+    const ginger = new THREE.MeshStandardMaterial({ color: 0xb4622a, roughness: 0.95 }), dark = new THREE.MeshStandardMaterial({ color: 0x8a4a22, roughness: 0.95 });
+    const horn = new THREE.MeshStandardMaterial({ color: 0xe8dcc0, roughness: 0.6 });
+    b.box(ginger, 0.95, 0.85, 1.7, 0, 1.15, 0); b.box(dark, 1.0, 0.25, 1.72, 0, 0.78, 0);   // shaggy body
+    b.box(ginger, 0.55, 0.55, 0.6, 0, 1.35, 1.05); b.box(dark, 0.58, 0.2, 0.3, 0, 1.55, 1.3); // head + fringe
+    b.box(new THREE.MeshStandardMaterial({ color: 0x3a2a20 }), 0.42, 0.2, 0.14, 0, 1.18, 1.38); // nose
+    for (const s of [-1, 1]) b.add(new THREE.ConeGeometry(0.07, 0.7, 8).rotateZ(s * (Math.PI / 2 + 0.45)), horn, s * 0.55, 1.65, 1.0);
+    for (const [x, z] of [[-0.3, 0.6], [0.3, 0.6], [-0.3, -0.6], [0.3, -0.6]]) b.box(dark, 0.2, 0.75, 0.2, x, 0.37, z);
+    b.box(dark, 0.08, 0.5, 0.08, 0, 1.1, -0.9, 0.5, 0, 0);                                     // tail
+    root.add(b.build());
+    return root;
+  });
+}
+
 export function makeJet(faction) {
   return cached(`jet-${faction}`, () => {
     const t = mats(faction), m = M();
@@ -1676,6 +1693,7 @@ export function makeUnitModel(type, faction) {
     case 'destroyer': return makeDestroyer(faction);
     case 'submarine': return makeSubmarine(faction);
     case 'battleship': return makeBattleship(faction);
+    case 'coo': return makeCoo();
     case 'haggislauncher': return makeHaggisLauncher(faction);
     case 'zeppelin': return makeZeppelin(faction);
     case 'landingcraft': return makeLandingCraft(faction);
@@ -1733,8 +1751,8 @@ export function makeBuildingModel(type, faction) {
     const t = mats(faction), m = M();
     const root = new THREE.Group();
     const b = new Builder();
-    const W = { coastgun: 2, shipyard: 3, tesla: 1, flametower: 1, house: 2, tesla: 1, flametower: 1, house: 2, xbarrel: 1, wonder: 3, bunker: 2, conyard: 4, power: 3, refinery: 4, barracks: 3, factory: 4, radar: 3, tech: 3, helipad: 3, turret: 1, sam: 2, plasma: 1, uplink: 3, silo: 3, wall: 1, gate: 2, mine: 1, derrick: 2, hospital: 2, depot: 2 };
-    const D = { coastgun: 2, shipyard: 3, tesla: 1, flametower: 1, house: 2, xbarrel: 1, wonder: 3, bunker: 2, conyard: 4, power: 3, refinery: 3, barracks: 3, factory: 4, radar: 3, tech: 3, helipad: 3, turret: 1, sam: 2, plasma: 1, uplink: 3, silo: 3, wall: 1, gate: 1, mine: 1, derrick: 2, hospital: 2, depot: 2 };
+    const W = { castle: 5, coastgun: 2, shipyard: 3, tesla: 1, flametower: 1, house: 2, tesla: 1, flametower: 1, house: 2, xbarrel: 1, wonder: 3, bunker: 2, conyard: 4, power: 3, refinery: 4, barracks: 3, factory: 4, radar: 3, tech: 3, helipad: 3, turret: 1, sam: 2, plasma: 1, uplink: 3, silo: 3, wall: 1, gate: 2, mine: 1, derrick: 2, hospital: 2, depot: 2 };
+    const D = { castle: 5, coastgun: 2, shipyard: 3, tesla: 1, flametower: 1, house: 2, xbarrel: 1, wonder: 3, bunker: 2, conyard: 4, power: 3, refinery: 3, barracks: 3, factory: 4, radar: 3, tech: 3, helipad: 3, turret: 1, sam: 2, plasma: 1, uplink: 3, silo: 3, wall: 1, gate: 1, mine: 1, derrick: 2, hospital: 2, depot: 2 };
     const w = W[type] * CELL - 0.3, d = D[type] * CELL - 0.3;
     const parts = {};
     switch (type) {
@@ -2078,6 +2096,37 @@ export function makeBuildingModel(type, faction) {
         tb.add(new THREE.SphereGeometry(0.07, 6, 4), m.lampRed, 0, 0.12, 1.32);
         const tur = tb.build(); tur.position.set(0, 2.6, 0); tur.name = 'turret';
         parts.turret = tur; parts.muzzle = new THREE.Vector3(0, 0, 1.35);
+        break;
+      }
+      case 'castle': {
+        const stone = new THREE.MeshStandardMaterial({ color: 0x8a867c, roughness: 0.95 }), dstone = new THREE.MeshStandardMaterial({ color: 0x6a665e, roughness: 0.95 });
+        const roof = new THREE.MeshStandardMaterial({ color: 0x3a3e48, roughness: 0.8 });
+        foundation(b, w, d, 0.4);
+        // curtain walls with battlements
+        for (const [x, z, sw, sd] of [[0, -4.2, 8.4, 0.8], [0, 4.2, 8.4, 0.8], [-4.2, 0, 0.8, 8.4], [4.2, 0, 0.8, 8.4]]) {
+          b.box(stone, sw, 2.6, sd, x, 1.5, z);
+          const n = 9;
+          for (let i = 0; i < n; i++) { const k = -0.5 + (i + 0.5) / n; b.box(dstone, sw > 1 ? sw / n * 0.55 : sd > 1 ? 0.9 : 0.5, 0.45, sd > 1 ? sd / n * 0.55 : 0.9, x + (sw > 1 ? k * sw : 0), 3.0, z + (sd > 1 ? k * sd : 0)); }
+        }
+        // round corner towers with conical roofs
+        for (const [x, z] of [[-4.2, -4.2], [4.2, -4.2], [-4.2, 4.2], [4.2, 4.2]]) {
+          b.cyl(stone, 1.0, 1.1, 4.2, 16, x, 2.3, z);
+          b.add(new THREE.ConeGeometry(1.25, 1.8, 16), roof, x, 5.3, z);
+          b.box(m.black, 0.12, 0.45, 0.05, x + (x > 0 ? -0.6 : 0.6), 3.2, z + (z > 0 ? 0.85 : -0.85)); // arrow slit
+        }
+        // the keep
+        b.box(stone, 3.6, 5.6, 3.6, 0, 3.0, -0.4);
+        for (let i = 0; i < 4; i++) for (const s of [-1, 1]) { b.box(dstone, 0.5, 0.5, 0.5, -1.35 + i * 0.9, 6.05, -0.4 + s * 1.55); b.box(dstone, 0.5, 0.5, 0.5, s * 1.55, 6.05, -1.75 + i * 0.9); }
+        for (const [x, y] of [[-0.8, 3.6], [0.8, 3.6], [0, 4.8]]) b.box(m.black, 0.25, 0.55, 0.05, x, y, 1.42);
+        // gatehouse and portcullis
+        b.box(dstone, 2.2, 3.0, 1.2, 0, 1.7, 4.3); b.box(m.black, 1.2, 1.8, 0.1, 0, 1.1, 4.92);
+        for (let i = 0; i < 4; i++) b.box(m.darkMetal, 0.06, 1.8, 0.04, -0.45 + i * 0.3, 1.1, 4.96);
+        // flagpole with a saltire
+        b.cyl(m.gun, 0.05, 0.05, 2.4, 6, 0, 7.0, -0.4);
+        b.box(new THREE.MeshStandardMaterial({ color: 0x1e5ad6, roughness: 0.8, side: THREE.DoubleSide }), 0.04, 0.8, 1.3, 0, 7.7, 0.25);
+        b.box(m.medic, 0.05, 0.1, 1.5, 0, 7.7, 0.25, 0.55, 0, 0); b.box(m.medic, 0.05, 0.1, 1.5, 0, 7.7, 0.25, -0.55, 0, 0);
+        // the holder's banner on the keep
+        b.box(t.team, 0.06, 1.6, 1.0, 1.82, 3.4, -0.4);
         break;
       }
       case 'house': {
