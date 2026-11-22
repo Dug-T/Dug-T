@@ -1,7 +1,7 @@
 // Interface: camera, mouse/keyboard/touch input, sidebar, minimap, selection panel, health bars, icons.
 import * as THREE from 'three';
 import { G, clamp, lerp } from './state.js';
-import { BUILDINGS, UNITS, UPGRADES, TABS, CELL, HALF, WORLD, GRID, FACTIONS, QUEUE_OF, HARVEST_CAPACITY } from './config.js';
+import { BUILDINGS, UNITS, UPGRADES, TABS, CELL, HALF, WORLD, GRID, FACTIONS, QUEUE_OF, HARVEST_CAPACITY, PRODUCERS } from './config.js';
 import { T, heightAt, cellOf, cellCenter, idx, isVisibleAt, isExploredAt, BASES } from './terrain.js';
 import { Unit, Building, alive, byId, capacityOf, canUpgrade, upgradeCost, upgradePerk, UPGRADE_TIME } from './entities.js';
 import { hasReqs, canPlace, defOf, isBuildingType, powerFactor, lineCells } from './production.js';
@@ -154,7 +154,7 @@ function buildQueueOpts() {
 export function buildGrid() {
   buildQueueOpts();
   const grid = $('grid'); grid.innerHTML = ''; gridItems = [];
-  const list = [...Object.entries(BUILDINGS), ...Object.entries(UNITS), ...Object.entries(UPGRADES)].filter(([, d]) => d.tab === curTab && (!d.fac || d.fac === G.player));
+  const list = [...Object.entries(BUILDINGS), ...Object.entries(UNITS), ...Object.entries(UPGRADES)].filter(([t, d]) => d.tab === curTab && (!d.fac || d.fac === G.player) && !lockedHere(t, d));
   for (const [type, d] of list) {
     const el = document.createElement('div'); el.className = 'item';
     if (!icons[type] && d.icon) icons[type] = emojiIcon(d.icon);
@@ -165,6 +165,14 @@ export function buildGrid() {
     grid.appendChild(el);
     gridItems.push({ type, el, clock: el.querySelector('.clock'), count: el.querySelector('.count'), state: el.querySelector('.state') });
   }
+  if (!list.length) { const n = document.createElement('div'); n.className = 'sub'; n.style.cssText = 'grid-column:1/-1;padding:10px;text-align:center'; n.textContent = G.allowed ? 'Nothing in this tab can be built in this mission.' : 'Nothing to build here on this map.'; grid.appendChild(n); }
+}
+// things this battle doesn't allow at all: campaign tech limits, and ships on maps without a sea
+function lockedHere(type, d) {
+  if (G.allowed && !d.research && !G.allowed.includes(type)) return true;
+  if (G.allowed && d.req && d.req.some(r => BUILDINGS[r] && !G.allowed.includes(r) && !(G.players[G.player].owned?.[r] > 0))) return true; // needs a building this mission won't let you build
+  if (d.naval && !G.navalMap) return true;
+  return false;
 }
 function emojiIcon(e) {
   const c = document.createElement('canvas'); c.width = 160; c.height = 128;
@@ -202,8 +210,13 @@ function rightClickItem(type) {
 function reqText(type) {
   const d = defOf(type);
   const P = G.players[G.player];
-  const names = d.req.filter(r => !(P.owned[r] > 0)).map(r => BUILDINGS[r].name);
-  return names.join(', ') || 'a producer';
+  if (G.allowed && !d.research && !G.allowed.includes(type)) return 'not available in this mission';
+  const names = d.req.filter(r => !(P.owned[r] > 0) && BUILDINGS[r]).map(r => BUILDINGS[r].name);
+  if (names.length) return names.join(', ');
+  // nothing listed is missing: it needs the building that makes it (e.g. the Command HQ for structures)
+  const prod = (PRODUCERS[d.tab] || []).filter(r => BUILDINGS[r]);
+  if (prod.length && !prod.some(r => P.owned[r] > 0)) return prod.map(r => BUILDINGS[r].name).join(' or ');
+  return 'not available right now';
 }
 function showTip(type, e) {
   const d = defOf(type); const tip = $('tooltip');

@@ -11,6 +11,7 @@ export const CHANGELOG = [
     '📍 Map pings: tap 📍, then tap the map to mark a spot. In online battles your teammate (or opponent) sees it too.',
     '🌈 Rainbows: when the rain clears during the day, a rainbow appears over the battlefield.',
     '🏠 Fixed: civilian houses, Tesla Coils and Flame Towers had broken foundations.',
+    '🎖 Fixed: in campaign missions, things you aren\'t allowed to build in that mission said "Requires: a producer". They are now hidden, and a tab with nothing available says so.',
   ] },
   { v: '1.39', date: '2026-11-21', title: 'Rule the Waves', items: [
     '⚓ Naval battles: build a Shipyard on the shore, then launch Gunboats, Destroyers (their sonar finds submarines), Submarines (they dive out of sight and torpedo ships) and the mighty Dreadnought (long-range guns that shell the coast). Find them in the new NAVY tab.',
