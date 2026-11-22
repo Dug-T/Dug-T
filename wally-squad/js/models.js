@@ -153,6 +153,21 @@ export function makeInfantry(type, faction) {
       for (const [dx, h] of [[-0.05, 0.75], [0.07, 0.6], [0.18, 0.5]]) b.cyl(m.black, 0.025, 0.03, h, 6, -0.3 + dx, 1.25 + h / 2, -0.05 - dx, -0.35, 0, 0.3); // drones
       b.cyl(m.black, 0.03, 0.035, 0.5, 6, -0.05, 0.95, 0.35, 0.6, 0, 0);                // chanter
     }
+    if (type === 'caber') { // a kilted strongman with a tree trunk over his shoulder
+      const tartan = new THREE.MeshStandardMaterial({ color: 0x8a1c1c, roughness: 0.85 });
+      b.box(tartan, 0.56, 0.32, 0.36, 0, 0.66, 0); b.box(m.lampGreen, 0.57, 0.03, 0.37, 0, 0.7, 0); b.box(m.black, 0.57, 0.03, 0.37, 0, 0.6, 0); // kilt
+      b.box(m.black, 0.16, 0.16, 0.06, 0, 0.66, 0.2);                                   // sporran
+      b.box(m.skin, 0.6, 0.18, 0.32, 0, 1.25, 0);                                        // massive shoulders
+      b.sph(new THREE.MeshStandardMaterial({ color: 0xc0501e, roughness: 0.9 }), 0.17, 0, 1.38, 0.12, 1, 0.8, 0.6); // big ginger beard
+      b.add(new THREE.CylinderGeometry(0.11, 0.14, 2.2, 10), m.wood, 0.28, 1.6, -0.1, 0.25, 0, -0.35); // the caber
+    }
+    if (type === 'rocketeer') { // a goblin with a rocket pack and flying goggles
+      b.cyl(m.darkMetal, 0.09, 0.1, 0.5, 10, -0.12, 1.05, -0.26); b.cyl(m.darkMetal, 0.09, 0.1, 0.5, 10, 0.12, 1.05, -0.26);
+      b.add(new THREE.ConeGeometry(0.09, 0.22, 10).rotateX(Math.PI), m.gun, -0.12, 0.72, -0.26); b.add(new THREE.ConeGeometry(0.09, 0.22, 10).rotateX(Math.PI), m.gun, 0.12, 0.72, -0.26);
+      const flame = new THREE.MeshStandardMaterial({ color: 0xffa030, emissive: 0xff6010, emissiveIntensity: 3 });
+      b.add(new THREE.ConeGeometry(0.07, 0.45, 8).rotateX(Math.PI), flame, -0.12, 0.45, -0.26); b.add(new THREE.ConeGeometry(0.07, 0.45, 8).rotateX(Math.PI), flame, 0.12, 0.45, -0.26);
+      b.box(m.glass, 0.3, 0.08, 0.06, 0, 1.5, 0.15);                                     // goggles
+    }
     if (type === 'drummer') { // a huge war drum slung on the front
       b.cyl(t.teamDark, 0.3, 0.3, 0.32, 14, 0, 0.98, 0.32, Math.PI / 2, 0, 0);
       b.cyl(m.concrete, 0.29, 0.29, 0.02, 14, 0, 0.98, 0.49, Math.PI / 2, 0, 0);
@@ -190,7 +205,9 @@ export function makeInfantry(type, faction) {
       b.box(m.gun, 0.07, 0.12, 0.8, 0.05, 1.0, 0.5); b.box(new THREE.MeshStandardMaterial({ color: 0x9fe8ff, emissive: 0x40d8ff, emissiveIntensity: 2.4 }), 0.05, 0.05, 0.3, 0.05, 1.08, 0.55); // laser rifle
     } else if (type === 'toxic') {
       b.cyl(m.gun, 0.08, 0.1, 0.6, 10, 0.05, 1.02, 0.5, Math.PI / 2, 0, 0); b.cyl(new THREE.MeshStandardMaterial({ color: 0x7adc3a, emissive: 0x2a6a10 }), 0.06, 0.06, 0.05, 10, 0.05, 1.02, 0.82, Math.PI / 2, 0, 0);
-    } else if (type === 'piper' || type === 'drummer') {
+    } else if (type === 'rocketeer') {
+      b.cyl(m.gun, 0.05, 0.06, 0.45, 8, 0.15, 1.0, 0.35, Math.PI / 2, 0, 0); // rocket pistol
+    } else if (type === 'piper' || type === 'drummer' || type === 'caber') {
       // hands busy with the music - no gun
     } else if (type === 'grenadier') {
       b.cyl(m.gun, 0.07, 0.07, 0.55, 10, 0.05, 1.02, 0.5, Math.PI / 2, 0, 0);

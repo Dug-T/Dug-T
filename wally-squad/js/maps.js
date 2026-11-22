@@ -15,7 +15,7 @@ export const MAPS = {
     ],
     lakes: [{ x: -38, z: -2, r: 20 }, { x: 38, z: 2, r: 20 }, { x: -2, z: -40, r: 11 }, { x: 2, z: 40, r: 11 }],
     ridge: 48, forest: 0.12,
-    theme: 'temperate', weather: ['clear', 'clear', 'rain', 'fog', 'storm'],
+    theme: 'temperate', weather: ['clear', 'clear', 'rain', 'fog', 'storm', 'hail'],
   },
   frost: {
     name: 'Frostbite Pass', desc: 'A frozen mountain pass. Three routes, icy lakes and heavy snowfall.',
@@ -32,7 +32,7 @@ export const MAPS = {
     ],
     lakes: [{ x: 0, z: -34, r: 16 }, { x: 0, z: 36, r: 16 }, { x: -60, z: 100, r: 14 }, { x: 60, z: -100, r: 14 }],
     ridge: 60, forest: 0.05,
-    theme: 'snow', weather: ['snow', 'snow', 'clear', 'fog', 'blizzard'],
+    theme: 'snow', weather: ['snow', 'snow', 'clear', 'fog', 'blizzard', 'hail'],
   },
   dunes: {
     name: 'Dune Sea', desc: 'Scorching desert with mesas, palm-lined oases and blinding sandstorms.',
@@ -136,7 +136,7 @@ export const MAPS = {
       { x: -36, z: 0, r: 18 }, { x: -58, z: 0, r: 17 }, { x: 36, z: 0, r: 18 }, { x: 58, z: 0, r: 17 },
       { x: -30, z: -60, r: 16 }, { x: 30, z: 60, r: 16 }],
     ridge: 40, forest: 0.12,
-    theme: 'highland', weather: ['rain', 'fog', 'clear', 'rain', 'storm'],
+    theme: 'highland', weather: ['rain', 'fog', 'clear', 'rain', 'storm', 'hail'],
   },
   highland: {
     name: 'Highland Glen', desc: 'A misty Scottish glen of heather, pines and dark lochs, with shaggy Highland cows. Bring a brolly - it is usually pishing doon.',
@@ -153,7 +153,7 @@ export const MAPS = {
     ],
     lakes: [{ x: -30, z: 32, r: 14 }, { x: 30, z: -32, r: 14 }, { x: 0, z: 54, r: 10 }, { x: 0, z: -54, r: 10 }],
     ridge: 48, forest: 0.1,
-    theme: 'highland', weather: ['rain', 'rain', 'fog', 'clear', 'storm'],
+    theme: 'highland', weather: ['rain', 'rain', 'fog', 'clear', 'storm', 'hail'],
   },
   blossom: {
     name: 'Blossom Gardens', desc: 'Peaceful spring gardens of pink cherry blossom around koi ponds. Petals drift on the breeze - until the tanks arrive.',

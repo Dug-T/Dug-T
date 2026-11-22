@@ -86,7 +86,8 @@ Both factions share the basic army: riflemen, rocket troopers, Scorchers, engine
 - **🚩 Capture the Flag** (Skirmish option): take the enemy flag to your own flag while yours is safe at home. First to 3 captures wins. A dropped flag goes home after 30 seconds, or straight away if one of its own side touches it. The computer raids and defends too.
 - **🥘 Haggis Launcher** (Wally Squad artillery) and **🎈 Goblin Zeppelin** (Grimlock bomber airship).
 - **🦟 Midge Swarm** support power (needs a Barracks and a Refinery): enemy infantry in the cloud are slowed, shoot much slower and take small, steady damage for 15 seconds.
-- **⚡ Real thunder:** a close strike makes a sharp crack and a boom, then a long rolling rumble with an outdoor echo. Distant storms just rumble, and the sound arrives after the flash.
+- **⚡ Real thunder:** built from a physical model of the lightning bolt (`js/thunder.js`). The bolt is a jagged, kilometres-long channel in which every segment sends out a shock wave (an N-wave). The nearest part arrives first as a crack, and the rest arrives later, quieter and more muffled, as the rolling rumble. Branches and a ground echo are included, and a long outdoor reverb is added in the game.
+- **🧊 Hailstorms, 🌌 northern lights, 🪵 Caber Tosser (Wally Squad) and 🚀 Goblin Rocketeer (Grimlocks).**
 - **🦕 Nessie:** on sea maps the Loch Ness Monster surfaces now and then. She bites ships and anyone on the shore and is worth a $3,000 bounty. The Skirmish "Monsters" option turns her and the dragon off.
 - **🛶 Landing Craft and 💥 Coastal Gun:** a boat that carries 6 infantry to a beach, and a long-range defence that must be built on the shore.
 - **📍 Map pings:** mark a spot on the map. Online, the other player sees it too.
