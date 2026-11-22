@@ -897,12 +897,48 @@ function touchTap(x, y) {
   select(e ? [e] : []);
 }
 
+// ---- keep every top-bar button visible: when the bar is too narrow for all of them (phones, or
+// next to the build menu) the least-used ones move into a "⋯" menu instead of hiding under the sidebar
+const MORE_ORDER = [['bNextTune', 'Next tune'], ['bRotL', 'Rotate left'], ['bRotR', 'Rotate right'], ['bPing', 'Ping the map'], ['bTaunt', 'Taunt'], ['bFull', 'Fullscreen'], ['bNorth', 'Reset view'], ['bFind', 'Find enemy'], ['bMusic', ''], ['bIdle', ''], ['bHelp', '']];
+const moreSlots = new Map();
+let fitSig = '';
+function setupMore() {
+  const pop = $('morePop'), more = $('bMore'); if (!pop || !more) return;
+  for (const [id, label] of MORE_ORDER) {
+    const b = $(id); if (!b) continue;
+    if (label) { const s = document.createElement('span'); s.className = 'ml'; s.textContent = label; b.appendChild(s); }
+    const mark = document.createComment(id); b.parentNode.insertBefore(mark, b); moreSlots.set(id, mark);
+    b.addEventListener('click', () => { if (b.parentNode === pop) setTimeout(() => { pop.style.display = 'none'; }, 0); });
+  }
+  more.onclick = e => { e.stopPropagation(); Audio.play('click'); pop.style.display = pop.style.display === 'none' ? 'flex' : 'none'; };
+  addEventListener('pointerdown', e => { if (pop.style.display !== 'none' && !pop.contains(e.target) && e.target !== more) pop.style.display = 'none'; });
+  fitTopbar(true);
+  setInterval(() => fitTopbar(), 400);
+  addEventListener('resize', () => setTimeout(() => fitTopbar(true), 60));
+}
+export function fitTopbar(force) {
+  const bar = $('topbar'), pop = $('morePop'), more = $('bMore'); if (!bar || !pop || !moreSlots.size) return;
+  const sig = bar.clientWidth + '|' + [...bar.children].map(e => e.offsetWidth).join(',') + '|' + [...pop.children].map(e => e.id + e.style.display).join(',');
+  if (!force && sig === fitSig) return;
+  // put everything back, then move buttons out one at a time until the bar fits
+  for (const [id] of MORE_ORDER) { const b = $(id), m = moreSlots.get(id); if (b && m && b.parentNode === pop) m.parentNode.insertBefore(b, m.nextSibling); }
+  more.style.display = 'none';
+  const over = () => bar.scrollWidth > bar.clientWidth + 1;
+  if (over()) {
+    more.style.display = '';
+    for (const [id] of MORE_ORDER) { if (!over()) break; if (id === 'bRotR') continue; const b = $(id); if (b) pop.appendChild(b); if (id === 'bRotL' && $('bRotR')) pop.appendChild($('bRotR')); } // the two rotate buttons go together
+  }
+  if (!pop.children.length) { more.style.display = 'none'; pop.style.display = 'none'; }
+  fitSig = bar.clientWidth + '|' + [...bar.children].map(e => e.offsetWidth).join(',') + '|' + [...pop.children].map(e => e.id + e.style.display).join(',');
+}
+
 function bindButtons() {
+  setTimeout(setupMore, 0);
   $('modeCancel').onclick = () => { cancelAllModes(); Audio.play('click'); };
   $('sideToggle').onclick = () => {
     document.body.classList.toggle('sideHidden');
     $('sideToggle').textContent = document.body.classList.contains('sideHidden') ? '◀ BUILD' : '▶';
-    requestAnimationFrame(resize);
+    requestAnimationFrame(resize); setTimeout(() => fitTopbar(true), 50);
   };
   $('bSell').onclick = () => setMode(G.mode === 'sell' ? null : 'sell');
   $('bRepair').onclick = () => setMode(G.mode === 'repair' ? null : 'repair');

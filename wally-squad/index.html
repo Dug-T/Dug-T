@@ -25,7 +25,12 @@
   #overlay { pointer-events: none; }
   /* top bar */
   #topbar { position: absolute; left: 0; right: var(--side); top: 0; height: 38px; display: flex; align-items: center; gap: 14px; padding: 0 12px; background: linear-gradient(#0c1117ee, #0c111700); pointer-events: none; z-index: 5; }
-  #topbar .btn { pointer-events: auto; }
+  #topbar .btn { pointer-events: auto; flex-shrink: 0; }
+  #topbar .ml { display: none; }
+  #morePop { position: fixed; top: 42px; right: calc(var(--side) + 8px); z-index: 40; background: rgba(12,18,28,0.96); border: 1px solid rgba(255,255,255,0.2); border-radius: 10px; padding: 6px; display: flex; flex-direction: column; gap: 4px; max-height: calc(100% - 60px); overflow-y: auto; }
+  #morePop .btn { text-align: left; white-space: nowrap; display: flex; gap: 8px; align-items: center; }
+  #morePop .ml { display: inline; }
+  body.sideHidden #morePop { right: 8px; }
   .brand { font-family: 'Black Ops One', sans-serif; letter-spacing: 1px; color: var(--accent); font-size: 18px; text-shadow: 0 0 8px #ffb30066; }
   #topbar .spacer { flex: 1; }
   .btn { background: var(--panel2); border: 1px solid var(--line2); color: var(--text); font: 600 14px 'Rajdhani', sans-serif; padding: 4px 10px; border-radius: 4px; cursor: pointer; letter-spacing: 0.5px; }
@@ -409,8 +414,10 @@
   <button class="btn" id="bMusic" title="Toggle music">♪ Music</button>
   <button class="btn" id="bNextTune" title="Skip to another tune">⏭</button>
   <button class="btn" id="bHelp" title="Controls (F1)">? Help</button>
+  <button class="btn" id="bMore" title="More buttons" style="display:none">⋯</button>
   <button class="btn" id="bPause" title="Pause (P / Esc)">❚❚ Menu</button>
 </div>
+<div id="morePop" style="display:none"></div>
 <div id="touchBar">
   <button class="btn" id="tAll">Select army</button>
   <button class="btn" id="tAM">Attack-move</button>

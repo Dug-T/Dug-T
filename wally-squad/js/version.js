@@ -1,8 +1,11 @@
 // Version number and update notes. Bump VERSION and add a new entry at the top of CHANGELOG for every
 // update: players see a "What's New" screen the first time they load a new version.
-export const VERSION = '1.41';
+export const VERSION = '1.41.1';
 
 export const CHANGELOG = [
+  { v: '1.41.1', date: '2026-11-22', title: 'Every button in reach', items: [
+    '📱 Fixed: on phones and smaller screens, the Menu button (and sometimes Help and Next tune) was hidden behind the build menu. The top bar now always fits beside the build menu: when space runs out, the least-used buttons (Next tune, Rotate, Ping, Taunt...) move into a ⋯ menu.',
+  ] },
   { v: '1.41', date: '2026-11-22', title: 'Flags, Haggis & Midges', items: [
     '🚩 Capture the Flag (Skirmish option): grab the enemy flag with any ground unit and bring it home to your own flag. First to 3 captures wins. If the carrier falls the flag drops, and the computer raids your flag too!',
     '🥘 Haggis Launcher (Wally Squad): a truck with a giant mortar that lobs piping-hot haggis across the battlefield. Now and then a haggis survives the landing and runs off - catch it for a bounty!',
