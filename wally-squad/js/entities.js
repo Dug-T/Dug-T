@@ -292,6 +292,7 @@ export class Unit {
 
   // ---------------------------------------------------- update
   update(dt) {
+    if (this.itchT > 0) this.itchT -= dt;
     if (this.dead) return;
     if (this.dropH > 0) { paraFall(this, dt); return; } // still floating down under a parachute
     if (this.boarded) { this.x = this.boarded.x; this.z = this.boarded.z; this.y = this.boarded.y; return; } // riding inside an APC
@@ -405,7 +406,7 @@ export class Unit {
     if (!(this.frenzyCD > 0) && (this.type === 'wallyman' || this.type === 'warlord') && G.players[this.faction]?.isAI) this.frenzy();
     const aimed = this.aimTurret(dt, t);
     if (aimed && this.cool <= 0 && canTarget(w, t)) {
-      this.cool = w.rof * (0.9 + srand() * 0.2) * (this.frenzyT > 0 ? 0.4 : 1) * (inspired(this) ? 0.75 : 1);
+      this.cool = w.rof * (0.9 + srand() * 0.2) * (this.frenzyT > 0 ? 0.4 : 1) * (inspired(this) ? 0.75 : 1) * (this.itchT > 0 ? 1.7 : 1); // midges make it hard to aim
       fireWeapon(this, w, t, this.mesh.userData.muzzle, this.turret);
       if (w.twin) later(0.14, () => { if (alive(this) && alive(t)) fireWeapon(this, w, t, this.mesh.userData.muzzle2 || this.mesh.userData.muzzle, this.turret); });
     }
@@ -713,6 +714,7 @@ export class Unit {
       this.bank = (this.bank || 0) + (bank - (this.bank || 0)) * Math.min(1, dt * 3);
       m.rotation.set(this.speedNow / this.def.speed * 0.18, this.heading, this.bank, 'YXZ');
       if (this.rotor) this.rotor.rotation.y += dt * 28;
+      if (this.prop) this.prop.rotation.z += dt * 14;
       if (this.rotor2) this.rotor2.rotation.y -= dt * 28;
       if (this.tailrotor) this.tailrotor.rotation.x += dt * 35;
       if (this.wingL) { const fl = Math.sin(G.time * 5 + this.id) * 0.55; this.wingL.rotation.z = fl; this.wingR.rotation.z = -fl; }
@@ -1406,6 +1408,7 @@ function projMesh(kind) {
   let g, m;
   if (!projMats[kind]) {
     if (kind === 'bullet' || kind === 'sniper') { g = new THREE.BoxGeometry(0.06, 0.06, 1.4); m = new THREE.MeshBasicMaterial({ color: kind === 'sniper' ? new THREE.Color(3, 3, 4) : new THREE.Color(4, 3, 1.2), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }); }
+    else if (kind === 'haggis') { g = new THREE.SphereGeometry(0.32, 10, 8); g.scale(1, 0.8, 1.3); m = new THREE.MeshStandardMaterial({ color: 0x7a4a2a, roughness: 0.8 }); }
     else if (kind === 'shell' || kind === 'artillery') { g = new THREE.SphereGeometry(kind === 'artillery' ? 0.22 : 0.15, 8, 6); g.scale(1, 1, 2.2); m = new THREE.MeshBasicMaterial({ color: new THREE.Color(4, 2.4, 0.8) }); }
     else { // rocket / missile
       const b = [new THREE.CylinderGeometry(0.08, 0.08, 0.7, 8).rotateX(Math.PI / 2), new THREE.ConeGeometry(0.08, 0.25, 8).rotateX(Math.PI / 2).translate(0, 0, 0.47)];
@@ -1508,7 +1511,8 @@ export function fireWeapon(src, w, target, muzzleLocal, frame) {
     p.arc = w.lob ? 2.5 + dl * 0.3 : 6 + dl * 0.45;
   }
   if (kind === 'rocket' || kind === 'missile') { p.wob = srand() * 6; p.vy = 4 + srand() * 3; }
-  p.mesh = getProj(kind === 'missile' ? 'rocket' : kind);
+  p.meshKind = w.haggis ? 'haggis' : kind === 'missile' ? 'rocket' : kind;
+  p.mesh = getProj(p.meshKind);
   p.mesh.position.set(p.x, p.y, p.z);
   p.mesh.visible = vis;
   G.projectiles.push(p);
@@ -1556,7 +1560,7 @@ export function updateProjectiles(dt) {
     p.mesh.position.set(p.x, p.y, p.z);
     if (done) {
       G.projectiles.splice(i, 1);
-      freeProj(p.kind === 'missile' ? 'rocket' : p.kind, p.mesh);
+      freeProj(p.meshKind || (p.kind === 'missile' ? 'rocket' : p.kind), p.mesh);
       impact(p);
     }
   }
@@ -1569,6 +1573,11 @@ function impact(p) {
   else if (kind === 'shell') FX.explosion(p.tx, p.ty, p.tz, w.damage > 80 ? 0.75 : 0.6, { debris: false, sound: vis, ground: p.ty - groundY(p.tx, p.tz) < 1.5 });
   else if (kind === 'rocket' || kind === 'missile') FX.explosion(p.tx, p.ty, p.tz, 0.55, { debris: false, sound: vis, ground: p.ty - groundY(p.tx, p.tz) < 1.5 });
   else if (kind === 'artillery') FX.explosion(p.tx, p.ty, p.tz, w.lob ? 0.8 : 1.3, { sound: vis });
+  if (w.haggis && srand() < 0.05 && G.units.filter(u => u.type === 'haggis' && !u.dead).length < 4) { // a haggis survives the landing!
+    const hg = new Unit('haggis', 'neutral', p.tx, p.tz, srand() * 6.28);
+    if (hg.canStand(hg.x, hg.z)) { hg.stance = 'holdfire'; hg.moveTo(p.tx + srr(-20, 20), p.tz + srr(-20, 20)); if (p.faction === G.player) G.ui?.message('A haggis survived the landing and ran off! Catch it for a bounty.'); emit('haggisfly', p.faction); }
+    else hg.remove();
+  }
   if (kind === 'artillery') { splash(p.src, w, p.tx, p.tz, w.splash, p.faction); if (w.gas) (G.clouds = G.clouds || []).push({ x: p.tx, z: p.tz, r: 3, t: 6, f: p.faction, src: p.src, tick: 0 }); return; }
   if (alive(p.target)) hit(p.src, w, p.target, { x: p.tx, y: p.ty, z: p.tz });
 }

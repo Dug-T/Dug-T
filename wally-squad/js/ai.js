@@ -203,7 +203,7 @@ export class AI {
     }
     if (P.queues.air && P.queues.air.items.length < 1 && this.t > 360 && srand() < 0.15 && hasReqs(this.f, 'jet')) enqueue(this.f, 'jet');
     if (P.queues.vehicle.items.length < 2) {
-      const opts = ['tank', 'tank', 'buggy', 'arty', 'titan', 'titan', 'stealth', 'stealth', 'inferno', 'inferno', 'repair', 'hover', 'teslatruck', 'mech', 'catapult', 'shieldgen', 'burrower', 'freezetank'].filter(t => hasReqs(this.f, t));
+      const opts = ['tank', 'tank', 'buggy', 'arty', 'titan', 'titan', 'stealth', 'stealth', 'inferno', 'inferno', 'repair', 'hover', 'teslatruck', 'mech', 'catapult', 'shieldgen', 'burrower', 'freezetank', 'haggislauncher'].filter(t => hasReqs(this.f, t));
       if (opts.length) enqueue(this.f, opts[Math.floor(srand() * opts.length)]);
     }
     if (P.credits > 2200 && !P.queues.research.items.length) {
@@ -213,6 +213,7 @@ export class AI {
     if (P.queues.air.items.length < 1 && hasReqs(this.f, 'medevac') && this.count('medevac') < 1 && srand() < 0.3) enqueue(this.f, 'medevac');
     if (P.queues.air.items.length < 1 && hasReqs(this.f, 'wyvern') && this.count('wyvern') < 3 && srand() < 0.5) enqueue(this.f, 'wyvern'); // Grimlocks mix in Wyvern Riders
     if (P.queues.air.items.length < 1 && hasReqs(this.f, 'gunship') && this.count('gunship') < 4) enqueue(this.f, 'gunship');
+    if (P.queues.air.items.length < 1 && hasReqs(this.f, 'zeppelin') && this.count('zeppelin') < 2 && srand() < 0.3) enqueue(this.f, 'zeppelin');
   }
 
   layMines() {

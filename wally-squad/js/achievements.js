@@ -45,6 +45,10 @@ export const MEDALS = {
   haggis:       { icon: '🐾', name: 'Haggis Hunter', desc: 'Catch a wild haggis.' },
   partyhat:     { icon: '🎉', name: 'Party Animal', desc: 'Win a skirmish with the Party Hats mutator.' },
   dragon:       { icon: '🐉', name: 'Dragonslayer', desc: 'Slay an Ancient Dragon.' },
+  nessie:       { icon: '🦕', name: 'Monster Hunter', desc: 'Defeat Nessie, the Loch Ness Monster.' },
+  flag:         { icon: '🚩', name: 'Flag Bearer', desc: 'Capture the enemy flag in Capture the Flag.' },
+  midges:       { icon: '🦟', name: 'Wee Beasties', desc: 'Unleash a Midge Swarm on the enemy.' },
+  haggisfly:    { icon: '🥘', name: 'Flying Haggis', desc: 'Have a haggis survive being fired from a Haggis Launcher.' },
   bonus3:       { icon: '🎯', name: 'Overachiever', desc: 'Complete all three bonus objectives in one skirmish.' },
   monster:      { icon: '🍦', name: 'You Monster', desc: 'Blow up the ice cream van.' },
   canyon:       { icon: '🏜', name: 'Canyon Conqueror', desc: 'Win a battle on Red Canyon.' },
@@ -88,7 +92,9 @@ export function initAchievements(run) {
   });
   on('house', (b, f) => { if (f === G.player) unlock('squatter'); });
   on('chain3', f => { if (f === G.player) unlock('shock'); });
-  on('bounty', (f, type) => { if (f === G.player) unlock(type === 'haggis' ? 'haggis' : type === 'dragon' ? 'dragon' : 'bounty'); });
+  on('bounty', (f, type) => { if (f === G.player) unlock(type === 'haggis' ? 'haggis' : type === 'dragon' ? 'dragon' : type === 'nessie' ? 'nessie' : 'bounty'); });
+  on('flag', f => { if (f === G.player) unlock('flag'); });
+  on('haggisfly', f => { if (f === G.player) unlock('haggisfly'); });
   on('infiltrate', f => { if (f === G.player) unlock('spy'); });
   on('bloodmoon', () => { if (G.buildings.some(b => !b.dead && b.faction === G.player)) unlock('bloodmoon'); });
   on('bonus3', () => unlock('bonus3'));
@@ -97,7 +103,7 @@ export function initAchievements(run) {
   on('crate', f => { if (f === G.player && ++session.crates >= 5) unlock('crates'); });
   on('capture', (b, f) => { if (f === G.player) unlock('capture'); });
   on('super', f => { if (f === G.player) unlock('superweapon'); });
-  on('power', (f, type) => { if (f === G.player) { session.powers.add(type); if (session.powers.size >= 3) unlock('powers'); } });
+  on('power', (f, type) => { if (f === G.player && type === 'midges') unlock('midges'); if (f === G.player) { session.powers.add(type); if (session.powers.size >= 3) unlock('powers'); } });
   on('end', win => {
     if (!win) return;
     if (run.mode === 'campaign') { unlock('mission'); if (run.camp === 'grim') { if (run.mission === 2) unlock('grimcamp'); } else { if (run.mission === 4) unlock('campaign'); if (run.mission === 5) unlock('epilogue'); } }

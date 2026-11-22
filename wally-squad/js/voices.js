@@ -42,6 +42,8 @@ const DEFAULT_LINES = {
   burrower: { select: ['Drill spinning!', 'Dig dig dig!', 'Tunnel Drill ready!'], move: ['Going under!', 'Diggin in!'], attack: ['DRILL THEM!', 'Bursting out!'] },
   medevac: { select: ['Medevac standing by.', 'Who needs patching up?', 'Rescue chopper ready!'], move: ['On my way.', 'Inbound to the wounded.'], attack: ['I am a medic, not a gunship!', 'Holding over the troops.'] },
   freezetank: { select: ['Freeze Tank, chilled and ready.', 'Stay frosty!', 'Ice to meet you!'], move: ['Rolling, nice and cool.', 'Brrr, moving out.'], attack: ['Freeze!', 'Chill out!', 'Ice ice, baby!'] },
+  haggislauncher: { select: ['Haggis Launcher, loaded and steaming!', 'Wha\'s like us? Haggis ready!', 'Hot haggis, coming right up!'], move: ['Rolling, mind the neeps.', 'On the move, pal.'], attack: ['Haggis away!', 'Get that doon ye!', 'Fire the puddin\'!', 'Chieftain o\' the puddin\' race!'] },
+  zeppelin: { select: ['Zeppelin floating, hehe!', 'Bombs loaded, boss!', 'Up, up and AWAY!'], move: ['Floating slowly...', 'The wind takes us!'], attack: ['Bombs away, hehe!', 'Drop the big ones!', 'Look out beloooow!'] },
   toxic: { select: ['Smells funny, hehe!', 'Toxic Trooper, ready to stink!', 'Who wants a whiff?'], move: ['Stinking along.', 'Pee-yew, moving.'], attack: ['Gas them!', 'Breathe deep, hehe!', 'Smell THIS!'] },
   rifle: { select: ['Rifleman reporting.', 'Ready for action!'], move: ['Moving out.', 'On my way.'], attack: ['Opening fire!', 'Engaging!'] },
   rocket: { select: ['Rockets loaded.', 'Anti-armour ready.'], move: ['Relocating.'], attack: ['Rocket away!', 'Tank spotted!'] },

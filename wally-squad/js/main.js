@@ -32,6 +32,7 @@ import { updateCrates, animateCrates, placeTechBuildings, placeBarrels, placeHou
 import { updatePowers } from './powers.js';
 import { updateHazards } from './hazards.js';
 import { initHill, updateHill, hillWinner, hill } from './koth.js';
+import { initCTF, updateCTF, animateCTF, ctfWinner } from './ctf.js';
 import { initAmbient, updateAmbient } from './ambient.js';
 import { initAchievements, checkAchievements, buildMedals } from './achievements.js';
 import { registerCustomMaps, buildMapEditor } from './mapeditor.js';
@@ -65,7 +66,7 @@ const replayData = cfg && cfg.mode === 'replay' ? loadReplay() : null;
 if (cfg && cfg.mode === 'replay') cfg = replayData ? { ...replayData.cfg, isReplay: true } : null;
 const menuMode = !cfg;
 { const lv = document.getElementById('loadVer'); if (lv) lv.textContent = `Version ${VERSION}`; }
-if (params.has('auto') && !cfg) cfg = { mode: 'skirmish', map: params.get('map') || 'valley', faction: params.get('faction') || 'wally', difficulty: localStorage.getItem('ws_diff') || 'normal', daynight: params.has('daynight'), weather: params.get('weather') || null, koth: params.has('koth'), hunt: params.has('hunt') };
+if (params.has('auto') && !cfg) cfg = { mode: 'skirmish', map: params.get('map') || 'valley', faction: params.get('faction') || 'wally', difficulty: localStorage.getItem('ws_diff') || 'normal', daynight: params.has('daynight'), weather: params.get('weather') || null, koth: params.has('koth'), hunt: params.has('hunt'), ctf: params.has('ctf') };
 if (cfg && cfg.mode !== 'mp') sessionStorage.removeItem('ws_cfg');
 if (cfg && cfg.mode === 'mp') sessionStorage.removeItem('ws_cfg');
 if (cfg) sessionStorage.setItem('ws_last', JSON.stringify(cfg));
@@ -233,6 +234,8 @@ async function boot() {
   placeBarrels();
   placeHouses();
   initHill(scene);
+  initCTF(scene, f => ais.some(a => a.f === f));
+  G.emitFlag = f => emit('flag', f);
   revealCircle(BASES[G.player].x, BASES[G.player].z, 42);
   updatePower();
   await step(0.7);
@@ -515,6 +518,7 @@ function setupMenus() {
   toggle('Starting armies', () => sk.army !== false, v => { sk.army = v; });
   toggle('🗿 Victory Monuments', () => sk.wonders !== false, v => { sk.wonders = v; });
   toggle('👑 King of the Hill', () => !!sk.koth, v => { sk.koth = v; });
+  toggle('🚩 Capture the Flag', () => !!sk.ctf, v => { sk.ctf = v; });
   toggle('🎯 Hero Hunt', () => !!sk.hunt, v => { sk.hunt = v; });
   toggle('💰 Bounty convoys', () => sk.convoys !== false, v => { sk.convoys = v; });
   toggle('🐉 Monsters (dragon, Nessie)', () => sk.dragons !== false, v => { sk.dragons = v; });
@@ -875,6 +879,8 @@ function checkEnd(dt) {
     const dead = ['wally', 'grim'].find(f => !G.units.some(u => u.vip && u.faction === f && !u.dead));
     if (dead) { const win = dead === 'wally' ? 'grim' : 'wally'; endGame(run.mode === 'watch' ? true : win === G.player, `${dead === 'wally' ? 'Wally Man' : 'Warlord Grak'} has fallen! The ${FACTIONS[win].name} wins the Hero Hunt!`, win); return; }
   }
+  const cw = ctfWinner();
+  if (cw) { endGame(run.mode === 'watch' ? true : cw === G.player, `${FACTIONS[cw].name} captured ${3} flags!`, cw); return; }
   const kh = hillWinner();
   if (kh) { endGame(run.mode === 'watch' ? true : kh === G.player, `${FACTIONS[kh].name} held the hill for 3 minutes!`, kh); return; }
   if (G.surrendered) { endGame(G.surrendered !== G.player, G.surrendered === G.player ? 'You surrendered.' : 'The enemy has surrendered!'); return; }
@@ -922,6 +928,7 @@ function simStep(dt) {
   updateIceCream(dt);
   updateHazards(dt);
   updateHill(dt);
+  updateCTF(dt);
   recordHistory(dt);
   if (run.mode === 'survival' && !G.over) { updateSurvival(dt); missionT -= dt; if (missionT <= 0) { missionT = 0.5; renderObjectives(); } }
   if (mission && !G.over) { missionT -= dt; if (missionT <= 0) { missionT = 0.5; if (mctx.heroCheck()) mission.tick(mctx); renderObjectives(); } }
@@ -973,6 +980,7 @@ function loop(now) {
   UI.updateMarkers(real);
   if (G.started) { UI.updateSidebar(real); UI.updateMinimap(real); }
   animateWater(now / 1000);
+  animateCTF();
   animateCrates(now / 1000);
   if (++shadowFrame >= shadowInterval()) { shadowFrame = 0; renderer.shadowMap.needsUpdate = true; }
   if (G.three.grade) { G.three.grade.uniforms.uCine.value = gfx.cinematic ? 1 : 0; G.three.grade.uniforms.uTime.value = now / 1000; }
