@@ -38,7 +38,7 @@ export function initUI() {
     sp.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse') infoHover = true; });
     sp.addEventListener('pointerleave', () => { infoHover = false; infoSince = performance.now(); });
     sp.addEventListener('pointerdown', () => { infoSince = performance.now(); }); }
-  G.ui = { message, refreshSelection: refreshSelPanel, setMode: m => setMode(m) };
+  G.ui = { message, refreshSelection: refreshSelPanel, setMode: m => setMode(m), flashMarker: (x, z, c) => flashMarker(x, z, c, true) };
   buildTabs();
   bindInput();
   bindButtons();
@@ -486,8 +486,8 @@ function commandAt(sx, sy, attackMove = false, queue = false) {
 }
 
 const markers = [];
-function flashMarker(x, z, color) {
-  const m = new THREE.Mesh(new THREE.RingGeometry(0.6, 0.9, 24).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+function flashMarker(x, z, color, big) {
+  const m = new THREE.Mesh(new THREE.RingGeometry(big ? 2.2 : 0.6, big ? 2.9 : 0.9, 32).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
   m.position.set(x, heightAt(x, z) + 0.3, z); m.renderOrder = 7;
   G.three.scene.add(m); markers.push({ m, t: 0 });
 }
@@ -746,6 +746,7 @@ function modeClick(x, y) {
     setMode(null);
     return;
   }
+  if (G.mode === 'ping') { const g = screenToGround(x, y); if (g) G.ping?.(g.x, g.z, true); setMode(null); return; }
   if (G.mode === 'spawn') { const g = screenToGround(x, y); if (g && G.sandboxSpawn) { G.sandboxSpawn(g.x, g.z); Audio.play('ack'); flashMarker(g.x, g.z, 0x7dff9a); } return; }
   if (G.mode === 'super') {
     const g = screenToGround(x, y);
@@ -767,7 +768,7 @@ function setMode(m) {
 }
 function setCursor() {
   const gl = $('gl');
-  gl.style.cursor = G.mode === 'sell' ? 'copy' : G.mode === 'repair' ? 'cell' : G.mode === 'spawn' || G.mode === 'super' || (G.mode && G.mode.startsWith('power:')) || attackMoveArmed ? 'crosshair' : 'default';
+  gl.style.cursor = G.mode === 'sell' ? 'copy' : G.mode === 'repair' ? 'cell' : G.mode === 'spawn' || G.mode === 'super' || G.mode === 'ping' || (G.mode && G.mode.startsWith('power:')) || attackMoveArmed ? 'crosshair' : 'default';
 }
 let hoverT = 0;
 let barSig = '';
@@ -775,7 +776,7 @@ function updateModeBar() {
   const what = G.placing ? `Placing ${BUILDINGS[G.placing].name}` + (BUILDINGS[G.placing].isWall ? ' · drag for a line' : '') + ' · drag the outline to a green spot and lift to build'
     : G.mode === 'sell' ? 'Sell mode · tap your building' : G.mode === 'repair' ? 'Repair mode · tap your building'
     : G.mode === 'spawn' ? `Sandbox · tap the map to spawn ${G.sandbox.n > 1 ? G.sandbox.n + ' × ' : ''}${UNITS[G.sandbox.type].name} (${G.sandbox.side === 'wally' ? 'Wally Squad' : 'Grimlocks'})`
-    : G.mode === 'super' ? 'Superweapon · tap the target' : G.mode && G.mode.startsWith('power:') ? 'Support power · tap the target'
+    : G.mode === 'ping' ? 'Ping · tap the spot to mark' : G.mode === 'super' ? 'Superweapon · tap the target' : G.mode && G.mode.startsWith('power:') ? 'Support power · tap the target'
     : attackMoveArmed === 'patrol' ? 'Patrol · tap the far end of the route' : attackMoveArmed ? 'Attack-move · tap the destination' : '';
   if (what === barSig) return;
   barSig = what;
@@ -1067,6 +1068,16 @@ export function updateMinimap(dt) {
     c.strokeStyle = `rgba(255,60,40,${1 - (G.time - G.alertAt.t) / 3})`; c.lineWidth = 2;
     c.beginPath(); c.arc((G.alertAt.x + HALF) * k, (G.alertAt.z + HALF) * k, r, 0, 7); c.stroke();
   }
+  // map pings (📍) stay on the minimap for 8 seconds
+  const now = performance.now() / 1000;
+  if (G.pings) for (const p of G.pings) {
+    const age = now - p.t; if (age > 8) continue;
+    const X = (p.x + HALF) * k, Y = (p.z + HALF) * k, a = 1 - age / 8;
+    c.fillStyle = p.mine ? `rgba(125,255,154,${a})` : `rgba(79,195,255,${a})`;
+    c.beginPath(); c.arc(X, Y, 3, 0, 7); c.fill();
+    c.strokeStyle = c.fillStyle; c.lineWidth = 1.5; c.beginPath(); c.arc(X, Y, 4 + (age % 1) * 8, 0, 7); c.stroke();
+  }
+  if (G.pings && G.pings.length > 20) G.pings.splice(0, G.pings.length - 20);
 }
 function approxGround(sx, sy) {
   ndc.set(sx / W * 2 - 1, -(sy / H) * 2 + 1);

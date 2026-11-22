@@ -83,6 +83,11 @@ Both factions share the basic army: riflemen, rocket troopers, Scorchers, engine
 - **💬 Enemy taunts:** the enemy commander (Warlord Grak, or Commander Wally when you play the Grimlocks) taunts you during skirmishes and campaigns. Taunts come at the start, when you destroy their buildings or they destroy yours, when a hero falls and when they're nearly beaten. They are spoken aloud, with at least 35 seconds between them.
 - **🎆 Victory celebration:** win and fireworks burst over the battlefield while your infantry jump for joy.
 - **🕹 Cheat codes** (type them into the box in the pause menu; single player only, and a cheating game earns no XP or medals): `WALLYCASH` (+$10,000), `SHOWMETHEMAP`, `INSTABUILD`, `BIGBOOM` (superweapon charged), `POWERUP` (support powers ready), `GODMODE` (your forces can't be hurt) and `HEROES` (a hero and a Titan arrive).
+- **⚡ Real thunder:** a close strike makes a sharp crack and a boom, then a long rolling rumble with an outdoor echo. Distant storms just rumble, and the sound arrives after the flash.
+- **🦕 Nessie:** on sea maps the Loch Ness Monster surfaces now and then. She bites ships and anyone on the shore and is worth a $3,000 bounty. The Skirmish "Monsters" option turns her and the dragon off.
+- **🛶 Landing Craft and 💥 Coastal Gun:** a boat that carries 6 infantry to a beach, and a long-range defence that must be built on the shore.
+- **📍 Map pings:** mark a spot on the map. Online, the other player sees it too.
+- **🌈 Rainbows** appear when the rain clears in daylight.
 - **⚓ Naval battles:** build a **Shipyard** on the shore (it needs open water right beside it), then use the **NAVY** tab:
   - **Gunboat:** fast, twin machine guns.
   - **Destroyer:** twin cannons; its sonar reveals submarines and cloaked units.

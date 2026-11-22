@@ -996,6 +996,54 @@ export function makeBattleship(faction) {
   });
 }
 
+export function makeLandingCraft(faction) {
+  return cached(`landingcraft-${faction}`, () => {
+    const t = mats(faction), m = M(), root = new THREE.Group(), b = new Builder();
+    b.box(hullRed(), 1.9, 0.4, 4.2, 0, -0.35, 0);                 // flat bottom
+    b.box(t.teamDark, 2.0, 0.9, 4.2, 0, 0.25, 0);                  // hull
+    b.box(m.concreteDark, 1.6, 0.05, 3.4, 0, 0.55, 0.2);           // well deck
+    for (const s of [-1, 1]) { b.box(t.team, 0.15, 0.7, 3.6, s * 0.95, 1.0, 0.1); b.box(m.hazard, 0.17, 0.08, 3.6, s * 0.95, 1.36, 0.1); }
+    const ramp = new Builder(); ramp.box(t.team, 1.9, 1.3, 0.12, 0, 0.65, 0); for (let i = 0; i < 5; i++) ramp.box(m.darkMetal, 1.7, 0.05, 0.05, 0, 0.2 + i * 0.25, 0.08);
+    const rm = ramp.build(); rm.position.set(0, 0.35, 2.1); rm.rotation.x = 0.12; rm.name = 'ramp'; root.add(rm);
+    b.box(t.team, 1.4, 1.0, 0.9, 0, 1.0, -1.75);                   // wheelhouse at the stern
+    b.box(m.glass, 1.2, 0.25, 0.04, 0, 1.25, -1.29);
+    b.box(t.accent, 1.42, 0.08, 0.92, 0, 1.52, -1.75);
+    b.cyl(m.gun, 0.03, 0.03, 0.8, 6, 0.5, 1.9, -1.9);
+    const tb = new Builder(); tb.cyl(m.darkMetal, 0.12, 0.15, 0.25, 10, 0, 0, 0); tb.cyl(m.gun, 0.04, 0.04, 0.7, 8, 0, 0.1, 0.35, Math.PI / 2, 0, 0);
+    const tur = tb.build(); tur.position.set(0, 1.6, -1.75); tur.name = 'turret'; root.add(tur);
+    root.add(b.build());
+    root.userData.muzzle = new THREE.Vector3(0, 0.1, 0.7);
+    return root;
+  });
+}
+// Nessie: a long-necked, humpy loch monster, mostly under the water
+export function makeNessie() {
+  return cached('nessie', () => {
+    const root = new THREE.Group(), b = new Builder();
+    const skin = new THREE.MeshStandardMaterial({ color: 0x3f6a4a, roughness: 0.55, metalness: 0.1 });
+    const belly = new THREE.MeshStandardMaterial({ color: 0x8aa67a, roughness: 0.7 });
+    const eye = new THREE.MeshStandardMaterial({ color: 0xffe066, emissive: 0xffb000, emissiveIntensity: 1.5 });
+    for (const [z, r] of [[-0.6, 1.0], [-2.3, 0.85], [-3.8, 0.6], [-5.0, 0.38]]) b.sph(skin, r, 0, -0.15, z, 1, 0.85, 1.3); // humps
+    b.add(new THREE.ConeGeometry(0.3, 1.6, 12).rotateX(-Math.PI / 2), skin, 0, -0.1, -5.9);  // tail tip
+    // neck: a curve of tapering segments rising out of the water
+    let px = 0, py = 0.2, pz = 0.6;
+    for (let i = 0; i < 9; i++) {
+      const a = i / 8, r = 0.52 - a * 0.25, ny = py + 0.55 - a * 0.12, nz = pz + 0.38 + a * 0.15;
+      b.sph(skin, r, 0, py, pz, 1, 1, 1);
+      b.sph(belly, r * 0.75, 0, py - 0.05, pz + r * 0.35, 1, 1, 0.6);
+      px = 0; py = ny; pz = nz;
+    }
+    b.sph(skin, 0.42, 0, py + 0.1, pz + 0.25, 0.9, 0.75, 1.5);         // head
+    b.sph(belly, 0.3, 0, py - 0.05, pz + 0.65, 0.85, 0.5, 1.0);         // snout
+    for (const s of [-1, 1]) { b.sph(eye, 0.08, s * 0.25, py + 0.25, pz + 0.45); b.add(new THREE.ConeGeometry(0.06, 0.3, 8), skin, s * 0.18, py + 0.5, pz + 0.05, -0.4, 0, s * 0.3); }
+    for (const s of [-1, 1]) for (const z of [0.2, -3.2]) b.box(skin, 1.1, 0.08, 0.5, s * 0.9, -0.35, z, 0, s * 0.4, s * 0.2); // flippers
+    for (let i = 0; i < 10; i++) b.add(new THREE.ConeGeometry(0.1, 0.32, 6), belly, 0, 0.75 - (i % 3) * 0.05, -0.6 - i * 0.5); // ridge spikes
+    root.add(b.build());
+    root.userData.muzzle = new THREE.Vector3(0, py, pz + 0.8);
+    return root;
+  });
+}
+
 export function makeJet(faction) {
   return cached(`jet-${faction}`, () => {
     const t = mats(faction), m = M();
@@ -1554,6 +1602,8 @@ export function makeUnitModel(type, faction) {
     case 'destroyer': return makeDestroyer(faction);
     case 'submarine': return makeSubmarine(faction);
     case 'battleship': return makeBattleship(faction);
+    case 'landingcraft': return makeLandingCraft(faction);
+    case 'nessie': return makeNessie();
     case 'titan': return makeTitan(faction);
     case 'buggy': return makeBuggy(faction);
     case 'harvester': return makeHarvester(faction);
@@ -1607,8 +1657,8 @@ export function makeBuildingModel(type, faction) {
     const t = mats(faction), m = M();
     const root = new THREE.Group();
     const b = new Builder();
-    const W = { shipyard: 3, tesla: 1, flametower: 1, house: 2, tesla: 1, flametower: 1, house: 2, xbarrel: 1, wonder: 3, bunker: 2, conyard: 4, power: 3, refinery: 4, barracks: 3, factory: 4, radar: 3, tech: 3, helipad: 3, turret: 1, sam: 2, plasma: 1, uplink: 3, silo: 3, wall: 1, gate: 2, mine: 1, derrick: 2, hospital: 2, depot: 2 };
-    const D = { shipyard: 3, xbarrel: 1, wonder: 3, bunker: 2, conyard: 4, power: 3, refinery: 3, barracks: 3, factory: 4, radar: 3, tech: 3, helipad: 3, turret: 1, sam: 2, plasma: 1, uplink: 3, silo: 3, wall: 1, gate: 1, mine: 1, derrick: 2, hospital: 2, depot: 2 };
+    const W = { coastgun: 2, shipyard: 3, tesla: 1, flametower: 1, house: 2, tesla: 1, flametower: 1, house: 2, xbarrel: 1, wonder: 3, bunker: 2, conyard: 4, power: 3, refinery: 4, barracks: 3, factory: 4, radar: 3, tech: 3, helipad: 3, turret: 1, sam: 2, plasma: 1, uplink: 3, silo: 3, wall: 1, gate: 2, mine: 1, derrick: 2, hospital: 2, depot: 2 };
+    const D = { coastgun: 2, shipyard: 3, tesla: 1, flametower: 1, house: 2, xbarrel: 1, wonder: 3, bunker: 2, conyard: 4, power: 3, refinery: 3, barracks: 3, factory: 4, radar: 3, tech: 3, helipad: 3, turret: 1, sam: 2, plasma: 1, uplink: 3, silo: 3, wall: 1, gate: 1, mine: 1, derrick: 2, hospital: 2, depot: 2 };
     const w = W[type] * CELL - 0.3, d = D[type] * CELL - 0.3;
     const parts = {};
     switch (type) {
@@ -1748,6 +1798,22 @@ export function makeBuildingModel(type, faction) {
         cb.add(new THREE.TorusKnotGeometry(0.55, 0.12, 64, 8), m.energy, 0, 0, 0);
         const core = cb.build(false); core.position.set(0, 3.4, 0); core.name = 'core';
         parts.core = core;
+        break;
+      }
+      case 'coastgun': {
+        foundation(b, w, d, 0.3);
+        b.cyl(m.concreteDark, 1.7, 1.9, 0.9, 20, 0, 0.6, 0);                       // casemate
+        b.cyl(m.concrete, 1.45, 1.7, 0.5, 20, 0, 1.25, 0);
+        for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2; b.add(new THREE.CapsuleGeometry(0.16, 0.35, 4, 6), m.sand, Math.cos(a) * 1.85, 0.35, Math.sin(a) * 1.85, 0, -a, Math.PI / 2); }
+        const tb = new Builder();
+        tb.cyl(t.team, 0.9, 1.0, 0.55, 18, 0, 0, 0);
+        tb.box(t.teamDark, 1.3, 0.55, 1.2, 0, 0.3, -0.1);
+        tb.box(m.darkMetal, 0.55, 0.5, 0.45, 0, 0.3, 0.6);
+        tb.cyl(m.gun, 0.13, 0.17, 3.0, 12, 0, 0.32, 2.2, Math.PI / 2, 0, 0);
+        tb.cyl(m.gun, 0.2, 0.2, 0.3, 12, 0, 0.32, 3.6, Math.PI / 2, 0, 0);
+        tb.box(t.accent, 1.32, 0.08, 1.22, 0, 0.6, -0.1);
+        const tur = tb.build(); tur.position.set(0, 1.75, 0); tur.name = 'turret';
+        parts.turret = tur; parts.muzzle = new THREE.Vector3(0, 0.32, 3.75);
         break;
       }
       case 'shipyard': {

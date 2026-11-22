@@ -27,7 +27,7 @@ import { startRecording, recordStep, saveReplay, loadReplay, replayInfo, beginPl
 import { registerCustomUnits, loadDesigns, buildDesigner } from './customunits.js';
 import { gfx, initGraphics, pixelRatio, autoTune, buildGraphicsPanel, maxAnisotropy, isTouch, shadowInterval } from './graphics.js';
 import { allMaterials } from './materials.js';
-import { updateConvoy, updateHaggis, updateDragon, updateIceCream } from './features.js';
+import { updateConvoy, updateHaggis, updateDragon, updateIceCream, updateNessie } from './features.js';
 import { updateCrates, animateCrates, placeTechBuildings, placeBarrels, placeHouses, recordHistory, drawHistory } from './features.js';
 import { updatePowers } from './powers.js';
 import { updateHazards } from './hazards.js';
@@ -380,6 +380,20 @@ const RETORTS = {
   wally: ['Aye, very funny, big man.', 'Is that a threat? Cute.', 'Talk is cheap, Grak. Crystal isn\'t!', 'Haud yer wheesht, ya big lump!', 'We\'ll see who\'s laughing in five minutes!'],
 };
 let myTauntT = -99;
+// ---------------------------------------------------------------- map pings (📍): a marker you, and a co-op partner, can see
+G.pings = [];
+G.ping = (x, z, mine) => {
+  G.pings.push({ x, z, t: performance.now() / 1000, mine });
+  for (let i = 0; i < 3; i++) setTimeout(() => G.ui?.flashMarker?.(x, z, mine ? 0x7dff9a : 0x4fc3ff), i * 450);
+  Audio.play('beep');
+  if (mine && run.mode === 'mp' && lockstep) lockstep.net.send('ping', { x: Math.round(x), z: Math.round(z) });
+  if (!mine) { UI.message(`📍 ${run.mp && run.mp.coop ? 'Your teammate' : 'Your opponent'} pinged the map`); G.alertAt = { x, z, t: G.time }; }
+};
+function setupPings() {
+  const b = $('bPing');
+  if (run.mode === 'watch' || run.mode === 'title' || run.isReplay) { b.style.display = 'none'; return; }
+  b.onclick = () => { Audio.play('click'); G.ui.setMode(G.mode === 'ping' ? null : 'ping'); };
+}
 function setupMyTaunts() {
   const pop = $('tauntPop'), btn = $('bTaunt');
   if (run.mode === 'watch' || run.mode === 'title') { btn.style.display = 'none'; return; }
@@ -503,7 +517,7 @@ function setupMenus() {
   toggle('👑 King of the Hill', () => !!sk.koth, v => { sk.koth = v; });
   toggle('🎯 Hero Hunt', () => !!sk.hunt, v => { sk.hunt = v; });
   toggle('💰 Bounty convoys', () => sk.convoys !== false, v => { sk.convoys = v; });
-  toggle('🐉 Dragon attacks', () => sk.dragons !== false, v => { sk.dragons = v; });
+  toggle('🐉 Monsters (dragon, Nessie)', () => sk.dragons !== false, v => { sk.dragons = v; });
   // starting money cycles through a few amounts
   const money = [2500, 4000, 7500, 15000];
   const mb = document.createElement('button'); mb.className = 'btn on';
@@ -756,6 +770,7 @@ function start() {
   setupFeed();
   setupTaunts();
   setupMyTaunts();
+  setupPings();
   if (run.mode === 'survival') { renderObjectives(); UI.message('Survival: build defences fast - the first wave arrives in 75 seconds!'); }
   if (mission) renderObjectives();
   const fname = FACTIONS[G.player].name;
@@ -903,6 +918,7 @@ function simStep(dt) {
   updateConvoy(dt);
   updateHaggis(dt);
   updateDragon(dt);
+  updateNessie(dt);
   updateIceCream(dt);
   updateHazards(dt);
   updateHill(dt);

@@ -94,7 +94,8 @@ function updateStrikes(dt) {
   const x = tgt.x + srr(-3, 3), z = tgt.z + srr(-3, 3), y = groundY(x, z);
   if (isVisibleAt(x, z) || G.revealed) {
     FX.lightning([[x + srr(-6, 6), y + 70, z + srr(-6, 6)], [x, y + 0.2, z]]);
-    FX.explosion(x, y + 0.3, z, 0.9, { sound: true });
+    FX.explosion(x, y + 0.3, z, 0.9, { sound: false });
+    G.sfx?.thunder?.(Math.max(0.6, 1 - Math.hypot(x - G.camera.x, z - G.camera.z) / 140), x, z); // a strike right here: CRACK-BOOM
   }
   blastTrees(x, z, 2, 160);
   for (const u of unitsNear(x, z, 3, buf)) if (!u.air && !u.dead) damage(u, (u.isInf ? 55 : 35) * (1 - Math.hypot(u.x - x, u.z - z) / 3.5), null);

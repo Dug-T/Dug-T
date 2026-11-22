@@ -68,14 +68,14 @@ export function ejectPassengers(host, hurt = 0, killer = null) {
   const list = (host.passengers || []).filter(u => !u.dead);
   // aircraft drop their troops on the nearest flat, dry ground below them
   let cx = host.x, cz = host.z;
-  if (host.air && list.length && !list[0].canStand(cx, cz)) {
+  if ((host.air || host.def.naval) && list.length && !list[0].canStand(cx, cz)) {
     let found = false;
-    for (let r = 2; r <= 8 && !found; r += 2) for (let k = 0; k < 12; k++) { const a = k / 12 * Math.PI * 2, x = host.x + Math.cos(a) * r, z = host.z + Math.sin(a) * r; if (list[0].canStand(x, z)) { cx = x; cz = z; found = true; break; } }
-    if (!found) { if (host.faction === G.player) G.ui?.message('Can\'t unload here - fly over flat, dry ground first'); return 0; }
+    for (let r = 2; r <= (host.def.naval ? 9 : 8) && !found; r += host.def.naval ? 1 : 2) for (let k = 0; k < 12; k++) { const a = k / 12 * Math.PI * 2, x = host.x + Math.cos(a) * r, z = host.z + Math.sin(a) * r; if (list[0].canStand(x, z)) { cx = x; cz = z; found = true; break; } }
+    if (!found) { if (host.faction === G.player) G.ui?.message(host.def.naval ? 'Can\'t unload here - sail right up to a beach first' : 'Can\'t unload here - fly over flat, dry ground first'); return 0; }
   }
   host.passengers = [];
   const base = host.kind === 'unit' ? host.heading + Math.PI : 0;
-  const R = host.air ? 1.8 : host.kind === 'unit' ? 2.6 : Math.max(host.def.w, host.def.h) * CELL / 2 + 1.6;
+  const R = host.air || host.def.naval ? 1.8 : host.kind === 'unit' ? 2.6 : Math.max(host.def.w, host.def.h) * CELL / 2 + 1.6;
   list.forEach((u, i) => {
     const a = base + (i - (list.length - 1) / 2) * 0.6;
     u.boarded = null;
@@ -268,7 +268,7 @@ export class Unit {
   boardLogic() {
     const apc = this.order.target;
     if (!alive(apc) || (apc.faction !== this.faction && !(apc.def.civil && apc.faction === 'neutral')) || (apc.passengers || []).length >= capacityOf(apc)) { this.order = null; this.path = null; return; }
-    if (apc.kind === 'building' ? distTo(apc, this.x, this.z) < 1.8 : Math.hypot(apc.x - this.x, apc.z - this.z) < 2.8) {
+    if (apc.kind === 'building' ? distTo(apc, this.x, this.z) < 1.8 : Math.hypot(apc.x - this.x, apc.z - this.z) < (apc.def.naval ? 7 : 2.8)) {
       apc.passengers = apc.passengers || [];
       if (apc.def.civil && apc.faction !== this.faction) apc.occupy(this.faction);
       apc.passengers.push(this);
@@ -838,8 +838,8 @@ export class Unit {
     if (this.passengers && this.passengers.length) ejectPassengers(this, 0.5, killer);
     if (this.def.bounty && killer && G.players[killer.faction] && killer.faction !== 'neutral') {
       G.players[killer.faction].credits += this.def.bounty;
-      const what = this.type === 'haggis' ? 'Haggis caught' : this.type === 'dragon' ? 'The Ancient Dragon is slain' : 'Convoy destroyed';
-      G.announce?.(killer.faction === G.player ? `${what}! +$${this.def.bounty.toLocaleString()} bounty` : `The enemy has claimed the ${this.type === 'haggis' ? 'haggis' : this.type === 'dragon' ? 'dragon' : 'convoy'} bounty`, G.player, 3);
+      const what = { haggis: 'Haggis caught', dragon: 'The Ancient Dragon is slain', nessie: 'Nessie has been defeated' }[this.type] || 'Convoy destroyed';
+      G.announce?.(killer.faction === G.player ? `${what}! +$${this.def.bounty.toLocaleString()} bounty` : `The enemy has claimed the ${{ haggis: 'haggis', dragon: 'dragon', nessie: 'Nessie' }[this.type] || 'convoy'} bounty`, G.player, 3);
       FX.sparkBurst(this.x, this.y + 1.5, this.z, 50, [4, 3.2, 0.8, 1]);
       emit('bounty', killer.faction, this.type);
     }

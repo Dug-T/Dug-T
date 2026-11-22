@@ -47,6 +47,8 @@ export const WARHEADS = {
 
 export const WEAPONS = {
   rifle:    { warhead: 'bullet', damage: 13, range: 11, rof: 0.75, proj: 'bullet', air: true, ground: true, sound: 'rifle' },
+  nessieBite: { warhead: 'shell', damage: 120, range: 6, rof: 1.6, proj: 'melee', air: false, ground: true, sound: 'bite' },
+  coastGun: { warhead: 'shell', damage: 95, range: 20, rof: 2.4, proj: 'shell', air: false, ground: true, sound: 'bigcannon' },
   boatGun:  { warhead: 'bullet', damage: 13, range: 13, rof: 0.15, proj: 'bullet', air: true, ground: true, sound: 'mg', twin: true },
   navalCannon: { warhead: 'shell', damage: 78, range: 16, rof: 1.7, proj: 'shell', air: false, ground: true, sound: 'bigcannon', twin: true },
   torpedo:  { warhead: 'shell', damage: 210, range: 12, rof: 2.8, proj: 'shell', air: false, ground: true, navalOnly: true, sound: 'cannon' },
@@ -111,6 +113,7 @@ export const BUILDINGS = {
   hospital: { name: 'Field Hospital', cost: 1000, time: 0, hp: 900, w: 2, h: 2, power: 0, sight: 8, req: ['none'], tab: 'none', tech: true, desc: 'Neutral tech. Capture it with an Engineer to heal nearby infantry.' },
   depot:    { name: 'Repair Depot', cost: 1000, time: 0, hp: 900, w: 2, h: 2, power: 0, sight: 8, req: ['none'], tab: 'none', tech: true, desc: 'Neutral tech. Capture it with an Engineer to repair nearby vehicles.' },
   shipyard: { name: 'Shipyard', cost: 1000, time: 14, hp: 1200, w: 3, h: 3, power: -20, sight: 12, req: ['barracks'], tab: 'build', key: 'Y', naval: true, desc: 'Builds warships. Must be built on the shore, next to open water (only on maps with lakes or sea).' },
+  coastgun: { name: 'Coastal Gun', cost: 900, time: 12, hp: 1100, w: 2, h: 2, power: -25, sight: 21, req: ['shipyard'], tab: 'defense', weapon: 'coastGun', naval: true, desc: 'A heavy long-range cannon in a concrete bunker. Must be built on the shore. Pounds ships and anything else that comes near the coast.' },
   turret:   { name: 'Gun Turret', cost: 600, time: 10, hp: 750, w: 1, h: 1, power: -20, sight: 16, req: ['barracks'], tab: 'defense', weapon: 'turretGun', desc: 'Anti-vehicle cannon emplacement.' },
   wonder:   { name: 'Victory Monument', cost: 5000, time: 60, hp: 3200, w: 3, h: 3, power: -40, sight: 12, req: ['tech'], tab: 'build', wonder: true, limit: 1, desc: 'A giant monument to your army. If it stands for 5 minutes after it is finished, you WIN. The enemy will throw everything at it.' },
   xbarrel:  { name: 'Fuel Barrels', cost: 0, time: 0, hp: 70, w: 1, h: 1, power: 0, sight: 0, req: [], explosive: true, desc: 'Explosive! Shoot them to blow up anything nearby.' },
@@ -144,6 +147,8 @@ export const UNITS = {
   gunboat:  { name: 'Gunboat', cost: 500, time: 8, hp: 380, armor: 'light', speed: 8.5, sight: 15, radius: 1.3, weapon: 'boatGun', turnRate: 2.6, naval: true, tab: 'naval', req: ['shipyard'], desc: 'Fast patrol boat with twin machine guns. Good against infantry, light boats and aircraft.' },
   destroyer: { name: 'Destroyer', cost: 1100, time: 14, hp: 980, armor: 'heavy', speed: 6, sight: 17, radius: 1.8, weapon: 'navalCannon', turnRate: 1.8, naval: true, detector: 14, tab: 'naval', req: ['shipyard', 'radar'], desc: 'Armoured warship with twin cannons. Its sonar finds submarines and cloaked units nearby.' },
   submarine: { name: 'Submarine', cost: 1000, time: 13, hp: 560, armor: 'heavy', speed: 6.4, sight: 14, radius: 1.5, weapon: 'torpedo', turnRate: 2.0, naval: true, stealth: true, tab: 'naval', req: ['shipyard', 'radar'], desc: 'Dives out of sight and sinks ships with huge torpedoes. Torpedoes only hit ships. Destroyers can find it with sonar.' },
+  landingcraft: { name: 'Landing Craft', cost: 650, time: 9, hp: 650, armor: 'heavy', speed: 7, sight: 13, radius: 1.6, weapon: 'mg', turnRate: 2.2, naval: true, transport: 6, tab: 'naval', req: ['shipyard'], desc: 'Carries up to 6 infantry across the water. Select infantry and right-click (or tap) it to load; sail up to a beach and press Unload.' },
+  nessie:   { name: 'Nessie', cost: 0, time: 0, hp: 2600, armor: 'heavy', speed: 5, sight: 16, radius: 2.4, weapon: 'nessieBite', naval: true, bounty: 3000, tab: 'none', req: ['none'], desc: 'The Loch Ness Monster herself! She bites ships and anyone standing on the shore. Worth a $3,000 bounty - if you can catch her before she dives.' },
   battleship: { name: 'Dreadnought', cost: 2200, time: 24, hp: 1900, armor: 'heavy', speed: 4.4, sight: 18, radius: 2.4, weapon: 'navalArty', turnRate: 1.2, naval: true, tab: 'naval', req: ['shipyard', 'tech'], desc: 'Huge battleship with long-range guns that shell anything near the shore. Can\'t hit targets right next to it.' },
   buggy:    { name: 'Scout Buggy', cost: 400, time: 8, hp: 260, armor: 'light', speed: 10, sight: 16, radius: 1.0, weapon: 'mg', tab: 'vehicle', req: ['factory'], desc: 'Fast raider with a heavy machine gun.' },
   tank:     { name: 'Battle Tank', cost: 800, time: 12, hp: 560, armor: 'heavy', speed: 5.6, sight: 14, radius: 1.35, weapon: 'cannon', turnRate: 2.6, tab: 'vehicle', req: ['factory'], desc: 'Main battle tank.' },

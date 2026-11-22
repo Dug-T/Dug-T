@@ -64,6 +64,8 @@ export class Lockstep {
     } else if (ev === 'bye') {
       this.show(`<div class="card"><h2>${this.coop ? 'TEAMMATE LEFT' : 'OPPONENT LEFT'}</h2><p style="text-align:center">${this.coop ? 'Your teammate' : 'Your opponent'} has left the battle.</p><div class="row"><button class="btn big" onclick="location.href=location.pathname">Main menu</button></div></div>`);
       G.over = true;
+    } else if (ev === 'ping') {
+      G.ping?.(+p.x || 0, +p.z || 0, false);
     } else if (ev === 'chat') {
       G.ui?.message(`${this.coop ? 'Teammate' : 'Opponent'}: ${String(p.text).slice(0, 80)}`);
     }

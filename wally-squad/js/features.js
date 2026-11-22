@@ -158,6 +158,41 @@ export function updateDragon(dt) {
   G.alertAt = { x, z, t: G.time };
 }
 
+// ---- Nessie: on maps with a real sea, the Loch Ness Monster surfaces now and then, bites ships and
+// anyone on the shore, and dives away again after a couple of minutes
+let nessieT = 420, nessie = null;
+export function updateNessie(dt) {
+  if (G.cfg.dragons === false || !G.navalMap || !['skirmish', 'mp', 'watch'].includes(G.cfg.mode) || G.over) return;
+  if (nessie) {
+    if (nessie.dead) { nessie = null; nessieT = srr(420, 600); return; }
+    nessie.life -= dt;
+    if (nessie.life <= 0) { G.announce?.('Nessie has dived back into the depths... for now.', G.player, 2); nessie.remove(); nessie = null; nessieT = srr(360, 540); return; }
+    nessie.roamT = (nessie.roamT || 0) - dt;
+    if (nessie.roamT <= 0 && !nessie.target) { // swim toward the nearest ship, or somewhere random on the loch
+      nessie.roamT = 12;
+      const ships = G.units.filter(u => !u.dead && u.def.naval && u !== nessie);
+      const t = ships.length ? ships[Math.floor(srand() * ships.length)] : null;
+      if (t) nessie.moveTo(t.x, t.z, { attackMove: true });
+      else { const w = randomWater(); if (w) nessie.moveTo(w.x, w.z); }
+    }
+    return;
+  }
+  nessieT -= dt;
+  if (nessieT > 0) return;
+  const w = randomWater(); if (!w) { nessieT = 60; return; }
+  nessie = new Unit('nessie', 'neutral', w.x, w.z, srand() * 6.28);
+  nessie.life = 150;
+  G.announce?.(`Is that... NESSIE?! Defeat the Loch Ness Monster for a $${UNITS.nessie.bounty.toLocaleString()} bounty!`, G.player, 9);
+  G.alertAt = { x: w.x, z: w.z, t: G.time };
+}
+function randomWater() {
+  for (let k = 0; k < 200; k++) {
+    const cx = 4 + Math.floor(srand() * (GRID - 8)), cz = 4 + Math.floor(srand() * (GRID - 8)), i = idx(cx, cz);
+    if (T.water[i] && !T.tree[i] && T.water[idx(cx + 2, cz)] && T.water[idx(cx - 2, cz)] && T.water[idx(cx, cz + 2)] && T.water[idx(cx, cz - 2)]) return { x: cellCenter(cx), z: cellCenter(cz) };
+  }
+  return null;
+}
+
 // ---- the Ice Cream Van: every few minutes it trundles across the map playing its jingle, healing everyone nearby
 let vanT = 300, van = null;
 export function updateIceCream(dt) {

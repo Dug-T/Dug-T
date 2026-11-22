@@ -43,7 +43,7 @@ export function hasReqs(faction, type) {
   if (d.wonder && (G.cfg.wonders === false || !['skirmish', 'mp'].includes(G.cfg.mode))) return false; // wonders: skirmish & online only
   if (d.research && (P.upgrades[type] || P.queues.research.items.includes(type))) return false;
   if (G.allowed && !d.research && !G.allowed.includes(type)) return false; // campaign tech restrictions
-  if (type === 'shipyard' && !G.navalMap) return false; // no open water on this map
+  if (BUILDINGS[type] && BUILDINGS[type].naval && !G.navalMap) return false; // no open water on this map
   if (hasMut(G.cfg, 'infantry') && (d.tab === 'vehicle' || d.tab === 'air' || d.tab === 'naval') && type !== 'harvester' && type !== 'apc') return false;
   if (!d.req.every(r => P.owned[r] > 0)) return false;
   const q = QUEUE_OF[d.tab];
