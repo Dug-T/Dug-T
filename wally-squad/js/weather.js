@@ -17,7 +17,7 @@ export const WEATHER = {
   ashfall:   { label: '🌋 Ashfall', sight: 0.75, speed: 1, fog: 0.35, dark: 0.3, sand: 0.7, tint: 0x5a4038 },
 };
 
-let theme, map, sky, stars, rain, snow, sand, bolt;
+let theme, map, sky, stars, rain, snow, sand, bolt, rainbow;
 const W = { type: 'clear', prev: 'clear', k: 1, next: 120 };
 const DAY_LENGTH = 720; // seconds of game time for a full day
 
@@ -56,6 +56,13 @@ export function initWeather(scene, mapDef, th) {
   sand = mkPts(4000, th.lava ? 0x9a8c86 : 0xd8a868, 0.7); // grey ash on volcanic maps
   bolt = new THREE.Line(new THREE.BufferGeometry().setFromPoints(Array.from({ length: 12 }, () => new THREE.Vector3())), new THREE.LineBasicMaterial({ color: new THREE.Color(4, 4, 6), transparent: true, opacity: 0 }));
   bolt.frustumCulled = false; scene.add(bolt);
+  // a rainbow that appears when the rain clears in daylight
+  rainbow = new THREE.Group();
+  ['#ff3b30', '#ff9500', '#ffd60a', '#34c759', '#0a84ff', '#3d3dff', '#9b51e0'].forEach((c, i) => {
+    const m = new THREE.Mesh(new THREE.TorusGeometry(120 - i * 2.6, 1.4, 6, 96, Math.PI), new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: 0, depthWrite: false, depthTest: false, fog: false, blending: THREE.AdditiveBlending }));
+    rainbow.add(m);
+  });
+  rainbow.visible = false; rainbow.children.forEach(m => { m.renderOrder = 9; m.frustumCulled = false; }); scene.add(rainbow);
 }
 
 // time of day 0..1 (0.5 = noon); deterministic from game time
@@ -78,7 +85,7 @@ export function updateWeatherSim(dt) {
     const list = map.weather || ['clear'];
     const t = list[Math.floor(srand() * list.length)];
     if (t !== W.type) {
-      W.prev = W.type; W.type = t; W.k = 0;
+      W.prev = W.type; W.type = t; W.k = 0; W.since = G.time;
       G.announce?.(`Weather report: ${WEATHER[t].label.slice(2)}`, G.player, 1);
     }
     W.next = srr(100, 200);
@@ -93,6 +100,7 @@ export function updateWeatherSim(dt) {
 }
 
 // ---- visuals (local) ----
+const tmpV = new THREE.Vector3(), tmpV2 = new THREE.Vector3();
 const cTop = new THREE.Color(), cHor = new THREE.Color(), cBot = new THREE.Color(), tmp = new THREE.Color(), tmp2 = new THREE.Color();
 const NIGHT_TOP = new THREE.Color(0x0a1430), NIGHT_HOR = new THREE.Color(0x22304e), NIGHT_BOT = new THREE.Color(0x10141c);
 const NIGHT_AMB = new THREE.Color(0x6a7cae); // soft moonlit blue for the ambient light at night (brighter than the sky colour)
@@ -122,6 +130,21 @@ export function updateWeatherFX(dt, real) {
   T3.hemi.intensity = theme.hemiI * (0.45 + 0.55 * day) * (1 - dark * 0.4);
   T3.hemi.color.set(theme.hemiSky).lerp(NIGHT_AMB, 1 - day);
 
+  // rainbow after the rain
+  if (rainbow) {
+    const after = (W.prev === 'rain' || W.prev === 'storm') && (W.type === 'clear' || W.type === 'fog') ? G.time - (W.since || 0) : 999;
+    const a = after < 120 ? Math.min(1, after / 15) * Math.min(1, (120 - after) / 30) * day * (W.type === 'fog' ? 0.4 : 1) : 0;
+    rainbow.visible = a > 0.01;
+    if (rainbow.visible) {
+      // a big arc across the view: placed in front of the camera, facing it, centred below the screen
+      const cam = T3.camera, D = 200;
+      const fwd = tmpV.set(0, 0, -1).applyQuaternion(cam.quaternion), up = tmpV2.set(0, 1, 0).applyQuaternion(cam.quaternion);
+      rainbow.position.copy(cam.position).addScaledVector(fwd, D).addScaledVector(up, -0.55 * D);
+      rainbow.quaternion.copy(cam.quaternion);
+      rainbow.scale.setScalar(D * 0.85 / 120);
+      for (const m of rainbow.children) m.material.opacity = 0.22 * a;
+    }
+  }
   // flash of lightning
   if (wb.lightning && W.k > 0.5) {
     nextBolt -= real;
@@ -131,7 +154,9 @@ export function updateWeatherFX(dt, real) {
       const pos = bolt.geometry.attributes.position;
       for (let i = 0; i < 12; i++) pos.setXYZ(i, x + (Math.random() - 0.5) * (i ? 6 : 0) * (1 - i / 12), y + 90 * (1 - i / 11), z + (Math.random() - 0.5) * (i ? 6 : 0) * (1 - i / 12));
       pos.needsUpdate = true;
-      setTimeout(() => G.sfx?.explosion(G.camera.x + (Math.random() - 0.5) * 30, G.camera.z, 2.5), 300 + Math.random() * 1200);
+      // thunder arrives after the flash: about 3 seconds per kilometre, squashed down to game scale
+      const far = Math.random(), near = 1 - far;
+      setTimeout(() => G.sfx?.thunder?.(near * 0.75, x, z), 120 + far * 2600);
     }
   }
   if (flashT > 0) { flashT -= real; const f = Math.max(0, flashT / 0.35); T3.hemi.intensity += 3 * f; bolt.material.opacity = f; } else bolt.material.opacity = 0;

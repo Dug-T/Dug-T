@@ -195,6 +195,7 @@ export class AI {
         enqueue(this.f, t);
       }
     }
+    if (this.count('shipyard') && !this.count('coastgun') && !P.queues.build.items.length && P.credits > 1200 && srand() < 0.2 && hasReqs(this.f, 'coastgun') && this.findSpot('coastgun')) enqueue(this.f, 'coastgun');
     if (P.queues.naval && !P.queues.naval.items.length && this.count('shipyard') && srand() < 0.5) {
       const navy = G.units.filter(u => u.faction === this.f && !u.dead && u.def.naval).length;
       const opts = ['gunboat', 'gunboat', 'destroyer', 'destroyer', 'submarine', 'battleship'].filter(t => hasReqs(this.f, t));

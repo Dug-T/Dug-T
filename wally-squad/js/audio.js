@@ -449,6 +449,65 @@ function schedule() {
   }
 }
 
-export const sfx = { play, explosion };
+// ---- thunder: a close strike tears the air with a sizzling CRACK, then a deep rumble rolls round
+// the hills for several seconds; a far-off one is just a soft, low, long roll. An outdoor echo
+// (a long, decaying reverb) gives it space.
+let thunderVerb = null;
+function outdoorVerb() {
+  if (thunderVerb) return thunderVerb;
+  const len = Math.floor(ctx.sampleRate * 4), b = ctx.createBuffer(2, len, ctx.sampleRate);
+  for (let c = 0; c < 2; c++) { const d = b.getChannelData(c); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3); }
+  thunderVerb = ctx.createConvolver(); thunderVerb.buffer = b;
+  const g = ctx.createGain(); g.gain.value = 0.55; thunderVerb.connect(g); g.connect(sfxBus);
+  return thunderVerb;
+}
+// a long stretch of filtered noise whose volume we shape by hand
+function rumbleNoise(dest, t0, dur, type, f0, f1, q = 0.8) {
+  const s = ctx.createBufferSource(); s.buffer = noiseBuf; s.loop = true; s.playbackRate.value = 0.6 + Math.random() * 0.3;
+  const f = ctx.createBiquadFilter(); f.type = type; f.Q.value = q; f.frequency.setValueAtTime(f0, t0); f.frequency.exponentialRampToValueAtTime(f1, t0 + dur);
+  const g = ctx.createGain(); g.gain.value = 0;
+  s.connect(f); f.connect(g); g.connect(dest);
+  s.start(t0, Math.random() * 1.8); s.stop(t0 + dur + 0.1);
+  return g.gain;
+}
+export function thunder(near = 0.5, x, z) {
+  if (!ctx || !enabled) return;
+  const now = ctx.currentTime;
+  if (lastPlayed.thunder && now - lastPlayed.thunder < 0.8) return;
+  lastPlayed.thunder = now;
+  near = Math.max(0, Math.min(1, near));
+  const o = ctx.createGain(); o.gain.value = 0.55 + near * 0.6;
+  const p = pan(x); if (p) { o.connect(p); p.connect(sfxBus); } else o.connect(sfxBus);
+  o.connect(outdoorVerb());
+  if (near > 0.55) {
+    // the crack: dozens of tiny sharp snaps tearing across a split second
+    const n = Math.round(14 + near * 22);
+    for (let i = 0; i < n; i++) {
+      const t = now + Math.pow(i / n, 1.6) * 0.35 + Math.random() * 0.015;
+      env(noise(o, t, 0.06, 'highpass', 1800 + Math.random() * 4000, 0.6), t, 0.0008, (0.5 + Math.random() * 0.6) * near * (1 - i / n * 0.6), 0.02 + Math.random() * 0.05);
+    }
+    const whip = rumbleNoise(o, now, 0.9, 'bandpass', 3200, 260, 0.5);      // the ripping "kssshh" of the bolt
+    whip.setValueAtTime(0.0001, now); whip.linearRampToValueAtTime(1.6 * near, now + 0.01); whip.exponentialRampToValueAtTime(0.0001, now + 0.9);
+    const boom = rumbleNoise(o, now + 0.02, 1.6, 'lowpass', 900, 70, 0.7);  // the BOOM right after
+    boom.setValueAtTime(0.0001, now + 0.02); boom.linearRampToValueAtTime(2.2 * near, now + 0.06); boom.exponentialRampToValueAtTime(0.0001, now + 1.6);
+    tone(o, now + 0.02, 1.4, 'sine', 62, 26, 1.3 * near);                  // the thump you feel in your chest
+  }
+  // the rolling rumble: overlapping low swells that come and go, fading as they roll away
+  const start = now + (near > 0.55 ? 0.25 : 0.05);
+  const len = 4 + (1 - near) * 3 + Math.random() * 2.5;
+  const k = 8 + Math.floor(Math.random() * 6);
+  const top = near > 0.55 ? 520 : 220 + near * 200;
+  for (let i = 0; i < k; i++) {
+    const f = i / k, t = start + Math.pow(f, 1.25) * len * 0.85 + Math.random() * 0.35, d = 0.9 + Math.random() * 1.8;
+    const cut = top * (1 - f * 0.55) * (0.8 + Math.random() * 0.4);
+    const g = rumbleNoise(o, t, d, 'lowpass', cut, Math.max(40, cut * 0.35), 1.1);
+    const peak = (near > 0.55 ? 1.5 : 0.7 + near) * (1 - f * 0.7) * (0.55 + Math.random() * 0.7);
+    g.setValueAtTime(0.0001, t); g.linearRampToValueAtTime(peak, t + 0.12 + Math.random() * 0.4); g.exponentialRampToValueAtTime(0.0001, t + d);
+  }
+  const sub = rumbleNoise(o, start, len, 'lowpass', 90, 45, 0.7);           // low, steady growl underneath
+  sub.setValueAtTime(0.0001, start); sub.linearRampToValueAtTime(1.4 * (0.5 + near * 0.5), start + 0.5); sub.exponentialRampToValueAtTime(0.0001, start + len);
+}
+
+export const sfx = { play, explosion, thunder };
 // testing aid: jump to a bar of the current tune
 export function _seekBar(bar) { step = bar * 16; }

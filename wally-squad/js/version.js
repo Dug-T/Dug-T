@@ -1,8 +1,18 @@
 // Version number and update notes. Bump VERSION and add a new entry at the top of CHANGELOG for every
 // update: players see a "What's New" screen the first time they load a new version.
-export const VERSION = '1.39';
+export const VERSION = '1.40';
 
 export const CHANGELOG = [
+  { v: '1.40', date: '2026-11-22', title: 'Thunder & Monsters', items: [
+    '⚡ Real thunder: a nearby strike now tears the air with a sharp, sizzling CRACK and a BOOM, then a deep rumble rolls round the hills for several seconds. Far-off storms just grumble softly, and the thunder arrives a moment after the flash, like the real thing.',
+    '🦕 Nessie! On maps with a sea, the Loch Ness Monster surfaces now and then, bites ships and anyone standing on the shore, then dives away again. Defeat her for a $3,000 bounty.',
+    '🛶 Landing Craft: ferries up to 6 infantry across the water. Sail up to a beach and press Unload.',
+    '💥 Coastal Gun: a heavy long-range cannon in a shoreline bunker. It pounds ships and anything else near the coast.',
+    '📍 Map pings: tap 📍, then tap the map to mark a spot. In online battles your teammate (or opponent) sees it too.',
+    '🌈 Rainbows: when the rain clears during the day, a rainbow appears over the battlefield.',
+    '🏠 Fixed: civilian houses, Tesla Coils and Flame Towers had broken foundations.',
+    '🎖 Fixed: in campaign missions, things you aren\'t allowed to build in that mission said "Requires: a producer". They are now hidden, and a tab with nothing available says so.',
+  ] },
   { v: '1.39', date: '2026-11-21', title: 'Rule the Waves', items: [
     '⚓ Naval battles: build a Shipyard on the shore, then launch Gunboats, Destroyers (their sonar finds submarines), Submarines (they dive out of sight and torpedo ships) and the mighty Dreadnought (long-range guns that shell the coast). Find them in the new NAVY tab.',
     '🌊 New map: Kelpie Loch - a great sea loch splits the glen in two. Rule the waves, or march the long way round by land. (Ships need a proper sea, so the NAVY tab only appears on maps with enough open water.)',
