@@ -1128,7 +1128,8 @@ export class Building {
     this.faction = faction;
     this.makeMesh();
     if (faction !== 'neutral') emit('house', this, faction);
-    if (faction === G.player) G.ui?.message('🏠 Your troops have taken a civilian house');
+    if (this.def.castle) { G.announce?.(faction === G.player ? 'We hold Castle Rock!' : faction === 'neutral' ? 'Castle Rock stands empty.' : 'The enemy has taken Castle Rock!', G.player, 3); }
+    else if (faction === G.player) G.ui?.message('🏠 Your troops have taken a civilian house');
     else if (old === G.player) G.ui?.message('🏠 Your troops have left the house');
     if (this.selected && faction !== G.player && faction !== 'neutral') { G.selection = G.selection.filter(s => s !== this); this.setSelected(false); }
   }

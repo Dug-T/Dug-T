@@ -239,6 +239,8 @@
   .cheatRow input { background: #0d1520; color: #fff; border: 1px solid var(--line2); border-radius: 4px; font: 600 15px Rajdhani, sans-serif; padding: 6px 10px; width: 220px; text-transform: uppercase; letter-spacing: 1px; }
   #qOpts { display: none; padding: 0 6px 4px; } #qOpts .btn { width: 100%; padding: 3px 6px; font-size: 12px; }
   #qOpts .btn.on { background: rgba(255,194,58,0.2); border-color: var(--accent); color: var(--accent); }
+  #scoreBoard table { margin: 4px auto 8px; border-collapse: collapse; font-size: 13px; } #scoreBoard td, #scoreBoard th { padding: 2px 10px; text-align: center; } #scoreBoard th { font-weight: 700; } #scoreBoard td:first-child { text-align: left; opacity: 0.8; }
+  .heroRow { display: flex; gap: 10px; align-items: center; padding: 6px 8px; border-bottom: 1px solid #ffffff14; } .heroRow img { width: 56px; height: 45px; border-radius: 6px; background: #0e1820; } .heroRow .k { margin-left: auto; font-weight: 700; color: var(--accent); white-space: nowrap; } .heroRow .sub { font-size: 12px; opacity: 0.75; }
   #endBoard { margin: 6px auto; max-width: 520px; } #endBoard input, #worldBoard input { background: #0008; color: #fff; border: 1px solid #fff4; border-radius: 6px; padding: 6px 8px; font: inherit; }
   table.lb { width: 100%; border-collapse: collapse; margin: 6px 0; font-size: 14px; } table.lb td { padding: 4px 6px; border-bottom: 1px solid #ffffff14; } table.lb tr.me td { color: var(--accent); font-weight: 700; } .lbNote { text-align: center; opacity: 0.8; padding: 8px; font-size: 13px; }
   #replayBar { position: fixed; top: 52px; left: 50%; transform: translateX(-50%); z-index: 35; gap: 6px; align-items: center; background: rgba(12,18,28,0.9); border: 1px solid rgba(255,255,255,0.2); border-radius: 10px; padding: 5px 10px; font-size: 13px; }
@@ -472,6 +474,7 @@
       <button class="btn big" data-panel="menuEditor">🗺 MAP EDITOR</button>
       <button class="btn big" data-panel="menuVoices">🎙 VOICE STUDIO</button>
       <button class="btn big" data-panel="menuMedals">🎖 MEDALS</button>
+      <button class="btn big" data-panel="menuHeroes">🏛 HALL OF HEROES</button>
       <button class="btn big" data-panel="menuWorld">🌍 WORLD LEADERBOARD</button>
       <button class="btn big" id="bLastReplay" style="display:none">🎬 REPLAY LAST BATTLE</button>
       <button class="btn big" data-panel="menuGraphics">⚙ GRAPHICS</button>
@@ -563,6 +566,12 @@
     <p class="sub" style="text-align:center">The best Survival scores and Daily Challenge times from commanders all over the world. Post yours from the end-of-battle screen.</p>
     <div class="row" id="worldTabs"></div>
     <div id="worldBoard"></div>
+    <div class="row"><button class="btn" data-panel="menuMain">◀ Back</button></div>
+  </div>
+  <div class="card wide" id="menuHeroes" style="display:none">
+    <h2>HALL OF HEROES</h2>
+    <p class="sub" style="text-align:center">Your bravest soldiers and deadliest machines from every battle. A unit earns its place with 3 or more kills.</p>
+    <div id="heroes"></div>
     <div class="row"><button class="btn" data-panel="menuMain">◀ Back</button></div>
   </div>
   <div class="card wide" id="menuMedals" style="display:none">
@@ -667,6 +676,7 @@
   <div class="card">
     <h2>PAUSED</h2>
     <div class="row"><button class="btn big" id="bResume">Resume</button></div>
+    <div id="scoreBoard"></div>
     <div id="bonusList" style="text-align:left;font-size:13px;line-height:1.6;margin:6px auto;max-width:420px"></div>
     <div class="row"><button class="btn" id="bSpeed">Game speed: 1x</button><button class="btn" id="bRestart">Restart</button></div>
     <div class="row cheatRow"><input id="cheatIn" type="text" maxlength="20" placeholder="Enter a cheat code" autocomplete="off" autocapitalize="characters" spellcheck="false"><button class="btn" id="bCheat">✓</button></div>

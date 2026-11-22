@@ -1,8 +1,15 @@
 // Version number and update notes. Bump VERSION and add a new entry at the top of CHANGELOG for every
 // update: players see a "What's New" screen the first time they load a new version.
-export const VERSION = '1.42';
+export const VERSION = '1.43';
 
 export const CHANGELOG = [
+  { v: '1.43', date: '2026-11-22', title: 'Castles & Coos', items: [
+    '📱 Fixed: after turning the phone, parts of the screen could go missing. The game now re-measures the screen several times as the phone turns, uses the area you can actually see, puts the page back in place, and keeps the 3D effects at the right resolution.',
+    '🏰 New map: Castle Rock. An ancient castle stands in the middle of the glen. Send up to 8 infantry inside to fire from the battlements, and the castle earns its holder $15 a second.',
+    '🐂 Highland coo stampede: on Highland maps a herd of shaggy cattle sometimes thunders right across the battlefield. Get your troops out of the way!',
+    '🏛 Hall of Heroes (main menu): your best soldiers and machines from every battle - any unit with 3 or more kills - with their names, ranks and battles.',
+    '📊 Live scoreboard in the pause menu: units, army value, buildings, kills and losses for both sides.',
+  ] },
   { v: '1.42', date: '2026-11-22', title: 'Crack, Boom, Rumble', items: [
     '⚡ Brand-new thunder, built from a model of a real lightning bolt. Every bit of the jagged, kilometre-long bolt sends out a shock wave: the closest part reaches you first as an ear-splitting CRACK, then the rest rolls in as a deep, grumbling rumble that can last several seconds. Close strikes crack and boom; far-off storms just roll and grumble.',
     '🧊 Hailstorms on the Highland, frost and valley maps: hailstones clatter down and sting infantry caught in the open (never below half health).',
