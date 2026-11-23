@@ -216,6 +216,27 @@ const TRACKS = [
     verse: [[53, 'M'], [58, 'M'], [53, 'M'], [48, 'M']], chorus: [[58, 'M'], [60, 'M'], [53, 'M'], [53, 'M']], seed: 149 },
   { name: 'Desert Shuffle', bpm: 122, key: 57, minor: false, drums: 'shuffle', bass: 'walk', lead: 'square', arp: false, vox: 'lead', lyrics: ['Sand in my boots!', 'Shuffle through the desert heat!', 'Hot sun, cool tunes!'],
     verse: [[57, 'M'], [50, 'M'], [57, 'M'], [52, 'M']], chorus: [[50, 'M'], [50, 'M'], [57, 'M'], [52, 'M']], seed: 101 },
+  // ---- ten more tunes (v1.44)
+  { name: 'Ceilidh Chaos', bpm: 150, key: 62, minor: false, drums: 'shuffle', bass: 'gallop', lead: 'pipes', arp: true, vox: 'choir', lyrics: ['Strip the Willow, strip the tank!', 'Birl yer partner, birl the turret!', 'Everybody up for the Gay Gordons!', 'Hooch!'],
+    verse: [[62, 'M'], [67, 'M'], [62, 'M'], [69, 'M']], chorus: [[67, 'M'], [69, 'M'], [62, 'M'], [62, 'M']], seed: 101 },
+  { name: 'Haggis Hoedown', bpm: 138, key: 55, minor: false, drums: 'ska', bass: 'walk', lead: 'pluck', arp: false, vox: 'shout', lyrics: ['Neeps and tatties, haggis too!', 'Chieftain o\'the puddin\' race!', 'Fire the haggis, here it comes!', 'Gie\'s a plate o\' that!'],
+    verse: [[55, 'M'], [60, 'M'], [62, 'M'], [55, 'M']], chorus: [[60, 'M'], [62, 'M'], [55, 'M'], [62, 'M']], seed: 113 },
+  { name: 'Loch Ness Lullaby', bpm: 84, key: 50, minor: true, drums: 'half', bass: 'drone', lead: 'brass', arp: true, vox: 'lead', lyrics: ['Deep in the loch, something stirs...', 'Is that a log? Naw, it is Nessie!', 'Sleep, wee soldier, the monster is near.'],
+    verse: [[50, 'm'], [46, 'M'], [43, 'm'], [45, 'M']], chorus: [[46, 'M'], [48, 'M'], [50, 'm'], [45, 'M']], seed: 127 },
+  { name: 'Tartan Thunder', bpm: 132, key: 52, minor: true, drums: 'metal', bass: 'octave', lead: 'saw', arp: false, vox: 'shout', lyrics: ['Tartan thunder, kilts of steel!', 'Crack and boom across the glen!', 'Wha\'s like us? Damn few!', 'Freedom! And a fish supper!'],
+    verse: [[52, 'm'], [48, 'M'], [50, 'M'], [47, 'M']], chorus: [[48, 'M'], [50, 'M'], [52, 'm'], [52, 'm']], seed: 131 },
+  { name: 'Irn Bru Boogie', bpm: 120, key: 57, minor: false, drums: 'funk', bass: 'funk', lead: 'square', arp: true, vox: 'scat', lyrics: ['Orange fizz and girders!', 'Made in Scotland from girders!', 'One more can and I can fly!', 'Boogie, boogie, Irn Bru!'],
+    verse: [[57, 'M'], [62, 'M'], [64, 'M'], [62, 'M']], chorus: [[62, 'M'], [64, 'M'], [57, 'M'], [57, 'M']], seed: 139 },
+  { name: 'Midge Attack', bpm: 172, key: 53, minor: true, drums: 'dnb', bass: 'synco', lead: 'chip', arp: true, vox: 'robot', lyrics: ['Bzzz bzzz, the midges are here!', 'Scratch, scratch, scratch!', 'Wee beasties, millions of them!', 'Somebody get the Smidge!'],
+    verse: [[53, 'm'], [49, 'M'], [56, 'M'], [51, 'M']], chorus: [[49, 'M'], [51, 'M'], [53, 'm'], [53, 'm']], seed: 149 },
+  { name: 'Goblin Disco Inferno', bpm: 124, key: 49, minor: true, drums: 'disco', bass: 'pulse', lead: 'saw', arp: true, vox: 'chant', lyrics: ['Burn, baby, burn, hehe!', 'Goblins on the dance floor!', 'Grak can boogie too!', 'Disco is war!'],
+    verse: [[49, 'm'], [45, 'M'], [47, 'M'], [44, 'M']], chorus: [[45, 'M'], [47, 'M'], [49, 'm'], [49, 'm']], seed: 151 },
+  { name: 'Zeppelin Raid', bpm: 100, key: 45, minor: true, drums: 'march', bass: 'gallop', lead: 'brass', arp: false, vox: 'chant', lyrics: ['Float the bombs, hehe!', 'Look out below!', 'The Legion rules the sky!'],
+    verse: [[45, 'm'], [45, 'm'], [41, 'M'], [43, 'M']], chorus: [[41, 'M'], [43, 'M'], [45, 'm'], [40, 'M']], seed: 163 },
+  { name: 'Dreadnought Dawn', bpm: 96, key: 48, minor: false, drums: 'rock', bass: 'eighth', lead: 'brass', arp: true, vox: 'choir', lyrics: ['Steel on the water, sun in the sky!', 'Full steam ahead, Wally Squad!', 'Rule the waves!'],
+    verse: [[48, 'M'], [53, 'M'], [55, 'M'], [48, 'M']], chorus: [[53, 'M'], [55, 'M'], [57, 'm'], [55, 'M']], seed: 167 },
+  { name: 'Caber Toss Shuffle', bpm: 110, key: 60, minor: false, drums: 'reggae', bass: 'walk', lead: 'pipes', arp: false, vox: 'scat', lyrics: ['Toss the caber, mind yer heid!', 'Kilts flyin\' in the breeze!', 'Ah have lifted bigger trees!', 'TIMBERRR!'],
+    verse: [[60, 'M'], [65, 'M'], [67, 'M'], [60, 'M']], chorus: [[65, 'M'], [67, 'M'], [60, 'M'], [67, 'M']], seed: 173 },
 ];
 // song layout in bars
 const SECTIONS = [['intro', 4], ['verse', 8], ['chorus', 8], ['break', 4], ['verse', 8], ['chorus', 8]];
@@ -279,10 +300,11 @@ const VERSE_LYRICS = {
   grim: ['From the shadows, here we come!', 'Hear the war drums in the night!', 'Grak is hungry, Grak is mad!', 'Crush the Squad and take their crystal!', 'Burn it down, burn it all!', 'Goblins laughing, hehehe!'],
   party: ['Everybody on the dance floor!', 'Tanks are dancing, soldiers too!', 'Turn it up, turn it up!', 'Feel the beat inside your boots!', 'Party in the battlefield!', 'Shake it, shake it, harvester!'],
   robot: ['Beep boop, battle mode.', 'Systems online. Lasers ready.', 'Calculating victory.', 'Error: enemy not found. Searching.', 'Download complete: courage.'],
-  scots: ['Doon the glen the pipers play!', 'Haud the line, ye brave yins!', 'Through the heather, through the rain!', 'Gie it laldy, Wally Squad!'],
+  scots: ['Doon the glen the pipers play!', 'Haud the line, ye brave yins!', 'Through the heather, through the rain!', 'Gie it laldy, Wally Squad!', 'Lang may yer lum reek!', 'Whit\'s fur ye\'ll no go by ye!', 'Haste ye back, Grimlocks... naw, dinnae!', 'Ah\'m pure dead chuffed!', 'Keep the heid, keep the heid!', 'Ye\'re a long time deid, so dance!', 'It\'s a braw bricht moonlicht nicht!', 'Mony a mickle maks a muckle!', 'Ah\'ll gie ye a skelpit lug!', 'Dinnae teach yer granny tae suck eggs!', 'We\'re aw Jock Tamson\'s bairns!', 'Awa\' an\' bile yer heid!'],
 };
-const THEME_OF = { 'Grimlock Rising': 'grim', 'Iron Grimlock': 'grim', 'Grimlock War Chant': 'grim', 'Neon Commander': 'robot', 'Pixel Platoon': 'robot', 'Crystal Disco': 'party', 'Skank Tank': 'party', 'Funky Harvester': 'party', 'Reggae Recon': 'party', 'Trap Tank': 'party', 'Highland Charge': 'scots' };
+const THEME_OF = { 'Ceilidh Chaos': 'scots', 'Haggis Hoedown': 'scots', 'Loch Ness Lullaby': 'scots', 'Tartan Thunder': 'scots', 'Irn Bru Boogie': 'scots', 'Midge Attack': 'scots', 'Caber Toss Shuffle': 'scots', 'Goblin Disco Inferno': 'grim', 'Zeppelin Raid': 'grim', 'Grimlock Rising': 'grim', 'Iron Grimlock': 'grim', 'Grimlock War Chant': 'grim', 'Neon Commander': 'robot', 'Pixel Platoon': 'robot', 'Crystal Disco': 'party', 'Skank Tank': 'party', 'Funky Harvester': 'party', 'Reggae Recon': 'party', 'Trap Tank': 'party', 'Highland Charge': 'scots' };
 const ADLIBS = ['Yeah!', 'Woo!', 'Come on!', 'Let\'s go!', 'Oh yeah!', 'Everybody!', 'Here we go!'];
+const SCOTS_ADLIBS = ['Hooch!', 'Och aye!', 'Haw!', 'Ya dancer!', 'Get it up ye!', 'Gaun yersel!', 'Mon then!'];
 function sing(t, line, kind) { if (lyricFn) setTimeout(() => lyricFn(line, tr, kind), Math.max(0, (t - ctx.currentTime) * 1000)); }
 export function setLyricHandler(fn) { lyricFn = fn; }
 // a bagpipe chanter note: bright and reedy, with a quick grace note flicked in front of it
@@ -444,7 +466,7 @@ function schedule() {
       // sung lyric lines: twice per chorus and once per verse (text-to-speech, timed to the music)
       if (s === 0 && tr.lyrics && chorus && sec.bar % 2 === 0) sing(t, tr.lyrics[lyricN++ % tr.lyrics.length], 'lyric');
       if (s === 0 && verse && sec.bar % 4 === 0) { const pool = VERSE_LYRICS[THEME_OF[tr.name] || 'wally']; sing(t, pool[verseN++ % pool.length], 'lyric'); }
-      if (chorus && sec.bar === sec.len - 1 && s === 8) sing(t, ADLIBS[(bar + lyricN) % ADLIBS.length], 'adlib');
+      if (chorus && sec.bar === sec.len - 1 && s === 8) { const ad = THEME_OF[tr.name] === 'scots' ? SCOTS_ADLIBS : ADLIBS; sing(t, ad[(bar + lyricN) % ad.length], 'adlib'); }
       if (brk && sec.bar === 1 && s === 0) sing(t, ['Break it down!', 'Everybody clap!', 'Here comes the drop!', 'Sing it with me!'][bar % 4], 'adlib');
     }
     next += sixteenth; step++;
