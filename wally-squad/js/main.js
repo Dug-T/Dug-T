@@ -377,8 +377,8 @@ const TAUNTS = {
     hero: ['Your hero is no match for Grak!', 'Who is next?'],
     losing: ['This is not over, Wally!', 'Retreat! Er... I mean, regroup!'] },
   wally: { who: 'Commander Wally', voice: 'wally',
-    start: ['Wally Squad, hold the line!', 'Nice try, Grimlocks. Not today!', 'Where is Wally? Right here!'],
-    lostBuilding: ['Hey! We were using that!', 'Oi! That cost good crystal!', 'Squad, get them!'],
+    start: ['Wally Squad, hold the line!', 'Nice try, Grimlocks. Not today!', 'Where is Wally? Right here!', 'Mon then, Grimlocks, if ye think ye\'re hard enough!', 'Kettle\'s oan, lads - this\'ll no take long!'],
+    lostBuilding: ['Hey! We were using that!', 'Oi! That cost good crystal!', 'Squad, get them!', 'Ya rotten swines! That was ma favourite!', 'Och, that\'s a pure sickener!'],
     tookBuilding: ['Another one bites the dust!', 'Your base is looking a bit thin, Grak!', 'Boom! Wally Squad strikes again!'],
     hero: ['Grak is down! Ha!', 'Who needs a Warlord anyway?'],
     losing: ['Fall back! Fall back!', 'We will be back, Grimlocks!'] },
@@ -406,12 +406,12 @@ function setupTaunts() {
 
 // ---------------------------------------------------------------- your own taunts (💬 button)
 const MY_TAUNTS = {
-  wally: { voice: 'wallyman', lines: ['Is that all ye\'ve got?', 'Ye couldnae hit a coo\'s backside wi\' a banjo!', 'Away an\' bile yer heid!', 'Wally Squad never retreats!', 'Get it up ye, Grimlocks!', 'Ah\'ve seen scarier haggis!', 'Gonnae no\' dae that? Naw? Fine then!', 'Your base is mince, pal!'] },
+  wally: { voice: 'wallyman', lines: ['Is that all ye\'ve got?', 'Ye couldnae hit a coo\'s backside wi\' a banjo!', 'Away an\' bile yer heid!', 'Wally Squad never retreats!', 'Get it up ye, Grimlocks!', 'Ah\'ve seen scarier haggis!', 'Gonnae no\' dae that? Naw? Fine then!', 'Your base is mince, pal!', 'Ye fight like a coo in wellies!', 'Ah\'ve seen mair fight in a wet paper bag!', 'Ye\'re as useful as a chocolate teapot!', 'Ah\'ll batter ye intae a fish supper!', 'Ye couldnae organise a ceilidh in a village hall!', 'Away an\' raffle yer doughnut!', 'Yer heid\'s full o\' mince!', 'Gie\'s peace, ya wee nyaff!'] },
   grim: { voice: 'warlord', lines: ['Grak is coming for you!', 'Your squad smells of fear!', 'Hide behind your little walls!', 'Crystals for the Legion!', 'Grak has eaten bigger snacks than you!', 'Run, tiny soldiers, RUN!', 'Your tanks are made of tinfoil!', 'Grimlocks never surrender!'] },
 };
 const RETORTS = {
   grim: ['Grak is not listening! LA LA LA!', 'Big words from a tiny commander!', 'Grak will remember that!', 'Your mother was a harvester!', 'Silence! Grak is trying to think!'],
-  wally: ['Aye, very funny, big man.', 'Is that a threat? Cute.', 'Talk is cheap, Grak. Crystal isn\'t!', 'Haud yer wheesht, ya big lump!', 'We\'ll see who\'s laughing in five minutes!'],
+  wally: ['Ach, away an\' boil yer heid, Grak.', 'Ye\'re aff yer heid, big man!', 'Whit a numpty.', 'Aye, an\' ah\'m the Queen o\' Sheba.', 'Haud yer wheesht, ya muppet!', 'Aye, very funny, big man.', 'Is that a threat? Cute.', 'Talk is cheap, Grak. Crystal isn\'t!', 'Haud yer wheesht, ya big lump!', 'We\'ll see who\'s laughing in five minutes!'],
 };
 let myTauntT = -99;
 // ---------------------------------------------------------------- map pings (📍): a marker you, and a co-op partner, can see

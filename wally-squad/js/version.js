@@ -1,8 +1,12 @@
 // Version number and update notes. Bump VERSION and add a new entry at the top of CHANGELOG for every
 // update: players see a "What's New" screen the first time they load a new version.
-export const VERSION = '1.43';
+export const VERSION = '1.44';
 
 export const CHANGELOG = [
+  { v: '1.44', date: '2026-11-23', title: 'Ceilidh Time', items: [
+    '🎵 10 new tunes - 29 in all: Ceilidh Chaos, Haggis Hoedown, Loch Ness Lullaby, Tartan Thunder, Irn Bru Boogie, Midge Attack, Goblin Disco Inferno, Zeppelin Raid, Dreadnought Dawn and Caber Toss Shuffle. The Scottish ones have their own sung lyrics and ad-libs ("Hooch!", "Och aye!", "Ya dancer!").',
+    '🏴 Loads more Scottish patter: dozens of new Wally Man lines ("Ah am aff like a bride\'s nightie!", "Ah am that hard ah eat cabers fur breakfast!"), new rain, hail, snow and fog lines ("Ah am drookit!", "It is Baltic oot here!", "It is a right haar the day!"), new taunts ("Ye fight like a coo in wellies!"), Scottish last words from your fallen troops, cheekier comebacks from the Wally Squad commander - and a Scottish word of the day on the loading screen.',
+  ] },
   { v: '1.43', date: '2026-11-22', title: 'Castles & Coos', items: [
     '📱 Fixed: after turning the phone, parts of the screen could go missing. The game now re-measures the screen several times as the phone turns, uses the area you can actually see, puts the page back in place, and keeps the 3D effects at the right resolution.',
     '🏰 New map: Castle Rock. An ancient castle stands in the middle of the glen. Send up to 8 infantry inside to fire from the battlements, and the castle earns its holder $15 a second.',

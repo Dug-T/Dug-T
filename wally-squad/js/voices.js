@@ -16,13 +16,14 @@ const DEFAULT_LINES = {
       'Gonnae no dae that, Grimlocks!', 'Ah am pure buzzin fur a scrap!', 'Whit is the craic?', 'Ya wee dancer!', 'Ah am no feart!',
       'Ah could murder a fish supper.', 'Is that you or the Irn Bru talkin?', 'Ma maw says ah am the best hero in the toon.', 'Dinnae fash yersel, Wally Man is here!',
       'Braw day fur a battle!', 'Ah am a pure belter, so ah am!', 'Whit are ye lookin at? Ah am gorgeous!', 'Och, ma cape is aw crumpled.',
-      'Gie us a minute, ah am eatin ma piece.', 'Haw! Ah have goat ma specs oan an everything!', 'Who is a hero? Me! Ah am a hero!', 'Ah am that fast ah can catch a haggis!'],
-    move: ['Up, up an awa!', 'Tae the rescue!', 'Ah am aff!', 'Shift yersel!', 'Ah am awa!', 'Hink ah will go fur a wee wander.', 'Gaun yersel!', 'Shift, shift, shift!', 'Ah am oan ma way, keep the kettle oan!', 'Haud oan, ah am comin!'],
-    attack: ['Gie it laldy!', 'Taste the Gatling, ya numpties!', 'Get it right up ye!', 'Wally Man, open fire!', 'Ya beauty!', 'Get tore in!', 'Ye have had it noo!', 'Ah will skelp ye!', 'Gie them pelters!', 'Mon then, square go!', 'Taste ma Gatling, ya bampots!'],
-    kill: ['Ya dancer!', 'That is you telt!', 'Pure dead brilliant!', 'Away ye go!', 'Hasta la vista, bampot!', 'Ah am gonnae need a bigger kilt.', 'Another wan bites the dust!', 'Haw! Did ye see that?', 'Sorted!'],
-    hurt: ['Ah am pure wabbit!', 'Ma heid is nippin!', 'Somebody get me an Irn Bru!', 'Ah have hud better days!', 'Ow! That is gonnae leave a mark!', 'Medic! An a cup of tea!'],
-    win: ['Ya dancer! We won!', 'Pure dead brilliant! Get the kettle oan!', 'That is them telt! Who is fur chips?', 'Haw! Victory! Ah am buyin the Irn Bru!'],
-    lose: ['Aw naw... ah am gonnae greet.', 'We have been pumped, so we have.', 'Och, that is a right sair yin.'],
+      'Gie us a minute, ah am eatin ma piece.', 'Haw! Ah have goat ma specs oan an everything!', 'Who is a hero? Me! Ah am a hero!', 'Ah am that fast ah can catch a haggis!',
+      'Ah am pure stervin, is there a chippy near here?', 'Lang may yer lum reek!', 'Whit is fur ye will no go by ye!', 'Ah am no a numpty, ah am a hero!', 'Ma granny could fight better than they Grimlocks!', 'Gonnae gie us a square sausage?', 'Ah am that hard ah eat cabers fur breakfast!', 'Ah have nae idea whit ah am daein, but ah am daein it brilliant!', 'Keep the heid!', 'Ah am mair Scottish than a deep fried Mars bar!', 'Pure magic, so it is!', 'Ah am lookin braw the day, by the way.', 'Ah will be needin a wee seat efter this.', 'Is it a scone or a scon? Answer me!', 'Ah am the Braveheart o the battlefield!'],
+    move: ['Ah am aff like a bride\'s nightie!', 'Haud yer horses, ah am comin!', 'Shoogle aboot, mind the coos!', 'Awa an no come back!', 'Up, up an awa!', 'Tae the rescue!', 'Ah am aff!', 'Shift yersel!', 'Ah am awa!', 'Hink ah will go fur a wee wander.', 'Gaun yersel!', 'Shift, shift, shift!', 'Ah am oan ma way, keep the kettle oan!', 'Haud oan, ah am comin!'],
+    attack: ['Gie it laldy!', 'Taste the Gatling, ya numpties!', 'Get it right up ye!', 'Wally Man, open fire!', 'Ya beauty!', 'Get tore in!', 'Ye have had it noo!', 'Ah will skelp ye!', 'Gie them pelters!', 'Mon then, square go!', 'Taste ma Gatling, ya bampots!', 'Ah will gie ye a skelpit lug!', 'Yer bum\'s oot the windae!', 'Get it doon ye, ya dobbers!', 'Ah will knock ye intae next week!', 'Ye\'re gettin it, pal!'],
+    kill: ['Ya dancer!', 'That is you telt!', 'Pure dead brilliant!', 'Away ye go!', 'Hasta la vista, bampot!', 'Ah am gonnae need a bigger kilt.', 'Another wan bites the dust!', 'Haw! Did ye see that?', 'Sorted!', 'That is you hame, pal!', 'Away an\' greet tae yer maw!', 'Ye\'re a long time deid!', 'Haste ye back... naw, dinnae!', 'Get in there!'],
+    hurt: ['Ah am pure wabbit!', 'Ma heid is nippin!', 'Somebody get me an Irn Bru!', 'Ah have hud better days!', 'Ow! That is gonnae leave a mark!', 'Medic! An a cup of tea!', 'Ma kilt is oan fire!', 'Ah am bleedin like a stuck haggis!', 'That nipped!', 'Ah am fine! Ah am FINE!'],
+    win: ['Ya dancer! We won!', 'Pure dead brilliant! Get the kettle oan!', 'That is them telt! Who is fur chips?', 'Haw! Victory! Ah am buyin the Irn Bru!', 'Ya beauty! Ceilidh at mine, everybody!', 'Wha\'s like us? Damn few, an they\'re aw deid!'],
+    lose: ['Aw naw... ah am gonnae greet.', 'We have been pumped, so we have.', 'Och, that is a right sair yin.', 'Ah am pure gutted, so ah am.', 'We got gubbed. Somebody pass the tablet.', 'Ach well, there is aye next time.'],
     dragon: ['A dragon! Ah have seen bigger midgies!', 'Get it doon, lads!', 'Mon then, ya big lizard!'],
     haggis: ['Haggis fur tea!', 'Ah have been chasin that wee beastie fur years!', 'Haw! Caught the haggis!'],
   },
@@ -198,13 +199,14 @@ const LAST_WORDS = {
   inf: ['Tell my mum I was brave!', 'Not the face!', 'I only had two days to retirement!', 'Worth it!', 'Was it something I said?', 'Avenge me... or not, whatever.', 'I regret nothing!', 'Mummy!', 'I should have been a baker!', 'Is it lunch time yet?', 'Ow, ow, ow!', 'I left the oven on!'],
   veh: ['Engine failure! And also everything else!', 'Who parked that there?!', 'I told you to check the oil!', 'Tell the mechanic it was not my fault!', 'That is going to void the warranty!', 'Abandon ship! Wait, this is a tank!'],
   grim: ['Grak will avenge... ow.', 'Worth it! Hehe... urk.', 'Tell the Legion... I tried...', 'Not fair! Not fair!'],
+  scots: ['Och, ah am deid!', 'Tell ma maw ah was brave!', 'Ah am away tae ma bed...', 'Look after ma Irn Bru!', 'Ah never even got ma chips...', 'Ah have been well and truly gubbed!', 'Bury me wi\' ma bagpipes!'],
 };
 let lastWordsT = 0;
 export function lastWords(unit) {
   if (!settings.voices || !settings.tts || !('speechSynthesis' in window) || speechSynthesis.speaking) return;
   const now = performance.now(); if (now - lastWordsT < 9000 || Math.random() > 0.2) return;
   lastWordsT = now;
-  const pool = unit.faction === 'grim' && unit.isInf ? LAST_WORDS.grim : unit.isInf ? LAST_WORDS.inf : LAST_WORDS.veh;
+  const pool = unit.faction === 'grim' && unit.isInf ? LAST_WORDS.grim : unit.isInf ? (unit.faction === 'wally' && Math.random() < 0.4 ? LAST_WORDS.scots : LAST_WORDS.inf) : LAST_WORDS.veh;
   sayLine(pool[Math.floor(Math.random() * pool.length)], unit.type);
 }
 
@@ -235,7 +237,10 @@ export function say(type, ev, force = false) {
   let lines = DEFAULT_LINES[type]?.[ev] || DEFAULT_LINES[UNITS[type]?.tab === 'vehicle' ? 'tank' : 'rifle'][ev];
   // Wally Man has something to say about the weather
   const wt = G.weather && G.weather.type;
-  if (type === 'wallyman' && ev === 'select' && (wt === 'rain' || wt === 'storm')) lines = ["It's pishing doon!"];
+  if (type === 'wallyman' && ev === 'select' && (wt === 'rain' || wt === 'storm')) lines = ["It's pishing doon!", "It's pishing doon!", "It's pishing doon! Ma cape is soakin!", 'Ah am drookit!', 'Typical Scottish summer!', 'It is a wee bit dreich the day.', 'Ah have been wetter... naw, ah huvnae.', 'Pure stoatin aff the ground, so it is!'];
+  if (type === 'wallyman' && ev === 'select' && wt === 'hail') lines = ['Hail! Ma heid! Ma heid!', 'It is chuckin it doon wi\' ice cubes!', 'Somebody hold a brolly ower me!', 'Ah have seen bigger hailstanes in ma Irn Bru!'];
+  if (type === 'wallyman' && ev === 'select' && (wt === 'snow' || wt === 'blizzard')) lines = ['It is Baltic oot here!', 'Ma knees are blue under this kilt!', 'Ah cannae feel ma face!', 'Brass monkeys, by the way!'];
+  if (type === 'wallyman' && ev === 'select' && wt === 'fog') lines = ['It is a right haar the day!', 'Ah cannae see ma hand in front o ma face!', 'Whit is that in the mist? Och, it is jist a coo.'];
   else if (type === 'wallyman' && ev === 'select' && (wt === 'snow' || wt === 'blizzard') && Math.random() < 0.5) lines = ["It's Baltic oot here!"];
   else if (type === 'wallyman' && ev === 'select' && G.bloodMoon && Math.random() < 0.5) lines = ["Thon moon is a pure funny colour...", "Whit is up wi the moon? It looks like a tomato!"];
   else if (type === 'wallyman' && ev === 'select' && (G.nightLevel || 0) > 0.7 && Math.random() < 0.2) lines = ["It is gey dark, int it?", "Who turned the lights aff?"];
