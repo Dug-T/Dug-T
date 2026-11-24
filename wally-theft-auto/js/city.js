@@ -59,7 +59,7 @@ export function buildCity(scene, quality) {
   const r = T.rng(1977);
   const world = {
     buildings: [], circles: [], grid: new Map(), specials: {}, blocks: [], lampHeads: [], nightMats: [], antennaLights: [],
-    pickupsSpots: [], specSpots: [], statue: null,
+    pickupsSpots: [], specSpots: [], alleySpots: [], statue: null,
   };
   const addCollider = (b) => {
     world.buildings.push(b);
@@ -226,10 +226,13 @@ export function buildCity(scene, quality) {
       lots.push([ix0, iz0, ix1, iz0 + D * 0.55], [ix0, iz0 + D * 0.62, ix0 + W * 0.45, iz1], [ix0 + W * 0.52, iz0 + D * 0.62, ix1, iz1]);
     } else {
       const sx = r() < 0.5 ? 2 : (r() < 0.5 ? 1 : 3), sz = r() < 0.5 ? 2 : (r() < 0.6 ? 1 : 3);
-      const gap = 2.5;
+      const gap = 3.2; // alleyways between the buildings
       for (let a = 0; a < sx; a++) for (let b = 0; b < sz; b++) {
         lots.push([ix0 + a * W / sx + (a ? gap / 2 : 0), iz0 + b * D / sz + (b ? gap / 2 : 0), ix0 + (a + 1) * W / sx - (a < sx - 1 ? gap / 2 : 0), iz0 + (b + 1) * D / sz - (b < sz - 1 ? gap / 2 : 0)]);
       }
+      // remember points down the middle of each alley, away from the street ends, for hiding pickups
+      for (let a = 1; a < sx; a++) { const x = ix0 + a * W / sx; for (let b = 0; b < sz; b++) { const z0 = iz0 + b * D / sz, z1 = iz0 + (b + 1) * D / sz; world.alleySpots.push([x, z0 + (z1 - z0) * 0.5, 'z']); } }
+      for (let b = 1; b < sz; b++) { const z = iz0 + b * D / sz; for (let a = 0; a < sx; a++) { const x0 = ix0 + a * W / sx, x1 = ix0 + (a + 1) * W / sx; world.alleySpots.push([x0 + (x1 - x0) * 0.5, z, 'x']); } }
     }
     lots.forEach((L, li) => {
       let [lx0, lz0, lx1, lz1] = L;

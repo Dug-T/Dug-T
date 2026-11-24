@@ -62,7 +62,9 @@ export function buildCarModel(type, paint) {
   const g = new THREE.Group();
   const body = new THREE.Group(); g.add(body);
   const paintM = new THREE.MeshPhysicalMaterial({ color: paint, roughness: 0.28, metalness: 0.55, clearcoat: 1, clearcoatRoughness: 0.08 });
-  const glassM = M('glass', () => new THREE.MeshPhysicalMaterial({ color: '#1c2a36', roughness: 0.04, metalness: 0.25, clearcoat: 1, transparent: true, opacity: 0.5, depthWrite: false }));
+  // clear, lightly tinted glass you can see the seats and driver through; shiny but not mirrored
+  const glassM = M('glass', () => new THREE.MeshPhysicalMaterial({ color: '#b8d4e4', roughness: 0.02, metalness: 0, clearcoat: 1, clearcoatRoughness: 0.02, transparent: true, opacity: 0.24, depthWrite: false, envMapIntensity: 0.6 }));
+  const doorGlassM = M('doorglass', () => new THREE.MeshPhysicalMaterial({ color: '#b8d4e4', roughness: 0.02, metalness: 0, clearcoat: 1, transparent: true, opacity: 0.16, depthWrite: false }));
   const blackM = M('black', () => new THREE.MeshStandardMaterial({ color: '#18191b', roughness: 0.6 }));
   const chromeM = M('chrome', () => new THREE.MeshStandardMaterial({ color: '#dfe3e8', roughness: 0.15, metalness: 1 }));
   const tyreM = M('tyre', () => new THREE.MeshStandardMaterial({ color: '#1b1b1b', roughness: 0.9 }));
@@ -156,13 +158,14 @@ export function buildCarModel(type, paint) {
   }
   body.position.y = 0.05;
   g.traverse((m) => { if (m.isMesh) { m.castShadow = true; } });
+  cabin.castShadow = false; // glass mustn't shade the interior, or the windows look solid
   // driver's door (right-hand drive, so on the car's right, which is local -X), hinged at its front edge
   const beltY = isBox ? 1.15 : (type === 'sports' ? 0.72 : 0.92);
   const hingeZ = isBox ? T.len / 2 - 0.95 : T.len * 0.12, doorLen = isBox ? 0.95 : T.len * 0.27;
   const door = new THREE.Group(); door.position.set(-T.wid / 2 - 0.006, 0, hingeZ); body.add(door);
   const panel = new THREE.Mesh(new THREE.BoxGeometry(0.035, beltY - 0.36, doorLen), paintM);
   panel.position.set(-0.012, (beltY + 0.36) / 2, -doorLen / 2); panel.castShadow = true; door.add(panel);
-  const win = new THREE.Mesh(new THREE.BoxGeometry(0.02, isBox ? 0.55 : (T.hgt - beltY) * 0.62, doorLen * (isBox ? 0.8 : 0.62)), glassM);
+  const win = new THREE.Mesh(new THREE.BoxGeometry(0.02, isBox ? 0.55 : (T.hgt - beltY) * 0.62, doorLen * (isBox ? 0.8 : 0.62)), doorGlassM);
   win.position.set(0.004, beltY + (isBox ? 0.3 : (T.hgt - beltY) * 0.31), -doorLen * (isBox ? 0.45 : 0.6)); door.add(win);
   const handle = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.03, 0.14), chromeM);
   handle.position.set(-0.035, beltY - 0.1, -doorLen * 0.8); door.add(handle);

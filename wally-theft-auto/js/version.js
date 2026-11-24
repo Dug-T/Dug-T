@@ -1,7 +1,12 @@
 // Bump VERSION for every update (1.1, 1.2, 1.3 ...) and add a line to CHANGES.
-export const VERSION = '1.9';
+export const VERSION = '2.0';
 
 export const CHANGES = [
+  ['2.0', [
+    'Weapons and ammo crates are now hidden up the alleyways between buildings (look for gold squares on the radar)',
+    'Alleyways are wider so Wally can get up them easily',
+    'All car windows are now clear glass you can see through, including the driver inside',
+  ]],
   ['1.9', [
     'Wally is now one smooth skinned character mesh with weight maps, so his joints bend as one body',
     'Wally\'s eyes peek out through his mask behind his specs, with eyebrows, a bigger nose and a mouth',
