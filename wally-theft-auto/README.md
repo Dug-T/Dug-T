@@ -45,7 +45,7 @@ On phones and tablets there's an on-screen stick, a drag-to-look area and button
 
 The version number is shown on the title screen (with a "What's new" list) and on the pause screen. It lives in `js/version.js`: bump it by 0.1 for every update (1.1, 1.2, 1.3...) and add a line to `CHANGES`.
 
-- **1.3**: carjacking (open the door, drag the driver out, punch them, drive off), opening driver's doors, and weather: Braw, Dreich, Pishin' doon, Blawin' a hoolie (thunder and lightning), the Haar and snow, with wet, slippy roads
+- **1.3**: carjacking (open the door, drag the driver out, punch them, drive off), opening driver's doors, and weather: Braw, Dreich, Pishin' doon, Blawin' a hoolie (thunder and lightning), the Haar and snow, with wet, slippy roads; graphics now default to High on every device
 - **1.2**: real hands with fingers, random weapon pickups (Golf Club, Wally Blaster, Scatter Blaster, Neep Grenades), engine sounds from nearby traffic, and more graphical detail (surface relief, contact shadows, awnings, fuller trees, manholes, clouds, rippling sea, colour grade)
 - **1.1**: Pamazon "Special Delivery" first mission with a GPS route on the radar, the cape no longer clips through the suit, the touch stick sits beside the map, ENTER/LEAVE button, and version numbers
 - **1.0**: first release

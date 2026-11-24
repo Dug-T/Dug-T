@@ -7,6 +7,7 @@ export const CHANGES = [
     'Every car now has an opening driver\'s door',
     "Weather that changes as you play: Braw, Dreich, Pishin' doon, Blawin' a hoolie (with thunder and lightning), the Haar and snow",
     'Wet roads look shiny and are slippier, and snow is slippier still',
+    'Graphics now start on High on every device, phones included (switch to Low on the title screen if needed)',
   ]],
   ['1.2', [
     'Wally (and everyone else) now has proper hands with fingers and thumbs',

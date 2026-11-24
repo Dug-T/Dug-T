@@ -29,7 +29,7 @@ const store = {
   get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch { return d; } },
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* private mode */ } },
 };
-let quality = store.get('wta-quality', isTouch ? 'low' : 'high');
+let quality = store.get('wta-gfx', 'high'); // v1.3: everyone starts on High (old 'wta-quality' choice is reset once)
 
 // ---------------- renderer ----------------
 const canvas = $('gl');
@@ -1408,7 +1408,7 @@ $('pauseHelp').onclick = () => { $('help').classList.remove('hidden'); };
 $('helpBack').onclick = () => $('help').classList.add('hidden');
 $('resume').onclick = () => togglePause(false);
 $('quit').onclick = () => { save(); game.playing = false; game.paused = false; $('pause').classList.add('hidden'); $('hud').classList.add('hidden'); $('title').classList.remove('hidden'); if (audio.ctx) audio.ctx.resume(); };
-const toggleGfx = () => { quality = quality === 'high' ? 'low' : 'high'; store.set('wta-quality', quality); applyQuality(); };
+const toggleGfx = () => { quality = quality === 'high' ? 'low' : 'high'; store.set('wta-gfx', quality); applyQuality(); };
 $('gfx').onclick = toggleGfx; $('gfx2').onclick = toggleGfx;
 setInterval(() => { if (game.playing && !game.paused) save(); }, 30000);
 
