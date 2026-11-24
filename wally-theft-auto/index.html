@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Wally Theft Auto</title>
+<meta name="theme-color" content="#0d1a33">
+<link rel="icon" href="img/icon.png">
+<link rel="apple-touch-icon" href="img/icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bangers&family=Oswald:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root { --gold: #ffd23f; --blue: #1f5fc4; --red: #e14a1e; --green: #3fbf4a; --ink: #fff; --shadow: 0 2px 0 #000, 0 0 6px rgba(0,0,0,.8); }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #000; color: var(--ink); font-family: 'Oswald', Arial, sans-serif; user-select: none; -webkit-user-select: none; touch-action: none; }
+  canvas#gl { display: block; position: fixed; inset: 0; width: 100%; height: 100%; }
+  .hidden { display: none !important; }
+  /* ---------- HUD ---------- */
+  #hud { position: fixed; inset: 0; pointer-events: none; }
+  #topright { position: absolute; top: max(12px, env(safe-area-inset-top)); right: max(16px, env(safe-area-inset-right)); text-align: right; }
+  #clock { font: 700 26px 'Oswald'; text-shadow: var(--shadow); letter-spacing: 1px; }
+  #weapon { display: inline-flex; align-items: center; gap: 8px; margin-top: 4px; }
+  #weaponIcon { width: 64px; height: 64px; border-radius: 50%; background: radial-gradient(circle at 40% 35%, #fff8, #0006); border: 3px solid #fff; display: grid; place-items: center; font-size: 30px; box-shadow: 0 0 8px #000; }
+  #ammo { font: 700 18px 'Oswald'; text-shadow: var(--shadow); }
+  #bars { margin-top: 6px; display: flex; flex-direction: column; gap: 4px; align-items: flex-end; }
+  .bar { width: 170px; height: 12px; background: #0008; border: 2px solid #000; border-radius: 3px; overflow: hidden; }
+  .bar > i { display: block; height: 100%; width: 100%; transition: width .2s; }
+  #hp > i { background: linear-gradient(#ff6a6a, #c81e1e); }
+  #ar > i { background: linear-gradient(#9fd2ff, #2f7fd6); }
+  #money { font: 700 30px 'Oswald'; color: #5fe36a; text-shadow: var(--shadow); letter-spacing: 1px; margin-top: 2px; }
+  #stars { font-size: 30px; letter-spacing: 2px; margin-top: -2px; }
+  #stars span { color: #0007; -webkit-text-stroke: 1px #fff8; }
+  #stars span.on { color: var(--gold); -webkit-text-stroke: 1px #000; text-shadow: 0 0 6px #ff0a; }
+  #stars.blink span.on { animation: blink .5s steps(2) infinite; }
+  @keyframes blink { 50% { opacity: .2; } }
+  #radarWrap { position: absolute; left: max(18px, env(safe-area-inset-left)); bottom: max(18px, env(safe-area-inset-bottom)); width: 190px; height: 190px; border-radius: 50%; overflow: hidden; border: 4px solid #000; box-shadow: 0 0 0 2px #fff6, 0 4px 14px #000a; background: #213; }
+  #radar { width: 100%; height: 100%; }
+  #zone { position: absolute; right: max(16px, env(safe-area-inset-right)); bottom: max(26px, env(safe-area-inset-bottom)); font: 400 34px 'Bangers', Impact, sans-serif; letter-spacing: 2px; color: #fff; text-shadow: var(--shadow); opacity: 0; transition: opacity .6s; text-align: right; }
+  #zone small { display: block; font: 700 16px 'Oswald'; color: var(--gold); }
+  #vehName { position: absolute; right: max(16px, env(safe-area-inset-right)); bottom: max(80px, env(safe-area-inset-bottom)); font: 400 30px 'Bangers', Impact; color: #9be7ff; text-shadow: var(--shadow); opacity: 0; transition: opacity .6s; }
+  #radio { position: absolute; top: 18%; left: 50%; transform: translateX(-50%); font: 400 30px 'Bangers', Impact; color: #ffb347; text-shadow: var(--shadow); opacity: 0; transition: opacity .5s; letter-spacing: 2px; }
+  #objective { position: absolute; bottom: 16%; left: 50%; transform: translateX(-50%); width: min(80vw, 720px); text-align: center; font: 700 22px 'Oswald'; text-shadow: var(--shadow); }
+  #objective .y { color: var(--gold); } #objective .r { color: #ff5a5a; } #objective .b { color: #6fb6ff; }
+  #subs { position: absolute; bottom: 24%; left: 50%; transform: translateX(-50%); width: min(86vw, 760px); text-align: center; font: 700 22px 'Oswald'; color: #fff; text-shadow: var(--shadow); }
+  #big { position: absolute; top: 30%; left: 0; right: 0; text-align: center; opacity: 0; transition: opacity .3s; }
+  #big h1 { margin: 0; font: 400 clamp(44px, 9vw, 96px) 'Bangers', Impact; letter-spacing: 4px; color: var(--gold); -webkit-text-stroke: 3px #000; text-shadow: 0 6px 0 #000; }
+  #big h1.bad { color: #ff3b30; }
+  #big p { margin: 6px 0 0; font: 700 22px 'Oswald'; text-shadow: var(--shadow); }
+  #toast { position: absolute; top: max(14px, env(safe-area-inset-top)); left: max(16px, env(safe-area-inset-left)); max-width: min(46vw, 420px); padding: 10px 14px; background: #000b; border-left: 5px solid var(--gold); border-radius: 4px; font: 500 17px 'Oswald'; opacity: 0; transition: opacity .3s; }
+  #timer { position: absolute; top: 150px; right: max(16px, env(safe-area-inset-right)); font: 700 30px 'Oswald'; text-shadow: var(--shadow); }
+  #cross { position: absolute; left: 50%; top: 50%; width: 26px; height: 26px; margin: -13px 0 0 -13px; border: 2px solid #fff; border-radius: 50%; box-shadow: 0 0 3px #000; opacity: 0; }
+  #cross::after { content: ''; position: absolute; left: 50%; top: 50%; width: 4px; height: 4px; margin: -2px; background: #f33; border-radius: 50%; }
+  #cross.on { opacity: .9; }
+  #bubbles { position: absolute; inset: 0; }
+  .bubble { position: absolute; transform: translate(-50%, -100%); background: #fff; color: #111; font: 700 14px 'Oswald'; padding: 5px 9px; border-radius: 10px; white-space: nowrap; box-shadow: 0 2px 6px #0008; }
+  .bubble::after { content: ''; position: absolute; left: 50%; bottom: -8px; border: 8px solid transparent; border-top-color: #fff; border-bottom: 0; margin-left: -8px; }
+  #power { position: absolute; left: max(220px, calc(env(safe-area-inset-left) + 220px)); bottom: max(22px, env(safe-area-inset-bottom)); width: 56px; height: 56px; border-radius: 50%; border: 3px solid #000; background: conic-gradient(var(--red) var(--p, 100%), #0009 0); display: grid; place-items: center; font: 400 22px 'Bangers'; text-shadow: var(--shadow); box-shadow: 0 0 0 2px #fff6; }
+  #damage { position: absolute; inset: 0; box-shadow: inset 0 0 120px #f00; opacity: 0; transition: opacity .3s; }
+  /* ---------- menus ---------- */
+  .screen { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: radial-gradient(ellipse at 30% 30%, #2a3f73, #0a0f1e 70%); z-index: 10; }
+  #title { gap: clamp(16px, 4vw, 48px); padding: 20px; box-sizing: border-box; flex-wrap: wrap; overflow: auto; }
+  #title img { height: min(78vh, 640px); max-width: 44vw; border: 6px solid #000; box-shadow: 0 0 0 3px var(--gold), 0 20px 50px #000; transform: rotate(-2deg); object-fit: cover; }
+  .logo { font: 400 clamp(48px, 9vw, 112px)/0.85 'Bangers', Impact; letter-spacing: 3px; color: var(--gold); -webkit-text-stroke: 3px #000; text-shadow: 0 7px 0 #000, 0 0 30px #ff8a00aa; transform: rotate(-3deg); margin: 0 0 6px; }
+  .logo span { display: block; color: #fff; font-size: .62em; -webkit-text-stroke: 2px #000; }
+  .tag { font: 500 18px 'Oswald'; color: #cfe0ff; margin: 18px 0 22px; max-width: 460px; }
+  .btn { display: block; width: 280px; margin: 10px 0; padding: 12px 18px; font: 400 28px 'Bangers', Impact; letter-spacing: 2px; color: #000; background: var(--gold); border: 3px solid #000; border-radius: 8px; box-shadow: 0 5px 0 #000; cursor: pointer; text-align: left; pointer-events: auto; }
+  .btn:hover { background: #fff; transform: translateY(-1px); }
+  .btn.alt { background: #6fb6ff; }
+  .btn.dim { background: #aaa; }
+  .keys { font: 500 15px 'Oswald'; color: #cfd8ee; line-height: 1.6; columns: 2; column-gap: 26px; max-width: 520px; }
+  .keys b { color: var(--gold); display: inline-block; min-width: 92px; }
+  #pause .card, #help .card { background: #0d1630ee; border: 3px solid var(--gold); border-radius: 12px; padding: 24px 30px; max-width: 92vw; max-height: 88vh; overflow: auto; }
+  h2 { font: 400 46px 'Bangers', Impact; color: var(--gold); margin: 0 0 10px; letter-spacing: 2px; }
+  #loading { position: fixed; inset: 0; display: grid; place-items: center; background: #000; z-index: 20; font: 400 40px 'Bangers', Impact; color: var(--gold); letter-spacing: 3px; }
+  .stat { font: 500 16px 'Oswald'; color: #dde; margin: 4px 0; }
+  /* ---------- touch ---------- */
+  #touch { position: fixed; inset: 0; pointer-events: none; display: none; }
+  body.touch #touch { display: block; }
+  #stick { position: absolute; left: max(30px, env(safe-area-inset-left)); bottom: max(230px, env(safe-area-inset-bottom)); width: 130px; height: 130px; border-radius: 50%; border: 2px solid #fff8; background: #fff1; pointer-events: auto; }
+  #knob { position: absolute; left: 40px; top: 40px; width: 50px; height: 50px; border-radius: 50%; background: #fff6; border: 2px solid #fff; }
+  #tbtns { position: absolute; right: max(18px, env(safe-area-inset-right)); bottom: max(26px, env(safe-area-inset-bottom)); display: grid; grid-template-columns: repeat(3, 66px); gap: 10px; pointer-events: auto; }
+  #tbtns button { width: 66px; height: 66px; border-radius: 50%; border: 2px solid #fff; background: #0005; color: #fff; font: 700 13px 'Oswald'; }
+  #tbtns button.on { background: #ffd23f88; }
+  #tlook { position: absolute; right: 0; top: 0; width: 55%; height: 60%; pointer-events: auto; }
+  #tpause { position: absolute; top: max(10px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); pointer-events: auto; background: #0007; border: 2px solid #fff; color: #fff; border-radius: 8px; font: 700 14px 'Oswald'; padding: 6px 12px; }
+  body.touch #radarWrap { width: 130px; height: 130px; }
+  body.touch #power { left: 160px; }
+  @media (max-width: 700px) { #title img { max-width: 60vw; height: 40vh; } .keys { columns: 1; } }
+</style>
+<script type="importmap">
+{ "imports": { "three": "./lib/three.module.min.js", "three/addons/": "./lib/" } }
+</script>
+</head>
+<body>
+<canvas id="gl"></canvas>
+<div id="hud" class="hidden">
+  <div id="topright">
+    <div id="clock">12:00</div>
+    <div id="weapon"><span id="ammo"></span><div id="weaponIcon">👊</div></div>
+    <div id="bars"><div class="bar" id="hp"><i></i></div><div class="bar" id="ar"><i style="width:0"></i></div></div>
+    <div id="money">$00000000</div>
+    <div id="stars"><span>★</span><span>★</span><span>★</span><span>★</span><span>★</span></div>
+  </div>
+  <div id="timer" class="hidden"></div>
+  <div id="radarWrap"><canvas id="radar" width="380" height="380"></canvas></div>
+  <div id="power">Q</div>
+  <div id="zone"></div>
+  <div id="vehName"></div>
+  <div id="radio"></div>
+  <div id="subs"></div>
+  <div id="objective"></div>
+  <div id="big"><h1></h1><p></p></div>
+  <div id="toast"></div>
+  <div id="cross"></div>
+  <div id="bubbles"></div>
+  <div id="damage"></div>
+</div>
+<div id="touch">
+  <div id="tlook"></div>
+  <div id="stick"><div id="knob"></div></div>
+  <button id="tpause">II PAUSE</button>
+  <div id="tbtns">
+    <button data-k="power">POWER</button><button data-k="weapon">WEAPON</button><button data-k="enter">ENTER</button>
+    <button data-k="aim">AIM</button><button data-k="jump">JUMP<br>/BRAKE</button><button data-k="fire">PUNCH<br>/FIRE</button>
+    <button data-k="sprint">SPRINT<br>/GAS</button><button data-k="hand">H-BRAKE</button><button data-k="horn">HORN<br>/RADIO</button>
+  </div>
+</div>
+
+<div id="title" class="screen">
+  <img src="img/wallyman.jpg" alt="Wally Man, the caped hero, on a mountain top at sunset">
+  <div>
+    <h1 class="logo">WALLY<span>THEFT AUTO</span></h1>
+    <p class="tag">Wallypool needs a hero. It got Wally Man: a caped crusader with a powers problem, a mammy with a list of chores and a city full of motors to "borrow".</p>
+    <button class="btn" id="play">▶ PLAY</button>
+    <button class="btn alt" id="newgame">↺ NEW GAME</button>
+    <button class="btn dim" id="howto">? CONTROLS</button>
+    <button class="btn dim" id="gfx">GRAPHICS: HIGH</button>
+  </div>
+</div>
+<div id="help" class="screen hidden">
+  <div class="card">
+    <h2>How to play</h2>
+    <div class="keys">
+      <div><b>W A S D</b> walk / drive</div>
+      <div><b>Mouse</b> look around</div>
+      <div><b>Shift</b> sprint</div>
+      <div><b>Space</b> jump / handbrake</div>
+      <div><b>F / Enter</b> get in or out of a car</div>
+      <div><b>Left click</b> punch / fire</div>
+      <div><b>Right click</b> aim the Blaster</div>
+      <div><b>Tab</b> switch weapon</div>
+      <div><b>Q</b> WALLY POWER (good luck)</div>
+      <div><b>Ctrl / C</b> fly down</div>
+      <div><b>H</b> horn</div>
+      <div><b>R</b> change radio station</div>
+      <div><b>C</b> change camera</div>
+      <div><b>M</b> mute</div>
+      <div><b>Esc / P</b> pause</div>
+      <div><b>Gamepad</b> supported</div>
+    </div>
+    <p class="tag">Walk into the yellow <b style="color:var(--gold)">W</b> marker outside Wally's Flat to start a mission. Find the 20 hidden Golden Specs. Drive into the Wally Wash to lose the polis.</p>
+    <button class="btn" id="helpBack">◀ BACK</button>
+  </div>
+</div>
+<div id="pause" class="screen hidden">
+  <div class="card">
+    <h2>Paused</h2>
+    <div id="statsBox"></div>
+    <button class="btn" id="resume">▶ RESUME</button>
+    <button class="btn dim" id="pauseHelp">? CONTROLS</button>
+    <button class="btn dim" id="gfx2">GRAPHICS: HIGH</button>
+    <button class="btn alt" id="quit">⌂ TITLE SCREEN</button>
+  </div>
+</div>
+<div id="loading">BUILDING WALLYPOOL...</div>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
