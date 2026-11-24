@@ -153,6 +153,7 @@ export class Ped {
       this.x += Math.sin(this.heading) * spd * dt; this.z += Math.cos(this.heading) * spd * dt;
     }
     const c = world.collide(this.x, this.z, 0.3, this.y); this.x = c.x; this.z = c.z;
+    if (game.carCollide) { const cc = game.carCollide(this.x, this.z, 0.3, this.y); this.x = cc.x; this.z = cc.z; }
     const g = world.groundHeight(this.x, this.z, this.y + 0.4);
     this.y += (g - this.y) * Math.min(1, dt * 15);
     this.speed = spd;

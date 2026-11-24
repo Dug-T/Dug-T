@@ -579,6 +579,33 @@ function respawn(where) {
   save();
 }
 
+// ---------------- people vs cars ----------------
+// Treat each car as a solid box: push a person (circle of radius rad at height y) out of it.
+// If they're up on the roof, the roof becomes their floor. Returns { x, z, floor, car }.
+game.carCollide = (x, z, rad, y, ignore) => {
+  let floor = -Infinity, hitCar = null;
+  for (const c of cars) {
+    if (c === ignore || c === player.car) continue;
+    const dx = x - c.x, dz = z - c.z;
+    if (dx * dx + dz * dz > 49) continue;
+    const fx = Math.sin(c.heading), fz = Math.cos(c.heading);
+    const along = dx * fx + dz * fz, across = dx * fz - dz * fx; // car-local coords
+    const hl = c.T.len / 2, hw = c.T.wid / 2, top = c.y + c.T.hgt + (c.dead ? -0.3 : 0.05);
+    if (Math.abs(along) > hl + rad || Math.abs(across) > hw + rad) continue;
+    if (y >= top - 0.35) { // standing on the roof or bonnet
+      if (Math.abs(along) < hl && Math.abs(across) < hw) floor = Math.max(floor, top);
+      continue;
+    }
+    // push out along the side with the least overlap
+    const pa = hl + rad - Math.abs(along), pc = hw + rad - Math.abs(across);
+    let na = along, nc = across;
+    if (pa < pc) na = Math.sign(along || 1) * (hl + rad); else nc = Math.sign(across || 1) * (hw + rad);
+    x = c.x + fx * na + fz * nc; z = c.z + fz * na - fx * nc;
+    hitCar = c;
+  }
+  return { x, z, floor, car: hitCar };
+};
+
 // ---------------- cars: enter / exit ----------------
 // ----- carjacking: walk to the door, open it, haul the driver out, thump them, jump in -----
 const JACK_LINES = ['Ma motor!', 'Wally, ya thief!', 'I only just washed that!', 'Ye cannae just TAKE it!', 'Ma heid! Ma CAR!', 'I\'m telling yer maw!'];
