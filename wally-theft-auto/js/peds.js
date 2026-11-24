@@ -17,7 +17,7 @@ export class Ped {
     const look = randomPedLook(Math.random);
     if (this.thug) { look.shirt = '#9b111e'; look.pants = '#111'; look.hair = '#111'; }
     this.h = buildHuman({ ...look, cop: this.cop });
-    if (this.cop || this.thug) { this.gun = buildBlaster(); this.h.arms[1].grip.add(this.gun); this.gun.rotation.x = -Math.PI / 2; this.gun.visible = this.thug || false; }
+    if (this.cop || this.thug) { this.gun = buildBlaster(); this.h.arms[1].grip.add(this.gun); this.gun.rotation.x = Math.PI / 2; this.gun.visible = this.thug || false; }
     this.scene = scene; scene.add(this.h.root);
     this.x = x; this.z = z; this.y = KERB; this.heading = Math.random() * 6.28;
     this.vx = 0; this.vy = 0; this.vz = 0;
