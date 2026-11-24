@@ -122,7 +122,10 @@ export class Player {
     this.x += this.vx * dt; this.z += this.vz * dt; this.y += this.vy * dt;
     const c = world.collide(this.x, this.z, 0.38, this.y);
     this.x = c.x; this.z = c.z;
-    const g = world.groundHeight(this.x, this.z, this.y + 0.6);
+    // cars are solid too, and you can stand on their roofs
+    const cc = game.carCollide(this.x, this.z, 0.38, this.y);
+    this.x = cc.x; this.z = cc.z;
+    const g = Math.max(world.groundHeight(this.x, this.z, this.y + 0.6), cc.floor);
     if (this.y <= g) {
       if (prevVy < -15 && this.flyT <= 0) game.hurtPlayer((-prevVy - 15) * 6, 'fall');
       this.y = g; this.vy = 0;

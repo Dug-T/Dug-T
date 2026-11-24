@@ -1,7 +1,11 @@
 // Bump VERSION for every update (1.1, 1.2, 1.3 ...) and add a line to CHANGES.
-export const VERSION = '1.3';
+export const VERSION = '1.4';
 
 export const CHANGES = [
+  ['1.4', [
+    'Cars are solid: Wally and pedestrians can no longer walk through them',
+    'You can stand on car roofs (fly onto one with Wally Power)',
+  ]],
   ['1.3', [
     'Carjacking: Wally opens the door, drags the driver out and punches them before driving off',
     'Every car now has an opening driver\'s door',
