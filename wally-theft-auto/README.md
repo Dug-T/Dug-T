@@ -38,6 +38,13 @@ Open `wally-theft-auto/index.html` from any web server (GitHub Pages works). Not
 
 On phones and tablets there's an on-screen stick, a drag-to-look area and buttons. The **Graphics** toggle switches between High (2048 shadows, bloom, retina resolution, more traffic) and Low.
 
+## Versions
+
+The version number is shown on the title screen (with a "What's new" list) and on the pause screen. It lives in `js/version.js`: bump it by 0.1 for every update (1.1, 1.2, 1.3...) and add a line to `CHANGES`.
+
+- **1.1**: Pamazon "Special Delivery" first mission with a GPS route on the radar, the cape no longer clips through the suit, the touch stick sits beside the map, ENTER/LEAVE button, and version numbers
+- **1.0**: first release
+
 ## Code layout
 
 - `js/main.js`: renderer, sky and lighting, camera, input, police, pickups, HUD, radar, missions glue and the game loop
@@ -49,3 +56,4 @@ On phones and tablets there's an on-screen stick, a drag-to-look area and button
 - `js/missions.js`: the story missions
 - `js/audio.js`: synthesised sound effects and generative radio
 - `js/textures.js`: procedural canvas textures
+- `js/version.js`: the version number and changelog
