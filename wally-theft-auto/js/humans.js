@@ -98,10 +98,10 @@ export function buildHuman(o = {}) {
   const shoeM = wally ? red : mat(cop ? '#111' : o.shoes || '#222', 0.5);
 
   const root = new THREE.Group();
-  const hips = new THREE.Group(); hips.position.y = 0.95; root.add(hips);
+  const hips = new THREE.Bone(); hips.position.y = 0.95; root.add(hips);
   const pelvis = sphere(0.24, legsM, seg, 12); pelvis.scale.set(1.28, 0.75, 0.95); hips.add(pelvis);
 
-  const spine = new THREE.Group(); spine.position.y = 0.08; hips.add(spine);
+  const spine = new THREE.Bone(); spine.position.y = 0.08; hips.add(spine);
   const torso = capsule(0.29, 0.36, suit, seg); torso.position.y = 0.32; torso.scale.set(1.08, 1, 0.78);
   if (o.female && !wally && !cop) torso.scale.set(0.96, 1, 0.74);
   spine.add(torso);
@@ -112,7 +112,7 @@ export function buildHuman(o = {}) {
     if (!emblemTex) emblemTex = emblemTexture();
     const eg = wrapPlane(new THREE.PlaneGeometry(0.5, 0.31, 24, 6), 0.26);
     const em = new THREE.Mesh(eg, new THREE.MeshStandardMaterial({ map: emblemTex, transparent: true, roughness: 0.5, polygonOffset: true, polygonOffsetFactor: -2 }));
-    em.position.set(0, 0.36, 0.245); em.rotation.x = -0.05; spine.add(em);
+    em.position.set(0, 0.36, 0.245); em.rotation.x = -0.05; em.userData.acc = true; spine.add(em);
     // belt
     const belt = new THREE.Mesh(new THREE.CylinderGeometry(0.312, 0.31, 0.09, 40, 1, true), red);
     belt.scale.set(1.0, 1, 0.86); belt.position.y = -0.04; spine.add(belt);
@@ -124,18 +124,22 @@ export function buildHuman(o = {}) {
     belt.scale.set(1, 1, 0.86); belt.position.y = -0.04; spine.add(belt);
   }
 
+  // shoulder yoke: a smooth slope from the neck out into each shoulder, so the arms grow out of the body
+  for (const sd of [-1, 1]) {
+    const y = capsule(0.105, 0.2, suit, seg); y.rotation.z = sd * (Math.PI / 2 - 0.32); y.position.set(sd * 0.2, 0.555, -0.01); y.scale.set(1, 1, 0.82); spine.add(y);
+  }
   // neck + head
-  const neck = new THREE.Group(); neck.position.y = 0.66; spine.add(neck);
+  const neck = new THREE.Bone(); neck.position.y = 0.66; spine.add(neck);
   const neckM = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.085, 0.12, seg), skin); neckM.position.y = 0.03; neck.add(neckM);
   if (wally) { // collar of the suit
     const col = new THREE.Mesh(new THREE.TorusGeometry(0.09, 0.025, 10, 28), suit); col.rotation.x = Math.PI / 2; col.position.y = -0.01; neck.add(col);
   }
-  const head = new THREE.Group(); head.position.y = 0.1; neck.add(head);
+  const head = new THREE.Bone(); head.position.y = 0.1; neck.add(head);
   const hr = wally ? 0.138 : 0.125;
   const skull = sphere(hr, skin, seg + 8, seg); skull.scale.set(0.95, 1.12, 1.02); skull.position.y = 0.1; head.add(skull);
   // jaw/chin
   const jaw = sphere(hr * 0.78, skin, seg, 12); jaw.position.set(0, 0.035, 0.03); jaw.scale.set(1.05, 0.75, 1); head.add(jaw);
-  const nose = sphere(0.024, skin, 12, 8); nose.position.set(0, 0.085, hr * 1.02); nose.scale.set(0.9, 1.1, 1.2); head.add(nose);
+  const nose = sphere(wally ? 0.03 : 0.024, skin, 14, 10); nose.position.set(0, 0.078, hr * 1.02); nose.scale.set(0.9, 1.15, 1.25); head.add(nose);
   for (const s of [-1, 1]) {
     const ear = sphere(0.03, skin, 12, 8); ear.position.set(s * hr * 0.95, 0.1, 0); ear.scale.set(0.5, 1, 0.8); head.add(ear);
   }
@@ -169,13 +173,13 @@ export function buildHuman(o = {}) {
     // blue mask band round the eyes
     const blue = mat('#1f5fc4', 0.55, 0, { side: THREE.DoubleSide });
     const band = new THREE.Mesh(new THREE.CylinderGeometry(hr * 1.02, hr * 1.01, 0.075, 40, 1, true), blue);
-    band.scale.set(0.95, 1, 1.04); band.position.y = 0.115; head.add(band);
-    const knot = sphere(0.035, blue, 14, 10); knot.position.set(0, 0.115, -hr * 1.05); head.add(knot);
+    band.scale.set(0.95, 1, 1.04); band.position.y = 0.115; band.userData.acc = true; head.add(band);
+    const knot = sphere(0.035, blue, 14, 10); knot.position.set(0, 0.115, -hr * 1.05); knot.userData.acc = true; head.add(knot);
     // flapping ties: two strips whose verts we animate
     tails = [];
     for (const s of [-1, 1]) {
       const g = new THREE.PlaneGeometry(0.045, 0.3, 1, 8); g.translate(0, -0.15, 0);
-      const m = new THREE.Mesh(g, blue);
+      const m = new THREE.Mesh(g, blue); m.userData.acc = true;
       m.position.set(s * 0.02, 0.115, -hr * 1.1);
       m.userData.base = Float32Array.from(g.attributes.position.array); m.userData.side = s;
       head.add(m); tails.push(m);
@@ -185,26 +189,38 @@ export function buildHuman(o = {}) {
     const lensM = new THREE.MeshStandardMaterial({ color: '#cfe3ff', roughness: 0.05, metalness: 0.4, transparent: true, opacity: 0.3 });
     for (const s of [-1, 1]) {
       const rim = new THREE.Mesh(new THREE.TorusGeometry(0.036, 0.008, 10, 28), frame);
-      rim.scale.set(1.15, 0.9, 1); rim.position.set(s * 0.052, 0.115, hr * 1.06); head.add(rim);
+      rim.scale.set(1.15, 0.9, 1); rim.position.set(s * 0.054, 0.115, hr * 1.18); rim.userData.acc = true; head.add(rim);
       const lens = new THREE.Mesh(new THREE.CircleGeometry(0.036, 24), lensM);
-      lens.scale.set(1.15, 0.9, 1); lens.position.set(s * 0.052, 0.115, hr * 1.06 + 0.002); head.add(lens);
-      const arm = new THREE.Mesh(new THREE.BoxGeometry(0.008, 0.008, hr * 1.0), frame);
-      arm.position.set(s * hr * 0.98, 0.118, hr * 0.55); head.add(arm);
+      lens.scale.set(1.15, 0.9, 1); lens.position.set(s * 0.054, 0.115, hr * 1.18 + 0.002); lens.userData.acc = true; head.add(lens);
+      const arm = new THREE.Mesh(new THREE.BoxGeometry(0.008, 0.008, hr * 1.1), frame);
+      arm.position.set(s * hr * 0.99, 0.118, hr * 0.58); arm.userData.acc = true; head.add(arm);
     }
-    const bridge = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.008, 0.008), frame); bridge.position.set(0, 0.12, hr * 1.07); head.add(bridge);
+    const bridge = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.008, 0.008), frame); bridge.position.set(0, 0.12, hr * 1.19); bridge.userData.acc = true; head.add(bridge);
+    // eyes peeking out through the mask's eye holes, behind the specs
+    const white = mat('#f7f4ee', 0.25), iris = mat('#3b6a8c', 0.2), pupil = mat('#0b0b0b', 0.1);
+    for (const sd of [-1, 1]) {
+      const eb = sphere(0.027, white, 18, 12); eb.position.set(sd * 0.054, 0.114, hr * 0.94); eb.scale.set(1, 0.82, 1); head.add(eb);
+      const ir = sphere(0.012, iris, 12, 8); ir.position.set(sd * 0.052, 0.113, hr * 0.94 + 0.022); ir.scale.set(1, 1, 0.45); head.add(ir);
+      const pu = sphere(0.0062, pupil, 8, 6); pu.position.set(sd * 0.052, 0.113, hr * 0.94 + 0.0265); pu.scale.set(1, 1, 0.4); head.add(pu);
+      // ginger eyebrows above the mask, raised in permanent mild surprise
+      const br = capsule(0.0075, 0.042, hairM, 8); br.rotation.z = Math.PI / 2 + sd * 0.18; br.position.set(sd * 0.054, 0.163, hr * 0.98); head.add(br);
+    }
+    // mouth under the moustache
+    const lip = capsule(0.0062, 0.028, mat('#9a4a40', 0.45), 10); lip.rotation.z = Math.PI / 2; lip.position.set(0, 0.032, hr * 0.985); lip.scale.set(1, 0.85, 0.6); head.add(lip);
   } else {
     // simple eyes
     const eyeM = mat('#111', 0.3);
     for (const s of [-1, 1]) { const e = sphere(0.013, eyeM, 8, 6); e.position.set(s * 0.045, 0.115, hr * 0.92); head.add(e); }
+    const lip = capsule(0.007, 0.03, mat('#8a4a44', 0.5), 6); lip.rotation.z = Math.PI / 2; lip.position.set(0, 0.04, hr * 0.92); lip.scale.set(1, 1, 0.6); head.add(lip);
   }
 
   // arms
   const arms = [];
   for (const s of [-1, 1]) {
-    const sh = new THREE.Group(); sh.position.set(s * 0.37, 0.56, 0); spine.add(sh);
-    const ball = sphere(0.1, suit, seg, 10); sh.add(ball);
+    const sh = new THREE.Bone(); sh.position.set(s * 0.37, 0.56, 0); spine.add(sh);
+    const ball = sphere(0.098, suit, seg, 12); ball.scale.set(1.05, 0.95, 0.95); ball.position.set(-s * 0.012, 0.005, 0); sh.add(ball);
     const up = capsule(0.082, 0.2, suit, seg); up.position.y = -0.16; sh.add(up);
-    const el = new THREE.Group(); el.position.y = -0.32; sh.add(el);
+    const el = new THREE.Bone(); el.position.y = -0.32; sh.add(el);
     const foreM = wally ? red : (cop ? suit : skin);
     const fore = capsule(wally ? 0.084 : 0.07, 0.18, foreM, seg); fore.position.y = -0.13; el.add(fore);
     if (!wally && !cop && o.shortSleeves !== false) { /* bare forearm */ }
@@ -218,9 +234,9 @@ export function buildHuman(o = {}) {
   // legs
   const legs = [];
   for (const s of [-1, 1]) {
-    const hip = new THREE.Group(); hip.position.set(s * 0.15, -0.04, 0); hips.add(hip);
+    const hip = new THREE.Bone(); hip.position.set(s * 0.15, -0.04, 0); hips.add(hip);
     const thigh = capsule(0.11, 0.28, legsM, seg); thigh.position.y = -0.2; hip.add(thigh);
-    const knee = new THREE.Group(); knee.position.y = -0.43; hip.add(knee);
+    const knee = new THREE.Bone(); knee.position.y = -0.43; hip.add(knee);
     const shin = capsule(0.088, 0.26, legsM, seg); shin.position.y = -0.18; knee.add(shin);
     if (wally) {
       const boot = new THREE.Mesh(new THREE.CylinderGeometry(0.108, 0.098, 0.3, seg), red); boot.position.y = -0.31; knee.add(boot);
@@ -235,22 +251,94 @@ export function buildHuman(o = {}) {
   if (wally) {
     const g = new THREE.PlaneGeometry(0.72, 1.15, 10, 16); g.translate(0, -0.575, 0);
     cape = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ color: '#e14a1e', roughness: 0.75, side: THREE.DoubleSide }));
-    cape.position.set(0, 0.6, 0); // vertices are posed in spine space so they can be kept clear of the body
+    cape.position.set(0, 0.6, 0); cape.userData.acc = true; // vertices are posed in spine space so they can be kept clear of the body
     cape.userData.base = Float32Array.from(g.attributes.position.array);
     spine.add(cape);
     // shoulder clasp line
     const clasp = new THREE.Mesh(new THREE.CapsuleGeometry(0.03, 0.4, 4, 12), mat('#e14a1e', 0.7));
-    clasp.rotation.z = Math.PI / 2; clasp.position.set(0, 0.6, -0.245); spine.add(clasp);
+    clasp.rotation.z = Math.PI / 2; clasp.position.set(0, 0.6, -0.245); clasp.userData.acc = true; spine.add(clasp);
   }
 
-  root.traverse((m) => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = detail > 0; } });
+  const body = skinBody(root, { hips, spine, neck, head, arms, legs });
+  body.receiveShadow = detail > 0;
+  root.traverse((m) => { if (m.isMesh) { m.castShadow = true; if (m !== body) m.receiveShadow = detail > 0; } });
   if (o.scale) root.scale.setScalar(o.scale);
 
   const h = {
-    root, hips, spine, neck, head, arms, legs, cape, tails, wally,
+    root, hips, spine, neck, head, arms, legs, cape, tails, wally, body,
     phase: Math.random() * 6, t: 0, punchT: 0, punchSide: 1, weapon: null,
   };
   return h;
+}
+
+// ---- one skinned mesh with weight maps ----
+// Every body part (torso, limbs, hands, head, face) is merged into a single SkinnedMesh on a
+// bone skeleton. Each vertex is weighted to its own bone, blending 50/50 with the neighbouring
+// bone right at a joint and fading out over a short distance, so shoulders, elbows, hips,
+// knees and the neck bend as one continuous body. Clothing (cape, mask, specs, emblem) stays separate.
+function skinBody(root, R) {
+  const { hips, spine, neck, head, arms, legs } = R;
+  const UP = new THREE.Vector3(0, 1, 0), DOWN = new THREE.Vector3(0, -1, 0);
+  // per bone: axis, length to its child joint, parent to blend with (over pb metres), child to blend with (over cb)
+  const info = new Map();
+  info.set(hips, { axis: UP, len: 0, parent: null, child: null });
+  info.set(spine, { axis: UP, len: 0.66, parent: hips, pb: 0.12, child: null });
+  info.set(neck, { axis: UP, len: 0.1, parent: spine, pb: 0.04, child: head, cb: 0.05 });
+  info.set(head, { axis: UP, len: 0, parent: null, child: null });
+  for (const a of arms) {
+    info.set(a.sh, { axis: DOWN, len: 0.32, parent: spine, pb: 0.1, child: a.el, cb: 0.075 });
+    info.set(a.el, { axis: DOWN, len: 0.4, parent: a.sh, pb: 0.075, child: null });
+  }
+  for (const l of legs) {
+    info.set(l.hip, { axis: DOWN, len: 0.43, parent: hips, pb: 0.1, child: l.knee, cb: 0.085 });
+    info.set(l.knee, { axis: DOWN, len: 0.5, parent: l.hip, pb: 0.085, child: null });
+  }
+  const bones = [...info.keys()];
+  const index = new Map(bones.map((b, i) => [b, i]));
+  root.updateMatrixWorld(true);
+  const origin = new Map(bones.map((b) => [b, b.getWorldPosition(new THREE.Vector3())]));
+  const parts = [];
+  root.traverse((m) => {
+    if (!m.isMesh || m.userData.acc || !m.parent || !info.has(m.parent)) return;
+    if (m.material.transparent || m.material.side === THREE.DoubleSide) return;
+    parts.push(m);
+  });
+  const byMat = new Map();
+  const v = new THREE.Vector3(), d = new THREE.Vector3();
+  for (const m of parts) {
+    const bone = m.parent, I = info.get(bone);
+    const g = m.geometry.index ? m.geometry.toNonIndexed() : m.geometry.clone();
+    for (const k of Object.keys(g.attributes)) if (!['position', 'normal', 'uv'].includes(k)) g.deleteAttribute(k);
+    if (!g.attributes.uv) g.setAttribute('uv', new THREE.Float32BufferAttribute(new Float32Array(g.attributes.position.count * 2), 2));
+    g.applyMatrix4(m.matrixWorld);
+    const n = g.attributes.position.count, si = new Uint16Array(n * 4), sw = new Float32Array(n * 4);
+    const o = origin.get(bone);
+    for (let i = 0; i < n; i++) {
+      v.fromBufferAttribute(g.attributes.position, i);
+      const along = d.subVectors(v, o).dot(I.axis);
+      let wp = 0, wc = 0;
+      if (I.parent) wp = THREE.MathUtils.clamp(0.5 - along / (2 * I.pb), 0, 1);
+      if (I.child) wc = THREE.MathUtils.clamp(0.5 + (along - I.len) / (2 * I.cb), 0, 1);
+      if (wp + wc > 1) { const k = 1 / (wp + wc); wp *= k; wc *= k; }
+      si[i * 4] = index.get(bone); sw[i * 4] = 1 - wp - wc;
+      si[i * 4 + 1] = I.parent ? index.get(I.parent) : 0; sw[i * 4 + 1] = wp;
+      si[i * 4 + 2] = I.child ? index.get(I.child) : 0; sw[i * 4 + 2] = wc;
+    }
+    g.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(si, 4));
+    g.setAttribute('skinWeight', new THREE.Float32BufferAttribute(sw, 4));
+    if (!byMat.has(m.material)) byMat.set(m.material, []);
+    byMat.get(m.material).push(g);
+    m.parent.remove(m);
+  }
+  const mats = [...byMat.keys()];
+  const geo = mergeGeometries(mats.map((k) => mergeGeometries(byMat.get(k))), true);
+  geo.computeBoundingSphere(); geo.boundingSphere.radius += 0.6; // room for posed limbs
+  const mesh = new THREE.SkinnedMesh(geo, mats);
+  root.add(mesh);
+  root.updateMatrixWorld(true);
+  mesh.bind(new THREE.Skeleton(bones));
+  mesh.castShadow = true;
+  return mesh;
 }
 
 // Pose the rig. st: { speed, mode, air, punch, aim, capeLift }

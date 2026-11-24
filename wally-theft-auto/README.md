@@ -13,7 +13,12 @@ Open `wally-theft-auto/index.html` from any web server (GitHub Pages works). Not
 - **Wanted level**: five stars. Polis cars use the road grid to hunt you down, foot cops try to arrest you and, from three stars, they open fire. Break line of sight to lose them, or pay $100 at the **Wally Wash** for a respray.
 - **Wally Power (Q)**: sometimes he flies, which lets you reach the rooftops. Sometimes he faceplants. Sometimes he gets one super punch that sends cars flying. Sometimes he discovers that his heat vision is just steamed-up specs.
 - **Six story missions**, started from the yellow marker outside Wally's Flat. In the first, *Special Delivery*, Wally follows his GPS (the purple route on the radar) to a white Pamazon van parked outside the depot, steals it, and has to deliver 10 parcels in 5 minutes. Then come *Fish Supper Run*, *Checkpoint Charlie*, *Pest Control*, *Hot Potato* and *The Big Flap*.
-- **Weapons** lying about town, in different spots every game: Granda's Golf Club, the Wally Blaster, the Scatter Blaster (a shotgun) and Neep Grenades (thrown turnips that explode). Tab cycles through what you've found.
+- **14 weapons** lying about town, in different spots every game, plus ammo crates:
+  - Melee: Granda's Golf Club, Frying Pan, Claymore, and the Battle Bagpipes (knock over everyone around you)
+  - Guns: Wally Blaster, Scatter Blaster, Wally Laser, Gatling Blaster, Long Scope (a sniper rifle that zooms in when aiming) and the Super Soaker (knocks people over and puts out car fires)
+  - Launchers: Tattie Gun (potatoes) and Haggis Launcher (explosive)
+  - Dragon's Breath (a flamethrower) and Neep Grenades (thrown turnips)
+  - Tab or the mouse wheel cycles through what you've found.
 - **20 hidden Golden Specs** (some on rooftops), plus health, armour, cash and Blaster-cell pickups.
 - **Carjacking**: press F by an occupied car and Wally yanks the door open, drags the driver out by the collar, punches them and drives off. Grab a polis car and the driver fights back.
 - **Weather** that changes every few minutes: Braw (clear), Dreich (overcast), Pishin' doon (rain), Blawin' a hoolie (storm, with thunder and lightning), the Haar (sea fog) and snow. Rain makes roads shiny and slippy.
@@ -45,6 +50,7 @@ On phones and tablets there's an on-screen stick, a drag-to-look area and button
 
 The version number is shown on the title screen (with a "What's new" list) and on the pause screen. It lives in `js/version.js`: bump it by 0.1 for every update (1.1, 1.2, 1.3...) and add a line to `CHANGES`.
 
+- **1.9**: Wally rebuilt as one skinned mesh with weight maps; eyes, eyebrows, nose and mouth; detailed cars with interiors and drivers; honking, shouting and arguing drivers; lamp posts that get knocked over; 10 new weapons and ammo crates
 - **1.8**: a UFO intro: a flying saucer beams Wally down outside his flat at the start of the game (skippable)
 - **1.7**: the touch PUNCH/FIRE button moves next to the red Q (Wally Power) button
 - **1.6**: the touch PUNCH/FIRE button sits beside the movement stick, so the left thumb fires while the right thumb aims

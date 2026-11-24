@@ -69,6 +69,7 @@ export function buildCity(scene, quality) {
       if (!world.grid.has(k)) world.grid.set(k, []);
       world.grid.get(k).push(b);
     }
+    return b;
   };
   const addCircle = (x, z, rad, h = 3) => addCollider({ x0: x - rad, z0: z - rad, x1: x + rad, z1: z + rad, h, circle: rad, cx: x, cz: z });
 
@@ -381,11 +382,12 @@ export function buildCity(scene, quality) {
     lamps.forEach(([x, z, ry], i) => {
       dummy.position.set(x, 0, z); dummy.rotation.set(0, ry + Math.PI / 2, 0); dummy.updateMatrix();
       poleM.setMatrixAt(i, dummy.matrix); armM.setMatrixAt(i, dummy.matrix); headM.setMatrixAt(i, dummy.matrix);
-      addCircle(x, z, 0.2, 6);
+      const col = addCircle(x, z, 0.2, 6); col.lamp = { i, x, z, ry: ry + Math.PI / 2 };
       const hp = new THREE.Vector3(1.55, 6.4, 0).applyEuler(dummy.rotation).add(dummy.position); world.lampHeads.push(hp);
     });
     poleM.castShadow = true; armM.castShadow = true;
     scene.add(poleM, armM, headM);
+    world.lampMeshes = [poleM, armM, headM];
   }
   // trees: trunk + three-lobed canopy
   {
@@ -558,10 +560,16 @@ export function buildCity(scene, quality) {
     return out;
   };
   // push a circle (x,z,rad) at height y out of colliders. Returns {x,z,hit,nx,nz}
-  world.collide = (x, z, rad, y = 0) => {
+  world.collide = (x, z, rad, y = 0, breaker = null) => {
     let hit = false, nx = 0, nz = 0;
     for (const b of world.nearby(x, z, rad + 1)) {
+      if (b.dead) continue;
       if (y >= (b.roof != null ? b.roof : b.h) - 0.25) continue;
+      if (b.lamp && breaker && breaker.speed > 3) { // a car fast enough snaps the lamp post off at the base
+        const dx = x - b.cx, dz = z - b.cz;
+        if (dx * dx + dz * dz < (rad + b.circle) * (rad + b.circle)) { world.knockLamp(b, breaker.vx, breaker.vz); breaker.knocked = true; }
+        continue;
+      }
       if (b.circle && b.cx !== undefined && !b.roof) {
         const dx = x - b.cx, dz = z - b.cz, d = Math.hypot(dx, dz), m = b.circle + rad;
         if (d < m && d > 1e-4) { x = b.cx + dx / d * m; z = b.cz + dz / d * m; hit = true; nx = dx / d; nz = dz / d; }
@@ -629,7 +637,34 @@ export function buildCity(scene, quality) {
     return { x0: block.x0 + o, z0: block.z0 + o, x1: block.x1 - o, z1: block.z1 - o };
   };
 
+  // ---- knocked-over lamp posts ----
+  const fallen = [];
+  const lm = new THREE.Matrix4(), lq = new THREE.Quaternion(), lq2 = new THREE.Quaternion(), lax = new THREE.Vector3(), lpos = new THREE.Vector3(), lsc = new THREE.Vector3(1, 1, 1);
+  const setLamp = (L, ang, ax, az) => {
+    lq.setFromAxisAngle(new THREE.Vector3(0, 1, 0), L.ry);
+    lq2.setFromAxisAngle(lax.set(ax, 0, az).normalize(), ang);
+    lm.compose(lpos.set(L.x, 0, L.z), lq2.multiply(lq), lsc);
+    for (const m of world.lampMeshes) { m.setMatrixAt(L.i, lm); m.instanceMatrix.needsUpdate = true; }
+  };
+  world.knockLamp = (b, vx, vz) => {
+    if (b.dead) return;
+    b.dead = true;
+    const sp = Math.hypot(vx, vz) || 1;
+    // falls the way the car was going: rotate about the horizontal axis at right angles to that
+    fallen.push({ b, ang: 0, vel: Math.min(2.5, sp * 0.12), ax: vz / sp, az: -vx / sp, t: 0 });
+    if (world.onLampKnock) world.onLampKnock(b.cx, b.cz, sp);
+  };
+  world.restoreLamps = (px, pz) => {
+    for (let k = fallen.length - 1; k >= 0; k--) {
+      const f = fallen[k];
+      if (f.t > 45 && Math.hypot(f.b.cx - px, f.b.cz - pz) > 140) { setLamp(f.b.lamp, 0, 1, 0); f.b.dead = false; fallen.splice(k, 1); }
+    }
+  };
   world.update = (dt, t, night) => {
+    for (const f of fallen) {
+      f.t += dt;
+      if (f.ang < 1.5) { f.vel += dt * 6 * Math.cos(f.ang * 0.3); f.ang = Math.min(1.5, f.ang + f.vel * dt); setLamp(f.b.lamp, f.ang, f.ax, f.az); if (f.ang >= 1.5 && world.onLampLand) world.onLampLand(f.b.cx, f.b.cz); }
+    }
     wt.offset.x = t * 0.004; wt.offset.y = t * 0.002;
     wn.offset.x = -t * 0.01; wn.offset.y = t * 0.006;
     for (const m of world.nightMats) m.emissiveIntensity = night * 1.2;

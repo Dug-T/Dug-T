@@ -134,6 +134,17 @@ export class Audio {
       u.g.gain.setTargetAtTime(0, t, 0.2); setTimeout(() => { u.o.stop(); u.o2.stop(); u.lfo.stop(); }, 1500);
     }
   }
+  // a terrible skirl on the pipes: drone plus a squealing chanter
+  pipes() {
+    if (!this.ctx) return;
+    this.tone(117, 1.2, 'sawtooth', 0.14); this.tone(175, 1.2, 'sawtooth', 0.1);
+    [880, 988, 1175, 880, 784].forEach((f, i) => this.tone(f, 0.22, 'square', 0.08, 0, i * 0.18));
+  }
+  // a car horn somewhere in the street (vol 0..1 by distance)
+  hornAt(vol = 1, pitch = 1) {
+    if (!this.ctx || vol <= 0.02) return;
+    this.tone(392 * pitch, 0.4, 'square', 0.1 * vol); this.tone(494 * pitch, 0.4, 'square', 0.08 * vol);
+  }
   nextStation() { this.station = (this.station + 1) % this.stations.length; return this.stations[this.station]; }
   // ---------- generative radio ----------
   schedule() {
