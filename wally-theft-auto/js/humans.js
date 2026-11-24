@@ -316,6 +316,13 @@ export function animateHuman(h, dt, st) {
     h.spine.rotation.y += -h.punchSide * 0.35 * k;
   }
   // aiming overlay (gun arm out)
+  // grabbing someone by the collar and hauling them out of a car
+  if (st.reach) {
+    const k = st.reach;
+    for (const a of h.arms) { a.sh.rotation.x = -1.35 * k; a.sh.rotation.z = a.side * 0.12; a.el.rotation.x = -0.5 * k; }
+    h.spine.rotation.x = 0.12 - (st.pull || 0) * 0.35;
+    ll.hip.rotation.x = -0.35 * (st.pull || 0); ll.knee.rotation.x = 0.3 * (st.pull || 0);
+  }
   if (st.aim && mode !== 'drive' && mode !== 'dead' && mode !== 'tumble') {
     ra.sh.rotation.x = -1.5 + (st.aimPitch || 0); ra.sh.rotation.z = -0.05; ra.el.rotation.x = 0;
   }

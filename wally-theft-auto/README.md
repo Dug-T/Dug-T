@@ -15,6 +15,8 @@ Open `wally-theft-auto/index.html` from any web server (GitHub Pages works). Not
 - **Six story missions**, started from the yellow marker outside Wally's Flat. In the first, *Special Delivery*, Wally follows his GPS (the purple route on the radar) to a white Pamazon van parked outside the depot, steals it, and has to deliver 10 parcels in 5 minutes. Then come *Fish Supper Run*, *Checkpoint Charlie*, *Pest Control*, *Hot Potato* and *The Big Flap*.
 - **Weapons** lying about town, in different spots every game: Granda's Golf Club, the Wally Blaster, the Scatter Blaster (a shotgun) and Neep Grenades (thrown turnips that explode). Tab cycles through what you've found.
 - **20 hidden Golden Specs** (some on rooftops), plus health, armour, cash and Blaster-cell pickups.
+- **Carjacking**: press F by an occupied car and Wally yanks the door open, drags the driver out by the collar, punches them and drives off. Grab a polis car and the driver fights back.
+- **Weather** that changes every few minutes: Braw (clear), Dreich (overcast), Pishin' doon (rain), Blawin' a hoolie (storm, with thunder and lightning), the Haar (sea fog) and snow. Rain makes roads shiny and slippy.
 - **Day–night cycle**: a full day lasts 24 minutes. At night the windows, street lamps and shop signs light up, with bloom.
 - **Three radio stations** (R in a car): Wally FM, Clyde Beats, and Pipes & Riffs.
 - If you die it's **HOPELESS!** and you wake up at the Infirmary. If you're arrested you're **NICKED!** and released from the Polis station.
@@ -43,6 +45,7 @@ On phones and tablets there's an on-screen stick, a drag-to-look area and button
 
 The version number is shown on the title screen (with a "What's new" list) and on the pause screen. It lives in `js/version.js`: bump it by 0.1 for every update (1.1, 1.2, 1.3...) and add a line to `CHANGES`.
 
+- **1.3**: carjacking (open the door, drag the driver out, punch them, drive off), opening driver's doors, and weather: Braw, Dreich, Pishin' doon, Blawin' a hoolie (thunder and lightning), the Haar and snow, with wet, slippy roads; graphics now default to High on every device
 - **1.2**: real hands with fingers, random weapon pickups (Golf Club, Wally Blaster, Scatter Blaster, Neep Grenades), engine sounds from nearby traffic, and more graphical detail (surface relief, contact shadows, awnings, fuller trees, manholes, clouds, rippling sea, colour grade)
 - **1.1**: Pamazon "Special Delivery" first mission with a GPS route on the radar, the cape no longer clips through the suit, the touch stick sits beside the map, ENTER/LEAVE button, and version numbers
 - **1.0**: first release
@@ -56,6 +59,7 @@ The version number is shown on the title screen (with a "What's new" list) and o
 - `js/peds.js`: pedestrians and foot cops
 - `js/player.js`: Wally's controls, combat and powers
 - `js/weapons.js`: weapon stats and models
+- `js/weather.js`: weather states, rain and snow particles, lightning
 - `js/missions.js`: the story missions
 - `js/audio.js`: synthesised sound effects and generative radio
 - `js/textures.js`: procedural canvas textures

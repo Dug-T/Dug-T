@@ -156,7 +156,17 @@ export function buildCarModel(type, paint) {
   }
   body.position.y = 0.05;
   g.traverse((m) => { if (m.isMesh) { m.castShadow = true; } });
-  return { group: g, body, wheels, lightbar, paintM, tailM, headM };
+  // driver's door (right-hand drive, so on the car's right, which is local -X), hinged at its front edge
+  const beltY = isBox ? 1.15 : (type === 'sports' ? 0.72 : 0.92);
+  const hingeZ = isBox ? T.len / 2 - 0.95 : T.len * 0.12, doorLen = isBox ? 0.95 : T.len * 0.27;
+  const door = new THREE.Group(); door.position.set(-T.wid / 2 - 0.006, 0, hingeZ); body.add(door);
+  const panel = new THREE.Mesh(new THREE.BoxGeometry(0.035, beltY - 0.36, doorLen), paintM);
+  panel.position.set(-0.012, (beltY + 0.36) / 2, -doorLen / 2); panel.castShadow = true; door.add(panel);
+  const win = new THREE.Mesh(new THREE.BoxGeometry(0.02, isBox ? 0.55 : (T.hgt - beltY) * 0.62, doorLen * (isBox ? 0.8 : 0.62)), glassM);
+  win.position.set(0.004, beltY + (isBox ? 0.3 : (T.hgt - beltY) * 0.31), -doorLen * (isBox ? 0.45 : 0.6)); door.add(win);
+  const handle = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.03, 0.14), chromeM);
+  handle.position.set(-0.035, beltY - 0.1, -doorLen * 0.8); door.add(handle);
+  return { group: g, body, wheels, lightbar, paintM, tailM, headM, door };
 }
 
 let carId = 0;
@@ -177,7 +187,7 @@ export class Car {
     this.driver = null;     // 'ai' | 'player' | 'cop' | null
     this.ai = null;
     this.input = { throttle: 0, steer: 0, brake: false, hand: false };
-    this.pitch = 0; this.roll = 0; this.lastHit = 0; this.horn = 0;
+    this.pitch = 0; this.roll = 0; this.lastHit = 0; this.horn = 0; this.doorOpen = 0;
     this.radius = this.T.wid / 2 + 0.05;
     this.scene = scene;
     scene.add(this.group);
@@ -212,7 +222,7 @@ export class Car {
     // yaw: kinematic bicycle
     const wb = T.len * 0.62;
     let yaw = vf * Math.tan(this.steer) / wb;
-    let grip = T.grip;
+    let grip = T.grip * (game && game.grip ? game.grip : 1); // wet roads are slippy
     if (inp.hand) { grip = 1.6; yaw *= 1.35; vf -= vf * 0.6 * dt; }
     this.heading -= yaw * dt; // steer>0 turns right (clockwise from above)
     this.yawRate = yaw;
@@ -270,6 +280,7 @@ export class Car {
       this.lightbar.userData.blueM.emissiveIntensity = on === 0 ? 6 : 0.4;
       this.lightbar.userData.redM.emissiveIntensity = on === 1 ? 6 : 0.4;
     }
+    if (this.door) this.door.rotation.y += (this.doorOpen * 1.15 - this.door.rotation.y) * Math.min(1, dt * 10);
     this.tailM.emissiveIntensity = inp.throttle < 0 && vf > 0.5 ? 3.5 : (game && game.night > 0.3 ? 1.4 : 0.4);
     this.sync();
   }

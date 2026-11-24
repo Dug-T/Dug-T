@@ -81,6 +81,10 @@ export function buildCity(scene, quality) {
   const grassMat = new THREE.MeshStandardMaterial({ map: T.grassTexture(), roughness: 1 });
   const roofMat = new THREE.MeshStandardMaterial({ map: T.roofTexture(), roughness: 0.95 });
   const trimMat = new THREE.MeshStandardMaterial({ color: '#8b8a86', roughness: 0.8, side: THREE.DoubleSide });
+  // surfaces that get darker and shinier in the rain
+  world.wetMats = [roadMat, juncMat, paveMat, trimMat].map((m) => ({ m, rough: m.roughness, col: m.color.clone() }));
+  const frost = new THREE.Color('#e9eef3');
+  world.setWet = (w, snow = 0) => { for (const e of world.wetMats) { e.m.roughness = e.rough - w * (1 - snow) * (e.rough - 0.28); e.m.color.copy(e.col).multiplyScalar(1 - w * (1 - snow) * 0.32); e.m.emissive.copy(frost).multiplyScalar(snow * 0.3); } };
   const darkMetal = new THREE.MeshStandardMaterial({ color: '#3b3f44', roughness: 0.5, metalness: 0.6 });
   const styles = ['brick', 'sandstone', 'concrete', 'glass', 'tenement', 'white', 'teal'];
   const facade = {};

@@ -67,6 +67,13 @@ export class Ped {
       animateHuman(h, dt, anim);
       return;
     }
+    if (this.state === 'held') {
+      // being dragged out of a car: position is set by the carjack, we just flail
+      h.root.position.set(this.x, this.y, this.z);
+      h.root.rotation.set(this.tilt || 0, this.heading, 0, 'YXZ');
+      animateHuman(h, dt, { mode: this.sit ? 'drive' : 'tumble' });
+      return;
+    }
     if (this.state === 'tumble') {
       this.vy -= 18 * dt;
       this.x += this.vx * dt; this.z += this.vz * dt; this.y += this.vy * dt;

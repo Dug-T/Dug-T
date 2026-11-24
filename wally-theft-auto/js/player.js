@@ -63,6 +63,13 @@ export class Player {
       return;
     }
     this.h.root.visible = true;
+    // ----- carjacking: main.js drives the position, we just hold the pose -----
+    if (this.jackPose) {
+      animateHuman(this.h, dt, this.jackPose);
+      this.h.root.position.set(this.x, this.y, this.z);
+      this.h.root.rotation.set(0, this.heading, 0);
+      return;
+    }
     // ----- faceplant after a failed flight -----
     if (this.faceplantT > 0) {
       this.faceplantT -= dt;
