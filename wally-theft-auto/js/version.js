@@ -1,7 +1,11 @@
 // Bump VERSION for every update (1.1, 1.2, 1.3 ...) and add a line to CHANGES.
-export const VERSION = '1.4';
+export const VERSION = '1.5';
 
 export const CHANGES = [
+  ['1.5', [
+    'Touch aiming: hold AIM (or FIRE) and drag your thumb to move the aim',
+    'On phones, aiming locks gently onto the nearest person in front of you (the crosshair turns red)',
+  ]],
   ['1.4', [
     'Cars are solid: Wally and pedestrians can no longer walk through them',
     'You can stand on car roofs (fly onto one with Wally Power)',
