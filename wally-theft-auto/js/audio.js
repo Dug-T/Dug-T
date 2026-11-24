@@ -43,6 +43,10 @@ export class Audio {
       a.start(); b.start();
       this.voices.push({ g, pan, f, a, b });
     }
+    // rain hiss
+    this.rainG = ctx.createGain(); this.rainG.gain.value = 0; this.rainG.connect(this.sfx);
+    const rf = ctx.createBiquadFilter(); rf.type = 'highpass'; rf.frequency.value = 1800; rf.connect(this.rainG);
+    const rn = ctx.createBufferSource(); rn.buffer = nb; rn.loop = true; rn.playbackRate.value = 0.7; rn.connect(rf); rn.start();
     this.step = 0; this.nextT = ctx.currentTime + 0.1;
     setInterval(() => this.schedule(), 50);
   }
@@ -107,6 +111,12 @@ export class Audio {
       v.g.gain.setTargetAtTime(near * near * (inCar ? 0.05 : 0.09) * (0.6 + rpm * 0.6), t, 0.1);
       if (v.pan) v.pan.pan.setTargetAtTime(Math.max(-0.9, Math.min(0.9, o.pan)), t, 0.1);
     });
+  }
+  setRain(v, inCar) { if (this.rainG) this.rainG.gain.setTargetAtTime(v * (inCar ? 0.12 : 0.22), this.ctx.currentTime, 0.5); }
+  thunder(near = 1) {
+    if (!this.ctx) return;
+    this.noise(3.5, 140, 1.4 * near); this.noise(1.2, 420, 0.6 * near);
+    this.tone(48, 2.5, 'sine', 0.5 * near, -20);
   }
   nextStation() { this.station = (this.station + 1) % this.stations.length; return this.stations[this.station]; }
   // ---------- generative radio ----------
