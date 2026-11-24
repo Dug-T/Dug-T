@@ -772,13 +772,28 @@ if (isTouch) {
     e.preventDefault();
     for (const t of e.changedTouches) if (t.identifier === touch.lookId) {
       cam.yaw -= (t.clientX - touch.lx) * 0.006; cam.pitch -= (t.clientY - touch.ly) * 0.005; cam.pitch = Math.max(-1.2, Math.min(0.7, cam.pitch));
-      touch.lx = t.clientX; touch.ly = t.clientY; cam.lastLook = performance.now();
+      touch.lx = t.clientX; touch.ly = t.clientY; cam.lastLook = performance.now(); touch.dragT = performance.now();
     }
   }, { passive: false });
   for (const b of document.querySelectorAll('#tbtns button')) {
     const k = b.dataset.k;
-    b.addEventListener('touchstart', (e) => { e.preventDefault(); audio.init(); touch.btn.add(k); touch.pressed.add(k); b.classList.add('on'); }, { passive: false });
-    const up = (e) => { e.preventDefault(); touch.btn.delete(k); b.classList.remove('on'); };
+    // AIM and FIRE can be held and dragged: sliding your thumb moves the aim, like the look area
+    const drag = k === 'aim' || k === 'fire';
+    let id = null, lx = 0, ly = 0;
+    b.addEventListener('touchstart', (e) => {
+      e.preventDefault(); audio.init(); touch.btn.add(k); touch.pressed.add(k); b.classList.add('on');
+      const t = e.changedTouches[0]; id = t.identifier; lx = t.clientX; ly = t.clientY;
+    }, { passive: false });
+    if (drag) b.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+      for (const t of e.changedTouches) if (t.identifier === id) {
+        const sens = player.aiming ? 0.0045 : 0.006;
+        cam.yaw -= (t.clientX - lx) * sens; cam.pitch -= (t.clientY - ly) * sens * 0.85;
+        cam.pitch = Math.max(-1.2, Math.min(0.7, cam.pitch));
+        lx = t.clientX; ly = t.clientY; cam.lastLook = performance.now(); touch.dragT = performance.now();
+      }
+    }, { passive: false });
+    const up = (e) => { e.preventDefault(); touch.btn.delete(k); b.classList.remove('on'); id = null; };
     b.addEventListener('touchend', up); b.addEventListener('touchcancel', up);
   }
   $('tpause').addEventListener('click', () => togglePause());
@@ -800,7 +815,7 @@ function readInput() {
     const b = (x) => touch.btn.has(x), tp = (x) => touch.pressed.has(x);
     if (Math.hypot(touch.mx, touch.my) > 0.95 && !player.car) inp.sprint = true;
     inp.sprint ||= b('sprint'); inp.jump ||= b('jump'); inp.jumpPressed ||= tp('jump');
-    inp.fire ||= b('fire'); inp.firePressed ||= tp('fire'); inp.aim ||= b('aim');
+    inp.fire ||= b('fire'); inp.firePressed ||= tp('fire'); inp.aim ||= b('aim'); inp.aimPressed = tp('aim');
     inp.enter ||= tp('enter'); inp.power ||= tp('power'); inp.weapon ||= tp('weapon'); inp.horn ||= b('horn');
     if (tp('horn') && player.car) inp.radio = true;
     inp.hand = b('hand');
@@ -829,6 +844,36 @@ function readInput() {
   inp.powerPressed = inp.power;
   pressed.clear(); mouse.lp = false; touch.pressed.clear();
   return inp;
+}
+
+// ---------------- touch lock-on ----------------
+// On phones, holding AIM gently swings the aim onto the nearest threat in front of you.
+// Dragging your thumb always wins; the lock comes back half a second after you stop.
+let lockTarget = null;
+function updateLockOn(dt) {
+  lockTarget = null;
+  if (!isTouch || !player.aiming || player.car || player.dead) return;
+  const fx = Math.sin(cam.yaw), fz = Math.cos(cam.yaw);
+  let best = null, bs = Infinity;
+  for (const p of peds.list) {
+    if (p.state === 'dead' || p.state === 'held') continue;
+    const dx = p.x - player.x, dz = p.z - player.z, d = Math.hypot(dx, dz);
+    if (d < 1.5 || d > 38) continue;
+    const cos = (dx * fx + dz * fz) / d;
+    if (cos < 0.82) continue; // within about 35 degrees of where you're facing
+    if (world.blocked(player.x, player.z, p.x, p.z, 1.3)) continue;
+    const threat = p.thug || p.cop || p.aggro ? 0.5 : 1;
+    const score = (d * 0.04 + (1 - cos) * 6) * threat;
+    if (score < bs) { bs = score; best = p; }
+  }
+  if (!best) return;
+  lockTarget = best;
+  if (performance.now() - (touch.dragT || 0) < 600) return;
+  const dx = best.x - player.x, dz = best.z - player.z, dy = (best.y + 1.1) - (player.y + 1.5);
+  const wantYaw = Math.atan2(dx, dz), wantPitch = Math.atan2(dy, Math.hypot(dx, dz)) - 0.05;
+  let dyaw = wantYaw - cam.yaw; while (dyaw > Math.PI) dyaw -= Math.PI * 2; while (dyaw < -Math.PI) dyaw += Math.PI * 2;
+  const k = Math.min(1, dt * 7);
+  cam.yaw += dyaw * k; cam.pitch += (wantPitch - cam.pitch) * k;
 }
 
 // ---------------- camera ----------------
@@ -1281,6 +1326,7 @@ function updateHUD(dt) {
   setText('weaponIcon', WEAPONS[player.weapon].icon);
   setText('ammo', WEAPONS[player.weapon].melee ? '' : String(player.ammo));
   $('cross').classList.toggle('on', player.aiming && !player.car);
+  $('cross').classList.toggle('lock', !!lockTarget);
   const pw = $('power'), pv = Math.round(100 - player.powerCool / 6 * 100) + '%';
   if (domCache.get('pw') !== pv) { domCache.set('pw', pv); pw.style.setProperty('--p', pv); }
   setStyle(pw, 'pwo', 'opacity', player.car ? '0.35' : '1');
@@ -1325,10 +1371,12 @@ function frame(now) {
   if (inp.camera) cam.far = !cam.far;
   if (inp.radio && player.car) { audio.nextStation(); showRadio(); }
   if (inp.enter && !game.jack) { if (player.car) exitCar(); else enterCar(); }
+  if (inp.aimPressed && !player.car && WEAPONS[player.weapon].melee) game.toast(player.hasWeapons ? 'You can only aim with a gun or neeps. Tap WEAPON to switch.' : 'Nothing to aim yet! Find a gun lying about town (gold rings on the radar... well, on the pavement).');
   if (inp.weapon && !player.car) { player.cycleWeapon(); if (!player.hasWeapons) game.toast('No weapons yet. Just fists of mild fury.'); else game.toast(`${WEAPONS[player.weapon].icon} ${WEAPONS[player.weapon].name}`); }
   if (inp.power && player.car) { player.usePower(game); inp.powerPressed = false; }
   updateJack(dt);
   player.update(dt, inp, game);
+  updateLockOn(dt);
   game.wanted.update(dt);
   if (game.alarmT > 0) { game.alarmT -= dt; if (game.alarmT <= 0) game.alarm = null; }
   updateTraffic(dt);
