@@ -29,6 +29,20 @@ export class Audio {
     this.wind = ctx.createGain(); this.wind.gain.value = 0; this.wind.connect(this.sfx);
     const wf = ctx.createBiquadFilter(); wf.type = 'lowpass'; wf.frequency.value = 500; wf.connect(this.wind);
     const wn = ctx.createBufferSource(); wn.buffer = nb; wn.loop = true; wn.connect(wf); wn.start();
+    // engines of nearby traffic: a few positional voices that get handed to the closest cars
+    this.voices = [];
+    for (let i = 0; i < 5; i++) {
+      const g = ctx.createGain(); g.gain.value = 0;
+      const pan = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
+      const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 500;
+      const a = ctx.createOscillator(); a.type = 'sawtooth';
+      const b = ctx.createOscillator(); b.type = 'square';
+      const bg = ctx.createGain(); bg.gain.value = 0.35;
+      a.connect(f); b.connect(bg); bg.connect(f); f.connect(g);
+      if (pan) { g.connect(pan); pan.connect(this.sfx); } else g.connect(this.sfx);
+      a.start(); b.start();
+      this.voices.push({ g, pan, f, a, b });
+    }
     this.step = 0; this.nextT = ctx.currentTime + 0.1;
     setInterval(() => this.schedule(), 50);
   }
@@ -76,6 +90,23 @@ export class Audio {
     this.sirenO.frequency.setValueAtTime((Math.floor(t * 1.4) % 2) ? 600 : 800, t);
     this.wind.gain.setTargetAtTime(st.flying ? 0.35 : Math.min(0.15, Math.abs(st.speed) / 400), t, 0.2);
     this.music.gain.setTargetAtTime(st.inCar && this.station < 3 && this.on ? 0.22 : 0, t, 0.3);
+  }
+  // others: [{ dist, pan (-1 left .. 1 right), speed, throttle, type }] nearest first
+  traffic(others, inCar) {
+    if (!this.ctx || !this.voices) return;
+    const t = this.ctx.currentTime;
+    this.voices.forEach((v, i) => {
+      const o = others[i];
+      if (!o) { v.g.gain.setTargetAtTime(0, t, 0.15); return; }
+      const base = o.type === 'sports' ? 58 : (o.type === 'van' || o.type === 'icecream' ? 30 : (o.type === 'police' ? 50 : 42));
+      const rpm = 0.22 + Math.min(1, o.speed / 30) * 0.7 + (o.throttle > 0.3 ? 0.08 : 0);
+      const f = base + rpm * base * 3;
+      v.a.frequency.setTargetAtTime(f, t, 0.08); v.b.frequency.setTargetAtTime(f * 0.5 + 1.5, t, 0.08);
+      v.f.frequency.setTargetAtTime(220 + rpm * 1100, t, 0.08);
+      const near = Math.max(0, 1 - o.dist / 55);
+      v.g.gain.setTargetAtTime(near * near * (inCar ? 0.05 : 0.09) * (0.6 + rpm * 0.6), t, 0.1);
+      if (v.pan) v.pan.pan.setTargetAtTime(Math.max(-0.9, Math.min(0.9, o.pan)), t, 0.1);
+    });
   }
   nextStation() { this.station = (this.station + 1) % this.stations.length; return this.stations[this.station]; }
   // ---------- generative radio ----------

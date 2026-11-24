@@ -4,6 +4,7 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { buildCity, N, P, HALF, ROAD, LANE, ISLAND, KERB, roadC, blockMin, blockMax } from './city.js';
 import { Car, TrafficAI, PoliceAI, randomType, DIRS, validDir } from './vehicles.js';
 import { PedManager, Ped } from './peds.js';
@@ -12,6 +13,7 @@ import { Audio } from './audio.js';
 import { MISSIONS, missionStartPoint } from './missions.js';
 import { smokeTexture, rng, signTexture } from './textures.js';
 import { VERSION, CHANGES } from './version.js';
+import { WEAPONS, buildNeep, buildWeaponModel } from './weapons.js';
 
 const $ = (id) => document.getElementById(id);
 const isTouch = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
@@ -39,18 +41,27 @@ scene.fog = new THREE.Fog('#c9d6e3', 120, 520);
 // sky dome
 const skyU = {
   top: { value: new THREE.Color('#3a6fc0') }, horizon: { value: new THREE.Color('#cfe0f0') }, bottom: { value: new THREE.Color('#2a4a60') },
-  sunDir: { value: new THREE.Vector3(0, 1, 0) }, sunCol: { value: new THREE.Color('#fff2cc') }, night: { value: 0 },
+  sunDir: { value: new THREE.Vector3(0, 1, 0) }, sunCol: { value: new THREE.Color('#fff2cc') }, night: { value: 0 }, time: { value: 0 },
 };
 const sky = new THREE.Mesh(new THREE.SphereGeometry(2000, 32, 16), new THREE.ShaderMaterial({
   uniforms: skyU, side: THREE.BackSide, depthWrite: false, fog: false,
   vertexShader: 'varying vec3 vP; void main(){ vP = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
-  fragmentShader: `uniform vec3 top, horizon, bottom, sunCol, sunDir; uniform float night; varying vec3 vP;
+  fragmentShader: `uniform vec3 top, horizon, bottom, sunCol, sunDir; uniform float night, time; varying vec3 vP;
     float h21(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7))) * 43758.5453); }
+    float vnoise(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
+      return mix(mix(h21(i), h21(i + vec2(1,0)), f.x), mix(h21(i + vec2(0,1)), h21(i + vec2(1,1)), f.x), f.y); }
+    float fbm(vec2 p){ float a = 0.5, s = 0.0; for (int k = 0; k < 5; k++) { s += a * vnoise(p); p *= 2.03; a *= 0.5; } return s; }
     void main(){ vec3 d = normalize(vP); float h = d.y;
       vec3 c = h > 0.0 ? mix(horizon, top, pow(h, 0.55)) : mix(horizon, bottom, pow(-h, 0.4));
       float s = max(dot(d, normalize(sunDir)), 0.0);
       c += sunCol * (pow(s, 900.0) * 6.0 + pow(s, 12.0) * 0.35 * (1.0 - night));
       vec3 md = normalize(-sunDir); float m = max(dot(d, md), 0.0); c += vec3(0.85,0.9,1.0) * pow(m, 1400.0) * 3.0 * night;
+      if (h > 0.0) { // drifting clouds, lit by the sun
+        vec2 cp = d.xz / (d.y + 0.12) * 1.6 + vec2(time * 0.012, time * 0.004);
+        float cl = smoothstep(0.52, 0.78, fbm(cp)) * smoothstep(0.0, 0.18, h);
+        vec3 cc = mix(vec3(1.0, 0.98, 0.95), sunCol * 0.9 + 0.1, 0.35) * (1.0 - night * 0.85) + vec3(0.04, 0.05, 0.08) * night;
+        c = mix(c, cc * (0.75 + 0.25 * fbm(cp * 2.0 + 3.0)), cl * 0.9);
+      }
       if (h > 0.0 && night > 0.0) { vec2 g = floor(d.xz / (d.y + 0.3) * 260.0); float st = step(0.9965, h21(g)); c += vec3(st) * night * smoothstep(0.0, 0.3, h); }
       gl_FragColor = vec4(c, 1.0);
       #include <tonemapping_fragment>
@@ -85,6 +96,18 @@ function applyQuality() {
     bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.35, 0.5, 0.88);
     composer.addPass(bloom);
     composer.addPass(new OutputPass());
+    // gentle colour grade: a touch more contrast and colour, darker corners
+    composer.addPass(new ShaderPass({
+      uniforms: { tDiffuse: { value: null } },
+      vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+      fragmentShader: `uniform sampler2D tDiffuse; varying vec2 vUv;
+        void main(){ vec3 c = texture2D(tDiffuse, vUv).rgb;
+          float l = dot(c, vec3(0.299, 0.587, 0.114));
+          c = mix(vec3(l), c, 1.12);
+          c = (c - 0.5) * 1.06 + 0.5;
+          vec2 q = vUv - 0.5; c *= 1.0 - dot(q, q) * 0.55;
+          gl_FragColor = vec4(clamp(c, 0.0, 1.0), 1.0); }`,
+    }));
   }
   for (const id of ['gfx', 'gfx2']) $(id).textContent = 'GRAPHICS: ' + quality.toUpperCase();
   resize();
@@ -288,8 +311,19 @@ function buildSpecsMesh() {
 const PICK = {
   health: { col: '#ff4040', icon: '❤' }, armour: { col: '#4aa3ff', icon: '🛡' }, cash: { col: '#5fe36a', icon: '$' }, ammo: { col: '#58e0ff', icon: '⚡' },
 };
-function makePickupMesh(kind) {
+const ringMat = new THREE.MeshStandardMaterial({ color: '#ffd23f', emissive: '#ffb300', emissiveIntensity: 1.4, roughness: 0.3 });
+function makePickupMesh(kind, weapon) {
   const g = new THREE.Group();
+  if (kind === 'weapon') {
+    const w = buildWeaponModel(weapon);
+    if (weapon === 'club') { w.scale.setScalar(1.1); w.rotation.z = 1.1; w.position.set(-0.35, -0.35, 0); }
+    else if (weapon === 'neep') w.scale.setScalar(3.2);
+    else { w.scale.multiplyScalar(3.2); w.position.z = -0.3; }
+    g.add(w);
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.55, 0.035, 8, 40), ringMat);
+    ring.rotation.x = Math.PI / 2; ring.position.y = -0.75; g.add(ring); g.userData.ring = ring;
+    return g;
+  }
   const m = new THREE.MeshStandardMaterial({ color: PICK[kind].col, emissive: PICK[kind].col, emissiveIntensity: 0.6, roughness: 0.3 });
   let mesh;
   if (kind === 'health') { mesh = new THREE.Group(); const a = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.22, 0.22), m), b = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.7, 0.22), m); mesh.add(a, b); }
@@ -300,9 +334,9 @@ function makePickupMesh(kind) {
   return g;
 }
 function addPickup(kind, x, z, o = {}) {
-  const g = makePickupMesh(kind); const y = (o.y ?? world.groundHeight(x, z, 1)) + 0.9;
+  const g = makePickupMesh(kind, o.weapon); const y = (o.y ?? world.groundHeight(x, z, 1)) + 0.9;
   g.position.set(x, y, z); scene.add(g);
-  const p = { kind, x, y, z, obj: g, amount: o.amount, respawn: o.respawn, home: [x, z], t: Math.random() * 6, gone: 0 };
+  const p = { kind, weapon: o.weapon, x, y, z, obj: g, amount: o.amount, respawn: o.respawn, home: [x, z], t: Math.random() * 6, gone: 0 };
   game.pickups.push(p); return p;
 }
 
@@ -325,6 +359,20 @@ function setupCollectibles(save) {
   addPickup('armour', pol.x - 10, pol.z, { respawn: 90 });
   addPickup('health', hos.x - 6, hos.z, { respawn: 30 });
   addPickup('ammo', h.x - 8, h.z, { respawn: 45 });
+  scatterWeapons(26);
+}
+// weapons dropped at random spots on the pavements, different every time you play
+function scatterWeapons(n) {
+  const kinds = ['club', 'club', 'blaster', 'blaster', 'blaster', 'scatter', 'scatter', 'neep', 'neep'];
+  for (let k = 0, tries = 0; k < n && tries < n * 8; tries++) {
+    const b = world.blocks[(Math.random() * world.blocks.length) | 0];
+    const L = world.paveLoop(b), t = 0.1 + Math.random() * 0.8, side = (Math.random() * 4) | 0;
+    const x = side < 2 ? L.x0 + (L.x1 - L.x0) * t : (side === 2 ? L.x0 : L.x1);
+    const z = side >= 2 ? L.z0 + (L.z1 - L.z0) * t : (side === 0 ? L.z0 : L.z1);
+    if (game.pickups.some((p) => Math.hypot(p.x - x, p.z - z) < 20)) continue;
+    k++;
+    addPickup('weapon', x, z, { weapon: kinds[(Math.random() * kinds.length) | 0], respawn: 90 });
+  }
 }
 
 // ---------------- combat ----------------
@@ -334,60 +382,95 @@ function raySphere(o, d, c, r) {
   const b = ox * d.x + oy * d.y + oz * d.z, cc = ox * ox + oy * oy + oz * oz - r * r, disc = b * b - cc;
   if (disc < 0) return -1; const t = -b - Math.sqrt(disc); return t;
 }
-game.playerShoot = () => {
-  audio.zap();
+// fire a ranged weapon (W from weapons.js): one ray per pellet with a little spread
+game.playerShoot = (W = WEAPONS.blaster) => {
+  if (W.pellets > 1) { audio.bang(); audio.noise(0.3, 600, 0.7); cam.shake = Math.max(cam.shake, 0.12); } else audio.zap();
   const origin = camera.position.clone();
-  const dir = new THREE.Vector3(); camera.getWorldDirection(dir);
+  const aim = new THREE.Vector3(); camera.getWorldDirection(aim);
   const minT = origin.distanceTo(tmpV.set(player.x, player.y + 1.4, player.z)) + 0.5;
-  let best = 90, hit = null;
-  // buildings: march
-  for (let t = minT; t < best; t += 0.8) {
-    const x = origin.x + dir.x * t, y = origin.y + dir.y * t, z = origin.z + dir.z * t;
-    if (y < 0) { best = t; hit = { kind: 'ground' }; break; }
-    let blocked = false;
-    for (const b of world.nearby(x, z, 0.1)) if (!b.circle && y < b.h && x > b.x0 && x < b.x1 && z > b.z0 && z < b.z1) { blocked = true; break; }
-    if (blocked) { best = t; hit = { kind: 'wall' }; break; }
+  const model = player.models[player.weapon] || player.blaster;
+  const muzzle = model.localToWorld(player.blaster.userData.muzzle.clone());
+  puff(muzzle.x, muzzle.y, muzzle.z, { color: W.pellets > 1 ? '#ffd27a' : '#9ff', add: true, life: 0.12, size: W.pellets > 1 ? 0.7 : 0.4, grow: 1, vy: 0, opacity: 1 });
+  game.raiseAlarm(player.x, player.z, 1.5);
+  for (let k = 0; k < W.pellets; k++) {
+    const dir = aim.clone();
+    if (W.spread) { dir.x += (Math.random() - 0.5) * W.spread * 2; dir.y += (Math.random() - 0.5) * W.spread * 2; dir.z += (Math.random() - 0.5) * W.spread * 2; dir.normalize(); }
+    let best = W.range, hit = null;
+    for (let t = minT; t < best; t += 0.8) {
+      const x = origin.x + dir.x * t, y = origin.y + dir.y * t, z = origin.z + dir.z * t;
+      if (y < 0) { best = t; hit = { kind: 'ground' }; break; }
+      let blocked = false;
+      for (const b of world.nearby(x, z, 0.1)) if (!b.circle && y < b.h && x > b.x0 && x < b.x1 && z > b.z0 && z < b.z1) { blocked = true; break; }
+      if (blocked) { best = t; hit = { kind: 'wall' }; break; }
+    }
+    for (const p of peds.list) {
+      if (p.state === 'dead') continue;
+      const t = raySphere(origin, dir, tmpV2.set(p.x, p.y + 1.05, p.z), 0.5);
+      if (t > minT && t < best) { best = t; hit = { kind: 'ped', p }; }
+    }
+    for (const c of cars) {
+      if (c === player.car) continue;
+      for (const [cx, cz] of c.circles()) {
+        const t = raySphere(origin, dir, tmpV2.set(cx, c.y + 0.8, cz), c.radius);
+        if (t > minT && t < best) { best = t; hit = { kind: 'car', c }; }
+      }
+    }
+    const end = origin.clone().addScaledVector(dir, best);
+    tracer(muzzle, end, W.pellets > 1 ? '#ffd27a' : '#7fe8ff');
+    if (!hit) continue;
+    if (hit.kind === 'ped') {
+      const p = hit.p;
+      p.hurt(W.dmg, game, player.x, player.z, 'shot');
+      puff(end.x, end.y, end.z, { color: '#ff3030', life: 0.4, size: 0.4, opacity: 0.9 });
+      if (p.cop) game.wanted.add(1.5 / W.pellets * 1.5); else if (!p.thug) game.wanted.add(0.4 / Math.sqrt(W.pellets));
+    } else if (hit.kind === 'car') {
+      hit.c.damage(W.dmg * 2, game, 'shot');
+      puff(end.x, end.y, end.z, { color: '#ffd080', add: true, life: 0.2, size: 0.5, opacity: 1 });
+      if (hit.c.ai instanceof TrafficAI) hit.c.ai.panic = 6;
+      if (hit.c.type === 'police') game.wanted.add(1 / W.pellets * 1.5);
+    } else puff(end.x, end.y, end.z, { color: '#ccc', life: 0.5, size: 0.5 });
   }
-  for (const p of peds.list) {
-    if (p.state === 'dead') continue;
-    const t = raySphere(origin, dir, tmpV2.set(p.x, p.y + 1.05, p.z), 0.5);
-    if (t > minT && t < best) { best = t; hit = { kind: 'ped', p }; }
-  }
-  for (const c of cars) {
-    if (c === player.car) continue;
-    for (const [cx, cz] of c.circles()) {
-      const t = raySphere(origin, dir, tmpV2.set(cx, c.y + 0.8, cz), c.radius);
-      if (t > minT && t < best) { best = t; hit = { kind: 'car', c }; }
+};
+// lob a neep grenade: it bounces, fizzes, then goes off
+const neeps = [];
+game.throwNeep = () => {
+  const dir = new THREE.Vector3(); camera.getWorldDirection(dir);
+  const hand = player.h.arms[1].grip.localToWorld(new THREE.Vector3());
+  const m = buildNeep(0.11); m.position.copy(hand); scene.add(m);
+  const sp = 15;
+  neeps.push({ m, x: hand.x, y: hand.y, z: hand.z, vx: dir.x * sp + player.vx, vy: dir.y * sp + 5, vz: dir.z * sp + player.vz, t: 2.2 });
+  audio.tone(500, 0.15, 'triangle', 0.08, -300);
+};
+function updateNeeps(dt) {
+  for (let i = neeps.length - 1; i >= 0; i--) {
+    const n = neeps[i];
+    n.t -= dt; n.vy -= 18 * dt;
+    n.x += n.vx * dt; n.y += n.vy * dt; n.z += n.vz * dt;
+    const c = world.collide(n.x, n.z, 0.12, n.y);
+    if (c.hit) { n.x = c.x; n.z = c.z; const vn = n.vx * c.nx + n.vz * c.nz; n.vx -= 1.6 * vn * c.nx; n.vz -= 1.6 * vn * c.nz; }
+    const g = world.groundHeight(n.x, n.z, n.y + 0.3) + 0.11;
+    if (n.y < g) { n.y = g; n.vy = Math.abs(n.vy) * 0.4; n.vx *= 0.6; n.vz *= 0.6; }
+    n.m.position.set(n.x, n.y, n.z); n.m.rotation.x += dt * 8; n.m.rotation.z += dt * 5;
+    if (Math.random() < dt * 20) puff(n.x, n.y + 0.15, n.z, { color: '#ffcf40', add: true, life: 0.25, size: 0.2, vy: 0.5, opacity: 1 });
+    if (n.t <= 0) {
+      scene.remove(n.m); neeps.splice(i, 1);
+      game.onExplosion(n.x, n.y, n.z, null);
+      game.wanted.add(1);
     }
   }
-  const end = origin.clone().addScaledVector(dir, best);
-  const muzzle = player.blaster.localToWorld(player.blaster.userData.muzzle.clone());
-  tracer(muzzle, end);
-  puff(muzzle.x, muzzle.y, muzzle.z, { color: '#9ff', add: true, life: 0.12, size: 0.4, grow: 1, vy: 0, opacity: 1 });
-  game.raiseAlarm(player.x, player.z, 1.5);
-  if (!hit) return;
-  if (hit.kind === 'ped') {
-    hit.p.hurt(45, game, player.x, player.z, 'shot');
-    puff(end.x, end.y, end.z, { color: '#ff3030', life: 0.4, size: 0.4, opacity: 0.9 });
-    if (hit.p.cop) game.wanted.add(1.5); else if (!hit.p.thug) game.wanted.add(0.4);
-  } else if (hit.kind === 'car') {
-    hit.c.damage(90, game, 'shot');
-    puff(end.x, end.y, end.z, { color: '#ffd080', add: true, life: 0.2, size: 0.5, opacity: 1 });
-    if (hit.c.ai instanceof TrafficAI) hit.c.ai.panic = 6;
-    if (hit.c.type === 'police') game.wanted.add(1);
-  } else puff(end.x, end.y, end.z, { color: '#ccc', life: 0.5, size: 0.5 });
-};
-game.playerPunch = () => {
+}
+game.playerPunch = (weapon = 'fists') => {
   const fx = Math.sin(player.heading), fz = Math.cos(player.heading);
   const sup = player.superPunch > 0;
+  const club = weapon === 'club', reach = sup ? 2.6 : (club ? WEAPONS.club.range : 1.6);
   let any = false;
   for (const p of peds.list) {
     if (p.state === 'dead') continue;
     const dx = p.x - player.x, dz = p.z - player.z, d = Math.hypot(dx, dz);
-    if (d < (sup ? 2.6 : 1.6) && (dx * fx + dz * fz) / (d || 1) > 0.3) {
+    if (d < reach && (dx * fx + dz * fz) / (d || 1) > 0.3) {
       any = true;
       if (sup) { p.vx = fx * 18; p.vz = fz * 18; p.vy = 9; p.state = 'tumble'; p.hurt(30, game, player.x, player.z, 'car'); }
-      else p.hurt(22, game, player.x, player.z, 'punch');
+      else p.hurt(club ? WEAPONS.club.dmg : 22, game, player.x, player.z, 'punch');
       if (p.cop) game.wanted.add(2); else if (!p.thug) game.wanted.add(0.5);
     }
   }
@@ -395,15 +478,16 @@ game.playerPunch = () => {
     if (c.dead) continue;
     for (const [cx, cz] of c.circles()) {
       const dx = cx - player.x, dz = cz - player.z, d = Math.hypot(dx, dz);
-      if (d < c.radius + (sup ? 1.6 : 0.9) && (dx * fx + dz * fz) / (d || 1) > 0.2) {
+      if (d < c.radius + (sup ? 1.6 : (club ? 1.4 : 0.9)) && (dx * fx + dz * fz) / (d || 1) > 0.2) {
         any = true;
         if (sup) { c.vx += fx * 28; c.vz += fz * 28; c.damage(650, game); game.bigText('KA-WALLOP!', '', 1); cam.shake = 0.6; }
-        else c.damage(15, game);
+        else c.damage(club ? 60 : 15, game);
         if (c.ai) c.ai.panic = 5;
         break;
       }
     }
   }
+  if (any && club) audio.tone(900, 0.12, 'square', 0.12, -500);
   if (any) { audio.punch(); if (sup) { player.superPunch = 0; audio.boom(); } }
   else audio.tone(180, 0.08, 'triangle', 0.05, -60);
 };
@@ -468,7 +552,7 @@ game.bust = () => {
   audio.fail();
   if (player.car) exitCar(true);
   game.bigText('NICKED!', 'You have the right to remain hopeless.', 4, true);
-  player.hasBlaster = false; player.ammo = 0; player.weapon = 'fists';
+  player.loseWeapons();
   failMission();
   player.dead = true;
   setTimeout(() => { respawn('police'); game.busting = false; }, 4200);
@@ -699,7 +783,7 @@ function updateSky(dt) {
   let pal = {};
   for (const k of ['top', 'hor', 'fog', 'sun']) pal[k] = lerpC(lerpC(PAL.day[k], PAL.dusk[k], dusk), PAL.night[k], night);
   skyU.top.value.copy(pal.top); skyU.horizon.value.copy(pal.hor); skyU.bottom.value.copy(pal.fog).multiplyScalar(0.6);
-  skyU.sunDir.value.copy(sd); skyU.sunCol.value.copy(pal.sun); skyU.night.value = night;
+  skyU.sunDir.value.copy(sd); skyU.sunCol.value.copy(pal.sun); skyU.night.value = night; skyU.time.value = performance.now() / 1000;
   scene.fog.color.copy(pal.fog);
   hemi.intensity = THREE.MathUtils.lerp(THREE.MathUtils.lerp(PAL.day.hemi, PAL.dusk.hemi, dusk), PAL.night.hemi, night);
   hemi.color.copy(pal.top).lerp(C('#ffffff'), 0.5);
@@ -887,14 +971,18 @@ function updateMission(dt) {
 
 // ---------------- save ----------------
 function save() {
-  store.set('wta-save', { v: 2, money: player.money, missionIdx: game.missionIdx, specs: game.collected || [], hasBlaster: player.hasBlaster, ammo: player.ammo, stats: game.stats, time: game.time });
+  store.set('wta-save', { v: 2, money: player.money, missionIdx: game.missionIdx, specs: game.collected || [], weapons: Object.keys(player.owned), ammoOf: player.ammoOf, stats: game.stats, time: game.time });
 }
 function load(fresh) {
   const s = fresh ? {} : store.get('wta-save', {});
   player.money = s.money || 0; game.missionIdx = s.missionIdx || 0;
   if (!s.v) game.missionIdx = 0; // mission 1 is new (Pamazon), so older saves start the story again
   game.collected = s.specs || [];
-  player.hasBlaster = !!s.hasBlaster; player.ammo = s.ammo || 0; if (s.stats) Object.assign(game.stats, s.stats);
+  player.loseWeapons();
+  for (const w of s.weapons || []) player.owned[w] = true;
+  Object.assign(player.ammoOf, s.ammoOf || {});
+  if (s.hasBlaster) { player.owned.blaster = true; player.ammoOf.blaster += s.ammo || 0; } // saves from v1.1 and earlier
+  if (s.stats) Object.assign(game.stats, s.stats);
   game.stats.specs = game.collected.length;
   if (s.time) game.time = s.time;
   return s;
@@ -906,12 +994,18 @@ function updatePickups(dt) {
   for (const p of game.pickups) {
     if (p.gone > 0) { p.gone -= dt; if (p.gone <= 0) p.obj.visible = true; continue; }
     p.t += dt; p.obj.rotation.y = p.t * 2; p.obj.position.y = p.y + Math.sin(p.t * 3) * 0.15;
+    if (p.obj.userData.ring) p.obj.userData.ring.position.y = -0.75 - Math.sin(p.t * 3) * 0.15;
     if (player.car || player.dead) continue;
     if (Math.abs(p.x - px) < 1.3 && Math.abs(p.z - pz) < 1.3 && Math.abs(p.y - 0.9 - py) < 1.6) {
       if (p.kind === 'health') { if (player.health >= 100) continue; player.health = 100; game.toast('Irn... er, energy drink. Health restored.'); }
       if (p.kind === 'armour') { if (player.armour >= 100) continue; player.armour = 100; game.toast('Body armour. Fits over the onesie.'); }
       if (p.kind === 'cash') { const a = p.amount || 250; player.money += a; audio.cash(); }
-      if (p.kind === 'ammo') { player.hasBlaster = true; player.ammo += 30; if (player.weapon === 'fists') player.weapon = 'blaster'; game.toast('Blaster cells +30'); }
+      if (p.kind === 'ammo') { player.giveWeapon('blaster', 30); game.toast('Blaster cells +30'); }
+      if (p.kind === 'weapon') {
+        const W = WEAPONS[p.weapon], had = player.owned[p.weapon];
+        player.giveWeapon(p.weapon, W.pickup || 0);
+        game.toast(had ? `${W.icon} ${W.name}${W.pickup ? ` +${W.pickup}` : ''}` : `${W.icon} Picked up the ${W.name}!${W.pickup ? ` (${W.pickup})` : ''} Tab to switch weapons.`);
+      }
       audio.pickup();
       if (p.respawn) { p.gone = p.respawn; p.obj.visible = false; }
       else { scene.remove(p.obj); p.dead = true; }
@@ -1040,8 +1134,8 @@ function updateHUD(dt) {
   const st = $('stars').children;
   for (let i = 0; i < 5; i++) st[i].className = i < game.wanted.level ? 'on' : '';
   $('stars').classList.toggle('blink', game.wanted.level > 0 && !game.wanted.seen);
-  $('weaponIcon').textContent = player.weapon === 'blaster' ? '🔫' : '👊';
-  $('ammo').textContent = player.weapon === 'blaster' ? player.ammo : '';
+  $('weaponIcon').textContent = WEAPONS[player.weapon].icon;
+  $('ammo').textContent = WEAPONS[player.weapon].melee ? '' : player.ammo;
   $('cross').classList.toggle('on', player.aiming && !player.car);
   const pw = $('power'); pw.style.setProperty('--p', (100 - player.powerCool / 6 * 100) + '%');
   pw.style.opacity = player.car ? 0.35 : 1;
@@ -1086,7 +1180,7 @@ function frame(now) {
   if (inp.camera) cam.far = !cam.far;
   if (inp.radio && player.car) { audio.nextStation(); showRadio(); }
   if (inp.enter) { if (player.car) exitCar(); else enterCar(); }
-  if (inp.weapon && !player.car) { player.cycleWeapon(); if (!player.hasBlaster) game.toast('No weapons yet. Just fists of mild fury.'); }
+  if (inp.weapon && !player.car) { player.cycleWeapon(); if (!player.hasWeapons) game.toast('No weapons yet. Just fists of mild fury.'); else game.toast(`${WEAPONS[player.weapon].icon} ${WEAPONS[player.weapon].name}`); }
   if (inp.power && player.car) { player.usePower(game); inp.powerPressed = false; }
   player.update(dt, inp, game);
   game.wanted.update(dt);
@@ -1097,6 +1191,7 @@ function frame(now) {
   updateGarage(dt);
   updateMission(dt);
   for (const m of game.markers) { if (m.obj.userData.arrow) { m.obj.userData.arrow.position.y = 5 + Math.sin(now / 250) * 0.4; m.obj.userData.arrow.rotation.y += dt * 2; } }
+  updateNeeps(dt);
   updateParticles(dt);
   for (let i = tracers.length - 1; i >= 0; i--) { const t = tracers[i]; t.t -= dt; t.l.material.opacity = t.t / 0.09; if (t.t <= 0) { scene.remove(t.l); t.l.geometry.dispose(); tracers.splice(i, 1); } }
   if (flashLight.intensity > 0) flashLight.intensity = Math.max(0, flashLight.intensity - dt * 900);
@@ -1114,6 +1209,21 @@ function frame(now) {
   // audio
   const c = player.car;
   const siren = cars.reduce((m, q) => (q.sirenOn && !q.dead ? Math.max(m, 1 - Math.hypot(q.x - player.x, q.z - player.z) / 90) : m), 0);
+  // engine noise from the nearest other cars, panned left/right relative to the camera
+  if (audio.ctx) {
+    const cx = camera.position.x, cz = camera.position.z, ry = Math.atan2(Math.sin(cam.yaw), Math.cos(cam.yaw));
+    const rxv = -Math.cos(ry), rzv = Math.sin(ry);
+    const near = [];
+    for (const q of cars) {
+      if (q === c || q.dead || !(q.driver === 'ai' || q.driver === 'cop' || q.speed > 1)) continue;
+      const dx = q.x - player.x, dz = q.z - player.z, dist = Math.hypot(dx, dz);
+      if (dist > 55) continue;
+      const pd = Math.hypot(q.x - cx, q.z - cz) || 1;
+      near.push({ dist, pan: ((q.x - cx) * rxv + (q.z - cz) * rzv) / pd, speed: q.speed, throttle: q.input.throttle, type: q.type });
+    }
+    near.sort((a, b) => a.dist - b.dist);
+    audio.traffic(near, !!c);
+  }
   audio.update({ inCar: !!c, speed: c ? c.vf : player.speed, throttle: c ? c.input.throttle : 0, slip: c ? c.vr || 0 : 0, carType: c ? c.type : '', siren, flying: player.flyT > 0 && !player.flail });
   updateBubbles(dt);
   updateHUD(dt);
@@ -1160,7 +1270,6 @@ function startGame(fresh) {
     player.place(h.x + 3, h.z - 7, 0); cam.yaw = 0; player.dead = false; player.health = 100;
     if (player.car) exitCar(true);
     game.wanted.clear();
-    if (player.hasBlaster && player.ammo > 0) player.weapon = 'blaster';
     placeMissionMarker();
     // a motor waiting at the kerb outside the flat
     if (!cars.some((c) => Math.hypot(c.x - h.x, c.z - h.z) < 12)) { const c = game.spawnCar('hatch', h.x - 7, h.z - 3.4, -Math.PI / 2); c.parked = true; }
@@ -1191,4 +1300,4 @@ $('news').innerHTML = `<b>What's new in v${VERSION}:</b><ul>${CHANGES[0][1].map(
 for (let i = 0; i < 6; i++) { player.x = world.specials.plaza.x; player.z = world.specials.plaza.z; spawnParked(); }
 $('loading').classList.add('hidden');
 requestAnimationFrame(frame);
-window.__game = game; // handy for debugging in the console
+window.__game = game; game.camera = camera; // handy for debugging in the console

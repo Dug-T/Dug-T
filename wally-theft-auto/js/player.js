@@ -1,6 +1,7 @@
 // Wally Man: on-foot movement, punching, the Blaster, cars, and his (unreliable) superpowers.
 import * as THREE from 'three';
-import { buildHuman, animateHuman, buildBlaster } from './humans.js';
+import { buildHuman, animateHuman } from './humans.js';
+import { WEAPONS, WEAPON_ORDER, buildWeaponModel } from './weapons.js';
 
 const POWER_FAILS = [
   'Up, up and... oh no.',
@@ -14,22 +15,36 @@ export class Player {
   constructor(scene) {
     this.h = buildHuman({ wally: true });
     scene.add(this.h.root);
-    this.blaster = buildBlaster();
-    this.blaster.rotation.x = -Math.PI / 2; this.blaster.visible = false;
-    this.h.arms[1].grip.add(this.blaster);
+    // one model per weapon in his right hand; only the current one is shown
+    this.models = {};
+    for (const id of ['club', 'blaster', 'scatter', 'neep']) {
+      const m = buildWeaponModel(id); m.visible = false;
+      if (id === 'club') m.rotation.x = Math.PI - 0.5; else if (id !== 'neep') m.rotation.x = Math.PI / 2;
+      this.h.arms[1].grip.add(m); this.models[id] = m;
+    }
+    this.blaster = this.models.blaster;
     this.x = 0; this.y = 0.2; this.z = 0; this.vy = 0; this.heading = 0;
     this.vx = 0; this.vz = 0;
     this.health = 100; this.armour = 0; this.money = 0;
-    this.weapon = 'fists'; this.ammo = 0; this.hasBlaster = false;
+    this.weapon = 'fists'; this.owned = { fists: true }; this.ammoOf = { blaster: 0, scatter: 0, neep: 0 };
     this.car = null; this.onGround = true; this.dead = false;
     this.fireT = 0; this.punchCool = 0; this.powerCool = 0; this.flyT = 0; this.flail = false; this.faceplantT = 0;
     this.superPunch = 0; this.flyBonus = 0; this.enterT = 0;
     this.speed = 0; this.aiming = false;
   }
-  giveBlaster(ammo) { this.hasBlaster = true; this.ammo += ammo; this.weapon = 'blaster'; }
+  get ammo() { return this.ammoOf[this.weapon] ?? 0; }
+  get hasWeapons() { return Object.keys(this.owned).length > 1; }
+  giveWeapon(id, ammo = 0) {
+    const fresh = !this.owned[id];
+    this.owned[id] = true;
+    if (id in this.ammoOf) this.ammoOf[id] += ammo;
+    if (fresh || this.weapon === 'fists') this.weapon = id;
+  }
+  giveBlaster(ammo) { this.giveWeapon('blaster', ammo); }
+  loseWeapons() { this.owned = { fists: true }; for (const k in this.ammoOf) this.ammoOf[k] = 0; this.weapon = 'fists'; }
   cycleWeapon() {
-    if (!this.hasBlaster) return;
-    this.weapon = this.weapon === 'fists' ? 'blaster' : 'fists';
+    const list = WEAPON_ORDER.filter((w) => this.owned[w]);
+    this.weapon = list[(list.indexOf(this.weapon) + 1) % list.length];
   }
   place(x, z, heading = 0) { this.x = x; this.z = z; this.y = 0.3; this.vy = 0; this.heading = heading; }
 
@@ -63,7 +78,7 @@ export class Player {
     let mx = fx * inp.my + rx * inp.mx, mz = fz * inp.my + rz * inp.mx;
     const ml = Math.hypot(mx, mz);
     if (ml > 1) { mx /= ml; mz /= ml; }
-    this.aiming = inp.aim && this.weapon === 'blaster';
+    this.aiming = inp.aim && !WEAPONS[this.weapon].melee;
     // ----- flight -----
     if (this.flyT > 0) {
       this.flyT -= dt;
@@ -113,15 +128,22 @@ export class Player {
     }
     this.speed = Math.hypot(this.vx, this.vz);
     // ----- weapons -----
-    this.blaster.visible = this.weapon === 'blaster';
+    const W = WEAPONS[this.weapon];
+    for (const id in this.models) this.models[id].visible = id === this.weapon && (id !== 'neep' || this.ammoOf.neep > 0);
     this.punchCool -= dt; this.fireT -= dt;
     if (inp.fire && this.flyT <= 0) {
-      if (this.weapon === 'fists' && this.punchCool <= 0) {
-        this.punchCool = 0.38; this.h.punchT = 0.3; this.h.punchSide *= -1;
-        setTimeout(() => game.playerPunch(), 120);
-      } else if (this.weapon === 'blaster' && this.fireT <= 0) {
-        if (this.ammo > 0) { this.fireT = 0.22; this.ammo--; game.playerShoot(); }
-        else { this.fireT = 0.4; game.audio.tone(200, 0.05, 'square', 0.1); if (inp.firePressed) game.toast('Out of blaster cells! Press Tab for fists.'); }
+      if (W.melee && this.punchCool <= 0) {
+        this.punchCool = W.cool || 0.38; this.h.punchT = 0.3; this.h.punchSide = this.weapon === 'club' ? 1 : -this.h.punchSide;
+        setTimeout(() => game.playerPunch(this.weapon), 120);
+      } else if ((W.ranged || W.thrown) && this.fireT <= 0) {
+        if (this.ammoOf[this.weapon] > 0) {
+          this.fireT = W.rate; this.ammoOf[this.weapon]--;
+          if (W.thrown) { this.h.punchT = 0.3; this.h.punchSide = 1; setTimeout(() => game.throwNeep(), 150); }
+          else game.playerShoot(W);
+        } else {
+          this.fireT = 0.4; game.audio.tone(200, 0.05, 'square', 0.1);
+          if (inp.firePressed) game.toast(`Out of ammo for the ${W.name}! Press Tab to switch.`);
+        }
       }
     }
     // ----- Wally Power -----
@@ -130,7 +152,7 @@ export class Player {
     const air = !this.onGround && this.flyT <= 0;
     animateHuman(this.h, dt, {
       speed: this.onGround ? this.speed : 0, air, mode: this.flyT > 0 ? 'fly' : 'move', flail: this.flail,
-      aim: this.aiming || (this.weapon === 'blaster' && this.fireT > 0), aimPitch: -game.cam.pitch * 0.8,
+      aim: this.aiming || (WEAPONS[this.weapon].ranged && this.fireT > 0), aimPitch: -game.cam.pitch * 0.8,
       capeLift: this.flyT > 0 ? 1.25 : (air ? 0.9 : this.speed / 7),
     });
     this.h.root.position.set(this.x, this.y, this.z);

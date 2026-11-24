@@ -1,6 +1,48 @@
 // Jointed, smooth high-poly humans. buildHuman({wally:true}) makes Wally Man himself.
 import * as THREE from 'three';
 import { emblemTexture } from './textures.js';
+import { mergeGeometries } from '../lib/utils/BufferGeometryUtils.js';
+
+// A proper hand (palm, four jointed fingers and a thumb) merged into one mesh.
+// Origin at the wrist, fingers pointing down (-Y), thumb forward (+Z), palm facing the body.
+const handCache = new Map();
+function handGeometry(side, hi) {
+  const key = side + (hi ? 'h' : 'l');
+  if (handCache.has(key)) return handCache.get(key);
+  const parts = [];
+  const seg = hi ? 12 : 7;
+  const m = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), v = new THREE.Vector3(), sc = new THREE.Vector3();
+  const add = (g, pos, rot, scale = [1, 1, 1]) => {
+    e.set(rot[0], rot[1], rot[2]); q.setFromEuler(e); m.compose(v.set(...pos), q, sc.set(...scale));
+    g.applyMatrix4(m); parts.push(g);
+  };
+  const inward = -side; // palm and finger curl face the body's midline
+  // palm: a squashed capsule, wider front-to-back than it is thick
+  add(new THREE.CapsuleGeometry(0.03, 0.045, 4, seg), [0, -0.045, 0.003], [0, 0, 0], [0.72, 1, 1.45]);
+  // knuckle ridge
+  add(new THREE.CapsuleGeometry(0.014, 0.06, 3, seg), [0.004 * inward, -0.082, 0.003], [Math.PI / 2, 0, 0], [1, 1, 1]);
+  // fingers: two segments each, index finger at the front by the thumb
+  const fz = [0.027, 0.009, -0.009, -0.026], fl = [0.028, 0.031, 0.029, 0.022];
+  fz.forEach((z, i) => {
+    const r = i === 3 ? 0.0085 : 0.0098;
+    const c1 = 0.25 + i * 0.05, c2 = 0.55 + i * 0.08; // a relaxed, slightly curled hand
+    const base = [0.002 * inward, -0.09, z];
+    const l1 = fl[i];
+    // proximal segment
+    const p1 = [base[0] + Math.sin(c1) * l1 / 2 * inward, base[1] - Math.cos(c1) * l1 / 2, z];
+    add(new THREE.CapsuleGeometry(r, l1, 3, seg), p1, [0, 0, c1 * inward]);
+    // distal segment, bent further toward the palm
+    const j = [base[0] + Math.sin(c1) * l1 * inward, base[1] - Math.cos(c1) * l1, z];
+    const l2 = l1 * 0.85, a = c1 + c2;
+    add(new THREE.CapsuleGeometry(r * 0.92, l2, 3, seg), [j[0] + Math.sin(a) * l2 / 2 * inward, j[1] - Math.cos(a) * l2 / 2, z], [0, 0, a * inward]);
+  });
+  // thumb: from the inner front of the palm, angled forward and down
+  add(new THREE.CapsuleGeometry(0.0125, 0.03, 3, seg), [0.012 * inward, -0.045, 0.036], [-0.75, 0, 0.35 * inward]);
+  add(new THREE.CapsuleGeometry(0.011, 0.024, 3, seg), [0.02 * inward, -0.072, 0.054], [-0.35, 0, 0.55 * inward]);
+  const g = mergeGeometries(parts.map((p) => p.toNonIndexed()));
+  handCache.set(key, g);
+  return g;
+}
 
 const matCache = new Map();
 function mat(color, rough = 0.6, metal = 0, extra = {}) {
@@ -166,8 +208,11 @@ export function buildHuman(o = {}) {
     const foreM = wally ? red : (cop ? suit : skin);
     const fore = capsule(wally ? 0.084 : 0.07, 0.18, foreM, seg); fore.position.y = -0.13; el.add(fore);
     if (!wally && !cop && o.shortSleeves !== false) { /* bare forearm */ }
-    const hand = sphere(0.058, skin, 14, 10); hand.position.y = -0.3; hand.scale.set(0.8, 1.15, 0.65); el.add(hand);
-    const grip = new THREE.Group(); grip.position.set(0, -0.32, 0.02); el.add(grip);
+    const hand = new THREE.Mesh(handGeometry(s, wally), skin); hand.position.y = -0.27; hand.scale.setScalar(wally ? 1.3 : 1.1); el.add(hand);
+    if (wally) { // the red gauntlet flares at the wrist
+      const cuff = new THREE.Mesh(new THREE.CylinderGeometry(0.088, 0.07, 0.07, seg), red); cuff.position.y = -0.235; el.add(cuff);
+    }
+    const grip = new THREE.Group(); grip.position.set(0, -0.37, 0.03); el.add(grip);
     arms.push({ sh, el, grip, side: s });
   }
   // legs
