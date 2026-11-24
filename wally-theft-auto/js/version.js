@@ -1,7 +1,10 @@
 // Bump VERSION for every update (1.1, 1.2, 1.3 ...) and add a line to CHANGES.
-export const VERSION = '1.5';
+export const VERSION = '1.6';
 
 export const CHANGES = [
+  ['1.6', [
+    'Touch controls: the PUNCH/FIRE button now sits right next to the movement stick, so your left thumb fires while your right thumb aims',
+  ]],
   ['1.5', [
     'Touch aiming: hold AIM (or FIRE) and drag your thumb to move the aim',
     'On phones, aiming locks gently onto the nearest person in front of you (the crosshair turns red)',

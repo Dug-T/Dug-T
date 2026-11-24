@@ -775,7 +775,7 @@ if (isTouch) {
       touch.lx = t.clientX; touch.ly = t.clientY; cam.lastLook = performance.now(); touch.dragT = performance.now();
     }
   }, { passive: false });
-  for (const b of document.querySelectorAll('#tbtns button')) {
+  for (const b of document.querySelectorAll('#tbtns button, #tfire')) {
     const k = b.dataset.k;
     // AIM and FIRE can be held and dragged: sliding your thumb moves the aim, like the look area
     const drag = k === 'aim' || k === 'fire';
