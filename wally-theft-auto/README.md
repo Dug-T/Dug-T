@@ -50,6 +50,7 @@ On phones and tablets there's an on-screen stick, a drag-to-look area and button
 
 The version number is shown on the title screen (with a "What's new" list) and on the pause screen. It lives in `js/version.js`: bump it by 0.1 for every update (1.1, 1.2, 1.3...) and add a line to `CHANGES`.
 
+- **2.0**: weapons and ammo crates hidden up the (now wider) alleyways and shown as gold squares on the radar; all car windows are clear see-through glass
 - **1.9**: Wally rebuilt as one skinned mesh with weight maps; eyes, eyebrows, nose and mouth; detailed cars with interiors and drivers; honking, shouting and arguing drivers; lamp posts that get knocked over; 10 new weapons and ammo crates
 - **1.8**: a UFO intro: a flying saucer beams Wally down outside his flat at the start of the game (skippable)
 - **1.7**: the touch PUNCH/FIRE button moves next to the red Q (Wally Power) button

@@ -409,31 +409,39 @@ function setupCollectibles(save) {
   addPickup('armour', pol.x - 10, pol.z, { respawn: 90 });
   addPickup('health', hos.x - 6, hos.z, { respawn: 30 });
   addPickup('ammo', h.x - 8, h.z, { respawn: 45 });
+  alleyPool = [];
   scatterWeapons(44);
-  scatterCrates(14);
+  scatterCrates(16);
 }
 // ammo crates: top up every gun you own
 function scatterCrates(n) {
-  for (let k = 0, tries = 0; k < n && tries < n * 8; tries++) {
-    const b = world.blocks[(Math.random() * world.blocks.length) | 0];
-    const L = world.paveLoop(b), t = 0.15 + Math.random() * 0.7;
-    const x = L.x0 + (L.x1 - L.x0) * t, z = Math.random() < 0.5 ? L.z0 : L.z1;
-    if (game.pickups.some((p) => Math.hypot(p.x - x, p.z - z) < 15)) continue;
-    k++; addPickup('crate', x, z, { respawn: 75 });
-  }
+  for (let k = 0; k < n; k++) { const s = takeAlleySpot(); if (!s) break; addPickup('crate', s[0], s[1], { respawn: 75 }); }
 }
 // weapons dropped at random spots on the pavements, different every time you play
 function scatterWeapons(n) {
   const kinds = ['club', 'pan', 'claymore', 'bagpipes', 'blaster', 'blaster', 'scatter', 'laser', 'gatling', 'sniper', 'soaker', 'tattie', 'haggis', 'flame', 'neep'];
-  for (let k = 0, tries = 0; k < n && tries < n * 8; tries++) {
-    const b = world.blocks[(Math.random() * world.blocks.length) | 0];
-    const L = world.paveLoop(b), t = 0.1 + Math.random() * 0.8, side = (Math.random() * 4) | 0;
-    const x = side < 2 ? L.x0 + (L.x1 - L.x0) * t : (side === 2 ? L.x0 : L.x1);
-    const z = side >= 2 ? L.z0 + (L.z1 - L.z0) * t : (side === 0 ? L.z0 : L.z1);
-    if (game.pickups.some((p) => Math.hypot(p.x - x, p.z - z) < 20)) continue;
-    k++;
-    addPickup('weapon', x, z, { weapon: kinds[(Math.random() * kinds.length) | 0], respawn: 90 });
+  for (let k = 0; k < n; k++) {
+    const s = takeAlleySpot(); if (!s) break;
+    addPickup('weapon', s[0], s[1], { weapon: kinds[(Math.random() * kinds.length) | 0], respawn: 90 });
   }
+}
+// pickups hide up the alleyways between buildings: a random alley each, never two together
+let alleyPool = [];
+function takeAlleySpot() {
+  if (!alleyPool.length) {
+    alleyPool = world.alleySpots.slice();
+    for (let i = alleyPool.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; [alleyPool[i], alleyPool[j]] = [alleyPool[j], alleyPool[i]]; }
+  }
+  while (alleyPool.length) {
+    const [x, z, along] = alleyPool.pop();
+    // nudge along the alley so they're not always dead centre
+    const off = (Math.random() - 0.5) * 6;
+    const px = along === 'x' ? x + off : x, pz = along === 'z' ? z + off : z;
+    if (world.collide(px, pz, 0.5, 0).hit) continue;
+    if (game.pickups.some((p) => Math.hypot(p.x - px, p.z - pz) < 8)) continue;
+    return [px, pz];
+  }
+  return null;
 }
 
 // ---------------- combat ----------------
@@ -1231,6 +1239,7 @@ function drawRadar() {
   dot(g.x, g.z - 6, BLIPC.garage, 7, false, 'sq');
   for (const car of cars) if (car.type === 'police' && car.driver === 'cop') dot(car.x, car.z, (Math.floor(performance.now() / 200) % 2) ? '#ff2f2f' : '#2f6dff', 6, false);
   for (const p of peds.list) if (p.cop && p.state !== 'dead' && game.wanted.level) dot(p.x, p.z, '#2f6dff', 4, false);
+  for (const p of game.pickups) if ((p.kind === 'weapon' || p.kind === 'crate') && !(p.gone > 0) && Math.abs(p.x - px) < 90 && Math.abs(p.z - pz) < 90) dot(p.x, p.z, p.kind === 'crate' ? '#c9a23a' : '#ffd23f', 4, false, 'sq');
   for (const m of game.markers) dot(m.x, m.z, BLIPC[m.type] || '#fff', m.type === 'ghost' ? 6 : 9);
   for (const b of game.blips) { const o = b.obj; if (o.dead || o.state === 'dead') continue; dot(o.x, o.z, BLIPC[b.kind] || '#fff', 7); }
   // north
