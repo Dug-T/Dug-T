@@ -1,24 +1,78 @@
 // Story missions. Each one is a small state machine driven by game.update.
-import { roadC, LANE, N } from './city.js';
+import { roadC, LANE, N, blockMin, blockMax } from './city.js';
+import { addLivery } from './vehicles.js';
+
+// Pamazon drop-offs: one doorstep on the north side of each of these blocks
+const DROPS = [[4, 4], [3, 4], [4, 3], [4, 5], [5, 5], [6, 4], [6, 5], [3, 5], [7, 4], [5, 2]];
+const PARCEL_LINES = ["Left it wi' the neighbour.", 'Chucked it over the hedge.', 'Left it in the wheelie bin. Safe!', 'Signed for it masel.', 'Posted it through the letterbox. Mostly.', 'Delivered! Slightly squashed.', "'Sorry we missed you' card left. They were in.", 'Handed to a passing dug.', 'Placed gently. From the van window.', 'Right door. Probably.'];
 
 const node = (i, j) => [roadC(i) + LANE, roadC(j) + LANE];
 
 export const MISSIONS = [
   {
-    id: 'motor', title: 'Cape Expectations', reward: 250,
-    intro: ["MAMMY WALLY: Wallace! You've been in that onesie for three days.", "MAMMY WALLY: If yer gonnae be a superhero, at least get a motor.", "MAMMY WALLY: Pinch... I mean BORROW one, and take it to the Wally Wash."],
-    start(g) { this.stage = 0; g.objective('Get in a car.'); },
+    id: 'pamazon', title: 'Special Delivery', reward: 750,
+    intro: ["MAMMY WALLY: Wallace! Superheroing doesnae pay the leccy bill.", "MAMMY WALLY: Pamazon are short a driver. Their van's parked up by the depot.", "MAMMY WALLY: Use yer GPS, get in that van and deliver ten parcels in five minutes. Go!"],
+    start(g) {
+      this.stage = 0; this.t = 300; this.done = 0;
+      // the van waits at the kerb outside the Pamazon depot
+      const vx = blockMin(5) + 20, vz = blockMin(4) - 1.6;
+      this.van = g.spawnCar('van', vx, vz, -Math.PI / 2, { paint: '#f4f4f2' });
+      this.van.parked = true; this.van.mission = true; this.van.name = 'Pamazon Van';
+      addLivery(this.van, 'PAMAZON', 'Parcels. Fast(ish).');
+      g.blip(this.van, 'target');
+      g.setGps(vx, vz);
+      this.sign = g.addSign('PAMAZON DEPOT', '#1b3a8a', '#ffffff', vx + 6, blockMin(4) + 0.6);
+      this.driver = g.spawnPed(vx + 4, blockMin(4) + 1.4, {}); this.driver.mission = true;
+      g.objective('Use yer ~y~GPS~w~ to find the ~b~Pamazon van~w~.');
+      g.toast('GPS: Route set. Follow the purple line on yer radar.');
+    },
+    beginDeliveries(g) {
+      this.stage = 1;
+      g.clearBlips();
+      this.drops = DROPS.map(([bx, bz], i) => {
+        const x = (blockMin(bx) + blockMax(bx)) / 2 + ((i * 7) % 15) - 7, z = blockMin(bz) - 1.5;
+        return g.marker(x, z, 'dest', 4.5);
+      });
+      g.bigText('10 PARCELS', '5 minutes. Nae pressure.', 2.2);
+      if (this.driver && this.driver.state !== 'dead' && Math.hypot(this.driver.x - g.player.x, this.driver.z - g.player.z) < 30) g.say(this.driver, "Oi! That's ma van! Ma targets!");
+    },
     update(dt, g) {
-      const pl = g.player;
-      if (this.stage === 0 && pl.car) { this.stage = 1; const s = g.world.specials.garage; this.m = g.marker(s.x, s.z - 6, 'dest', 4); g.objective('Drive the car to the ~y~Wally Wash~w~.'); }
-      if (this.stage === 1) {
-        if (!pl.car) { g.objective('Get back in a car.'); }
-        else if (this.m && g.inMarker(this.m, pl.car.x, pl.car.z)) { if (pl.car.speed < 3) return 'pass'; g.objective('Slow down and stop in the bay.'); }
-        else g.objective('Drive the car to the ~y~Wally Wash~w~.');
+      const pl = g.player, van = this.van;
+      if (van.dead) return 'fail';
+      if (this.stage === 0) {
+        if (pl.car === van) this.beginDeliveries(g);
+        else return null;
+      }
+      this.t -= dt; g.timer(this.t);
+      if (this.t <= 0) return 'fail';
+      // GPS points at the nearest undelivered parcel (or back to the van)
+      const px = pl.car ? pl.car.x : pl.x, pz = pl.car ? pl.car.z : pl.z;
+      if (pl.car !== van) {
+        g.setGps(van.x, van.z); g.blip(van, 'target', true);
+        g.objective('Get back in the ~b~Pamazon van~w~!');
+        return null;
+      }
+      g.clearBlips();
+      let best = null, bd = 1e9;
+      for (const m of this.drops) { if (m.done) continue; const d = Math.hypot(m.x - px, m.z - pz); if (d < bd) { bd = d; best = m; } }
+      if (best) g.setGps(best.x, best.z);
+      g.objective(`Deliver the parcels: ~y~${this.done} / 10~w~ delivered.`);
+      for (const m of this.drops) {
+        if (m.done || !g.inMarker(m, van.x, van.z)) continue;
+        if (van.speed > 6) { g.objective('Slow down to drop the parcel off!'); continue; }
+        m.done = true; m.obj.visible = false; g.markers = g.markers.filter((q) => q !== m);
+        this.done++; g.audio.pickup(); g.player.money += 25;
+        g.toast(`Parcel ${this.done}/10: ${PARCEL_LINES[this.done - 1]} (+$25 tip)`);
+        if (this.done >= 10) return 'pass';
       }
       return null;
     },
-    end(g) { g.clearMarkers(); },
+    end(g) {
+      g.clearMarkers(); g.clearBlips(); g.timer(null);
+      if (this.sign) { this.sign.parent?.remove(this.sign); this.sign = null; }
+      if (this.van) { this.van.mission = false; if (g.player.car !== this.van && !this.van.dead) g.removeCar(this.van); }
+      if (this.driver) this.driver.mission = false;
+    },
   },
   {
     id: 'chippy', title: 'Fish Supper Run', reward: 500,

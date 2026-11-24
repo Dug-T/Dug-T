@@ -10,7 +10,7 @@ import { PedManager, Ped } from './peds.js';
 import { Player } from './player.js';
 import { Audio } from './audio.js';
 import { MISSIONS, missionStartPoint } from './missions.js';
-import { smokeTexture, rng } from './textures.js';
+import { smokeTexture, rng, signTexture } from './textures.js';
 
 const $ = (id) => document.getElementById(id);
 const isTouch = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
@@ -184,6 +184,15 @@ game.say = (ped, text) => {
   const el = document.createElement('div'); el.className = 'bubble'; el.textContent = text; $('bubbles').appendChild(el);
   bubbles.push({ el, ped, t: 3.2 });
 };
+game.addSign = (text, bg, fg, x, z, ry = Math.PI) => {
+  const tex = signTexture(text, bg, fg);
+  const g = new THREE.Group();
+  const board = new THREE.Mesh(new THREE.PlaneGeometry(5, 1.25), new THREE.MeshStandardMaterial({ map: tex, emissive: '#ffffff', emissiveMap: tex, emissiveIntensity: 0.35, side: THREE.DoubleSide }));
+  board.position.y = 3.2; g.add(board);
+  for (const sx of [-2.2, 2.2]) { const p = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 3.2, 10), new THREE.MeshStandardMaterial({ color: '#3b3f44', metalness: 0.6, roughness: 0.4 })); p.position.set(sx, 1.6 + KERB, 0); p.castShadow = true; g.add(p); }
+  g.position.set(x, 0, z); g.rotation.y = ry; scene.add(g); return g;
+};
+game.removeCar = (c) => removeCar(c);
 game.spawnCar = (type, x, z, heading, o = {}) => { const c = new Car(scene, type, o.paint, x, z, heading); cars.push(c); return c; };
 game.spawnPed = (x, z, o = {}) => { const p = new Ped(scene, x, z, o); peds.list.push(p); return p; };
 
@@ -745,6 +754,19 @@ const mapCanvas = document.createElement('canvas'); mapCanvas.width = mapCanvas.
   m.strokeStyle = '#1f2f3f'; m.lineWidth = 3; m.strokeRect(1, 1, mapSize - 2, mapSize - 2);
 })();
 const BLIPC = { enemy: '#ff3b30', target: '#4aa3ff', cop: '#2f6dff', mission: '#ffd23f', dest: '#ffd23f', check: '#ff4fb8', ghost: '#ff4fb880', home: '#5fe36a', garage: '#ff9a3c' };
+// Manhattan route over the road grid: to the nearest junction, along one road, then the other
+function gpsRoute(px, pz, tx, tz) {
+  const [ai, aj] = world.nearestNode(px, pz), [bi, bj] = world.nearestNode(tx, tz);
+  const pts = [[px, pz]];
+  if (ai !== bi || aj !== bj) {
+    pts.push([roadC(ai), roadC(aj)]);
+    if (Math.abs(tx - px) > Math.abs(tz - pz)) pts.push([roadC(bi), roadC(aj)]); else pts.push([roadC(ai), roadC(bj)]);
+    pts.push([roadC(bi), roadC(bj)]);
+  }
+  pts.push([tx, tz]);
+  return pts;
+}
+game.setGps = (x, z) => { game.gps = x == null ? null : { x, z }; };
 function drawRadar() {
   const W = RAD.width, c = W / 2, s = 1.1 * (W / 190) / 1.15;
   const px = player.car ? player.car.x : player.x, pz = player.car ? player.car.z : player.z;
@@ -767,6 +789,21 @@ function drawRadar() {
     rctx.fill(); rctx.stroke();
   };
   // specials
+  // GPS route along the roads to the current target
+  if (game.gps) {
+    const pts = gpsRoute(px, pz, game.gps.x, game.gps.z).map(([x, z]) => toR(x, z));
+    rctx.save(); rctx.beginPath(); rctx.arc(c, c, c - 2, 0, 7); rctx.clip();
+    rctx.lineJoin = 'round'; rctx.lineCap = 'round';
+    for (const [w, col] of [[13, '#000'], [8, '#c86bff']]) {
+      rctx.strokeStyle = col; rctx.lineWidth = w; rctx.beginPath();
+      pts.forEach(([x, y], i) => (i ? rctx.lineTo(x, y) : rctx.moveTo(x, y))); rctx.stroke();
+    }
+    rctx.restore();
+    const dist = Math.round(Math.hypot(game.gps.x - px, game.gps.z - pz));
+    rctx.font = 'bold 26px Oswald, sans-serif'; rctx.textAlign = 'center'; rctx.textBaseline = 'middle';
+    rctx.strokeStyle = '#000'; rctx.lineWidth = 6; rctx.fillStyle = '#e7c6ff';
+    rctx.strokeText(`GPS ${dist}m`, c, W - 44); rctx.fillText(`GPS ${dist}m`, c, W - 44);
+  }
   const h = world.specials.home, g = world.specials.garage;
   dot(h.x, h.z, BLIPC.home, 8, true, 'sq');
   dot(g.x, g.z - 6, BLIPC.garage, 7, false, 'sq');
@@ -825,7 +862,7 @@ function startMission() {
 function failMission() {
   if (!game.mission) return;
   game.mission.end(game);
-  game.mission = null; game.objective('');
+  game.mission = null; game.objective(''); game.setGps(null);
   setTimeout(() => { if (!player.dead) game.bigText('MISSION FAILED!', 'Hopeless.', 2.5, true); }, 4400);
   placeMissionMarker();
 }
@@ -833,7 +870,7 @@ function updateMission(dt) {
   if (game.mission) {
     const r = game.mission.update(dt, game);
     if (r === 'pass') {
-      const m = game.mission; m.end(game); game.mission = null; game.objective('');
+      const m = game.mission; m.end(game); game.mission = null; game.objective(''); game.setGps(null);
       player.money += m.reward; game.missionIdx++; audio.pass();
       game.bigText('MISSION PASSED!', `+$${m.reward}`, 3.5);
       if (game.missionIdx >= MISSIONS.length) setTimeout(() => game.bigText('WALLYPOOL IS SAFE', '(ish). Thanks for playing! Keep exploring.', 5), 4000);
@@ -849,11 +886,13 @@ function updateMission(dt) {
 
 // ---------------- save ----------------
 function save() {
-  store.set('wta-save', { money: player.money, missionIdx: game.missionIdx, specs: game.collected || [], hasBlaster: player.hasBlaster, ammo: player.ammo, stats: game.stats, time: game.time });
+  store.set('wta-save', { v: 2, money: player.money, missionIdx: game.missionIdx, specs: game.collected || [], hasBlaster: player.hasBlaster, ammo: player.ammo, stats: game.stats, time: game.time });
 }
 function load(fresh) {
   const s = fresh ? {} : store.get('wta-save', {});
-  player.money = s.money || 0; game.missionIdx = s.missionIdx || 0; game.collected = s.specs || [];
+  player.money = s.money || 0; game.missionIdx = s.missionIdx || 0;
+  if (!s.v) game.missionIdx = 0; // mission 1 is new (Pamazon), so older saves start the story again
+  game.collected = s.specs || [];
   player.hasBlaster = !!s.hasBlaster; player.ammo = s.ammo || 0; if (s.stats) Object.assign(game.stats, s.stats);
   game.stats.specs = game.collected.length;
   if (s.time) game.time = s.time;

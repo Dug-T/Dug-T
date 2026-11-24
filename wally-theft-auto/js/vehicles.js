@@ -436,4 +436,27 @@ export function randomType(r = Math.random) {
   return 'icecream';
 }
 
+// Side and rear branding for a box van, e.g. the Pamazon delivery van
+export function addLivery(car, name, tagline, colour = '#1b3a8a') {
+  const T = car.T;
+  const c = document.createElement('canvas'); c.width = 512; c.height = 256; const x = c.getContext('2d');
+  // parcel icon
+  x.fillStyle = '#c8924a'; x.fillRect(24, 70, 120, 110); x.fillStyle = '#a5743a'; x.fillRect(24, 70, 120, 26);
+  x.fillStyle = '#e8d3a8'; x.fillRect(76, 70, 16, 110);
+  x.fillStyle = colour; x.font = 'bold 96px Impact, "Arial Black", sans-serif'; x.textBaseline = 'middle';
+  x.fillText(name, 160, 112);
+  x.fillStyle = '#e8641c'; x.font = 'bold 34px Arial, sans-serif'; x.fillText(tagline, 164, 186);
+  x.fillStyle = colour; x.fillRect(0, 232, 512, 24);
+  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8;
+  const m = new THREE.MeshStandardMaterial({ map: tex, transparent: true, roughness: 0.4, polygonOffset: true, polygonOffsetFactor: -2 });
+  const h = T.hgt - 1.1, len = T.len - 1.4, yc = (T.hgt + 1.12) / 2;
+  for (const sx of [-1, 1]) {
+    const p = new THREE.Mesh(new THREE.PlaneGeometry(len * 0.95, h * 0.9), m);
+    p.position.set(sx * (T.wid / 2 + 0.012), yc, -0.62); p.rotation.y = sx * Math.PI / 2;
+    car.body.add(p);
+  }
+  const back = new THREE.Mesh(new THREE.PlaneGeometry(T.wid * 0.85, h * 0.45), m);
+  back.position.set(0, yc + 0.1, -T.len / 2 - 0.02); back.rotation.y = Math.PI; car.body.add(back);
+}
+
 export { TYPES, PAINTS, DIRS, validDir };
