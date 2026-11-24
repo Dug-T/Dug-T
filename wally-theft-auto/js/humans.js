@@ -190,12 +190,12 @@ export function buildHuman(o = {}) {
   if (wally) {
     const g = new THREE.PlaneGeometry(0.72, 1.15, 10, 16); g.translate(0, -0.575, 0);
     cape = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ color: '#e14a1e', roughness: 0.75, side: THREE.DoubleSide }));
-    cape.position.set(0, 0.6, -0.2);
+    cape.position.set(0, 0.6, 0); // vertices are posed in spine space so they can be kept clear of the body
     cape.userData.base = Float32Array.from(g.attributes.position.array);
     spine.add(cape);
     // shoulder clasp line
-    const clasp = new THREE.Mesh(new THREE.CapsuleGeometry(0.035, 0.6, 4, 12), mat('#e14a1e', 0.7));
-    clasp.rotation.z = Math.PI / 2; clasp.position.set(0, 0.6, -0.17); spine.add(clasp);
+    const clasp = new THREE.Mesh(new THREE.CapsuleGeometry(0.03, 0.4, 4, 12), mat('#e14a1e', 0.7));
+    clasp.rotation.z = Math.PI / 2; clasp.position.set(0, 0.6, -0.245); spine.add(clasp);
   }
 
   root.traverse((m) => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = detail > 0; } });
@@ -284,15 +284,19 @@ export function animateHuman(h, dt, st) {
     for (let i = 0; i < p.count; i++) {
       const bx = base[i * 3], by = base[i * 3 + 1];
       const t = -by / 1.15; // 0 top .. 1 bottom
-      const widen = 1 + t * 0.55;
+      const widen = 0.83 + t * 0.45;
       const ang = lift * 1.25 * t;
       const len = -by;
-      let z = -Math.sin(ang) * len - t * 0.06;
-      let y = -Math.cos(ang) * len;
+      let z = -0.27 - Math.sin(ang) * len - t * 0.08;
+      const y = -Math.cos(ang) * len;
       z += Math.sin(h.t * (5 + lift * 9) - t * 5 + bx * 4) * flap * t;
       const x = bx * widen + Math.sin(h.t * 3 + t * 3) * 0.03 * t;
-      z += (bx * bx) * 1.1 * (1 - t * 0.6); // wraps round the shoulders
-      p.setXYZ(i, x, y, z);
+      z += (x * x) * 0.9 * (1 - t * 0.6); // wraps round the shoulders
+      // never pass through the suit: stay behind the back/bum (an ellipse ~0.31 wide, 0.23 deep)
+      // and behind the arms out at the sides
+      const ex = Math.min(1, Math.abs(x) / 0.31);
+      const zmax = Math.min(-0.16, -0.04 - 0.235 * Math.sqrt(1 - ex * ex));
+      p.setXYZ(i, x, y, Math.min(z, zmax));
     }
     p.needsUpdate = true; g.computeVertexNormals();
   }

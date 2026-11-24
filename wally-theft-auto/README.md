@@ -12,7 +12,7 @@ Open `wally-theft-auto/index.html` from any web server (GitHub Pages works). Not
 - **Traffic & pedestrians**: AI traffic drives on the left and follows the road network. Pedestrians walk the pavements, heckle Wally in Scots and run when trouble starts.
 - **Wanted level**: five stars. Polis cars use the road grid to hunt you down, foot cops try to arrest you and, from three stars, they open fire. Break line of sight to lose them, or pay $100 at the **Wally Wash** for a respray.
 - **Wally Power (Q)**: sometimes he flies, which lets you reach the rooftops. Sometimes he faceplants. Sometimes he gets one super punch that sends cars flying. Sometimes he discovers that his heat vision is just steamed-up specs.
-- **Six story missions**, started from the yellow marker outside Wally's Flat: *Cape Expectations*, *Fish Supper Run*, *Checkpoint Charlie*, *Pest Control*, *Hot Potato* and *The Big Flap*.
+- **Six story missions**, started from the yellow marker outside Wally's Flat. In the first, *Special Delivery*, Wally follows his GPS (the purple route on the radar) to a white Pamazon van parked outside the depot, steals it, and has to deliver 10 parcels in 5 minutes. Then come *Fish Supper Run*, *Checkpoint Charlie*, *Pest Control*, *Hot Potato* and *The Big Flap*.
 - **20 hidden Golden Specs** (some on rooftops), plus health, armour, cash and Blaster-cell pickups.
 - **Day–night cycle**: a full day lasts 24 minutes. At night the windows, street lamps and shop signs light up, with bloom.
 - **Three radio stations** (R in a car): Wally FM, Clyde Beats, and Pipes & Riffs.
