@@ -11,6 +11,7 @@ import { Player } from './player.js';
 import { Audio } from './audio.js';
 import { MISSIONS, missionStartPoint } from './missions.js';
 import { smokeTexture, rng, signTexture } from './textures.js';
+import { VERSION, CHANGES } from './version.js';
 
 const $ = (id) => document.getElementById(id);
 const isTouch = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
@@ -1183,6 +1184,9 @@ $('gfx').onclick = toggleGfx; $('gfx2').onclick = toggleGfx;
 setInterval(() => { if (game.playing && !game.paused) save(); }, 30000);
 
 applyQuality();
+// version badge and what's new
+$('verTitle').textContent = 'v' + VERSION; $('verPause').textContent = 'v' + VERSION;
+$('news').innerHTML = `<b>What's new in v${VERSION}:</b><ul>${CHANGES[0][1].map((c) => `<li>${c}</li>`).join('')}</ul>`;
 // a few cars about town before the player arrives
 for (let i = 0; i < 6; i++) { player.x = world.specials.plaza.x; player.z = world.specials.plaza.z; spawnParked(); }
 $('loading').classList.add('hidden');
