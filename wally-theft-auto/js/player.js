@@ -1,7 +1,7 @@
 // Wally Man: on-foot movement, punching, the Blaster, cars, and his (unreliable) superpowers.
 import * as THREE from 'three';
 import { buildHuman, animateHuman } from './humans.js';
-import { WEAPONS, WEAPON_ORDER, buildWeaponModel } from './weapons.js';
+import { WEAPONS, WEAPON_ORDER, HOLD, usesAmmo, buildWeaponModel } from './weapons.js';
 
 const POWER_FAILS = [
   'Up, up and... oh no.',
@@ -17,16 +17,18 @@ export class Player {
     scene.add(this.h.root);
     // one model per weapon in his right hand; only the current one is shown
     this.models = {};
-    for (const id of ['club', 'blaster', 'scatter', 'neep']) {
+    for (const id of WEAPON_ORDER) {
+      if (id === 'fists') continue;
       const m = buildWeaponModel(id); m.visible = false;
-      if (id === 'club') m.rotation.x = Math.PI - 0.5; else if (id !== 'neep') m.rotation.x = Math.PI / 2;
+      m.rotation.x = HOLD[id] ? HOLD[id][0] : Math.PI / 2;
+      if (id === 'bagpipes') m.position.set(-0.05, 0.12, 0.12);
       this.h.arms[1].grip.add(m); this.models[id] = m;
     }
     this.blaster = this.models.blaster;
     this.x = 0; this.y = 0.2; this.z = 0; this.vy = 0; this.heading = 0;
     this.vx = 0; this.vz = 0;
     this.health = 100; this.armour = 0; this.money = 0;
-    this.weapon = 'fists'; this.owned = { fists: true }; this.ammoOf = { blaster: 0, scatter: 0, neep: 0 };
+    this.weapon = 'fists'; this.owned = { fists: true }; this.ammoOf = Object.fromEntries(WEAPON_ORDER.filter(usesAmmo).map((w) => [w, 0]));
     this.car = null; this.onGround = true; this.dead = false;
     this.fireT = 0; this.punchCool = 0; this.powerCool = 0; this.flyT = 0; this.flail = false; this.faceplantT = 0;
     this.superPunch = 0; this.flyBonus = 0; this.enterT = 0;
@@ -146,10 +148,12 @@ export class Player {
       if (W.melee && this.punchCool <= 0) {
         this.punchCool = W.cool || 0.38; this.h.punchT = 0.3; this.h.punchSide = this.weapon === 'club' ? 1 : -this.h.punchSide;
         setTimeout(() => game.playerPunch(this.weapon), 120);
-      } else if ((W.ranged || W.thrown) && this.fireT <= 0) {
+      } else if (!W.melee && this.fireT <= 0) {
         if (this.ammoOf[this.weapon] > 0) {
           this.fireT = W.rate; this.ammoOf[this.weapon]--;
           if (W.thrown) { this.h.punchT = 0.3; this.h.punchSide = 1; setTimeout(() => game.throwNeep(), 150); }
+          else if (W.proj) game.fireProjectile(W);
+          else if (W.flame) game.playerFlame(W);
           else game.playerShoot(W);
         } else {
           this.fireT = 0.4; game.audio.tone(200, 0.05, 'square', 0.1);
@@ -157,13 +161,15 @@ export class Player {
         }
       }
     }
+    // the Gatling's barrels spin up while you hold the trigger
+    if (this.models.gatling.visible) { this.gatSpin = Math.min(30, Math.max(0, (this.gatSpin || 0) + (inp.fire ? 60 : -40) * dt)); this.models.gatling.userData.spin.rotation.z += this.gatSpin * dt; }
     // ----- Wally Power -----
     if (inp.powerPressed) this.usePower(game);
 
     const air = !this.onGround && this.flyT <= 0;
     animateHuman(this.h, dt, {
       speed: this.onGround ? this.speed : 0, air, mode: this.flyT > 0 ? 'fly' : 'move', flail: this.flail,
-      aim: this.aiming || (WEAPONS[this.weapon].ranged && this.fireT > 0), aimPitch: -game.cam.pitch * 0.8,
+      aim: this.aiming || (!WEAPONS[this.weapon].melee && !WEAPONS[this.weapon].thrown && this.fireT > 0), aimPitch: -game.cam.pitch * 0.8,
       capeLift: this.flyT > 0 ? 1.25 : (air ? 0.9 : this.speed / 7),
     });
     this.h.root.position.set(this.x, this.y, this.z);

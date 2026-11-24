@@ -62,7 +62,7 @@ export function buildCarModel(type, paint) {
   const g = new THREE.Group();
   const body = new THREE.Group(); g.add(body);
   const paintM = new THREE.MeshPhysicalMaterial({ color: paint, roughness: 0.28, metalness: 0.55, clearcoat: 1, clearcoatRoughness: 0.08 });
-  const glassM = M('glass', () => new THREE.MeshPhysicalMaterial({ color: '#141c24', roughness: 0.05, metalness: 0.8, clearcoat: 1 }));
+  const glassM = M('glass', () => new THREE.MeshPhysicalMaterial({ color: '#1c2a36', roughness: 0.04, metalness: 0.25, clearcoat: 1, transparent: true, opacity: 0.5, depthWrite: false }));
   const blackM = M('black', () => new THREE.MeshStandardMaterial({ color: '#18191b', roughness: 0.6 }));
   const chromeM = M('chrome', () => new THREE.MeshStandardMaterial({ color: '#dfe3e8', roughness: 0.15, metalness: 1 }));
   const tyreM = M('tyre', () => new THREE.MeshStandardMaterial({ color: '#1b1b1b', roughness: 0.9 }));
@@ -166,7 +166,51 @@ export function buildCarModel(type, paint) {
   win.position.set(0.004, beltY + (isBox ? 0.3 : (T.hgt - beltY) * 0.31), -doorLen * (isBox ? 0.45 : 0.6)); door.add(win);
   const handle = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.03, 0.14), chromeM);
   handle.position.set(-0.035, beltY - 0.1, -doorLen * 0.8); door.add(handle);
-  return { group: g, body, wheels, lightbar, paintM, tailM, headM, door };
+  // ---------- extra detail ----------
+  const trimM = M('trim', () => new THREE.MeshStandardMaterial({ color: '#0f1012', roughness: 0.55 }));
+  const amberM = M('amber', () => new THREE.MeshStandardMaterial({ color: '#ff9a1c', emissive: '#ff7a00', emissiveIntensity: 0.35, roughness: 0.3 }));
+  // side sills
+  for (const sx of [-1, 1]) { const sill = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.08, T.len * 0.62), trimM); sill.position.set(sx * (T.wid / 2 + 0.01), 0.36, 0); body.add(sill); }
+  // indicators front and back, chrome bezels round the headlights, fog lamps
+  for (const sx of [-1, 1]) {
+    const fi = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.06, 0.05), amberM); fi.position.set(sx * (T.wid / 2 - 0.08), isBox ? 0.64 : 0.56, T.len / 2 - 0.02); body.add(fi);
+    const ri = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.06, 0.04), amberM); ri.position.set(sx * (T.wid / 2 - 0.3), isBox ? 0.76 : 0.7, -T.len / 2 - 0.02); body.add(ri);
+    const bez = new THREE.Mesh(new THREE.TorusGeometry(0.13, 0.018, 8, 20), chromeM); bez.scale.set(1.3, 0.75, 1);
+    bez.position.set(sx * (T.wid / 2 - 0.3), isBox ? 0.8 : (type === 'sports' ? 0.58 : 0.7), T.len / 2 - (isBox ? 0.0 : 0.06)); body.add(bez);
+    const fog = new THREE.Mesh(new THREE.CircleGeometry(0.05, 14), headM); fog.position.set(sx * (T.wid / 2 - 0.35), 0.4, T.len / 2 + 0.16); body.add(fog);
+  }
+  // windscreen wipers
+  if (!isBox) for (const sx of [-0.25, 0.3]) { const w = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.015, 0.02), trimM); w.position.set(sx, beltY + 0.06, T.len * (type === 'sports' ? 0.04 : 0.14)); w.rotation.z = 0.12; body.add(w); }
+  // exhaust pipe
+  const ex = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.045, 0.2, 12), chromeM); ex.rotation.x = Math.PI / 2; ex.position.set(T.wid / 2 - 0.35, 0.3, -T.len / 2 - 0.05); body.add(ex);
+  // rear door seam on four-door cars
+  if (type === 'saloon' || type === 'taxi' || type === 'police') for (const sx of [-1, 1]) { const seam = new THREE.Mesh(new THREE.BoxGeometry(0.012, beltY - 0.4, 0.015), trimM); seam.position.set(sx * (T.wid / 2 + 0.008), (beltY + 0.36) / 2, hingeZ - doorLen - 0.02); body.add(seam); }
+  // aerial and roof rails
+  if (type === 'saloon' || type === 'taxi') { const ae = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.55, 6), trimM); ae.position.set(T.wid / 2 - 0.3, T.hgt + 0.3, -T.len * 0.35); ae.rotation.x = -0.25; body.add(ae); }
+  if (type === 'hatch' || isBox) for (const sx of [-1, 1]) { const rr = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.05, T.len * (isBox ? 0.6 : 0.3)), chromeM); rr.position.set(sx * (T.wid / 2 - 0.12), T.hgt + (isBox ? 0.03 : 0.1), isBox ? -0.6 : -T.len * 0.1); body.add(rr); }
+  // interior, seen through the glass: seats, dashboard, steering wheel (right-hand drive)
+  const seatM = M('seat', () => new THREE.MeshStandardMaterial({ color: '#2a2622', roughness: 0.9 }));
+  const seatZ = hingeZ - doorLen * 0.62, seatY = isBox ? 0.85 : beltY - 0.35;
+  for (const sx of [-1, 1]) {
+    const cushion = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.12, 0.5), seatM); cushion.position.set(sx * (T.wid / 2 - 0.45), seatY, seatZ); body.add(cushion);
+    const back = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.6, 0.1), seatM); back.position.set(sx * (T.wid / 2 - 0.45), seatY + 0.32, seatZ - 0.27); back.rotation.x = -0.15; body.add(back);
+  }
+  const dash = new THREE.Mesh(new THREE.BoxGeometry(T.wid - 0.3, 0.16, 0.35), trimM); dash.position.set(0, beltY - 0.02, seatZ + 0.75); body.add(dash);
+  const wheel = new THREE.Mesh(new THREE.TorusGeometry(0.17, 0.022, 8, 24), trimM);
+  wheel.position.set(-(T.wid / 2 - 0.45), beltY + 0.05, seatZ + 0.48); wheel.rotation.x = -0.45; body.add(wheel);
+  // the driver: shown whenever someone is at the wheel
+  const driver = new THREE.Group();
+  const shirt = new THREE.MeshStandardMaterial({ color: ['#c0392b', '#2471a3', '#27ae60', '#e67e22', '#8e44ad', '#ecf0f1'][(Math.random() * 6) | 0], roughness: 0.8 });
+  const skinD = new THREE.MeshStandardMaterial({ color: ['#f1c7a5', '#e0ac85', '#c68863', '#8d5a3b'][(Math.random() * 4) | 0], roughness: 0.6 });
+  const hairD = new THREE.MeshStandardMaterial({ color: ['#2b1a10', '#5a3a1c', '#d9b56a', '#1a1a1a'][(Math.random() * 4) | 0], roughness: 0.9 });
+  const torsoD = new THREE.Mesh(new THREE.CapsuleGeometry(0.17, 0.25, 4, 12), shirt); torsoD.scale.z = 0.75; torsoD.position.y = 0.3; driver.add(torsoD);
+  const headD = new THREE.Mesh(new THREE.SphereGeometry(0.11, 16, 12), skinD); headD.position.y = 0.72; headD.scale.y = 1.1; driver.add(headD);
+  const hairCap = new THREE.Mesh(new THREE.SphereGeometry(0.115, 16, 8, 0, Math.PI * 2, 0, Math.PI * 0.5), hairD); hairCap.position.y = 0.74; hairCap.rotation.x = -0.3; driver.add(hairCap);
+  for (const sx of [-1, 1]) { const arm = new THREE.Mesh(new THREE.CapsuleGeometry(0.05, 0.3, 3, 8), shirt); arm.position.set(sx * 0.15, 0.42, 0.2); arm.rotation.x = -1.1; driver.add(arm); }
+  driver.position.set(-(T.wid / 2 - 0.45), seatY, seatZ - 0.05);
+  driver.userData = { shirt, skinD, hairD, own: [shirt.color.clone(), skinD.color.clone(), hairD.color.clone()] };
+  driver.visible = false; body.add(driver);
+  return { group: g, body, wheels, lightbar, paintM, tailM, headM, door, driverFig: driver, amberM };
 }
 
 let carId = 0;
@@ -236,9 +280,10 @@ export class Car {
     // collide with the city (three circles along the car)
     let pushX = 0, pushZ = 0, impact = 0, hn = null;
     const o = T.len / 2 - this.radius;
+    const brk = { speed: Math.hypot(this.vx, this.vz), vx: this.vx, vz: this.vz, knocked: false };
     for (const k of [1, 0, -1]) {
       const cx = nx + nfx * o * k, cz = nz + nfz * o * k;
-      const c = world.collide(cx, cz, this.radius, 0);
+      const c = world.collide(cx, cz, this.radius, 0, brk);
       if (c.hit) {
         const dx = c.x - cx, dz = c.z - cz;
         if (Math.abs(dx) > Math.abs(pushX)) pushX = dx;
@@ -256,6 +301,7 @@ export class Car {
       }
     }
     this.x = nx; this.z = nz;
+    if (brk.knocked) { this.vx *= 0.78; this.vz *= 0.78; this.damage(25, game); if (this.driver === 'ai' && game) game.onHonk(this, 'crash'); }
     if (impact > 3) this.damage(impact * impact * 1.1, game, 'crash');
     if (impact > 2 && game) game.onCarImpact(this, impact);
     // ground follow
@@ -281,6 +327,16 @@ export class Car {
       this.lightbar.userData.redM.emissiveIntensity = on === 1 ? 6 : 0.4;
     }
     if (this.door) this.door.rotation.y += (this.doorOpen * 1.15 - this.door.rotation.y) * Math.min(1, dt * 10);
+    if (this.driverFig) {
+      const who = this.driver === 'player' ? 'wally' : ((this.driver === 'ai' || this.driver === 'cop' || (this.driver === 'jacked' && !this.driverOut)) ? 'npc' : null);
+      this.driverFig.visible = !!who && !this.dead;
+      if (who !== this._who) {
+        this._who = who; const u = this.driverFig.userData;
+        if (who === 'wally') { u.shirt.color.set('#1f5fc4'); u.skinD.color.set('#f0c09a'); u.hairD.color.set('#c8763a'); }
+        else if (this.driver === 'cop' || this.type === 'police') { u.shirt.color.set('#1c2a4a'); u.skinD.color.copy(u.own[1]); u.hairD.color.set('#151c30'); }
+        else { u.shirt.color.copy(u.own[0]); u.skinD.color.copy(u.own[1]); u.hairD.color.copy(u.own[2]); }
+      }
+    }
     this.tailM.emissiveIntensity = inp.throttle < 0 && vf > 0.5 ? 3.5 : (game && game.night > 0.3 ? 1.4 : 0.4);
     this.sync();
   }
@@ -375,13 +431,19 @@ export class TrafficAI {
     // obstacles ahead
     this.ignore -= dt;
     if (this.ignore <= 0) {
-      const check = (ox, oz, rad) => {
+      let blocker = null;
+      const check = (ox, oz, rad, who) => {
         const rx = ox - car.x, rz = oz - car.z;
         const along = rx * fx + rz * fz, lat = Math.abs(rx * fz - rz * fx);
-        if (along > 0 && along < 14 && lat < 1.6 + rad) want = Math.min(want, Math.max(0, (along - 5) * 0.9));
+        if (along > 0 && along < 14 && lat < 1.6 + rad) { const w = Math.max(0, (along - 5) * 0.9); if (w < want) { want = w; blocker = who; } }
       };
-      for (const o of cars) if (o !== car && !o.dead) { if (Math.abs(o.x - car.x) < 16 && Math.abs(o.z - car.z) < 16) check(o.x, o.z, 0.8); }
-      if (game) { for (const p of game.peds.list) if (!p.dead && Math.abs(p.x - car.x) < 15 && Math.abs(p.z - car.z) < 15) check(p.x, p.z, 0.2); if (!game.player.car) check(game.player.x, game.player.z, 0.3); }
+      const pc = game ? game.player.car : null;
+      for (const o of cars) if (o !== car && !o.dead) { if (Math.abs(o.x - car.x) < 16 && Math.abs(o.z - car.z) < 16) check(o.x, o.z, 0.8, o === pc ? 'wally' : null); }
+      if (game) { for (const p of game.peds.list) if (!p.dead && Math.abs(p.x - car.x) < 15 && Math.abs(p.z - car.z) < 15) check(p.x, p.z, 0.2, null); if (!game.player.car && !game.player.dead) check(game.player.x, game.player.z, 0.3, 'wally'); }
+      // Wally's in the way: lean on the horn and give him a piece of your mind
+      this.hornCool = (this.hornCool || 0) - dt;
+      if (blocker === 'wally' && car.speed < 2.5) this.annoyed = (this.annoyed || 0) + dt; else this.annoyed = Math.max(0, (this.annoyed || 0) - dt * 2);
+      if (game && this.annoyed > 1.1 && this.hornCool <= 0) { this.hornCool = 3 + Math.random() * 3; game.onHonk(car, 'blocked'); }
     }
     if (this.panic > 0) { this.panic -= dt; want = Math.max(want, 18); }
     if (car.speed < 0.5 && want < 1) { this.stuck += dt; if (this.stuck > 3.5) { this.ignore = 2.5; this.stuck = 0; car.horn = 0.5; } } else this.stuck = 0;

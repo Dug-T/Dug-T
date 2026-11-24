@@ -1,7 +1,16 @@
 // Bump VERSION for every update (1.1, 1.2, 1.3 ...) and add a line to CHANGES.
-export const VERSION = '1.8';
+export const VERSION = '1.9';
 
 export const CHANGES = [
+  ['1.9', [
+    'Wally is now one smooth skinned character mesh with weight maps, so his joints bend as one body',
+    'Wally\'s eyes peek out through his mask behind his specs, with eyebrows, a bigger nose and a mouth',
+    'Cars have see-through glass with seats, a dashboard, a steering wheel and a driver, plus indicators, sills, wipers, exhausts and more',
+    'Drivers honk and shout at Wally when he blocks the road, and sometimes climb out after a crash to argue',
+    'Cars knock lamp posts over',
+    '10 new weapons: Frying Pan, Claymore, Battle Bagpipes, Wally Laser, Gatling Blaster, Long Scope, Super Soaker, Tattie Gun, Haggis Launcher and Dragon\'s Breath',
+    'Ammo crates top up all your guns, and the mouse wheel switches weapons',
+  ]],
   ['1.8', [
     'New intro: a UFO swoops over Wallypool and beams Wally down outside his flat (tap or press any key to skip)',
   ]],

@@ -7,6 +7,7 @@ const LINES = {
   idle: ["Haw, Wally! Nice cape!", "Is that a onesie?", "Get a real job, pal!", "Wally! Sign ma chip butty!", "Mind the cape, son.", "Whit's the 'W' for? Wee?", "Ma maw says you're a menace.", "Can ye even fly?", "Nae chance yer a superhero.", "Lovely day for it!"],
   hit: ["Ya numpty!", "Oi! Watch it!", "Ma heid!", "Awa' an bile yer heid!", "Polis! POLIS!", "That's no very heroic!"],
   flee: ["Aaargh!", "Run!", "He's lost the plot!", "Somebody phone the polis!", "Help ma boab!"],
+  argue: ["Oi! You! Aye, YOU in the cape!", "Look whit ye did tae ma motor!", "I want yer insurance details!", "Who d'ye think ye are, Superman?", "Ma maw's gonnae hear aboot this!", "Ye want a square go, pal?", "That's a brand new bumper!"],
   cop: ["Stop right there, cape boy!", "You're nicked!", "Haud it right there!", "Drop the gadget, Wally!", "We know where yer maw lives!"],
 };
 export const pick = (a) => a[(Math.random() * a.length) | 0];
@@ -124,6 +125,15 @@ export class Ped {
       if (!shooter && pl.car && d < 3.5 && pl.car.speed < 1.0) { this.bustT += dt; if (this.bustT > 1.6) game.bust(); }
       if (Math.random() < dt * 0.15 && d < 20) game.say(this, pick(LINES.cop));
       anim.aim = shooter && d < 30;
+    } else if (this.state === 'argue') {
+      // storm up to Wally, wave your arms and shout
+      this.argueT -= dt;
+      const px = pl.car ? pl.car.x : pl.x, pz = pl.car ? pl.car.z : pl.z, d = Math.hypot(px - this.x, pz - this.z);
+      tx = px; tz = pz; spd = d > 2 ? 4.2 : 0;
+      if (d <= 2) this.heading = Math.atan2(px - this.x, pz - this.z);
+      this.shoutT = (this.shoutT || 0) - dt;
+      if (this.shoutT <= 0 && d < 25) { this.shoutT = 2.4 + Math.random() * 1.5; game.say(this, pick(LINES.argue)); this.h.punchT = 0.3; this.h.punchSide = Math.random() < 0.5 ? 1 : -1; }
+      if (this.argueT <= 0 || d > 40) { this.state = 'walk'; this.setLoop(world); }
     } else if (this.state === 'flee') {
       this.fleeT -= dt;
       const [fx, fz] = this.fleeFrom || [pl.x, pl.z];
