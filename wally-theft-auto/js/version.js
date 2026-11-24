@@ -1,7 +1,10 @@
 // Bump VERSION for every update (1.1, 1.2, 1.3 ...) and add a line to CHANGES.
-export const VERSION = '1.7';
+export const VERSION = '1.8';
 
 export const CHANGES = [
+  ['1.8', [
+    'New intro: a UFO swoops over Wallypool and beams Wally down outside his flat (tap or press any key to skip)',
+  ]],
   ['1.7', [
     'Touch controls: the PUNCH/FIRE button now sits right beside the red Q (Wally Power) button',
   ]],

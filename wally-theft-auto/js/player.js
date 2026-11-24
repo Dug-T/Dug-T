@@ -65,6 +65,7 @@ export class Player {
     this.h.root.visible = true;
     // ----- carjacking: main.js drives the position, we just hold the pose -----
     if (this.jackPose) {
+      this.h.root.visible = !this.introHidden;
       animateHuman(this.h, dt, this.jackPose);
       this.h.root.position.set(this.x, this.y, this.z);
       this.h.root.rotation.set(0, this.heading, 0);

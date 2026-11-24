@@ -118,6 +118,22 @@ export class Audio {
     this.noise(3.5, 140, 1.4 * near); this.noise(1.2, 420, 0.6 * near);
     this.tone(48, 2.5, 'sine', 0.5 * near, -20);
   }
+  // the saucer's warbling hum
+  ufoHum(on) {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    if (on && !this._ufo) {
+      const o = this.ctx.createOscillator(), o2 = this.ctx.createOscillator(), lfo = this.ctx.createOscillator(), lg = this.ctx.createGain(), g = this.ctx.createGain();
+      o.type = 'sine'; o.frequency.value = 220; o2.type = 'triangle'; o2.frequency.value = 331;
+      lfo.frequency.value = 6; lg.gain.value = 30; lfo.connect(lg); lg.connect(o.frequency); lg.connect(o2.frequency);
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.09, t + 1.5);
+      o.connect(g); o2.connect(g); g.connect(this.sfx); o.start(); o2.start(); lfo.start();
+      this._ufo = { o, o2, lfo, g };
+    } else if (!on && this._ufo) {
+      const u = this._ufo; this._ufo = null;
+      u.g.gain.setTargetAtTime(0, t, 0.2); setTimeout(() => { u.o.stop(); u.o2.stop(); u.lfo.stop(); }, 1500);
+    }
+  }
   nextStation() { this.station = (this.station + 1) % this.stations.length; return this.stations[this.station]; }
   // ---------- generative radio ----------
   schedule() {

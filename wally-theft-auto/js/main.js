@@ -15,6 +15,7 @@ import { smokeTexture, rng, signTexture } from './textures.js';
 import { VERSION, CHANGES } from './version.js';
 import { WEAPONS, buildNeep, buildWeaponModel } from './weapons.js';
 import { Weather, WEATHERS } from './weather.js';
+import { buildUFO } from './ufo.js';
 
 const $ = (id) => document.getElementById(id);
 // per-frame HUD writes only touch the page when the value actually changes
@@ -738,11 +739,13 @@ window.addEventListener('keyup', (e) => keys.delete(e.code));
 window.addEventListener('blur', () => keys.clear());
 canvas.addEventListener('mousedown', (e) => {
   audio.init();
+  if (game.intro) game._tapSkip = true;
   if (game.playing && !game.paused && document.pointerLockElement !== canvas && !isTouch) { canvas.requestPointerLock?.(); return; }
   if (e.button === 0) { mouse.l = true; mouse.lp = true; } if (e.button === 2) mouse.r = true;
 });
 window.addEventListener('mouseup', (e) => { if (e.button === 0) mouse.l = false; if (e.button === 2) mouse.r = false; });
 canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+document.addEventListener('touchstart', () => { if (game.intro) game._tapSkip = true; }, { passive: true });
 document.addEventListener('mousemove', (e) => {
   if (document.pointerLockElement !== canvas || game.paused) return;
   cam.yaw -= e.movementX * 0.0026; cam.pitch -= e.movementY * 0.0022;
@@ -842,6 +845,7 @@ function readInput() {
   }
   inp.mx = Math.max(-1, Math.min(1, inp.mx)); inp.my = Math.max(-1, Math.min(1, inp.my));
   inp.powerPressed = inp.power;
+  inp.anyKey = pressed.size > 0 || mouse.lp || touch.pressed.size > 0 || !!game._tapSkip; game._tapSkip = false;
   pressed.clear(); mouse.lp = false; touch.pressed.clear();
   return inp;
 }
@@ -1360,6 +1364,75 @@ function updateGarage(dt) {
   }
 }
 
+// ---------------- intro: a UFO drops Wally off outside his flat ----------------
+let ufo = null;
+const ease = (k) => { k = Math.max(0, Math.min(1, k)); return k * k * (3 - 2 * k); };
+function startIntro() {
+  if (!ufo) ufo = buildUFO();
+  scene.add(ufo.group);
+  const h = world.specials.home;
+  const land = [player.x, player.z];
+  game.intro = { t: 0, land, hoverY: 17, from: [land[0] - 140, 70, land[1] + 90], skipReady: 0.6, said: false };
+  document.body.classList.add('cine');
+  audio.ufoHum(true);
+  game.subs([]); $('subs').textContent = '';
+}
+function endIntro() {
+  const I = game.intro; if (!I) return;
+  game.intro = null; player.jackPose = null; player.introHidden = false;
+  player.place(I.land[0], I.land[1], 0); player.y = world.groundHeight(I.land[0], I.land[1], 1);
+  scene.remove(ufo.group); ufo.beamOn = 0;
+  audio.ufoHum(false);
+  document.body.classList.remove('cine');
+  cam.yaw = 0; cam.pitch = -0.18; cam.dist = 4.4;
+  if (game.missionIdx === 0) game.subs(["WALLY MAN: ...that's the last time I take a lift aff strangers.", "WALLY MAN: Mammy's waiting at the flat. Walk into the yellow marker.", "WALLY MAN: (Q to use my powers. If they work.)"]);
+  else game.subs(["WALLY MAN: ...that's the last time I take a lift aff strangers."]);
+}
+function updateIntro(dt, inp) {
+  const I = game.intro;
+  I.t += dt; I.skipReady -= dt;
+  if (I.skipReady <= 0 && inp.any) { endIntro(); return; }
+  const T = I.t, [lx, lz] = I.land, gy = world.groundHeight(lx, lz, 1);
+  const hover = [lx, I.hoverY, lz];
+  let ux, uy, uz;
+  if (T < 3) { // swoop in from over the sea
+    const k = ease(T / 3);
+    ux = I.from[0] + (hover[0] - I.from[0]) * k; uy = I.from[1] + (hover[1] - I.from[1]) * k + Math.sin(k * Math.PI) * 8; uz = I.from[2] + (hover[2] - I.from[2]) * k;
+    ufo.group.rotation.z = (1 - k) * 0.35;
+  } else if (T < 6.8) { [ux, uy, uz] = hover; uy += Math.sin(T * 2) * 0.3; ufo.group.rotation.z = Math.sin(T * 1.3) * 0.05; }
+  else { // zoom off into the sky
+    const k = (T - 6.8) / 1.4;
+    ux = hover[0] + k * k * 220; uy = hover[1] + k * k * 160; uz = hover[2] - k * k * 60; ufo.group.rotation.z = -0.4 * Math.min(1, k * 3);
+    if (!I.zoomed) { I.zoomed = true; audio.ufoHum(false); audio.tone(300, 1.2, 'sawtooth', 0.12, 2400); audio.tone(150, 1.2, 'triangle', 0.1, 1200); }
+  }
+  ufo.group.position.set(ux, uy, uz);
+  ufo.beamOn = T < 3.1 ? 0 : (T < 6.2 ? Math.min(1, (T - 3.1) * 3) : Math.max(0, 1 - (T - 6.2) * 3));
+  ufo.update(dt, uy - gy);
+  // Wally floats down the beam, turning slowly, arms flailing
+  if (T < 3.4) { player.x = lx; player.z = lz; player.y = uy - 2.6; player.introHidden = T < 3.1; player.jackPose = { mode: 'fly', flail: true, capeLift: 0.6 }; }
+  else if (T < 6.0) {
+    player.introHidden = false;
+    const k = ease((T - 3.4) / 2.6);
+    player.x = lx; player.z = lz; player.y = (hover[1] - 2.6) + (gy - (hover[1] - 2.6)) * k;
+    player.heading += dt * 2.2 * (1 - k * 0.7);
+    player.jackPose = k < 0.9 ? { mode: 'fly', flail: true, capeLift: 0.4 + Math.sin(T * 6) * 0.2 } : { speed: 0 };
+  } else {
+    player.y = gy; player.jackPose = { speed: 0 };
+    let da = Math.atan2(ux - lx, uz - lz) - player.heading; while (da > Math.PI) da -= Math.PI * 2; while (da < -Math.PI) da += Math.PI * 2;
+    player.heading += da * Math.min(1, dt * 4); // watches them go
+    if (!I.said) { I.said = true; $('subs').textContent = 'WALLY MAN: Cheers for the lift, lads!'; }
+  }
+  // cinematic camera down the street, looking up at the action
+  const camPos = new THREE.Vector3(lx + 26, gy + 6.5, lz + 5);
+  const wally = new THREE.Vector3(lx, player.y + 1.2, lz);
+  const look = T < 2.6 ? new THREE.Vector3(ux, uy, uz)
+    : (T < 6.2 ? new THREE.Vector3(lx, (uy + player.y) / 2, lz)
+      : wally.clone().add(new THREE.Vector3(0, 0.6 + Math.min(1, (T - 6.2)) * 1.2, 0)));
+  if (!I.look) I.look = look.clone(); else I.look.lerp(look, Math.min(1, dt * 3));
+  camera.position.copy(camPos); camera.fov = 50; camera.updateProjectionMatrix(); camera.lookAt(I.look);
+  if (T > 8.2) endIntro();
+}
+
 let last = performance.now();
 let acc = 0;
 function frame(now) {
@@ -1367,6 +1440,11 @@ function frame(now) {
   let dt = Math.max(0, Math.min(0.05, (now - last) / 1000)); last = now;
   if (!game.playing || game.paused) { if (!game.playing) titleCam(dt); render(); return; }
   const inp = readInput(); game._inp = inp;
+  if (game.intro) { // during the intro, controls only skip it
+    inp.any = inp.enter || inp.power || inp.weapon || inp.jumpPressed || inp.firePressed || inp.anyKey;
+    for (const k of ['enter', 'power', 'weapon', 'camera', 'radio', 'jumpPressed', 'firePressed', 'fire', 'aim', 'powerPressed']) inp[k] = false;
+    inp.mx = inp.my = 0;
+  }
   if (inp.mute) { audio.on = !audio.on; if (audio.master) audio.master.gain.value = audio.on ? 0.7 : 0; game.toast(audio.on ? 'Sound on' : 'Sound off'); }
   if (inp.camera) cam.far = !cam.far;
   if (inp.radio && player.car) { audio.nextStation(); showRadio(); }
@@ -1398,7 +1476,7 @@ function frame(now) {
     headlight.target.position.set(c.x + fx * 20, 0, c.z + fz * 20);
   } else headlight.intensity = 0;
   world.update(dt, now / 1000, game.night);
-  updateCamera(dt, inp);
+  if (game.intro) updateIntro(dt, inp); else updateCamera(dt, inp);
   updateWeather(dt);
   updateSky(dt);
   // audio
@@ -1469,7 +1547,7 @@ function startGame(fresh) {
     // a motor waiting at the kerb outside the flat
     if (!cars.some((c) => Math.hypot(c.x - h.x, c.z - h.z) < 12)) { const c = game.spawnCar('hatch', h.x - 7, h.z - 3.4, -Math.PI / 2); c.parked = true; }
     started = true;
-    if (game.missionIdx === 0) game.subs(["WALLY MAN: Another beautiful day in Wallypool.", "WALLY MAN: Mammy's waiting at the flat. Walk into the yellow marker.", "WALLY MAN: (Q to use my powers. If they work.)"]);
+    startIntro();
   }
   game.playing = true; game.paused = false;
   $('title').classList.add('hidden'); $('hud').classList.remove('hidden'); $('pause').classList.add('hidden');

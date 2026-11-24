@@ -45,6 +45,7 @@ On phones and tablets there's an on-screen stick, a drag-to-look area and button
 
 The version number is shown on the title screen (with a "What's new" list) and on the pause screen. It lives in `js/version.js`: bump it by 0.1 for every update (1.1, 1.2, 1.3...) and add a line to `CHANGES`.
 
+- **1.8**: a UFO intro: a flying saucer beams Wally down outside his flat at the start of the game (skippable)
 - **1.7**: the touch PUNCH/FIRE button moves next to the red Q (Wally Power) button
 - **1.6**: the touch PUNCH/FIRE button sits beside the movement stick, so the left thumb fires while the right thumb aims
 - **1.5**: touch aiming: hold AIM or FIRE and drag to move the aim, plus a soft lock-on to the nearest target (red crosshair)
@@ -63,6 +64,7 @@ The version number is shown on the title screen (with a "What's new" list) and o
 - `js/peds.js`: pedestrians and foot cops
 - `js/player.js`: Wally's controls, combat and powers
 - `js/weapons.js`: weapon stats and models
+- `js/ufo.js`: the flying saucer from the intro
 - `js/weather.js`: weather states, rain and snow particles, lightning
 - `js/missions.js`: the story missions
 - `js/audio.js`: synthesised sound effects and generative radio
