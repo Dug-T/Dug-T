@@ -1,7 +1,10 @@
 // Bump VERSION for every update (1.1, 1.2, 1.3 ...) and add a line to CHANGES.
-export const VERSION = '1.6';
+export const VERSION = '1.7';
 
 export const CHANGES = [
+  ['1.7', [
+    'Touch controls: the PUNCH/FIRE button now sits right beside the red Q (Wally Power) button',
+  ]],
   ['1.6', [
     'Touch controls: the PUNCH/FIRE button now sits right next to the movement stick, so your left thumb fires while your right thumb aims',
   ]],
