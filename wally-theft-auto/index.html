@@ -114,6 +114,14 @@
   body.touch #radarWrap { width: 130px; height: 130px; }
   body.touch #power { left: calc(max(18px, env(safe-area-inset-left)) + 37px); bottom: calc(max(18px, env(safe-area-inset-bottom)) + 146px); }
   @media (max-width: 700px) { #title img { max-width: 60vw; height: 40vh; } .keys { columns: 1; } }
+/* phones and tablets held upright get a "turn it sideways" screen: the game is landscape only */
+#rotate { display: none; position: fixed; inset: 0; z-index: 99999; background: #0d1b2a; color: #fff; flex-direction: column; align-items: center; justify-content: center; text-align: center; font-family: Oswald, sans-serif; padding: 24px; }
+#rotate .phone { width: 70px; height: 120px; border: 6px solid #ffd23f; border-radius: 14px; position: relative; animation: wtaTurn 2.2s ease-in-out infinite; margin-bottom: 34px; }
+#rotate .phone::after { content: ''; position: absolute; left: 50%; bottom: 6px; width: 12px; height: 12px; margin-left: -6px; border-radius: 50%; background: #ffd23f; }
+#rotate h2 { font-size: 30px; margin: 0 0 10px; color: #ffd23f; letter-spacing: 1px; }
+#rotate p { font-size: 18px; margin: 0; opacity: 0.85; max-width: 320px; }
+@keyframes wtaTurn { 0%, 20% { transform: rotate(0deg); } 50%, 80% { transform: rotate(-90deg); } 100% { transform: rotate(0deg); } }
+@media (orientation: portrait) { body.touch #rotate { display: flex; } }
 </style>
 <meta http-equiv="Cache-Control" content="no-cache">
 </head>
@@ -223,6 +231,7 @@
     <button class="btn" onclick="location.reload()" style="margin:10px auto">↻ RELOAD THE GAME</button>
   </div>
 </div>
+<div id="rotate"><div class="phone"></div><h2>TURN YER PHONE SIDEWAYS</h2><p>Wally Theft Auto only plays in landscape. Even Wally Man cannae drive sideways.</p></div>
 <div id="fade"></div>
 <div id="loading">BUILDING WALLYPOOL...</div>
 <script>

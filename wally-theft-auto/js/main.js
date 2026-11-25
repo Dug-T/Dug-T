@@ -2033,6 +2033,22 @@ function startGame(fresh) {
   if (!isTouch) canvas.requestPointerLock?.();
   last = performance.now();
 }
+// landscape only: on phones, go full screen and lock the screen sideways where the browser allows it,
+// and pause if the phone is turned upright (the "turn yer phone sideways" screen covers the game)
+function lockLandscape() {
+  if (!isTouch) return;
+  try {
+    const el = document.documentElement, fs = el.requestFullscreen || el.webkitRequestFullscreen;
+    const lock = () => { try { screen.orientation?.lock?.('landscape').catch(() => {}); } catch (e) { /* not supported */ } };
+    if (fs && !document.fullscreenElement && !document.webkitFullscreenElement) {
+      const p = fs.call(el, { navigationUI: 'hide' }); if (p && p.then) p.then(lock, lock); else lock();
+    } else lock();
+  } catch (e) { /* not supported */ }
+}
+const portrait = matchMedia('(orientation: portrait)');
+const onTurn = () => { if (isTouch && portrait.matches && game.playing && !game.paused) togglePause(true); };
+portrait.addEventListener ? portrait.addEventListener('change', onTurn) : portrait.addListener(onTurn);
+for (const id of ['play', 'newgame']) $(id).addEventListener('click', lockLandscape);
 $('play').onclick = () => startGame(false);
 $('newgame').onclick = () => { if (!store.get('wta-save', null) || confirm('Start a new game? Your progress will be wiped.')) { store.set('wta-save', {}); startGame(true); } };
 $('howto').onclick = () => { $('help').classList.remove('hidden'); };
