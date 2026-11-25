@@ -152,6 +152,25 @@ export class Audio {
   }
   // a seagull overhead
   gull() { if (!this.ctx) return; this.tone(1400, 0.25, 'sawtooth', 0.04, -700); this.tone(1300, 0.2, 'sawtooth', 0.035, -600, 0.3); }
+  // a car hitting someone: a deep body thud plus a crunch of bumper, louder the faster you were going
+  thud(speed = 10, vol = 1) {
+    if (!this.ctx) return;
+    const k = Math.min(1, speed / 25) * vol;
+    this.tone(95, 0.22, 'sine', 0.55 * k + 0.1, -55);
+    this.noise(0.18, 420, 0.7 * k + 0.15);
+    this.noise(0.08, 2600, 0.18 * k, 'highpass');
+  }
+  // a comic cartoon yelp that slides down; pitch varies so everyone sounds different
+  yelp(pitch = 1, vol = 1) {
+    if (!this.ctx) return;
+    const c = this.ctx, t = c.currentTime, o = c.createOscillator(), g = c.createGain(), f = c.createBiquadFilter();
+    o.type = 'sawtooth'; f.type = 'bandpass'; f.frequency.value = 1200 * pitch; f.Q.value = 3;
+    o.frequency.setValueAtTime(700 * pitch, t); o.frequency.exponentialRampToValueAtTime(260 * pitch, t + 0.45);
+    const vib = c.createOscillator(), vg = c.createGain(); vib.frequency.value = 9; vg.gain.value = 25 * pitch; vib.connect(vg); vg.connect(o.frequency);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.22 * vol, t + 0.03); g.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
+    o.connect(f); f.connect(g); g.connect(this.sfx); o.start(t); vib.start(t); o.stop(t + 0.55); vib.stop(t + 0.55);
+  }
+  bump(vol = 1) { if (!this.ctx) return; this.tone(70, 0.12, 'sine', 0.3 * vol, -30); this.noise(0.07, 300, 0.25 * vol); }
   nextStation() { this.station = (this.station + 1) % this.stations.length; return this.stations[this.station]; }
   // ---------- generative radio ----------
   schedule() {

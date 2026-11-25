@@ -1,7 +1,16 @@
 // Bump VERSION for every update (1.1, 1.2, 1.3 ...) and add a line to CHANGES.
-export const VERSION = '2.7';
+export const VERSION = '2.9';
 
 export const CHANGES = [
+  ['2.9', [
+    "5 new missions: Granda's Appointment, Ice Cream Wars, Big Air, Bingo Bus and The Great Neep Robbery",
+    'Every mission now shows a GPS route on the radar, including the chippy run, the race and the docks',
+    'The Pamazon van shows its full name and slogan, and shop signs no longer get cut off',
+    'Landscape only on phones: the game goes full screen sideways, and holding the phone upright shows a "turn yer phone sideways" screen and pauses',
+  ]],
+  ['2.8', [
+    'Running people over now sounds like it: a thud, a cartoon yelp, a cry ("Ma bunions!"), a bump when they land, and witnesses who shout about it',
+  ]],
   ['2.7', [
     'Fixed a crash on phones after long sessions (like the Pamazon deliveries): cars, people, projectiles and pickups now free their graphics memory when they leave',
     'Safety net: if the graphics ever do give out, the game saves and offers a reload instead of freezing',

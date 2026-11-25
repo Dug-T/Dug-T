@@ -292,6 +292,24 @@ game.quip = (cat, chance = 1, prio = false) => {
   $('subs').textContent = 'WALLY MAN: ' + line; subsT = Math.max(3, line.length * 0.07);
   voice.say(line, 'WALLY', prio);
 };
+// someone's been run over: thud, yelp, a cry (if they're not out cold) and a horrified witness
+const RUN_OVER = ['Ma bunions!', 'Aaaargh!', 'Ma good leg!', 'Watch where yer goin\'!', 'Ooyah!', 'Ya bampot!', 'Ma messages!', 'Nae again!', 'I\'ve only just been discharged!', 'Ma hip!'];
+const WITNESS = ['He\'s run that wifie ower!', 'Did ye see that?!', 'Somebody phone an ambulance!', 'Wally! Ya maniac!', 'That\'s no\' very superhero!'];
+let witnessCool = 0;
+function runOverSounds(p, sp, car) {
+  const d = Math.hypot(p.x - player.x, p.z - player.z), near = Math.max(0, 1 - d / 70);
+  if (near <= 0) return;
+  audio.thud(sp, near);
+  const pitch = p.cop ? 0.75 : (p.female ? 1.35 : 0.95) * (0.9 + Math.random() * 0.2);
+  audio.yelp(pitch, near);
+  if (d < 30 && p.health > 0) game.say(p, RUN_OVER[(Math.random() * RUN_OVER.length) | 0]);
+  p.thudLand = true; // they'll bump when they hit the ground
+  if (car === player.car && performance.now() > witnessCool) {
+    const w = peds.list.find((q) => q !== p && q.state !== 'dead' && !q.cop && Math.hypot(q.x - p.x, q.z - p.z) < 18);
+    if (w) { witnessCool = performance.now() + 9000; setTimeout(() => game.say(w, WITNESS[(Math.random() * WITNESS.length) | 0]), 700); }
+  }
+}
+game.onPedLand = (p, hard) => { const d = Math.hypot(p.x - player.x, p.z - player.z); if (d < 50) audio.bump((hard ? 1 : 0.6) * (1 - d / 50)); };
 game.sayCar = (car, text) => {
   if (bubbles.length > 4 || bubbles.some((b) => b.ped === car)) return;
   const el = document.createElement('div'); el.className = 'bubble'; el.textContent = text; $('bubbles').appendChild(el);
@@ -1382,7 +1400,7 @@ function drawRadar() {
   };
   // specials
   // GPS route along the roads to the current target
-  const tgt = game.gps || (game.inside ? null : userGpsTarget());
+  const tgt = game.gps || (game.mission && !game.inside && game.autoRoute) || (game.inside ? null : userGpsTarget());
   if (tgt) {
     const pts = gpsRoute(px, pz, tgt.x, tgt.z).map(([x, z]) => toR(x, z));
     rctx.save(); rctx.beginPath(); rctx.arc(c, c, c - 2, 0, 7); rctx.clip();
@@ -1393,7 +1411,7 @@ function drawRadar() {
     }
     rctx.restore();
     const dist = Math.round(Math.hypot(tgt.x - px, tgt.z - pz));
-    const label = game.gps ? 'GPS' : (tgt.name.length > 12 ? tgt.name.split(' ').pop() : tgt.name);
+    const label = (game.gps || (game.mission && game.autoRoute)) ? 'GPS' : (tgt.name.length > 12 ? tgt.name.split(' ').pop() : tgt.name);
     rctx.font = 'bold 26px Oswald, sans-serif'; rctx.textAlign = 'center'; rctx.textBaseline = 'middle';
     rctx.strokeStyle = '#000'; rctx.lineWidth = 6; rctx.fillStyle = '#e7c6ff';
     rctx.strokeText(`${label} ${dist}m`, c, W - 44); rctx.fillText(`${label} ${dist}m`, c, W - 44);
@@ -1478,13 +1496,29 @@ function startMission() {
 function failMission() {
   if (!game.mission) return;
   game.mission.end(game);
-  game.mission = null; game.objective(''); game.setGps(null);
+  game.mission = null; game.autoRoute = null; game.objective(''); game.setGps(null);
   setTimeout(() => { if (!player.dead) game.bigText('MISSION FAILED!', 'Hopeless.', 2.5, true); }, 4400);
   placeMissionMarker();
 }
+// missions that don't steer the GPS themselves get a route to their nearest marker or target
+function autoGps() {
+  const px = player.car ? player.car.x : player.x, pz = player.car ? player.car.z : player.z;
+  let best = null, bd = 1e9;
+  for (const m of game.markers) {
+    if (m.type === 'mission' || m.type === 'ghost' || m.type === 'pickup' || m.persistent || !m.obj.visible) continue;
+    const d = Math.hypot(m.x - px, m.z - pz); if (d < bd) { bd = d; best = m; }
+  }
+  if (!best) for (const b of game.blips) {
+    const o = b.obj; if (o.dead || o.state === 'dead' || o.health <= 0) continue;
+    const d = Math.hypot(o.x - px, o.z - pz); if (d < bd) { bd = d; best = o; }
+  }
+  return best ? { x: best.x, z: best.z } : null;
+}
 function updateMission(dt) {
   if (game.mission) {
+    game.autoRoute = null;
     const r = game.mission.update(dt, game);
+    if (game.mission && !game.gps) game.autoRoute = autoGps();
     if (r === 'pass') {
       const m = game.mission; m.end(game); game.mission = null; game.objective(''); game.setGps(null);
       player.money += m.reward; game.missionIdx++; audio.pass(); game.quip('pass', 1, true);
@@ -1649,7 +1683,7 @@ function updateTraffic(dt) {
         p.vx = c.vx * 0.9 + (p.x - cx) * 2; p.vz = c.vz * 0.9 + (p.z - cz) * 2; p.vy = 3 + sp * 0.25;
         const wasDead = p.health <= 0; p.state = 'tumble';
         if (!wasDead) p.hurt(sp * 7, c === player.car ? game : { onPedKilled() {}, say() {} }, c.x, c.z, 'car');
-        audio.punch();
+        runOverSounds(p, sp, c);
         if (c === player.car && p.cop) game.wanted.add(2);
         break;
       }
@@ -1999,6 +2033,22 @@ function startGame(fresh) {
   if (!isTouch) canvas.requestPointerLock?.();
   last = performance.now();
 }
+// landscape only: on phones, go full screen and lock the screen sideways where the browser allows it,
+// and pause if the phone is turned upright (the "turn yer phone sideways" screen covers the game)
+function lockLandscape() {
+  if (!isTouch) return;
+  try {
+    const el = document.documentElement, fs = el.requestFullscreen || el.webkitRequestFullscreen;
+    const lock = () => { try { screen.orientation?.lock?.('landscape').catch(() => {}); } catch (e) { /* not supported */ } };
+    if (fs && !document.fullscreenElement && !document.webkitFullscreenElement) {
+      const p = fs.call(el, { navigationUI: 'hide' }); if (p && p.then) p.then(lock, lock); else lock();
+    } else lock();
+  } catch (e) { /* not supported */ }
+}
+const portrait = matchMedia('(orientation: portrait)');
+const onTurn = () => { if (isTouch && portrait.matches && game.playing && !game.paused) togglePause(true); };
+portrait.addEventListener ? portrait.addEventListener('change', onTurn) : portrait.addListener(onTurn);
+for (const id of ['play', 'newgame']) $(id).addEventListener('click', lockLandscape);
 $('play').onclick = () => startGame(false);
 $('newgame').onclick = () => { if (!store.get('wta-save', null) || confirm('Start a new game? Your progress will be wiped.')) { store.set('wta-save', {}); startGame(true); } };
 $('howto').onclick = () => { $('help').classList.remove('hidden'); };

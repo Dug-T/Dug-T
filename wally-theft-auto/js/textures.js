@@ -241,7 +241,8 @@ export function plateTexture(text) {
 export function signTexture(text, bg, fg) {
   const [c, x] = canvas(512, 128);
   x.fillStyle = bg; x.fillRect(0, 0, 512, 128);
-  x.fillStyle = fg; x.font = 'bold 64px Impact, "Arial Black", sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle';
+  x.fillStyle = fg; x.textAlign = 'center'; x.textBaseline = 'middle';
+  let s = 64; do { x.font = `bold ${s}px Impact, "Arial Black", sans-serif`; s -= 2; } while (x.measureText(text).width > 480 && s > 12);
   x.fillText(text, 256, 68);
   return tex(c, false);
 }
