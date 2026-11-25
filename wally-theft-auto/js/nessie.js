@@ -67,6 +67,7 @@ export function buildNessie(scene, world, home) {
     headPos: new THREE.Vector3(),
   };
   const fwd = new THREE.Vector3(), side = new THREE.Vector3(), tmp = new THREE.Vector3();
+  // (she used to wander; now she follows Wally, see update)
   const pickTarget = () => {
     for (let k = 0; k < 8; k++) {
       const x = home.x + (Math.random() - 0.5) * 30, z = zLine + (Math.random() - 0.5) * 0.8;
@@ -76,26 +77,46 @@ export function buildNessie(scene, world, home) {
   };
   N.update = (dt, player) => {
     N.t += dt;
-    // wander: wriggle to a spot, have a wee rest, wriggle on
-    if (N.pause > 0) { N.pause -= dt; N.speed = Math.max(0, N.speed - dt * 2); if (N.pause <= 0) N.target = pickTarget(); }
-    else if (N.target) {
-      const dx = N.target[0] - N.x, dz = N.target[1] - N.z, d = Math.hypot(dx, dz);
-      if (d < 0.6) { N.target = null; N.pause = 2 + Math.random() * 4; }
-      else {
+    // follow Wally about like a big green puppy: closer is slower, further is faster
+    N.caughtUp = false;
+    if (player) {
+      const c = player.car, px = c ? c.x : player.x, pz = c ? c.z : player.z, pf = c ? c.heading : player.heading;
+      const dx = px - N.x, dz = pz - N.z, d = Math.hypot(dx, dz);
+      const keep = c ? 7 : 3.6;
+      // left miles behind (Wally drove off, flew away or got sent to the Infirmary): pop up just behind him
+      if (d > 70 || (N.stuck > 1.6 && d > 10)) {
+        for (let k = 0; k < 12; k++) {
+          const a = pf + Math.PI + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * 0.45, r = 7 + (k % 3) * 2;
+          const x = px + Math.sin(a) * r, z = pz + Math.cos(a) * r;
+          if (!world.collide(x, z, 0.7, 0.5).hit) { N.x = x; N.z = z; N.heading = Math.atan2(px - x, pz - z); N.stuck = 0; N.caughtUp = true; break; }
+        }
+      } else if (d > keep) {
         const want = Math.atan2(dx, dz); let dh = want - N.heading; dh = Math.atan2(Math.sin(dh), Math.cos(dh));
-        N.heading += Math.max(-1.2 * dt, Math.min(1.2 * dt, dh));
-        N.speed = Math.min(1.4, N.speed + dt * 1.5);
-        const nx = N.x + Math.sin(N.heading) * N.speed * dt, nz = N.z + Math.cos(N.heading) * N.speed * dt;
-        if (world.collide(nx, nz, 0.6, 0.5).hit) { N.target = null; N.pause = 1; } else { N.x = nx; N.z = nz; }
+        N.heading += Math.max(-3 * dt, Math.min(3 * dt, dh));
+        const top = Math.min(14, 1.6 + (d - keep) * 1.1);
+        N.speed += Math.max(-6 * dt, Math.min(4 * dt, top - N.speed));
+        // slide along walls rather than getting stuck on them
+        const mx = Math.sin(N.heading) * N.speed * dt, mz = Math.cos(N.heading) * N.speed * dt;
+        const free = (x, z) => !world.collide(x, z, 0.6, 0.5).hit;
+        if (free(N.x + mx, N.z + mz)) { N.x += mx; N.z += mz; N.stuck = 0; }
+        else if (free(N.x + mx, N.z)) { N.x += mx; N.stuck = 0; }
+        else if (free(N.x, N.z + mz)) { N.z += mz; N.stuck = 0; }
+        else N.stuck = (N.stuck || 0) + dt;
+      } else {
+        N.speed = Math.max(0, N.speed - dt * 5);
+        // turn to face him while she waits
+        const want = Math.atan2(dx, dz); let dh = want - N.heading; dh = Math.atan2(Math.sin(dh), Math.cos(dh));
+        N.heading += Math.max(-1.5 * dt, Math.min(1.5 * dt, dh));
       }
+      N.dist = d;
     }
-    // Wally gets in the way: she shoves him gently aside
+    // Wally walks into her: she nudges him gently aside
     if (player && !player.car) {
       const px = player.x - N.x, pz = player.z - N.z, pd = Math.hypot(px, pz);
-      if (pd < 1.1 && pd > 0.01) { player.x = N.x + px / pd * 1.1; player.z = N.z + pz / pd * 1.1; }
+      if (pd < 0.9 && pd > 0.01) { player.x = N.x + px / pd * 0.9; player.z = N.z + pz / pd * 0.9; }
     }
     // the wriggle itself: waves run down her back faster when she's on the move
-    const wig = 1.5 + N.speed * 3.5;
+    const wig = 1.5 + Math.min(N.speed, 5) * 3.2;
     N.phase = (N.phase || 0) + dt * wig;
     fwd.set(Math.sin(N.heading), 0, Math.cos(N.heading)); side.set(fwd.z, 0, -fwd.x);
     const gy = world.groundHeight(N.x, N.z, 1); N.y = gy;
@@ -115,7 +136,7 @@ export function buildNessie(scene, world, home) {
     // neck sways and bobs; she turns to look at Wally when he's near
     const base = body[0].m.position;
     let look = 0;
-    if (player) { const ax = Math.atan2(player.x - N.x, player.z - N.z) - N.heading; look = Math.max(-0.9, Math.min(0.9, Math.atan2(Math.sin(ax), Math.cos(ax)))) * (Math.hypot(player.x - N.x, player.z - N.z) < 15 ? 1 : 0); }
+    if (player && !player.car) { const ax = Math.atan2(player.x - N.x, player.z - N.z) - N.heading; look = Math.max(-0.9, Math.min(0.9, Math.atan2(Math.sin(ax), Math.cos(ax)))) * (Math.hypot(player.x - N.x, player.z - N.z) < 15 ? 1 : 0); }
     N.look = (N.look || 0) + (look - (N.look || 0)) * Math.min(1, dt * 3);
     const nf = tmp.set(Math.sin(N.heading + N.look * 0.6), 0, Math.cos(N.heading + N.look * 0.6)).clone();
     const nside = new THREE.Vector3(nf.z, 0, -nf.x);
