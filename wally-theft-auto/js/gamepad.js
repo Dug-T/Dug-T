@@ -27,6 +27,7 @@ const KEY = 'wta-pad';
 export class Pad {
   constructor(store) {
     this.store = store; this.custom = null; this.prev = {}; this.name = ''; this.used = false;
+    this.rest = null; this.armed = {}; // resting position of every axis, and which controls have been seen let go
     try { this.custom = store.get(KEY, null); } catch (e) { this.custom = null; }
     window.addEventListener('gamepadconnected', (e) => { this.name = e.gamepad.id; if (this.onConnect) this.onConnect(e.gamepad); });
     window.addEventListener('gamepaddisconnected', (e) => { if (this.onDisconnect) this.onDisconnect(e.gamepad); });
@@ -34,8 +35,9 @@ export class Pad {
   get() { const l = navigator.getGamepads ? navigator.getGamepads() : []; for (const g of l) if (g && g.connected) return g; return null; }
   map(gp) {
     if (this.custom) return { ...STD, ...this.custom, sticks: { ...STD.sticks, ...(this.custom.sticks || {}) } };
-    // a few controllers report no layout; most of them put the right stick on axes 2 and 5 and triggers on 3 and 4
-    if (gp.mapping !== 'standard' && gp.axes.length >= 6) return { ...STD, fire: { a: 4, dir: 1, rest: -1 }, aim: { a: 3, dir: 1, rest: -1 }, sticks: { ...STD.sticks, lx: { a: 2 }, ly: { a: 5 } } };
+    // a few controllers report no layout; many put the right stick on axes 2 and 5 and the triggers on 3 and 4.
+    // Triggers rest at -1 on some and at 0 on others, so measure where they rest instead of guessing.
+    if (gp.mapping !== 'standard' && gp.axes.length >= 6) return { ...STD, fire: { a: 4, dir: 1, rest: 'auto' }, aim: { a: 3, dir: 1, rest: 'auto' }, sticks: { ...STD.sticks, lx: { a: 2 }, ly: { a: 5 } } };
     return STD;
   }
   // how hard a control is pressed, 0..1
@@ -43,8 +45,10 @@ export class Pad {
     if (!src) return 0;
     if (src.b != null) { const b = gp.buttons[src.b]; return b ? (b.value || (b.pressed ? 1 : 0)) : 0; }
     if (src.a != null) {
-      const v = gp.axes[src.a] || 0, rest = src.rest ?? 0, dir = src.dir || 1;
-      return Math.max(0, Math.min(1, ((v - rest) * dir) / (rest === 0 ? 1 : 2)));
+      const v = gp.axes[src.a] || 0, dir = src.dir || 1;
+      const rest = src.rest === 'auto' || src.rest == null ? ((this.rest && this.rest.a[src.a]) || 0) : src.rest;
+      const range = dir > 0 ? 1 - rest : rest + 1;
+      return range < 0.2 ? 0 : Math.max(0, Math.min(1, ((v - rest) * dir) / range));
     }
     return 0;
   }
@@ -54,9 +58,15 @@ export class Pad {
     const gp = this.get();
     if (!gp) { this.state = null; return null; }
     this.name = gp.id;
+    // a new controller: note where every axis sits when it's left alone
+    if (!this.rest || this.rest.id !== gp.id || this.rest.a.length !== gp.axes.length) { this.rest = { id: gp.id, a: gp.axes.slice() }; this.armed = {}; }
     const M = this.map(gp), s = { gp, pressed: {} };
     for (const k of ['fire', 'aim', 'jump', 'sprint', 'power', 'enter', 'weapon', 'gps', 'pause', 'camera', 'radio', 'back', 'l3', 'up', 'down', 'left', 'right']) {
-      s[k] = this.val(gp, M[k]);
+      let v = this.val(gp, M[k]);
+      // a control that reads as held down from the moment the controller appears is probably wired
+      // differently to what we expect: ignore it until it's been seen let go, so nothing gets stuck on
+      if (v < 0.2) this.armed[k] = true; else if (!this.armed[k]) v = 0;
+      s[k] = v;
       const on = s[k] > 0.5;
       s.pressed[k] = on && !this.prev[k];
       this.prev[k] = on;
@@ -74,8 +84,14 @@ export class Pad {
     const a = gp.vibrationActuator;
     try { if (a && a.playEffect) a.playEffect('dual-rumble', { duration: ms, strongMagnitude: Math.min(1, strong), weakMagnitude: Math.min(1, weak) }).catch(() => {}); } catch (e) { /* not supported */ }
   }
-  save(custom) { this.custom = custom; try { this.store.set(KEY, custom); } catch (e) { /* storage blocked */ } }
-  reset() { this.custom = null; try { this.store.set(KEY, null); } catch (e) { /* storage blocked */ } }
+  // what the controller is sending right now, for the CONTROLLER screen
+  live() {
+    const gp = this.get(); if (!gp) return '';
+    const b = gp.buttons.map((x, i) => (x.pressed || x.value > 0.5 ? i : -1)).filter((i) => i >= 0);
+    return `Layout: ${gp.mapping || 'none'} · Buttons held: ${b.length ? b.join(' ') : 'none'} · Axes: ${gp.axes.map((v) => v.toFixed(2)).join('  ')}`;
+  }
+  save(custom) { this.custom = custom; this.armed = {}; try { this.store.set(KEY, custom); } catch (e) { /* storage blocked */ } }
+  reset() { this.custom = null; this.armed = {}; try { this.store.set(KEY, null); } catch (e) { /* storage blocked */ } }
 }
 
 // The button-teaching wizard: shows one action at a time and records whatever you press for it

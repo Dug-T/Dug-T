@@ -2090,6 +2090,7 @@ function frame(now) {
   requestAnimationFrame(frame);
   let dt = Math.max(0, Math.min(0.05, (now - last) / 1000)); last = now;
   pad.poll(); padMenus(dt);
+  if (!$('padscreen').classList.contains('hidden')) $('padLive').textContent = pad.live();
   if (!game.playing || game.paused || game.shopOpen || !$('padscreen').classList.contains('hidden')) { if (!game.playing) titleCam(dt); if (game.shopOpen && pressed.has('Escape')) { pressed.clear(); game.closeShop(); } render(); return; }
   // slow motion while Wally's car is flying off a stunt ramp
   const wantScale = player.car && player.car.air ? 0.4 : 1;

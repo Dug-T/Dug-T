@@ -1,7 +1,12 @@
 // Bump VERSION for every update (1.1, 1.2, 1.3 ...) and add a line to CHANGES.
-export const VERSION = '3.7';
+export const VERSION = '3.8';
 
 export const CHANGES = [
+  ['3.8', [
+    "Fixed: on some Bluetooth controllers (like the Nacon MG-X Pro) FIRE kept firing on its own and cars wouldn't drive forward. The game now measures where each trigger rests instead of guessing",
+    'Any control that reads as held down from the moment a controller connects is ignored until it has been let go, so nothing can get stuck on',
+    'The CONTROLLER screen shows live readings from the controller, to help sort out any muddled buttons',
+  ]],
   ['3.7', [
     'Full game controller support for Bluetooth controllers on phones (and Xbox / PlayStation pads): every action is on a button, the triggers are proper analogue pedals, and the right stick turns the camera smoothly',
     'Menus work on the controller too: D-pad to move, A to choose, B to go back',
