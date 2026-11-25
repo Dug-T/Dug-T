@@ -1,7 +1,10 @@
 // Bump VERSION for every update (1.1, 1.2, 1.3 ...) and add a line to CHANGES.
-export const VERSION = '2.1';
+export const VERSION = '2.2';
 
 export const CHANGES = [
+  ['2.2', [
+    'Updates now load properly: the game checks the live version and fetches fresh files, so browsers can\'t get stuck on an old copy',
+  ]],
   ['2.1', [
     "Walk into Wally's Flat through the front door (pink ring) and look around inside",
     'Sleep in the bed to save the game; you wake up in the flat when you continue',
