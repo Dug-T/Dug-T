@@ -1,7 +1,14 @@
 // Bump VERSION for every update (1.1, 1.2, 1.3 ...) and add a line to CHANGES.
-export const VERSION = '1.5';
+export const VERSION = '1.6';
 
 export const CHANGES = [
+  ['1.6', [
+    'Palm trunks bend in the wind along with their crowns, and the wind now comes in gusts that move every tree, bush, flower and grass tuft',
+    'Ash settles on everything: the jungle, the rocks and the buildings grey over as the ashfall thickens',
+    'The sea glints with fine ripples, glows orange where lava is near, and throws up steam where a flow pours into it',
+    'A pulsing glow hangs over the crater, fireflies drift through the jungle at dusk, and leaves blow loose in the gusts',
+    'Film grade: colours split at the edges when you are hurt, near lava or being shaken, and each stage of the eruption has its own tint',
+  ]],
   ['1.5', [
     'Fixed: the jeep leaned the wrong way on side slopes, leaving its uphill wheels in the air. The body now fits the ground under all four wheels, and each wheel rides its own spring to sit on the ground beneath it',
   ]],
