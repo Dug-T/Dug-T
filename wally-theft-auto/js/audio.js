@@ -3,7 +3,7 @@ import { STATIONS } from './radio.js';
 export class Audio {
   constructor() { this.ctx = null; this.on = true; this.station = 0; this.stations = STATIONS.map((s) => s.name).concat('RADIO OFF'); this.songIdx = STATIONS.map(() => (Math.random() * 3) | 0); this.onTrack = null; }
   init() {
-    if (this.ctx) { if (this.ctx.state === 'suspended') this.ctx.resume(); return; }
+    if (this.ctx) { if (this.ctx.state !== 'running') this.ctx.resume().catch(() => {}); return; }
     const C = window.AudioContext || window.webkitAudioContext; if (!C) return;
     const ctx = this.ctx = new C();
     this.master = ctx.createGain(); this.master.gain.value = 0.7; this.master.connect(ctx.destination);
@@ -190,7 +190,17 @@ export class Audio {
     // UK two-tone "nee-naw"
     this.sirenO.frequency.setValueAtTime((Math.floor(t * 1.4) % 2) ? 600 : 800, t);
     this.wind.gain.setTargetAtTime(st.flying ? 0.35 : Math.min(0.15, Math.abs(st.speed) / 400), t, 0.2);
-    this.music.gain.setTargetAtTime(st.inCar && this.station < STATIONS.length && this.on ? 0.22 : 0, t, 0.3);
+    // the radio: remember whether it should be playing ourselves (reading the gain back isn't reliable on
+    // every phone), and only touch the volume when that changes
+    const want = !!(st.inCar && this.station < STATIONS.length && this.on);
+    if (want !== this.musicOn) {
+      this.musicOn = want;
+      this.music.gain.cancelScheduledValues(t); this.music.gain.setValueAtTime(this.music.gain.value, t);
+      this.music.gain.setTargetAtTime(want ? 0.22 : 0, t, want ? 0.15 : 0.3);
+      if (want) { this.nextT = t + 0.05; this.musicOffAt = 0; } else this.musicOffAt = t;
+    }
+    // if the phone has paused the sound (a call, another app, speech), wake it back up
+    if (this.ctx.state !== 'running' && !this.resuming) { this.resuming = true; this.ctx.resume().catch(() => {}).finally(() => { this.resuming = false; }); }
   }
   // others: [{ dist, pan (-1 left .. 1 right), speed, throttle, type }] nearest first
   traffic(others, inCar) {
@@ -277,9 +287,14 @@ export class Audio {
   schedule() {
     const c = this.ctx; if (!c) return;
     const st = this.station;
-    if (st >= STATIONS.length || this.music.gain.value < 0.001) { this.nextT = c.currentTime + 0.1; return; }
+    const faded = !this.musicOn && c.currentTime - (this.musicOffAt || 0) > 1.5;
+    if (st >= STATIONS.length || faded) { this.nextT = c.currentTime + 0.1; return; }
     let song = this.song(st);
-    while (this.nextT < c.currentTime + 0.2) {
+    // never let the beat clock get stuck: if it's miles ahead (or broken) restart it, and if the phone was too
+    // busy to keep up, skip the missed notes but stay on the beat
+    if (!(this.nextT < c.currentTime + 1)) this.nextT = c.currentTime + 0.05;
+    else if (this.nextT < c.currentTime - 0.3) { const sp = 60 / song.bpm / song.div, miss = Math.ceil((c.currentTime - this.nextT) / sp); this.nextT += miss * sp; this.step += miss; }
+    while (this.nextT < c.currentTime + 0.3) {
       // when a song has played through, the station moves on to its next one
       if (this.step >= song.bars * song.steps) {
         this.songIdx[st] = (this.songIdx[st] + 1) % STATIONS[st].songs.length; this.step = 0; song = this.song(st);

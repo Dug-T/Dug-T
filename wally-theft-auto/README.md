@@ -61,6 +61,7 @@ On phones and tablets there's an on-screen stick, a drag-to-look area and button
 
 The version number is shown on the title screen (with a "What's new" list) and on the pause screen. It lives in `js/version.js`: bump it by 0.1 for every update (1.1, 1.2, 1.3...) and add a line to `CHANGES`.
 
+- **3.1**: fixed the radio going silent after changing vehicles
 - **3.0**: 10 new weapons (including a Flamethrower), realistic firing sounds for every weapon, twice as many pickups, 3 new radio stations and 18 songs
 - **2.9**: 5 new missions, GPS routes for every mission, full Pamazon van lettering, landscape only on phones
 - **2.8**: run-over sounds: a thud, a cartoon yelp, a Scottish cry, a bump on landing, and shouting witnesses
