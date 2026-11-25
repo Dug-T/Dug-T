@@ -16,6 +16,7 @@ import { VERSION, CHANGES } from './version.js';
 import { WEAPONS, WEAPON_ORDER, usesAmmo, buildNeep, buildWeaponModel, buildProjectile } from './weapons.js';
 import { Weather, WEATHERS } from './weather.js';
 import { buildUFO } from './ufo.js';
+import { buildFlat, FLAT } from './flat.js';
 
 const $ = (id) => document.getElementById(id);
 // per-frame HUD writes only touch the page when the value actually changes
@@ -91,7 +92,7 @@ scene.add(headlight, headlight.target);
 const flashLight = new THREE.PointLight('#ffaa55', 0, 40, 1.6);
 scene.add(flashLight);
 
-let composer = null, bloom = null;
+let composer = null, bloom = null, gradePass = null;
 function applyQuality() {
   const hi = quality === 'high';
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, hi ? 2 : 1.25));
@@ -104,17 +105,31 @@ function applyQuality() {
     composer.addPass(bloom);
     composer.addPass(new OutputPass());
     // gentle colour grade: a touch more contrast and colour, darker corners
-    composer.addPass(new ShaderPass({
-      uniforms: { tDiffuse: { value: null } },
+    // colour grade + speed blur + chromatic fringe + film grain
+    gradePass = new ShaderPass({
+      uniforms: { tDiffuse: { value: null }, uBlur: { value: 0 }, uTime: { value: 0 }, uFringe: { value: 0.0015 } },
       vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
-      fragmentShader: `uniform sampler2D tDiffuse; varying vec2 vUv;
-        void main(){ vec3 c = texture2D(tDiffuse, vUv).rgb;
+      fragmentShader: `uniform sampler2D tDiffuse; uniform float uBlur, uTime, uFringe; varying vec2 vUv;
+        float rnd(vec2 p){ return fract(sin(dot(p, vec2(12.9898, 78.233)) + uTime) * 43758.5453); }
+        void main(){
+          vec2 q = vUv - 0.5; float r2 = dot(q, q);
+          // chromatic fringe grows toward the edges (and with speed)
+          vec2 off = q * (uFringe + uBlur * 0.01) * (0.5 + r2 * 4.0);
+          vec3 c = vec3(texture2D(tDiffuse, vUv + off).r, texture2D(tDiffuse, vUv).g, texture2D(tDiffuse, vUv - off).b);
+          // radial speed blur: streaks out from the centre when you go fast
+          if (uBlur > 0.01) {
+            vec3 acc = c; float w = 1.0;
+            for (int i = 1; i <= 6; i++) { float k = float(i) / 6.0 * uBlur * 0.06 * smoothstep(0.02, 0.25, r2); acc += texture2D(tDiffuse, vUv - q * k).rgb; w += 1.0; }
+            c = acc / w;
+          }
           float l = dot(c, vec3(0.299, 0.587, 0.114));
           c = mix(vec3(l), c, 1.12);
           c = (c - 0.5) * 1.06 + 0.5;
-          vec2 q = vUv - 0.5; c *= 1.0 - dot(q, q) * 0.55;
+          c *= 1.0 - r2 * 0.55;
+          c += (rnd(vUv * 731.0) - 0.5) * 0.028; // fine film grain
           gl_FragColor = vec4(clamp(c, 0.0, 1.0), 1.0); }`,
-    }));
+    });
+    composer.addPass(gradePass);
   }
   for (const id of ['gfx', 'gfx2']) $(id).textContent = 'GRAPHICS: ' + quality.toUpperCase();
   resize();
@@ -130,6 +145,7 @@ window.addEventListener('resize', resize);
 // ---------------- world ----------------
 const world = buildCity(scene, quality);
 const weather = new Weather(scene, quality === 'high');
+const flat = buildFlat(scene, world, world.addCollider);
 const audio = new Audio();
 const player = new Player(scene);
 const peds = new PedManager(scene, world);
@@ -164,6 +180,23 @@ function updateParticles(dt) {
     p.s.material.opacity = p.op * (1 - k);
   }
 }
+// skid marks: a ring buffer of dark rubber strips on the road, plus tyre smoke
+const SKIDS = 900;
+const skidMesh = new THREE.InstancedMesh(new THREE.PlaneGeometry(0.22, 0.55).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: '#0a0a0a', transparent: true, opacity: 0.45, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }), SKIDS);
+skidMesh.count = 0; skidMesh.frustumCulled = false; skidMesh.renderOrder = 1; scene.add(skidMesh);
+let skidI = 0;
+const skidDummy = new THREE.Object3D();
+function skidAt(x, z, heading, car) {
+  const key = car.id + (x > car.x ? 'a' : 'b'), last = skidLast.get(key);
+  if (last && Math.hypot(last[0] - x, last[1] - z) < 0.45) return; // lay a strip every half metre
+  skidLast.set(key, [x, z]);
+  skidDummy.position.set(x, world.groundHeight(x, z, 0.5) + 0.015, z); skidDummy.rotation.set(0, heading, 0); skidDummy.updateMatrix();
+  skidMesh.setMatrixAt(skidI, skidDummy.matrix); skidI = (skidI + 1) % SKIDS; skidMesh.count = Math.max(skidMesh.count, skidI === 0 ? SKIDS : skidI);
+  skidMesh.instanceMatrix.needsUpdate = true;
+  if (Math.random() < 0.35 && Math.hypot(x - player.x, z - player.z) < 80) puff(x, 0.3, z, { color: '#d8d8d8', life: 1.2, size: 0.6, grow: 3, vy: 0.6, opacity: 0.35 });
+}
+const skidLast = new Map();
+
 // tracers
 const tracers = [];
 function tracer(a, b, col = '#7fe8ff', life = 0.09) {
@@ -180,6 +213,8 @@ const game = {
   wanted: null, alarm: null, alarmT: 0, mission: null, missionIdx: 0, markers: [], blips: [], specs: [], pickups: [],
   playing: false, paused: false,
 };
+
+game.onSkid = skidAt;
 
 // ----- wanted level -----
 game.wanted = {
@@ -410,20 +445,29 @@ function setupCollectibles(save) {
   addPickup('health', hos.x - 6, hos.z, { respawn: 30 });
   addPickup('ammo', h.x - 8, h.z, { respawn: 45 });
   alleyPool = [];
-  scatterWeapons(44);
-  scatterCrates(16);
+  scatterWeapons(130);
+  scatterCrates(45);
 }
 // ammo crates: top up every gun you own
 function scatterCrates(n) {
-  for (let k = 0; k < n; k++) { const s = takeAlleySpot(); if (!s) break; addPickup('crate', s[0], s[1], { respawn: 75 }); }
+  for (let k = 0; k < n; k++) { const s = takeAlleySpot() || paveSpot(); if (!s) break; addPickup('crate', s[0], s[1], { respawn: 75 }); }
 }
 // weapons dropped at random spots on the pavements, different every time you play
 function scatterWeapons(n) {
   const kinds = ['club', 'pan', 'claymore', 'bagpipes', 'blaster', 'blaster', 'scatter', 'laser', 'gatling', 'sniper', 'soaker', 'tattie', 'haggis', 'flame', 'neep'];
   for (let k = 0; k < n; k++) {
-    const s = takeAlleySpot(); if (!s) break;
+    const s = takeAlleySpot() || paveSpot(); if (!s) break;
     addPickup('weapon', s[0], s[1], { weapon: kinds[(Math.random() * kinds.length) | 0], respawn: 90 });
   }
+}
+// once the alleys are full, extras go on quiet bits of pavement
+function paveSpot() {
+  for (let tries = 0; tries < 30; tries++) {
+    const b = world.blocks[(Math.random() * world.blocks.length) | 0], L = world.paveLoop(b), t = 0.15 + Math.random() * 0.7, side = (Math.random() * 4) | 0;
+    const x = side < 2 ? L.x0 + (L.x1 - L.x0) * t : (side === 2 ? L.x0 : L.x1), z = side >= 2 ? L.z0 + (L.z1 - L.z0) * t : (side === 0 ? L.z0 : L.z1);
+    if (!game.pickups.some((p) => Math.hypot(p.x - x, p.z - z) < 10)) return [x, z];
+  }
+  return null;
 }
 // pickups hide up the alleyways between buildings: a random alley each, never two together
 let alleyPool = [];
@@ -438,7 +482,7 @@ function takeAlleySpot() {
     const off = (Math.random() - 0.5) * 6;
     const px = along === 'x' ? x + off : x, pz = along === 'z' ? z + off : z;
     if (world.collide(px, pz, 0.5, 0).hit) continue;
-    if (game.pickups.some((p) => Math.hypot(p.x - px, p.z - pz) < 8)) continue;
+    if (game.pickups.some((p) => Math.hypot(p.x - px, p.z - pz) < 6)) continue;
     return [px, pz];
   }
   return null;
@@ -460,6 +504,7 @@ game.playerShoot = (W = WEAPONS.blaster) => {
   const model = player.models[player.weapon] || player.blaster;
   const muzzle = model.localToWorld(player.blaster.userData.muzzle.clone());
   puff(muzzle.x, muzzle.y, muzzle.z, { color: W.pellets > 1 ? '#ffd27a' : '#9ff', add: true, life: 0.12, size: W.pellets > 1 ? 0.7 : 0.4, grow: 1, vy: 0, opacity: 1 });
+  flashLight.position.copy(muzzle); flashLight.color.set(W.tracer || '#ffcc88'); flashLight.intensity = Math.max(flashLight.intensity, W.pellets > 1 ? 60 : 30);
   game.raiseAlarm(player.x, player.z, 1.5);
   for (let k = 0; k < W.pellets; k++) {
     const dir = aim.clone();
@@ -676,7 +721,7 @@ game.onCarImpact = (car, v) => {
 game.onExplosion = (x, y, z, src) => {
   const d = Math.hypot(x - player.x, z - player.z);
   if (d < 120) audio.boom();
-  flashLight.position.set(x, y + 1, z); flashLight.intensity = 400;
+  flashLight.position.set(x, y + 1, z); flashLight.color.set('#ffaa55'); flashLight.intensity = 400;
   for (let i = 0; i < 26; i++) puff(x, y, z, { color: i < 12 ? '#ffb030' : '#ff6010', add: true, life: 0.6 + Math.random() * 0.5, size: 2 + Math.random() * 2, vx: (Math.random() - 0.5) * 10, vy: Math.random() * 8, vz: (Math.random() - 0.5) * 10, opacity: 1, grow: 1.5 });
   for (let i = 0; i < 16; i++) puff(x, y + 1, z, { color: '#2a2a2a', life: 2.5 + Math.random() * 2, size: 2.5, vx: (Math.random() - 0.5) * 4, vy: 2 + Math.random() * 3, vz: (Math.random() - 0.5) * 4, opacity: 0.8, grow: 3 });
   if (d < 60) cam.shake = Math.max(cam.shake, 0.8 * (1 - d / 60));
@@ -1068,6 +1113,7 @@ function updateCamera(dt, inp) {
     if (hit) { d = Math.max(0.6, t - 0.4); break; }
   }
   camera.position.set(ox - fx * d, Math.max(0.4, ty - fy * d), oz - fz * d);
+  if (game.inside) { const B = flat.bounds; camera.position.x = Math.min(B.x1 - 0.25, Math.max(B.x0 + 0.25, camera.position.x)); camera.position.z = Math.min(B.z1 - 0.25, Math.max(B.z0 + 0.25, camera.position.z)); camera.position.y = Math.min(B.h - 0.3, camera.position.y); }
   if (cam.shake > 0) { cam.shake = Math.max(0, cam.shake - dt * 1.5); camera.position.x += (Math.random() - 0.5) * cam.shake; camera.position.y += (Math.random() - 0.5) * cam.shake; }
   camera.lookAt(ox + fx * 10, ty + fy * 10, oz + fz * 10);
 }
@@ -1143,19 +1189,44 @@ function refreshEnv(night) {
   envRT = rt; scene.environment = rt.texture;
 }
 
+// ---------------- raindrops on the lens ----------------
+const lens = $('lens'), lctx = lens.getContext('2d');
+const drops = [];
+function updateLens(dt, rain) {
+  if (quality !== 'high') { if (drops.length) { drops.length = 0; lctx.clearRect(0, 0, lens.width, lens.height); } return; }
+  const W = Math.round(window.innerWidth / 2), H = Math.round(window.innerHeight / 2);
+  if (lens.width !== W || lens.height !== H) { lens.width = W; lens.height = H; }
+  if (!drops.length && rain <= 0.2) return;
+  if (rain > 0.2 && cam.pitch > -0.6 && Math.random() < dt * rain * 14) drops.push({ x: Math.random() * W, y: Math.random() * H * 0.8, r: 3 + Math.random() * 7, life: 2 + Math.random() * 3, vy: 0 });
+  lctx.clearRect(0, 0, W, H);
+  for (let i = drops.length - 1; i >= 0; i--) {
+    const d = drops[i];
+    d.life -= dt; if (d.r > 6) { d.vy += dt * 20; d.y += d.vy * dt; }
+    if (d.life <= 0 || d.y > H + 10) { drops.splice(i, 1); continue; }
+    const a = Math.min(1, d.life);
+    const g = lctx.createRadialGradient(d.x - d.r * 0.3, d.y - d.r * 0.3, d.r * 0.1, d.x, d.y, d.r);
+    g.addColorStop(0, `rgba(255,255,255,${0.35 * a})`); g.addColorStop(0.6, `rgba(200,220,240,${0.12 * a})`); g.addColorStop(1, `rgba(40,60,80,${0.25 * a})`);
+    lctx.fillStyle = g; lctx.beginPath(); lctx.ellipse(d.x, d.y, d.r * 0.85, d.r, 0, 0, 7); lctx.fill();
+    if (d.vy > 0) { lctx.fillStyle = `rgba(220,235,250,${0.12 * a})`; lctx.fillRect(d.x - d.r * 0.25, d.y - d.vy * 0.6, d.r * 0.5, d.vy * 0.6); }
+  }
+}
+
 // ---------------- weather ----------------
 let lastWet = -1;
 function updateWeather(dt) {
-  const changed = weather.update(dt, camera.position, () => audio.thunder(0.7 + Math.random() * 0.3));
+  const changed = weather.update(dt, camera.position, () => audio.thunder((game.inside ? 0.25 : 0.5) + Math.random() * 0.2));
+  if (game.inside) { weather.rain.visible = false; weather.snow.visible = false; }
   if (changed && game.playing) game.toast(`${WEATHERS[changed].icon} Weather: ${WEATHERS[changed].name}`);
   const wv = weather.v;
   const wet = Math.min(1, wv.wet);
   const key = wet + wv.snow * 10;
   if (Math.abs(key - lastWet) > 0.01) { lastWet = key; world.setWet(wet, wv.snow); }
-  game.grip = 1 - wet * 0.16 - wv.snow * 0.3; // slidier in the wet, worse in the snow
-  audio.setRain(wv.rain, !!player.car);
+  game.grip = 1 - wet * 0.16 - wv.snow * 0.3;
+  game.weatherDark = wv.light < 0.62;
+  updateLens(dt, game.inside || player.car ? 0 : wv.rain); // slidier in the wet, worse in the snow
+  audio.setRain(game.inside ? wv.rain * 0.25 : wv.rain, !!player.car);
   // raindrops splashing on the ground around Wally
-  if (wv.rain > 0.15 && quality === 'high') {
+  if (wv.rain > 0.15 && quality === 'high' && !game.inside) {
     const n = Math.floor(wv.rain * dt * 70 + Math.random());
     for (let i = 0; i < n; i++) {
       const a = Math.random() * 6.283, d = 2 + Math.random() * 16;
@@ -1260,6 +1331,7 @@ function drawRadar() {
 
 // ---------------- zones ----------------
 function zoneName(x, z) {
+  if (game.inside) return "Wally's Flat";
   if (Math.abs(x) > HALF + 4 || Math.abs(z) > HALF + 4) return 'The Prom';
   const bx = Math.floor((x + HALF) / P), bz = Math.floor((z + HALF) / P);
   const b = world.blocks[Math.max(0, Math.min(N - 1, bx)) * N + Math.max(0, Math.min(N - 1, bz))];
@@ -1316,8 +1388,8 @@ function updateMission(dt) {
 }
 
 // ---------------- save ----------------
-function save() {
-  store.set('wta-save', { v: 2, money: player.money, missionIdx: game.missionIdx, specs: game.collected || [], weapons: Object.keys(player.owned), ammoOf: player.ammoOf, stats: game.stats, time: game.time });
+function save(bed) {
+  store.set('wta-save', { v: 2, slept: !!(bed || (store.get('wta-save', {}) || {}).slept), money: player.money, missionIdx: game.missionIdx, specs: game.collected || [], weapons: Object.keys(player.owned), ammoOf: player.ammoOf, stats: game.stats, time: game.time });
 }
 function load(fresh) {
   const s = fresh ? {} : store.get('wta-save', {});
@@ -1339,6 +1411,9 @@ function updatePickups(dt) {
   const px = player.x, py = player.y, pz = player.z;
   for (const p of game.pickups) {
     if (p.gone > 0) { p.gone -= dt; if (p.gone <= 0) p.obj.visible = true; continue; }
+    const pd = Math.abs(p.x - px) + Math.abs(p.z - pz);
+    p.obj.visible = pd < 110;
+    if (pd > 110) continue;
     p.t += dt; p.obj.rotation.y = p.t * 2; p.obj.position.y = p.y + Math.sin(p.t * 3) * 0.15;
     if (p.obj.userData.ring) p.obj.userData.ring.position.y = -0.75 - Math.sin(p.t * 3) * 0.15;
     if (player.car || player.dead) continue;
@@ -1525,6 +1600,56 @@ function updateGarage(dt) {
   }
 }
 
+// ---------------- Wally's Flat: go inside, sleep to save ----------------
+game.inside = false;
+let doorUntil = 0; // real-time cooldown after using a door or the bed
+const coolDoor = (sec) => { doorUntil = performance.now() + sec * 1000; };
+function fade(cb, hold = 0.35) {
+  const f = $('fade'); f.style.opacity = 1;
+  setTimeout(() => { cb(); setTimeout(() => { f.style.opacity = 0; }, hold * 1000); }, 380);
+}
+function enterFlat() {
+  if (game.wanted.level > 0) { game.toast('Ye cannae go hame wi\'the polis on yer tail!'); coolDoor(3); return; }
+  if (game.mission) { game.toast('Nae time for a cuppa - finish the job first!'); coolDoor(3); return; }
+  coolDoor(1.5); audio.door();
+  fade(() => {
+    game.inside = true; document.body.classList.add('inside');
+    player.place(flat.exit[0], flat.exit[1], Math.PI); player.y = 0; cam.yaw = Math.PI; cam.pitch = -0.2;
+    $('zone').innerHTML = "Wally's Flat"; $('zone').style.opacity = 1; setTimeout(() => ($('zone').style.opacity = 0), 2200);
+  });
+}
+function exitFlat() {
+  coolDoor(1.5); audio.door();
+  fade(() => {
+    game.inside = false; document.body.classList.remove('inside');
+    player.place(flat.outside[0], flat.outside[1], Math.PI); cam.yaw = Math.PI; cam.pitch = -0.18;
+  });
+}
+function sleepAndSave() {
+  coolDoor(4); game.sleeping = true;
+  const f = $('fade'); f.style.transition = 'opacity 1s'; f.style.opacity = 1; f.textContent = 'Z z z . . .';
+  setTimeout(() => {
+    game.time = 8 * 60; player.health = 100;
+    save(true);
+    f.textContent = '';
+    setTimeout(() => { f.style.opacity = 0; game.sleeping = false; setTimeout(() => (f.style.transition = ''), 1000); }, 400);
+    audio.pass();
+    game.bigText('GAME SAVED', 'Wally had a lovely kip. It\'s 08:00.', 3);
+  }, 1500);
+}
+function updateFlat(dt, inp) {
+  flat.update(dt, performance.now() / 1000, game.inside, game.night);
+  if (player.car || player.dead || game.intro || game.jack || performance.now() < doorUntil || game.sleeping) { $('prompt').classList.add('hidden'); return; }
+  const near = (p, r) => Math.hypot(player.x - p[0], player.z - p[1]) < r;
+  let prompt = '';
+  if (!game.inside) { if (near(flat.door, 0.9)) enterFlat(); }
+  else {
+    if (near(flat.exitMarker, 0.8)) exitFlat();
+    else if (near(flat.bedMarker, 1.0)) { prompt = isTouch ? 'Tap ENTER to sleep and SAVE' : 'Press F to sleep and SAVE'; if (inp.enter) { inp.enter = false; sleepAndSave(); } }
+  }
+  $('prompt').textContent = prompt; $('prompt').classList.toggle('hidden', !prompt);
+}
+
 // ---------------- intro: a UFO drops Wally off outside his flat ----------------
 let ufo = null;
 const ease = (k) => { k = Math.max(0, Math.min(1, k)); return k * k * (3 - 2 * k); };
@@ -1609,7 +1734,8 @@ function frame(now) {
   if (inp.mute) { audio.on = !audio.on; if (audio.master) audio.master.gain.value = audio.on ? 0.7 : 0; game.toast(audio.on ? 'Sound on' : 'Sound off'); }
   if (inp.camera) cam.far = !cam.far;
   if (inp.radio && player.car) { audio.nextStation(); showRadio(); }
-  if (inp.enter && !game.jack) { if (player.car) exitCar(); else enterCar(); }
+  updateFlat(dt, inp);
+  if (inp.enter && !game.jack && !game.inside) { if (player.car) exitCar(); else enterCar(); }
   if (inp.aimPressed && !player.car && WEAPONS[player.weapon].melee) game.toast(player.hasWeapons ? 'You can only aim with a gun or neeps. Tap WEAPON to switch.' : 'Nothing to aim yet! Find a gun lying about town (gold rings on the radar... well, on the pavement).');
   if (inp.weapon && !player.car) { player.cycleWeapon(); if (!player.hasWeapons) game.toast('No weapons yet. Just fists of mild fury.'); else game.toast(`${WEAPONS[player.weapon].icon} ${WEAPONS[player.weapon].name}`); }
   if (inp.power && player.car) { player.usePower(game); inp.powerPressed = false; }
@@ -1665,7 +1791,17 @@ function frame(now) {
   updateHUD(dt);
   render();
 }
-function render() { if (composer && quality === 'high') composer.render(); else renderer.render(scene, camera); }
+function updatePost() {
+  if (!gradePass) return;
+  const c = player.car;
+  const sp = c ? c.speed : (player.flyT > 0 && !player.flail ? 22 : 0);
+  const target = Math.min(1, Math.max(0, (sp - 16) / 26));
+  const u = gradePass.uniforms;
+  u.uBlur.value += (target - u.uBlur.value) * 0.08;
+  u.uTime.value = (performance.now() / 1000) % 100;
+}
+function render() {
+  updatePost(); if (composer && quality === 'high') composer.render(); else renderer.render(scene, camera); }
 
 // slow orbit behind the title screen
 let titleT = 0;
@@ -1710,7 +1846,11 @@ function startGame(fresh) {
     // a motor waiting at the kerb outside the flat
     if (!cars.some((c) => Math.hypot(c.x - h.x, c.z - h.z) < 12)) { const c = game.spawnCar('hatch', h.x - 7, h.z - 3.4, -Math.PI / 2); c.parked = true; }
     started = true;
-    startIntro();
+    if (s.slept && !fresh) { // you saved in bed last time: wake up in the flat
+      game.inside = true; document.body.classList.add('inside');
+      player.place(flat.spawn[0], flat.spawn[1], Math.PI); player.y = 0; cam.yaw = Math.PI;
+      game.subs(["WALLY MAN: *yawn* Right. Another day of heroics.", "WALLY MAN: (The pink ring by the door takes me outside.)"]);
+    } else { game.inside = false; document.body.classList.remove('inside'); startIntro(); }
   }
   game.playing = true; game.paused = false;
   $('title').classList.add('hidden'); $('hud').classList.remove('hidden'); $('pause').classList.add('hidden');
@@ -1736,4 +1876,4 @@ $('news').innerHTML = `<b>What's new in v${VERSION}:</b><ul>${CHANGES[0][1].map(
 for (let i = 0; i < 6; i++) { player.x = world.specials.plaza.x; player.z = world.specials.plaza.z; spawnParked(); }
 $('loading').classList.add('hidden');
 requestAnimationFrame(frame);
-window.__game = game; game.camera = camera; game.scene = scene; game.renderer = renderer; // handy for debugging in the console
+window.__game = game; game.flat = flat; game.camera = camera; game.scene = scene; game.renderer = renderer; // handy for debugging in the console

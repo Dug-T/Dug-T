@@ -385,12 +385,22 @@ export function buildCity(scene, quality) {
     lamps.forEach(([x, z, ry], i) => {
       dummy.position.set(x, 0, z); dummy.rotation.set(0, ry + Math.PI / 2, 0); dummy.updateMatrix();
       poleM.setMatrixAt(i, dummy.matrix); armM.setMatrixAt(i, dummy.matrix); headM.setMatrixAt(i, dummy.matrix);
-      const col = addCircle(x, z, 0.2, 6); col.lamp = { i, x, z, ry: ry + Math.PI / 2 };
       const hp = new THREE.Vector3(1.55, 6.4, 0).applyEuler(dummy.rotation).add(dummy.position); world.lampHeads.push(hp);
+      const col = addCircle(x, z, 0.2, 6); col.lamp = { i, x, z, ry: ry + Math.PI / 2, px: hp.x, pz: hp.z };
     });
     poleM.castShadow = true; armM.castShadow = true;
     scene.add(poleM, armM, headM);
     world.lampMeshes = [poleM, armM, headM];
+    // warm pools of light on the ground under each lamp, faded in at night
+    const pc = document.createElement('canvas'); pc.width = pc.height = 128; const px = pc.getContext('2d');
+    const pg = px.createRadialGradient(64, 64, 0, 64, 64, 64); pg.addColorStop(0, 'rgba(255,214,150,1)'); pg.addColorStop(0.45, 'rgba(255,190,110,0.45)'); pg.addColorStop(1, 'rgba(255,170,90,0)');
+    px.fillStyle = pg; px.fillRect(0, 0, 128, 128);
+    const poolGeo = new THREE.PlaneGeometry(8, 8); poolGeo.rotateX(-Math.PI / 2);
+    world.lampPoolMat = new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(pc), transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 });
+    const pools = new THREE.InstancedMesh(poolGeo, world.lampPoolMat, lamps.length);
+    world.lampHeads.forEach((hp, i) => { dummy.position.set(hp.x, KERB + 0.025, hp.z); dummy.rotation.set(0, 0, 0); dummy.updateMatrix(); pools.setMatrixAt(i, dummy.matrix); });
+    pools.renderOrder = 2; pools.visible = false; scene.add(pools);
+    world.lampPools = pools;
   }
   // trees: trunk + three-lobed canopy
   {
@@ -554,6 +564,7 @@ export function buildCity(scene, quality) {
   }
 
   // ---------- queries ----------
+  world.addCollider = addCollider;
   world.nearby = (x, z, rad) => {
     const out = new Set();
     const gx0 = Math.floor((x - rad) / GRID), gx1 = Math.floor((x + rad) / GRID), gz0 = Math.floor((z - rad) / GRID), gz1 = Math.floor((z + rad) / GRID);
@@ -652,6 +663,7 @@ export function buildCity(scene, quality) {
   world.knockLamp = (b, vx, vz) => {
     if (b.dead) return;
     b.dead = true;
+    if (world.lampPools) { lm.makeScale(0, 0, 0); world.lampPools.setMatrixAt(b.lamp.i, lm); world.lampPools.instanceMatrix.needsUpdate = true; }
     const sp = Math.hypot(vx, vz) || 1;
     // falls the way the car was going: rotate about the horizontal axis at right angles to that
     fallen.push({ b, ang: 0, vel: Math.min(2.5, sp * 0.12), ax: vz / sp, az: -vx / sp, t: 0 });
@@ -660,7 +672,10 @@ export function buildCity(scene, quality) {
   world.restoreLamps = (px, pz) => {
     for (let k = fallen.length - 1; k >= 0; k--) {
       const f = fallen[k];
-      if (f.t > 45 && Math.hypot(f.b.cx - px, f.b.cz - pz) > 140) { setLamp(f.b.lamp, 0, 1, 0); f.b.dead = false; fallen.splice(k, 1); }
+      if (f.t > 45 && Math.hypot(f.b.cx - px, f.b.cz - pz) > 140) {
+        setLamp(f.b.lamp, 0, 1, 0); f.b.dead = false; fallen.splice(k, 1);
+        if (world.lampPools) { lm.makeTranslation(f.b.lamp.px, KERB + 0.025, f.b.lamp.pz); world.lampPools.setMatrixAt(f.b.lamp.i, lm); world.lampPools.instanceMatrix.needsUpdate = true; }
+      }
     }
   };
   world.update = (dt, t, night) => {
@@ -672,6 +687,7 @@ export function buildCity(scene, quality) {
     wn.offset.x = -t * 0.01; wn.offset.y = t * 0.006;
     for (const m of world.nightMats) m.emissiveIntensity = night * 1.2;
     if (world.lampMat) world.lampMat.emissiveIntensity = 0.1 + night * 3.5;
+    if (world.lampPoolMat) { world.lampPoolMat.opacity = Math.max(0, night - 0.15) * 0.75; world.lampPools.visible = night > 0.18; }
     if (world.beacons) world.beacons.visible = (Math.floor(t * 1.2) % 2) === 0;
   };
   return world;

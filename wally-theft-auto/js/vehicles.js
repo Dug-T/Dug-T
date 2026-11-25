@@ -57,6 +57,19 @@ const sharedM = {};
 function M(key, make) { return sharedM[key] || (sharedM[key] = make()); }
 
 let plateN = 0;
+// shared additive glow sprites for car lights
+const glowMats = {};
+function glowMat(kind) {
+  if (!glowMats[kind]) {
+    const c = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d');
+    const g = x.createRadialGradient(32, 32, 0, 32, 32, 32);
+    if (kind === 'head') { g.addColorStop(0, 'rgba(255,255,240,1)'); g.addColorStop(0.25, 'rgba(255,240,200,0.6)'); g.addColorStop(1, 'rgba(255,220,160,0)'); }
+    else { g.addColorStop(0, 'rgba(255,80,60,1)'); g.addColorStop(0.3, 'rgba(255,30,20,0.55)'); g.addColorStop(1, 'rgba(255,0,0,0)'); }
+    x.fillStyle = g; x.fillRect(0, 0, 64, 64);
+    glowMats[kind] = new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), blending: THREE.AdditiveBlending, depthWrite: false, transparent: true });
+  }
+  return glowMats[kind];
+}
 export function buildCarModel(type, paint) {
   const T = TYPES[type];
   const g = new THREE.Group();
@@ -70,6 +83,7 @@ export function buildCarModel(type, paint) {
   const tyreM = M('tyre', () => new THREE.MeshStandardMaterial({ color: '#1b1b1b', roughness: 0.9 }));
   const headM = M('head', () => new THREE.MeshStandardMaterial({ color: '#fffbe8', emissive: '#fff1c4', emissiveIntensity: 0.3, roughness: 0.1 }));
   const tailM = new THREE.MeshStandardMaterial({ color: '#7a0000', emissive: '#ff1010', emissiveIntensity: 0.4, roughness: 0.3 });
+  const glows = [], tailGlows = [];
   const [bs, cs] = profile(type, T.len, T.hgt);
   const bodyMesh = new THREE.Mesh(extrude(bs, T.wid, 0.12), paintM);
   const cabin = new THREE.Mesh(extrude(cs, T.wid - 0.16, 0.08), glassM);
@@ -104,6 +118,9 @@ export function buildCarModel(type, paint) {
     hl.position.set(sx * (T.wid / 2 - 0.3), isBox ? 0.8 : (type === 'sports' ? 0.58 : 0.7), T.len / 2 - (isBox ? 0.02 : 0.08)); body.add(hl);
     const tl = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.14, 0.06), tailM);
     tl.position.set(sx * (T.wid / 2 - 0.28), isBox ? 0.9 : 0.82, -T.len / 2 - 0.01); body.add(tl);
+    // night-time glows: a soft halo round each headlight and taillight
+    const hg = new THREE.Sprite(glowMat('head')); hg.scale.setScalar(1.3); hg.position.copy(hl.position).add(new THREE.Vector3(0, 0, 0.12)); hg.visible = false; body.add(hg); glows.push(hg);
+    const tg = new THREE.Sprite(glowMat('tail')); tg.scale.setScalar(0.8); tg.position.copy(tl.position).add(new THREE.Vector3(0, 0, -0.08)); tg.visible = false; body.add(tg); glows.push(tg); tailGlows.push(tg);
     // mirrors
     const mr = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.1, 0.12), paintM);
     mr.position.set(sx * (T.wid / 2 + 0.06), isBox ? 1.25 : 1.0, isBox ? T.len / 2 - 1.0 : T.len * 0.12); body.add(mr);
@@ -213,7 +230,7 @@ export function buildCarModel(type, paint) {
   driver.position.set(-(T.wid / 2 - 0.45), seatY, seatZ - 0.05);
   driver.userData = { shirt, skinD, hairD, own: [shirt.color.clone(), skinD.color.clone(), hairD.color.clone()] };
   driver.visible = false; body.add(driver);
-  return { group: g, body, wheels, lightbar, paintM, tailM, headM, door, driverFig: driver, amberM };
+  return { group: g, body, wheels, lightbar, paintM, tailM, headM, door, driverFig: driver, amberM, glows, tailGlows, rearAxle: { x: wx, z: -wz } };
 }
 
 let carId = 0;
@@ -340,7 +357,16 @@ export class Car {
         else { u.shirt.color.copy(u.own[0]); u.skinD.color.copy(u.own[1]); u.hairD.color.copy(u.own[2]); }
       }
     }
-    this.tailM.emissiveIntensity = inp.throttle < 0 && vf > 0.5 ? 3.5 : (game && game.night > 0.3 ? 1.4 : 0.4);
+    const braking = inp.throttle < 0 && vf > 0.5;
+    this.tailM.emissiveIntensity = braking ? 3.5 : (game && game.night > 0.3 ? 1.4 : 0.4);
+    const lit = !!game && (game.night > 0.25 || game.weatherDark) && !this.dead;
+    if (this.glows) for (const s of this.glows) s.visible = lit;
+    if (lit) for (const s of this.tailGlows) s.scale.setScalar(braking ? 1.4 : 0.8);
+    // tyres squeal and leave rubber when the back end steps out or the handbrake's on
+    if (game && game.onSkid && this.speed > 5 && (Math.abs(vr) > 3.2 || (inp.hand && Math.abs(vf) > 6))) {
+      const [hx, hz] = this.forward(), lx = hz, lz = -hx, a = this.rearAxle;
+      for (const sd of [-1, 1]) game.onSkid(this.x + hx * a.z + lx * a.x * sd, this.z + hz * a.z + lz * a.x * sd, this.heading, this);
+    }
     this.sync();
   }
   damage(amount, game, cause) {

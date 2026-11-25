@@ -112,10 +112,10 @@ export class Audio {
       if (v.pan) v.pan.pan.setTargetAtTime(Math.max(-0.9, Math.min(0.9, o.pan)), t, 0.1);
     });
   }
-  setRain(v, inCar) { if (this.rainG) this.rainG.gain.setTargetAtTime(v * (inCar ? 0.12 : 0.22), this.ctx.currentTime, 0.5); }
+  setRain(v, inCar) { if (this.rainG) this.rainG.gain.setTargetAtTime(v * (inCar ? 0.03 : 0.055), this.ctx.currentTime, 0.5); } // a gentle patter, not a roar
   thunder(near = 1) {
     if (!this.ctx) return;
-    this.noise(3.5, 140, 1.4 * near); this.noise(1.2, 420, 0.6 * near);
+    this.noise(3.5, 140, 0.8 * near); this.noise(1.2, 420, 0.3 * near);
     this.tone(48, 2.5, 'sine', 0.5 * near, -20);
   }
   // the saucer's warbling hum
