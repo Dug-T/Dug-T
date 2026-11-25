@@ -1,7 +1,7 @@
 // The places on the island: camp, village, plane wreck, ranger station, bunker, raft beach and the things lying about.
 import * as THREE from 'three';
 import { POIS, heightAt, normalAt } from './island.js';
-import { thatchTexture, metalTexture, concreteTexture, signTexture, rng } from './textures.js';
+import { thatchTexture, metalTexture, concreteTexture, signTexture, sparkTexture, rng } from './textures.js';
 import { mat } from './survivor.js';
 
 const box = (w, h, d, m) => new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m);
@@ -22,7 +22,7 @@ export function buildProps(scene, world, quality) {
     const stones = new THREE.Group(); for (let i = 0; i < 9; i++) { const a = i / 9 * Math.PI * 2; const s = new THREE.Mesh(new THREE.DodecahedronGeometry(0.25), mat('#6a6560', 0.9)); s.position.set(Math.cos(a) * 0.8, 0.12, Math.sin(a) * 0.8); stones.add(s); }
     g.add(stones);
     for (let i = 0; i < 3; i++) { const l = cyl(0.08, 0.1, 1.1, darkWood, 7); l.rotation.z = Math.PI / 2 + 0.5; l.rotation.y = i * 2.1; l.position.y = 0.2; g.add(l); }
-    const flame = new THREE.Sprite(new THREE.SpriteMaterial({ color: '#ff9a30', transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.9 }));
+    const flame = new THREE.Sprite(new THREE.SpriteMaterial({ map: sparkTexture(), color: '#ff9a30', transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.95 }));
     flame.scale.set(1.2, 1.8, 1); flame.position.y = 0.9; g.add(flame);
     const light = new THREE.PointLight('#ff8a30', 14, 22, 1.8); light.position.y = 1.5; g.add(light);
     P.fires.push({ flame, light });

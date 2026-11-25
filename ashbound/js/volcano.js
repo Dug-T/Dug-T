@@ -5,8 +5,8 @@ import { puffTexture, sparkTexture, lavaTexture, makeNoise } from './textures.js
 import { stageAt } from './survival.js';
 
 // a pool of billboard particles with per-point size, alpha and shade
-class Puffs {
-  constructor(scene, count, map, colA, colB, blending = THREE.NormalBlending, depthWrite = false) {
+export class Puffs {
+  constructor(scene, count, map, colA, colB, blending = THREE.NormalBlending, depthWrite = false, fogMul = 1) {
     this.n = count; this.pos = new Float32Array(count * 3); this.size = new Float32Array(count); this.alpha = new Float32Array(count); this.shade = new Float32Array(count);
     this.vel = new Float32Array(count * 3); this.life = new Float32Array(count); this.max = new Float32Array(count); this.grow = new Float32Array(count); this.fade = new Float32Array(count);
     this.head = 0; this.alive = 0;
@@ -16,7 +16,7 @@ class Puffs {
     g.setAttribute('aAlpha', new THREE.BufferAttribute(this.alpha, 1));
     g.setAttribute('aShade', new THREE.BufferAttribute(this.shade, 1));
     g.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 3000);
-    this.u = { tMap: { value: map }, uColA: { value: new THREE.Color(colA) }, uColB: { value: new THREE.Color(colB) }, uScale: { value: 800 }, uLight: { value: 1 } };
+    this.u = { tMap: { value: map }, uColA: { value: new THREE.Color(colA) }, uColB: { value: new THREE.Color(colB) }, uScale: { value: 800 }, uLight: { value: 1 }, uFogMul: { value: fogMul } };
     const mat = new THREE.ShaderMaterial({
       uniforms: THREE.UniformsUtils.merge([THREE.UniformsLib.fog, this.u]), transparent: true, depthWrite, blending, fog: true,
       vertexShader: `attribute float aSize, aAlpha, aShade; varying float vA, vS; uniform float uScale;
@@ -24,10 +24,12 @@ class Puffs {
         void main(){ vA = aAlpha; vS = aShade; vec4 mvPosition = modelViewMatrix * vec4(position, 1.0); gl_PointSize = aSize * uScale / max(1.0, -mvPosition.z); gl_Position = projectionMatrix * mvPosition;
         #include <fog_vertex>
         }`,
-      fragmentShader: `uniform sampler2D tMap; uniform vec3 uColA, uColB; uniform float uLight; varying float vA, vS;
+      fragmentShader: `uniform sampler2D tMap; uniform vec3 uColA, uColB; uniform float uLight, uFogMul; varying float vA, vS;
         #include <fog_pars_fragment>
         void main(){ vec4 t = texture2D(tMap, gl_PointCoord); vec3 c = mix(uColA, uColB, vS) * uLight; gl_FragColor = vec4(c, t.a * vA); if (gl_FragColor.a < 0.01) discard;
-        #include <fog_fragment>
+        #ifdef USE_FOG
+        float fogFactor = smoothstep(fogNear, fogFar, vFogDepth); gl_FragColor.rgb = mix(gl_FragColor.rgb, fogColor, fogFactor * uFogMul);
+        #endif
         #include <tonemapping_fragment>
         #include <colorspace_fragment>
         }`,
@@ -66,11 +68,12 @@ export class Volcano {
     this.progress = 0; this.stage = stageAt(0); this.shake = 0; this.rumbleLevel = 0; this.tremorT = 20; this.tremorEnv = 0; this.bombT = 8; this.ash = 0; this.flowFront = 0; this.surgeR = 0;
     this.t = 0; this.wind = 1.2;
     const puff = puffTexture(), spark = sparkTexture();
-    this.plume = new Puffs(scene, this.hi ? 900 : 450, puff, '#e8e4df', '#2a2524');
+    // the column and the surge only half-fade into the haze, so they stay readable against an ash sky
+    this.plume = new Puffs(scene, this.hi ? 1400 : 700, puff, '#e8e4df', '#2a2524', THREE.NormalBlending, false, 0.35);
     this.ashFall = new Puffs(scene, this.hi ? 1400 : 700, puff, '#8d8884', '#3a3634');
     this.burst = new Puffs(scene, 400, puff, '#ffb060', '#2a2220');
-    this.embers = new Puffs(scene, this.hi ? 600 : 300, spark, '#ffe6a0', '#ff5a00', THREE.AdditiveBlending);
-    this.surge = new Puffs(scene, this.hi ? 700 : 350, puff, '#6a6360', '#1c1818');
+    this.embers = new Puffs(scene, this.hi ? 600 : 300, spark, '#ffe6a0', '#ff5a00', THREE.AdditiveBlending, false, 0.3);
+    this.surge = new Puffs(scene, this.hi ? 700 : 350, puff, '#6a6360', '#1c1818', THREE.NormalBlending, false, 0.3);
     // the crater: a lava lake and its glow
     const lavaTex = lavaTexture();
     this.lavaU = { tLava: { value: lavaTex }, uFront: { value: 1e6 }, uTime: { value: 0 } };
@@ -85,7 +88,7 @@ export class Volcano {
         #include <fog_pars_fragment>
         void main(){
           if (vDist > uFront) discard;
-          vec3 t = texture2D(tLava, vec2(vUv.x, vUv.y - uTime * 0.06)).rgb;
+          vec3 t = texture2D(tLava, vec2(vUv.x, vUv.y - uTime * 0.025)).rgb;
           float crack = t.r;
           float front = smoothstep(uFront - 30.0, uFront, vDist);
           float edge = smoothstep(0.0, 0.2, vUv.x) * smoothstep(1.0, 0.8, vUv.x);
@@ -105,12 +108,16 @@ export class Volcano {
     this.lake = lake; this.craterY = craterY;
     this.glow = new THREE.PointLight('#ff5a1a', 0, 260, 1.6); this.glow.position.set(VOLCANO.x, craterY + 20, VOLCANO.z); scene.add(this.glow);
     // the lava flows, hidden until the eruption
-    this.flows = world.paths.map((pts) => this.buildFlow(pts));
+    this.flows = world.paths.map((pts, k) => this.buildFlow(pts, k));
     this.flowLight = new THREE.PointLight('#ff6a20', 0, 90, 1.8); scene.add(this.flowLight);
     // bombs
     this.bombs = [];
-    const bg = new THREE.SphereGeometry(1, 10, 8), bm = new THREE.MeshStandardMaterial({ color: '#2a1a14', emissive: '#ff5a10', emissiveIntensity: 2.2, roughness: 1 });
-    for (let i = 0; i < 20; i++) { const m = new THREE.Mesh(bg, bm); m.visible = false; scene.add(m); this.bombs.push({ m, on: false, x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, s: 1 }); }
+    const bg = new THREE.IcosahedronGeometry(1, 1);
+    { const p = bg.attributes.position; for (let i = 0; i < p.count; i++) { const k = 0.8 + Math.random() * 0.4; p.setXYZ(i, p.getX(i) * k, p.getY(i) * k, p.getZ(i) * k); } bg.computeVertexNormals(); }
+    this.hotM = new THREE.MeshStandardMaterial({ color: '#2a1a14', emissive: '#ff5a10', emissiveIntensity: 2.4, roughness: 1 });
+    this.rockM = new THREE.MeshStandardMaterial({ color: '#3a3330', emissive: '#6a2a10', emissiveIntensity: 0.35, roughness: 1 });
+    for (let i = 0; i < 30; i++) { const m = new THREE.Mesh(bg, this.hotM); m.visible = false; m.castShadow = true; scene.add(m); this.bombs.push({ m, on: false, x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, s: 1, hot: true }); }
+    this.burstT = 2;
     this.flashes = []; for (let i = 0; i < 4; i++) { const l = new THREE.PointLight('#ffa040', 0, 70, 1.5); scene.add(l); this.flashes.push(l); }
     this.fires = []; // {sprite, light?, x, z, t}
     this.fireTex = spark;
@@ -118,7 +125,7 @@ export class Volcano {
     this.scorches = [];
     this.noise = makeNoise(77);
   }
-  buildFlow(pts) {
+  buildFlow(pts, k) {
     const n = pts.length, across = 5, Nn = makeNoise(pts[0].x | 0);
     const pos = new Float32Array(n * across * 3), uv = new Float32Array(n * across * 2), dist = new Float32Array(n * across);
     const idxs = [];
@@ -149,7 +156,7 @@ export class Volcano {
     g.setIndex(idxs); g.computeVertexNormals();
     const mat = this.lavaMat.clone(); mat.uniforms.uFront.value = -1;
     const m = new THREE.Mesh(g, mat); m.frustumCulled = false; m.visible = false; this.scene.add(m);
-    return { pts, mesh: m, mat, length: d, widths, front: -1, burnIdx: 0 };
+    return { pts, mesh: m, mat, length: d, widths, front: -1, burnIdx: 0, start: (k % 4) * 9 + (k * 7) % 11, speed: 2.4 + ((k * 13) % 7) * 0.25 };
   }
   // called each frame. ctx: { dt, progress, duration (s total), playerPos, camera, sunHeight }
   update(ctx) {
@@ -161,15 +168,30 @@ export class Volcano {
     const sc = Math.min(1.6, Math.max(0.4, camera.aspect ? innerHeight / 700 : 1)); // point size scale per screen
     for (const s of [this.plume, this.ashFall, this.burst, this.embers, this.surge]) { s.u.uScale.value = innerHeight * 1.1; s.u.uLight.value = 0.35 + 0.65 * ctx.sunHeight; }
     // ---- plume ----
-    const rate = [5, 16, 36, 70, 70][stageIdx] * (this.hi ? 1 : 0.55);
-    const dark = [0.05, 0.35, 0.7, 0.9, 1][stageIdx];
+    const rate = [5, 16, 40, 110, 130][stageIdx] * (this.hi ? 1 : 0.55);
+    const dark = [0.05, 0.35, 0.7, 0.92, 1][stageIdx];
+    const big = stageIdx >= 3 ? 1 : 0;
     this.plumeAcc = (this.plumeAcc || 0) + rate * dt;
     while (this.plumeAcc >= 1) {
       this.plumeAcc--;
-      const a = Math.random() * Math.PI * 2, rr = Math.random() * 12;
-      const up = 14 + stageIdx * 7 + Math.random() * 8;
-      this.plume.emit(VOLCANO.x + Math.cos(a) * rr, this.craterY + 4, VOLCANO.z + Math.sin(a) * rr, (Math.random() - 0.5) * 3, up, (Math.random() - 0.5) * 3,
-        18 + Math.random() * 16, 22 + Math.random() * 16 + stageIdx * 6, dark * (0.6 + Math.random() * 0.4), 0.55, 6 + stageIdx * 2.5, 1);
+      const a = Math.random() * Math.PI * 2, rr = Math.random() * (12 + big * 8);
+      const up = 14 + stageIdx * 7 + Math.random() * 8 + big * 18;
+      this.plume.emit(VOLCANO.x + Math.cos(a) * rr, this.craterY + 4, VOLCANO.z + Math.sin(a) * rr, (Math.random() - 0.5) * (3 + big * 6), up, (Math.random() - 0.5) * (3 + big * 6),
+        18 + Math.random() * 16 + big * 14, 22 + Math.random() * 16 + stageIdx * 6, dark * (0.6 + Math.random() * 0.4), 0.55 + big * 0.2, 6 + stageIdx * 2.5 + big * 4, 1);
+    }
+    // the column billows: every few seconds a great dark bulge is thrown up out of the crater
+    if (stageIdx >= 3) {
+      this.burstT -= dt;
+      if (this.burstT <= 0) {
+        this.burstT = 2.5 + Math.random() * 4;
+        for (let i = 0; i < (this.hi ? 60 : 30); i++) {
+          const a = Math.random() * Math.PI * 2, rr = Math.random() * 10, sp = 10 + Math.random() * 16;
+          this.plume.emit(VOLCANO.x + Math.cos(a) * rr, this.craterY + 6, VOLCANO.z + Math.sin(a) * rr, Math.cos(a) * sp * 0.5, 40 + Math.random() * 35, Math.sin(a) * sp * 0.5,
+            30 + Math.random() * 30, 45 + Math.random() * 20, 0.85 + Math.random() * 0.15, 0.85, 12, 1);
+          if (i % 3 === 0) this.embers.emit(VOLCANO.x, this.craterY + 3, VOLCANO.z, Math.cos(a) * sp, 45 + Math.random() * 40, Math.sin(a) * sp, 1.5 + Math.random() * 1.5, 3 + Math.random() * 3, Math.random(), 1, 0, 1);
+        }
+        this.shake = Math.max(this.shake, 0.3); if (this.hooks.onBurst) this.hooks.onBurst();
+      }
     }
     this.plume.update(dt, 0.12, -0.6, this.wind * (1 + stageIdx * 0.3));
     // ---- embers (eruption) ----
@@ -217,18 +239,20 @@ export class Volcano {
     if (stageIdx >= 3) {
       this.bombT -= dt;
       if (this.bombT <= 0) {
-        this.bombT = stageIdx === 4 ? 1.2 + Math.random() * 1.5 : 2.2 + Math.random() * 3.5;
-        this.launchBomb(playerPos);
+        this.bombT = stageIdx === 4 ? 0.5 + Math.random() * 0.8 : 0.9 + Math.random() * 1.6;
+        this.launchBomb(playerPos, Math.random() < 0.4);
       }
     }
     this.updateBombs(dt, playerPos);
     this.burst.update(dt, 0.9, 6, 0);
     // ---- lava flows ----
     if (p >= 0.72) {
-      const erupT = (p - 0.72) / (0.94 - 0.72); // 0..1 across the eruption stage
+      // lava creeps at a few metres a second, each flow setting off a little after the last
+      const erupS = (p - 0.72) * (ctx.duration || 1440);
       for (const f of this.flows) {
-        f.mesh.visible = true;
-        f.front = Math.min(f.length + 10, erupT * (f.length + 20) * 1.15);
+        f.front = Math.min(f.length + 10, (erupS - f.start) * f.speed);
+        f.mesh.visible = f.front > 0;
+        if (f.front <= 0) continue;
         f.mat.uniforms.uFront.value = f.front; f.mat.uniforms.uTime.value = this.t;
         this.burnAlongFlow(f);
       }
@@ -292,9 +316,9 @@ export class Volcano {
     if (Math.hypot(x - VOLCANO.x, z - VOLCANO.z) < 26) best = 1;
     return best;
   }
-  launchBomb(target) {
+  launchBomb(target, rock = false) {
     const b = this.bombs.find((q) => !q.on); if (!b) return;
-    b.on = true; b.m.visible = true; b.s = 0.7 + Math.random() * 1.6; b.m.scale.setScalar(b.s);
+    b.on = true; b.m.visible = true; b.hot = !rock; b.m.material = rock ? this.rockM : this.hotM; b.s = (rock ? 0.5 : 0.7) + Math.random() * (rock ? 1.0 : 1.6); b.m.scale.setScalar(b.s);
     b.x = VOLCANO.x; b.y = this.craterY + 5; b.z = VOLCANO.z;
     const up = 70 + Math.random() * 45;
     // sometimes one is thrown toward the player, which is the point
@@ -312,14 +336,14 @@ export class Volcano {
       if (!b.on) continue;
       b.vy -= 9.81 * dt; b.x += b.vx * dt; b.y += b.vy * dt; b.z += b.vz * dt;
       b.m.position.set(b.x, b.y, b.z); b.m.rotation.x += dt * 3; b.m.rotation.z += dt * 2;
-      if (Math.random() < 0.7) this.plume.emit(b.x, b.y, b.z, 0, 0.5, 0, 2.5 * b.s, 2.2, 0.55, 0.4, 2.5);
-      if (Math.random() < 0.5) this.embers.emit(b.x, b.y, b.z, (Math.random() - 0.5) * 4, (Math.random() - 0.5) * 4, (Math.random() - 0.5) * 4, 0.9, 0.8, Math.random(), 1);
+      if (Math.random() < 0.7) this.plume.emit(b.x, b.y, b.z, 0, 0.5, 0, 2.5 * b.s, 2.2, b.hot ? 0.55 : 0.8, 0.4, 2.5);
+      if (b.hot && Math.random() < 0.5) this.embers.emit(b.x, b.y, b.z, (Math.random() - 0.5) * 4, (Math.random() - 0.5) * 4, (Math.random() - 0.5) * 4, 0.9, 0.8, Math.random(), 1);
       if (b.vy < 0 && !b.whistled && Math.hypot(b.x - playerPos.x, b.z - playerPos.z) < 160) { b.whistled = true; if (this.hooks.onWhistle) this.hooks.onWhistle(); }
       const g = heightAt(b.x, b.z);
       if (b.y <= Math.max(g, 0) + b.s * 0.5) {
         b.on = false; b.m.visible = false;
         if (g < 0) { for (let i = 0; i < 25; i++) this.burst.emit(b.x, 0.5, b.z, (Math.random() - 0.5) * 10, 4 + Math.random() * 9, (Math.random() - 0.5) * 10, 2 + Math.random() * 3, 1.5 + Math.random(), 0.0, 0.8, 4); this.burst.u.uColA.value.set('#ffb060'); if (this.hooks.onExplode) this.hooks.onExplode(b.x, 0, b.z, 0, true); continue; }
-        this.explode(b.x, g, b.z, 7 + b.s * 3.5);
+        if (b.hot) this.explode(b.x, g, b.z, 7 + b.s * 3.5); else this.thud(b.x, g, b.z, 3 + b.s * 2.5);
       }
     }
   }
@@ -336,6 +360,14 @@ export class Volcano {
     if (this.fires.length < 40) this.fire(x, y, z, 45);
     for (const o of this.world.obstaclesNear(x, z)) if (o.alive && o.v != null && Math.hypot(o.x - x, o.z - z) < radius) { this.world.fellTree(o); if (this.fires.length < 40 && Math.random() < 0.5) this.fire(o.x, heightAt(o.x, o.z), o.z, 30); }
     if (this.hooks.onExplode) this.hooks.onExplode(x, y, z, radius, false);
+  }
+  // a cold rock lands: dust, a crater mark and anyone underneath it is crushed
+  thud(x, y, z, radius) {
+    for (let i = 0; i < 18; i++) { const a = Math.random() * Math.PI * 2, sp = 3 + Math.random() * 8; this.burst.emit(x, y + 0.5, z, Math.cos(a) * sp, 2 + Math.random() * 5, Math.sin(a) * sp, 2 + Math.random() * 3, 1.5 + Math.random(), 0.9, 0.6, 5); }
+    const sc = new THREE.Mesh(this.scorchG, this.scorchM); sc.rotation.x = -Math.PI / 2; sc.position.set(x, y + 0.15, z); sc.scale.setScalar(radius * 0.6); this.scene.add(sc); this.scorches.push(sc);
+    if (this.scorches.length > 60) this.scene.remove(this.scorches.shift());
+    for (const o of this.world.obstaclesNear(x, z)) if (o.alive && o.v != null && Math.hypot(o.x - x, o.z - z) < radius * 0.6) this.world.fellTree(o);
+    if (this.hooks.onExplode) this.hooks.onExplode(x, y, z, radius, false, true);
   }
   fire(x, y, z, life) {
     const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.fireTex, color: '#ff8a20', transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));

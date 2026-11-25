@@ -1,7 +1,7 @@
 // The other survivors: where they live, what they say as the mountain wakes, and how they follow you.
 import * as THREE from 'three';
-import { POIS, heightAt, SEA } from './island.js';
-import { buildSurvivor, animateSurvivor, LOOKS } from './survivor.js';
+import { POIS, heightAt, SEA, normalAt } from './island.js';
+import { buildSurvivor, animateSurvivor, LOOKS, groundTilt } from './survivor.js';
 
 export const SURVIVORS = [
   {
@@ -64,6 +64,7 @@ export const SURVIVORS = [
   },
 ];
 
+const tmpN = new THREE.Vector3();
 export class NpcManager {
   constructor(scene, world, hooks) {
     this.scene = scene; this.world = world; this.hooks = hooks; this.list = [];
@@ -104,6 +105,10 @@ export class NpcManager {
     n.talkT = 4;
     return { name: n.def.name, text: this.line(n, ctx.stageId, ctx) + (n.state === 'follow' ? '' : '  (Press again: come with me)') };
   }
+  // a hot rock lands: anyone under it is gone
+  blast(x, z, r) {
+    for (const n of this.list) { if (n.dead || n.saved) continue; if (Math.hypot(n.x - x, n.z - z) < r) { n.dead = true; n.state = 'dead'; if (this.hooks.onDeath) this.hooks.onDeath(n, 'rock'); } }
+  }
   // run from an explosion
   scare(x, z, r) { for (const n of this.list) { const d = Math.hypot(n.x - x, n.z - z); if (d < r + 25 && !n.hurt && !n.saved) { n.fleeT = 3; n.fleeDir = Math.atan2(n.x - x, n.z - z); } } }
   update(dt, ctx) {
@@ -114,12 +119,12 @@ export class NpcManager {
       n.talkT -= dt;
       let mx = 0, mz = 0, want = 0, mode = 'move';
       if (n.hurt) { mode = 'lie'; }
-      else if (n.fleeT > 0) { n.fleeT -= dt; mx = Math.sin(n.fleeDir); mz = Math.cos(n.fleeDir); want = 6; }
+      else if (n.fleeT > 0) { n.fleeT -= dt; mx = Math.sin(n.fleeDir); mz = Math.cos(n.fleeDir); want = 6.0; }
       else if (n.state === 'follow') {
         const dx = player.x - n.x, dz = player.z - n.z, d = Math.hypot(dx, dz);
         const idx = ctx.followIndex(n);
         const keep = 2.6 + idx * 1.3;
-        if (d > keep) { mx = dx / d; mz = dz / d; want = d > keep + 6 ? 6.2 : 3.2; }
+        if (d > keep) { mx = dx / d; mz = dz / d; want = d > keep + 6 ? 6.0 : 2.6; }
         if (d > 90) { n.x = player.x - dx / d * 8; n.z = player.z - dz / d * 8; } // lost: catch up the cheap way
       } else {
         // potter around home
@@ -141,7 +146,7 @@ export class NpcManager {
       } else if (n.talkT > 0) { const ty = Math.atan2(player.x - n.x, player.z - n.z); let d = ty - n.yaw; while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2; n.yaw += d * Math.min(1, dt * 5); }
       n.y = heightAt(n.x, n.z);
       n.rig.root.position.set(n.x, Math.max(n.y, SEA - 0.3), n.z); n.rig.root.rotation.y = n.yaw;
-      animateSurvivor(n.rig, dt, { mode, speed: want > 0 ? n.speed : 0, talk: n.talkT > 0, hurt: n.def.id === 'tomas' });
+      animateSurvivor(n.rig, dt, { mode, speed: want > 0 ? n.speed : 0, talk: n.talkT > 0, hurt: n.def.id === 'tomas', tilt: mode === 'move' ? groundTilt(normalAt(n.x, n.z, tmpN), n.yaw) : [0, 0] });
       // hazards
       if (heatAt(n.x, n.z) > 0.6 || (surgeR > 0 && Math.hypot(n.x - volcano.x, n.z - volcano.z) < surgeR && !(hiddenInBunker && n.state === 'follow'))) { n.dead = true; n.state = 'dead'; if (this.hooks.onDeath) this.hooks.onDeath(n); }
     }
