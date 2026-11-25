@@ -287,12 +287,14 @@ const ROAD_RAGE = {
 };
 let quipCool = 0, idleQuipT = 40 + Math.random() * 30;
 // ---- extra chatter: speeding, day and night, folk blethering, phone calls ----
-let fastT = 0, chatT = 20 + Math.random() * 20, callT = 150 + Math.random() * 90, lastHour = -1, chatQ = [];
+let carPatterT = 50, fastT = 0, chatT = 20 + Math.random() * 20, callT = 150 + Math.random() * 90, lastHour = -1, chatQ = [];
 function updateChatter(dt) {
   if (game.intro || player.dead || game.inside) return;
   const c = player.car;
   // flat out in a motor
   if (c && Math.abs(c.vf || c.speed) > 30) { fastT += dt; if (fastT > 4) { fastT = -25; game.quip('fast', 0.6); } } else fastT = Math.min(fastT, 0) + dt * 0.2;
+  // a bit of patter at the wheel
+  if (c && !game.mission) { carPatterT -= dt; if (carPatterT <= 0) { carPatterT = 70 + Math.random() * 60; game.quip('driving', 0.8); } }
   // the sun comes up, the street lamps come on
   const hr = Math.floor(game.time / 60);
   if (lastHour >= 0 && hr !== lastHour) { if (hr === 21) game.quip('night', 0.8); if (hr === 7) game.quip('morning', 0.8); }
@@ -915,6 +917,7 @@ function respawn(where) {
   for (const p of peds.list.slice()) if (p.cop) { p.remove(); peds.list.splice(peds.list.indexOf(p), 1); }
   for (const c of cars.slice()) if (c.type === 'police' && c.ai) removeCar(c);
   cam.yaw = Math.PI; game._lowSaid = false;
+  defaultWeapon(true); // the polis took everything else, but he keeps a spare rifle in his pants
   setTimeout(() => game.quip(where === 'police' ? 'busted' : 'wasted', 1, true), 1500);
   save();
 }
@@ -1621,6 +1624,12 @@ function updateMission(dt) {
 function save(bed) {
   store.set('wta-save', { v: 2, slept: !!(bed || (store.get('wta-save', {}) || {}).slept), money: player.money, missionIdx: game.missionIdx, specs: game.collected || [], weapons: Object.keys(player.owned), ammoOf: player.ammoOf, stats: game.stats, time: game.time, outfit: player.outfit, extra: content.save() });
 }
+// Wally never leaves the house without his Highland Rifle
+function defaultWeapon(equip) {
+  player.owned.rifle = true;
+  player.ammoOf.rifle = Math.max(player.ammoOf.rifle || 0, 90);
+  if (equip) player.weapon = 'rifle';
+}
 function load(fresh) {
   const s = fresh ? {} : store.get('wta-save', {});
   player.money = s.money || 0; game.missionIdx = s.missionIdx || 0;
@@ -1630,6 +1639,7 @@ function load(fresh) {
   for (const w of s.weapons || []) player.owned[w] = true;
   Object.assign(player.ammoOf, s.ammoOf || {});
   if (s.hasBlaster) { player.owned.blaster = true; player.ammoOf.blaster += s.ammo || 0; } // saves from v1.1 and earlier
+  defaultWeapon(true);
   if (s.stats) Object.assign(game.stats, s.stats);
   player.setOutfit(s.outfit || 0, game);
   content.load(s.extra);
@@ -1899,7 +1909,7 @@ function updateFlat(dt, inp) {
 let ufo = null;
 const ease = (k) => { k = Math.max(0, Math.min(1, k)); return k * k * (3 - 2 * k); };
 function updateNessie(dt) {
-  nessie.update(dt, player);
+  if (!game.inside) nessie.update(dt, player);
   nessie.group.visible = !game.inside;
   if (game.intro || game.inside || player.dead) return;
   const d = Math.hypot(player.x - nessie.x, player.z - nessie.z);
@@ -1913,7 +1923,14 @@ function updateNessie(dt) {
       nessie.greeted = true; speak('Och aye the noo!', true);
       setTimeout(() => game.quip(["Is that... Nessie?! Mammy'll never believe this."], 1, true), 2600);
     }
-  } else if (d < 9 && nessie.sayCool <= 0 && !player.car) speak(NESSIE_LINES[(Math.random() * NESSIE_LINES.length) | 0], false);
+  } else if (nessie.caughtUp && nessie.sayCool < 20) speak(NESSIE_CATCHUP[(Math.random() * NESSIE_CATCHUP.length) | 0], false);
+  else if (d < 12 && nessie.sayCool <= 0) speak(Math.random() < 0.5 ? NESSIE_LINES[(Math.random() * NESSIE_LINES.length) | 0] : NESSIE_FOLLOW[(Math.random() * NESSIE_FOLLOW.length) | 0], false);
+  // every few minutes, a proper blether between the two of them
+  nessie.banterT = (nessie.banterT ?? 70) - dt;
+  if (nessie.banterT <= 0 && d < 15 && !game.mission && !subsQ.length && !game.cuffs) {
+    nessie.banterT = 110 + Math.random() * 90; nessie.sayCool = 30;
+    game.subs(NESSIE_BANTER[(Math.random() * NESSIE_BANTER.length) | 0]);
+  }
 }
 function startIntro() {
   if (!ufo) ufo = buildUFO();
@@ -2112,6 +2129,23 @@ function togglePause(force) {
   }
 }
 let started = false, nessie = null;
+const NESSIE_FOLLOW = ['Wait for me, Wally!', 'Where are we going? Is it the chippy?', 'Ma flippers are killing me.', 'Is this a date, Wally?', 'Slow doon! I\'m a monster, no\' a motorbike!', 'Ooh, Wallypool! It\'s like the loch but wi\' mair shopping trolleys.', 'Can we get a pokey hat?', 'I\'ve no\' been this far fae the water since nineteen thirty four.', 'Are we there yet?', 'Mind the traffic, Wally. Some of us are an endangered species.'];
+const NESSIE_CATCHUP = ['Wait for me! Ma wee flippers!', 'Did ye think ye could lose me? I hid in a loch for fifteen hundred years!', 'Found ye! I followed the smell of chips.', 'Ye left me behind! I had to get the bus!'];
+// Wally and Nessie have a wee blether as they wander about
+const NESSIE_BANTER = [
+  ['NESSIE: Wally, why do they call ye Wally Man?', 'WALLY MAN: Because I\'m a man. Called Wally.', 'NESSIE: Oh. I thought it was a warning.'],
+  ['NESSIE: I\'ve been hiding in that loch for centuries, ye know.', 'WALLY MAN: Whit were ye hiding fae?', 'NESSIE: Tourists. And the council tax.'],
+  ['WALLY MAN: Nessie, can ye no\' swim instead of wriggling?', 'NESSIE: On a pavement? Are ye daft?', 'WALLY MAN: Fair point.'],
+  ['NESSIE: Is that yer superhero costume or did ye lose a bet?', 'WALLY MAN: It\'s hand-made!', 'NESSIE: Aye. Ye can tell.'],
+  ['WALLY MAN: Everybody\'s staring at us.', 'NESSIE: It\'s you, Wally. Nobody looks twice at a monster in Wallypool.'],
+  ['NESSIE: Fancy a deep-fried Mars bar after this?', 'WALLY MAN: Nessie, ye\'ve had six the day.', 'NESSIE: I\'m eating for one. A very big one.'],
+  ['NESSIE: Ma cousin\'s in Loch Lomond. She\'s a right snob.', 'WALLY MAN: How?', 'NESSIE: She says she\'s on the bonnie banks. I\'m on the dreich ones.'],
+  ['WALLY MAN: Nessie, how come naebody\'s ever got a good photo of ye?', 'NESSIE: Because I always blink. And I\'m a monster.'],
+  ['NESSIE: Wally, can I be yer sidekick?', 'WALLY MAN: Whit would yer superhero name be?', 'NESSIE: The Wriggler. Fear me.'],
+  ['NESSIE: Is it always this cold in Wallypool?', 'WALLY MAN: Naw. Sometimes it\'s colder.', 'NESSIE: I miss ma loch. At least the loch had central heating. Well. No\' really.'],
+  ['WALLY MAN: Whit do monsters eat, Nessie?', 'NESSIE: Fish, mostly. And the odd tourist\'s sandwich.', 'WALLY MAN: That\'s just a seagull wi\' a long neck.'],
+  ['NESSIE: Mammy Wally gave me a scone this morning.', 'WALLY MAN: She\'s never given ME a scone!', 'NESSIE: Ye\'re no\' as cute as me, Wally.'],
+];
 const NESSIE_LINES = ['Och aye the noo!', 'Och aye the noo! Fancy a deep-fried Mars bar?', 'Och aye the noo! Seen ma loch anywhere?', 'Och aye the noo! Nae photos, I\'m shy.', 'Och aye the noo, Wally!'];
 function startGame(fresh) {
   audio.init();

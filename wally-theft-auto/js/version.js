@@ -1,7 +1,12 @@
 // Bump VERSION for every update (1.1, 1.2, 1.3 ...) and add a line to CHANGES.
-export const VERSION = '3.4';
+export const VERSION = '3.5';
 
 export const CHANGES = [
+  ['3.5', [
+    'Nessie follows Wally everywhere: she wriggles after him on foot, chases his motor, and pops up behind him if he gets too far ahead',
+    'Wally now starts every game holding the Highland Rifle, with 90 rounds',
+    'Loads more Scottish patter: new lines for Wally, folk on the street, pavement chats and phone calls, patter at the wheel, and wee blethers between Wally and Nessie',
+  ]],
   ['3.4', [
     "The Loch Ness Monster is outside Wally's flat! She wriggles up and down the pavement in her tartan bunnet and says \"Och aye the noo!\" when you start the game, and again when you go near her",
   ]],
