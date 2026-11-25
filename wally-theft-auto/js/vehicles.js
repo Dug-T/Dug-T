@@ -22,7 +22,26 @@ function extrude(shape, width, bevel, segs = 24) {
 }
 
 const sharedM = {};
-function M(key, make) { return sharedM[key] || (sharedM[key] = make()); }
+// everything cached here is shared by many cars, so it must never be disposed
+export const SHARED = new Set();
+function M(key, make) { if (!sharedM[key]) { sharedM[key] = make(); SHARED.add(sharedM[key]); if (sharedM[key] && sharedM[key].map) SHARED.add(sharedM[key].map); } return sharedM[key]; }
+
+// Free the GPU memory held by an object's own geometry, materials and textures.
+// Anything in `keep` (shared caches) is left alone; sprites share one internal geometry, so skip it.
+export function disposeObject(root, keep = SHARED) {
+  const seen = new Set();
+  root.traverse((o) => {
+    if (o.isSkinnedMesh && o.skeleton) o.skeleton.dispose();
+    if (!o.isSprite && o.geometry && !keep.has(o.geometry) && !seen.has(o.geometry)) { seen.add(o.geometry); o.geometry.dispose(); }
+    const mats = Array.isArray(o.material) ? o.material : (o.material ? [o.material] : []);
+    for (const m of mats) {
+      if (keep.has(m) || seen.has(m)) continue;
+      seen.add(m);
+      for (const k of ['map', 'emissiveMap', 'normalMap', 'bumpMap', 'alphaMap']) if (m[k] && !keep.has(m[k]) && !seen.has(m[k])) { seen.add(m[k]); m[k].dispose(); }
+      m.dispose();
+    }
+  });
+}
 
 // Per-type body plan (profile x runs front +h to back -h; y is up). All cars share one builder.
 function carSpec(type, T) {
@@ -88,6 +107,7 @@ function glowMat(kind) {
     else { g.addColorStop(0, 'rgba(255,80,60,1)'); g.addColorStop(0.3, 'rgba(255,30,20,0.55)'); g.addColorStop(1, 'rgba(255,0,0,0)'); }
     x.fillStyle = g; x.fillRect(0, 0, 64, 64);
     glowMats[kind] = new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), blending: THREE.AdditiveBlending, depthWrite: false, transparent: true });
+    SHARED.add(glowMats[kind]); SHARED.add(glowMats[kind].map);
   }
   return glowMats[kind];
 }
@@ -509,7 +529,7 @@ export class Car {
     this.group.rotation.y = this.heading;
     this.body.rotation.x = this.pitch; this.body.rotation.z = this.roll + (this.dead ? 0.1 : 0);
   }
-  remove() { this.scene.remove(this.group); this.group.traverse((m) => { if (m.isMesh && m.geometry && !m.geometry.userData.shared) { /* shared geos kept */ } }); }
+  remove() { this.scene.remove(this.group); disposeObject(this.group); }
   // where the driver's door is (left-hand side kerb side for UK... driver sits on the right)
   doorPos() {
     const [fx, fz] = this.forward();

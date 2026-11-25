@@ -1,6 +1,8 @@
 // Pedestrians and foot cops
 import * as THREE from 'three';
-import { buildHuman, animateHuman, randomPedLook, buildBlaster } from './humans.js';
+import { buildHuman, animateHuman, randomPedLook, buildBlaster, SHARED_HUMAN } from './humans.js';
+import { disposeObject, SHARED } from './vehicles.js';
+const KEEP = { has: (x) => SHARED_HUMAN.has(x) || SHARED.has(x) };
 import { N, P, HALF, ROAD, KERB, blockMin, blockMax } from './city.js';
 
 const LINES = {
@@ -29,7 +31,7 @@ export class Ped {
     this.t = 0; this.deadT = 0; this.downT = 0; this.fleeT = 0; this.fireT = 1 + Math.random(); this.bustT = 0;
     this.sayCool = 3 + Math.random() * 10; this.walkSpeed = 1.2 + Math.random() * 0.5;
   }
-  remove() { this.scene.remove(this.h.root); }
+  remove() { this.scene.remove(this.h.root); disposeObject(this.h.root, KEEP); }
   setLoop(world) {
     const bx = Math.max(0, Math.min(N - 1, Math.floor((this.x + HALF - ROAD / 2) / P)));
     const bz = Math.max(0, Math.min(N - 1, Math.floor((this.z + HALF - ROAD / 2) / P)));

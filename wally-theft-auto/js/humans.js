@@ -45,9 +45,10 @@ function handGeometry(side, hi) {
 }
 
 const matCache = new Map();
+export const SHARED_HUMAN = new Set(); // cached materials and textures shared by every person
 function mat(color, rough = 0.6, metal = 0, extra = {}) {
   const key = color + '|' + rough + '|' + metal + JSON.stringify(extra);
-  if (!matCache.has(key)) matCache.set(key, new THREE.MeshStandardMaterial({ color, roughness: rough, metalness: metal, ...extra }));
+  if (!matCache.has(key)) { matCache.set(key, new THREE.MeshStandardMaterial({ color, roughness: rough, metalness: metal, ...extra })); SHARED_HUMAN.add(matCache.get(key)); }
   return matCache.get(key);
 }
 
@@ -109,7 +110,7 @@ export function buildHuman(o = {}) {
     const belly = sphere(0.26, suit, seg, 14); belly.position.set(0, 0.12, 0.03); belly.scale.set(1.0, 0.85, 0.85); spine.add(belly);
   }
   if (wally) {
-    if (!emblemTex) emblemTex = emblemTexture();
+    if (!emblemTex) { emblemTex = emblemTexture(); SHARED_HUMAN.add(emblemTex); }
     // shape the badge to the front of his chest (an ellipse, like the torso) so no letters sink inside him
     const eg = new THREE.PlaneGeometry(0.46, 0.29, 40, 8);
     { const p = eg.attributes.position; for (let i = 0; i < p.count; i++) { const x = p.getX(i); p.setZ(i, 0.236 * Math.sqrt(Math.max(0, 1 - (x / 0.33) ** 2)) + 0.014); } eg.computeVertexNormals(); }

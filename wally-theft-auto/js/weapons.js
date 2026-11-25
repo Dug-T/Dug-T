@@ -26,7 +26,8 @@ export const usesAmmo = (id) => !WEAPONS[id].melee;
 export const HOLD = { club: [Math.PI - 0.5, 0], pan: [Math.PI - 0.5, 0], claymore: [Math.PI - 0.45, 0], bagpipes: [0, 0], neep: [0, 0] };
 
 const M = {};
-const mat = (k, o) => M[k] || (M[k] = new THREE.MeshStandardMaterial(o));
+export const SHARED_WEAPON = new Set();
+const mat = (k, o) => { if (!M[k]) { M[k] = new THREE.MeshStandardMaterial(o); SHARED_WEAPON.add(M[k]); } return M[k]; };
 const steel = () => mat('steel', { color: '#c9ced6', metalness: 1, roughness: 0.25 });
 const black = () => mat('blk', { color: '#161616', roughness: 0.5, metalness: 0.4 });
 const cyl = (r1, r2, h, m, seg = 14) => new THREE.Mesh(new THREE.CylinderGeometry(r1, r2, h, seg), m);

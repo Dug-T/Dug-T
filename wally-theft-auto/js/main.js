@@ -6,14 +6,17 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { buildCity, N, P, HALF, ROAD, LANE, ISLAND, KERB, roadC, blockMin, blockMax } from './city.js';
-import { Car, TrafficAI, PoliceAI, randomType, DIRS, validDir } from './vehicles.js';
+import { Car, TrafficAI, PoliceAI, randomType, DIRS, validDir, disposeObject, SHARED } from './vehicles.js';
 import { PedManager, Ped } from './peds.js';
 import { Player } from './player.js';
 import { Audio } from './audio.js';
 import { MISSIONS, missionStartPoint } from './missions.js';
 import { smokeTexture, rng, signTexture } from './textures.js';
 import { VERSION, CHANGES } from './version.js';
-import { WEAPONS, WEAPON_ORDER, usesAmmo, buildNeep, buildWeaponModel, buildProjectile } from './weapons.js';
+import { WEAPONS, WEAPON_ORDER, usesAmmo, buildNeep, buildWeaponModel, buildProjectile, SHARED_WEAPON } from './weapons.js';
+import { SHARED_HUMAN } from './humans.js';
+const KEEP = { has: (x) => SHARED.has(x) || SHARED_WEAPON.has(x) || SHARED_HUMAN.has(x) || x === ringMat };
+const dropObject = (o) => { scene.remove(o); disposeObject(o, KEEP); };
 import { Weather, WEATHERS } from './weather.js';
 import { buildUFO } from './ufo.js';
 import { buildFlat, FLAT } from './flat.js';
@@ -599,7 +602,7 @@ function updateShots(dt) {
     s.m.lookAt(nx + s.vx, ny + s.vy, nz + s.vz);
     if (s.kind === 'haggis' && Math.random() < dt * 40) puff(nx, ny, nz, { color: '#aaa', life: 0.8, size: 0.4, vy: 0.3, opacity: 0.6 });
     if (!hit) continue;
-    scene.remove(s.m); shots.splice(i, 1);
+    dropObject(s.m); shots.splice(i, 1);
     if (s.kind === 'haggis') { game.onExplosion(nx, ny, nz, null); game.wanted.add(1); continue; }
     // a potato to the face
     audio.punch();
@@ -658,7 +661,7 @@ function updateNeeps(dt) {
     n.m.position.set(n.x, n.y, n.z); n.m.rotation.x += dt * 8; n.m.rotation.z += dt * 5;
     if (Math.random() < dt * 20) puff(n.x, n.y + 0.15, n.z, { color: '#ffcf40', add: true, life: 0.25, size: 0.2, vy: 0.5, opacity: 1 });
     if (n.t <= 0) {
-      scene.remove(n.m); neeps.splice(i, 1);
+      dropObject(n.m); neeps.splice(i, 1);
       game.onExplosion(n.x, n.y, n.z, null);
       game.wanted.add(1);
     }
@@ -1548,7 +1551,7 @@ function updatePickups(dt) {
       }
       audio.pickup();
       if (p.respawn) { p.gone = p.respawn; p.obj.visible = false; }
-      else { scene.remove(p.obj); p.dead = true; }
+      else { dropObject(p.obj); p.dead = true; }
     }
   }
   game.pickups = game.pickups.filter((p) => !p.dead);
@@ -1849,6 +1852,7 @@ const content = initContent(game, scene, world);
 let last = performance.now();
 let acc = 0;
 function frame(now) {
+  if (game.contextLost) return; // graphics are gone: stop drawing until the player reloads
   requestAnimationFrame(frame);
   let dt = Math.max(0, Math.min(0.05, (now - last) / 1000)); last = now;
   if (!game.playing || game.paused || game.shopOpen) { if (!game.playing) titleCam(dt); if (game.shopOpen && pressed.has('Escape')) { pressed.clear(); game.closeShop(); } render(); return; }
@@ -1973,7 +1977,7 @@ function startGame(fresh) {
   audio.init();
   if (!started || fresh) {
     const s = load(fresh);
-    if (started) { for (const sp of game.specs) scene.remove(sp.obj); for (const p of game.pickups) scene.remove(p.obj); game.specs = []; game.pickups = []; failMission(); }
+    if (started) { for (const sp of game.specs) dropObject(sp.obj); for (const p of game.pickups) dropObject(p.obj); game.specs = []; game.pickups = []; failMission(); }
     setupCollectibles(s);
     const h = world.specials.home;
     player.place(h.x + 3, h.z - 7, 0); cam.yaw = 0; player.dead = false; player.health = 100;
@@ -2009,6 +2013,13 @@ $('vox').onclick = toggleVox; $('vox2').onclick = toggleVox;
 setInterval(() => { if (game.playing && !game.paused) save(); }, 30000);
 
 applyQuality();
+// safety net: if the phone's graphics memory gives out, save and offer a reload instead of freezing
+canvas.addEventListener('webglcontextlost', (e) => {
+  e.preventDefault(); game.contextLost = true;
+  try { if (game.playing) save(); } catch (_) { /* nothing more we can do */ }
+  $('crash').classList.remove('hidden');
+});
+window.addEventListener('error', () => { try { if (game.playing && !player.dead) save(); } catch (_) { /* ignore */ } });
 // version badge and what's new
 $('verTitle').textContent = 'v' + VERSION; $('verPause').textContent = 'v' + VERSION;
 $('news').innerHTML = `<b>What's new in v${VERSION}:</b><ul>${CHANGES[0][1].map((c) => `<li>${c}</li>`).join('')}</ul>`;
