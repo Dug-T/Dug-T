@@ -63,7 +63,7 @@
   #ashfx { position: absolute; inset: 0; background: radial-gradient(ellipse at center, transparent 45%, rgba(90,84,78,.75) 100%); opacity: 0; }
   #heat { position: absolute; inset: 0; background: radial-gradient(ellipse at center, transparent 30%, rgba(255,90,10,.75) 100%); opacity: 0; }
   #fade { position: fixed; inset: 0; background: #000; opacity: 0; pointer-events: none; transition: opacity .8s; z-index: 50; }
-  #fps { position: fixed; top: 4px; left: 50%; transform: translateX(-50%); font: 600 12px 'Barlow'; color: #9f9; text-shadow: var(--shadow); z-index: 9; display: none; }
+  #fps { position: fixed; top: calc(max(10px, env(safe-area-inset-top)) + 136px); left: max(14px, env(safe-area-inset-left)); font: 600 13px 'Barlow'; color: #9f9; text-shadow: var(--shadow); z-index: 9; display: none; letter-spacing: 1px; }
   #cross { position: absolute; left: 50%; top: 50%; width: 4px; height: 4px; margin: -2px; background: #fff9; border-radius: 50%; }
   /* ---------- touch controls ---------- */
   #touch { position: fixed; inset: 0; pointer-events: none; display: none; }

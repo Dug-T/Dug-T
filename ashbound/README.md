@@ -42,4 +42,5 @@ Version 1.0 is single player with NPC survivors. The world is seeded and determi
 
 ## Versions
 
+- **1.1**: fixed left/right movement being mirrored on the joystick, keyboard, controller and raft; fixed the mirrored compass and map (north is up); FPS counter shown under the stat bars, with a switch in the pause menu.
 - **1.0**: first release. A procedurally built tropical island with a live volcano; third-person survival with health, stamina, hunger, thirst and clean air; the five eruption stages (calm, unrest, ashfall, eruption, surge); three escapes (raft, radio and helicopter, bunker); five survivors to find, help and bring along; phone, PC/Mac and controller support.

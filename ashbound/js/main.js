@@ -30,7 +30,7 @@ const store = {
 let quality = store.get('ash-gfx', 'high');
 let soundOn = store.get('ash-snd', true);
 let difficulty = store.get('ash-diff', 'standard');
-let showFps = store.get('ash-fps', false);
+let showFps = store.get('ash-fps', true);
 const SAVE_KEY = 'ashbound-save';
 
 // ---------------- renderer, scene, camera ----------------
@@ -397,7 +397,7 @@ function updateHeli(dt) {
 // ---------------- the raft ----------------
 function updateRaft(dt, mv) {
   const raft = props.raft, ud = raft.userData;
-  const camF = { x: Math.sin(cam.yaw), z: Math.cos(cam.yaw) }, camR = { x: Math.cos(cam.yaw), z: -Math.sin(cam.yaw) };
+  const camF = { x: Math.sin(cam.yaw), z: Math.cos(cam.yaw) }, camR = { x: -Math.cos(cam.yaw), z: Math.sin(cam.yaw) };
   const ax = (camF.x * mv.y + camR.x * mv.x), az = (camF.z * mv.y + camR.z * mv.x);
   const push = player.stats.stamina > 5 ? 4.0 : 1.5;
   ud.vx += ax * push * dt; ud.vz += az * push * dt;
@@ -431,7 +431,7 @@ function updatePlayer(dt) {
     animateSurvivor(player.rig, dt, { mode: 'sit' });
     return;
   }
-  const camF = { x: Math.sin(cam.yaw), z: Math.cos(cam.yaw) }, camR = { x: Math.cos(cam.yaw), z: -Math.sin(cam.yaw) };
+  const camF = { x: Math.sin(cam.yaw), z: Math.cos(cam.yaw) }, camR = { x: -Math.cos(cam.yaw), z: Math.sin(cam.yaw) };
   let dx = camF.x * mv.y + camR.x * mv.x, dz = camF.z * mv.y + camR.z * mv.x;
   const ground = heightAt(player.x, player.z);
   const depth = SEA - ground;
@@ -573,11 +573,11 @@ function updateHUD(dt) {
   for (const n of npcs.list) if (!n.dead && !n.saved && n.state !== 'follow') items.push({ x: n.x, z: n.z, icon: '🧍', name: n.def.name.split(' ').pop() });
   let html = '';
   const width = compassEl.clientWidth || 400, fov = 1.9;
-  const cardinal = [['N', 0], ['E', Math.PI / 2], ['S', Math.PI], ['W', -Math.PI / 2]];
-  for (const [c, a] of cardinal) { let d = a - cam.yaw; while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2; if (Math.abs(d) < fov / 2) html += `<div class="m c" style="left:${(0.5 + d / fov) * width}px">${c}</div>`; }
+  const cardinal = [['N', 0], ['W', Math.PI / 2], ['S', Math.PI], ['E', -Math.PI / 2]];
+  for (const [c, a] of cardinal) { let d = a - cam.yaw; while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2; if (Math.abs(d) < fov / 2) html += `<div class="m c" style="left:${(0.5 - d / fov) * width}px">${c}</div>`; }
   for (const it of items) {
     let d = Math.atan2(it.x - player.x, it.z - player.z) - cam.yaw; while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2;
-    if (Math.abs(d) < fov / 2) { const dist = Math.hypot(it.x - player.x, it.z - player.z); html += `<div class="m" style="left:${(0.5 + d / fov) * width}px">${it.icon}<small>${dist < 1000 ? Math.round(dist) + 'm' : ''}</small></div>`; }
+    if (Math.abs(d) < fov / 2) { const dist = Math.hypot(it.x - player.x, it.z - player.z); html += `<div class="m" style="left:${(0.5 - d / fov) * width}px">${it.icon}<small>${dist < 1000 ? Math.round(dist) + 'm' : ''}</small></div>`; }
   }
   setHTML('compass', html);
   // overlays
@@ -606,8 +606,8 @@ function updateHUD(dt) {
 // ---------------- the map screen ----------------
 function drawMap() {
   const c = $('mapCanvas'), x = c.getContext('2d'), S = c.width, k = S / W;
-  x.drawImage(world.mapCanvas, 0, 0, S, S);
-  const px = (v) => (v + W / 2) * k;
+  x.save(); x.translate(S, S); x.scale(-1, -1); x.drawImage(world.mapCanvas, 0, 0, S, S); x.restore();
+  const px = (v) => (W / 2 - v) * k;
   // lava flows so far
   if (game.progress >= 0.72) { x.strokeStyle = '#ff5a10'; x.lineWidth = 6; x.lineCap = 'round'; for (const f of volcano.flows) { if (f.front <= 0) continue; x.beginPath(); let d = 0; for (let i = 0; i < f.pts.length && d <= f.front; i++) { if (i) d += Math.hypot(f.pts[i].x - f.pts[i - 1].x, f.pts[i].z - f.pts[i - 1].z); const p = f.pts[i]; if (i === 0) x.moveTo(px(p.x), px(p.z)); else x.lineTo(px(p.x), px(p.z)); } x.stroke(); } }
   if (volcano.surgeR > 0) { x.fillStyle = 'rgba(60,50,45,0.6)'; x.beginPath(); x.arc(px(VOLCANO.x), px(VOLCANO.z), volcano.surgeR * k, 0, 7); x.fill(); }
