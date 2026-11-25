@@ -1,7 +1,7 @@
 // The mountain: its plume, tremors, ashfall, lava bombs, lava flows and the final pyroclastic surge.
 import * as THREE from 'three';
 import { VOLCANO, heightAt, W } from './island.js';
-import { puffTexture, sparkTexture, lavaTexture, makeNoise } from './textures.js';
+import { puffTexture, sparkTexture, lavaTexture, glowTexture, makeNoise } from './textures.js';
 import { stageAt } from './survival.js';
 
 // a pool of billboard particles with per-point size, alpha and shade
@@ -113,6 +113,9 @@ export class Volcano {
     this.flowLights = []; for (let i = 0; i < 3; i++) { const l = new THREE.PointLight('#ff6a20', 0, 110, 1.7); scene.add(l); this.flowLights.push(l); }
     this.bombLight = new THREE.PointLight('#ff7a30', 0, 140, 1.6); scene.add(this.bombLight);
     this.glow = Array.from({ length: 8 }, () => new THREE.Vector4(0, 0, 1, 0)); this.flash = 0; this.lightT = 6; this.nearFront = 1e9;
+    // a soft glow hanging over the crater, growing with the eruption
+    this.craterGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture(), color: '#ff6a20', transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0 }));
+    this.craterGlow.position.set(VOLCANO.x, this.craterY + 18, VOLCANO.z); scene.add(this.craterGlow);
     // bombs
     this.bombs = [];
     const bg = new THREE.IcosahedronGeometry(1, 1);
@@ -238,6 +241,7 @@ export class Volcano {
     this.flash *= Math.max(0, 1 - dt * 6);
     if (stageIdx >= 3) { this.lightT -= dt; if (this.lightT <= 0) { this.lightT = 3 + Math.random() * 9; this.flash = 1; if (this.hooks.onLightning) this.hooks.onLightning(distP); } }
     this.glow[0].set(VOLCANO.x, VOLCANO.z, 70, [0, 0.15, 0.35, 0.9, 1][stageIdx]);
+    { const g = [0, 0.1, 0.25, 0.7, 0.85][stageIdx] * (0.8 + 0.2 * Math.sin(this.t * 5.3) * Math.sin(this.t * 2.1)); this.craterGlow.material.opacity += (g - this.craterGlow.material.opacity) * Math.min(1, dt * 2); const sc = 70 + stageIdx * 40; this.craterGlow.scale.set(sc, sc * 0.8, 1); }
     if (p < 0.72) for (let i = 1; i < 8; i++) this.glow[i].w = 0;
     // ---- the crater glow ----
     const glowT = [0, 0.6, 1.2, 4.5, 5][stageIdx] * (0.9 + 0.1 * Math.sin(this.t * 7));
@@ -271,6 +275,8 @@ export class Volcano {
       this.nearFront = fronts.length ? fronts[0].d : 1e9;
       this.flowLights.forEach((l, i) => { const f = fronts[i]; if (f) { l.position.set(f.fp.x, f.fp.y + 6, f.fp.z); l.intensity = 900 * (0.85 + 0.15 * Math.sin(this.t * 9 + i)); } else l.intensity = 0; });
       for (let i = 1; i < 8; i++) { const f = fronts[i - 1]; if (f) this.glow[i].set(f.fp.x, f.fp.z, 16, 0.9); else this.glow[i].w = 0; }
+      // steam where lava pours into the sea
+      for (const f of this.flows) { const fp = this.frontPoint(f); if (fp && fp.y < 1.5 && f.front < f.length + 9) { for (let i = 0; i < (this.hi ? 3 : 1); i++) this.plume.emit(fp.x + (Math.random() - 0.5) * 8, 0.5, fp.z + (Math.random() - 0.5) * 8, (Math.random() - 0.5) * 2, 4 + Math.random() * 4, (Math.random() - 0.5) * 2, 6 + Math.random() * 6, 7 + Math.random() * 4, 0.02, 0.6, 5, 1); } }
       // smoke and sparks off the fronts
       for (const f of this.flows) { const fp = this.frontPoint(f); if (fp && Math.random() < 0.6) { this.plume.emit(fp.x, fp.y + 1, fp.z, 0, 3, 0, 5, 8, 0.6, 0.45, 2); if (Math.random() < 0.5) this.embers.emit(fp.x, fp.y + 1, fp.z, (Math.random() - 0.5) * 6, 4 + Math.random() * 5, (Math.random() - 0.5) * 6, 0.8, 1.5, Math.random(), 1); } }
     }

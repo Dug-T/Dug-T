@@ -202,7 +202,7 @@ export function buildIsland(scene, quality) {
   const seaMat = new THREE.ShaderMaterial({
     uniforms: THREE.UniformsUtils.merge([THREE.UniformsLib.fog, {
       time: U.uTime, tHeight: { value: hTex }, tNoise: { value: tex.noise }, uW: { value: W }, uSun: U.uSun, uSunCol: U.uSunCol, uSky: U.uSky,
-      deepCol: { value: new THREE.Color('#083a6b') }, shallowCol: { value: new THREE.Color('#2fc6c0') }, uAsh: U.uAsh,
+      deepCol: { value: new THREE.Color('#083a6b') }, shallowCol: { value: new THREE.Color('#2fc6c0') }, uAsh: U.uAsh, uGlow: U.uGlow,
     }]),
     transparent: true, fog: true, depthWrite: true,
     vertexShader: `uniform float time; varying vec3 vW; varying vec3 vN;
@@ -218,7 +218,7 @@ export function buildIsland(scene, quality) {
         vec4 mvPosition = viewMatrix * wp; gl_Position = projectionMatrix * mvPosition;
         #include <fog_vertex>
       }`,
-    fragmentShader: `uniform float time, uW, uAsh; uniform sampler2D tHeight, tNoise; uniform vec3 uSun, uSunCol, uSky, deepCol, shallowCol;
+    fragmentShader: `uniform float time, uW, uAsh; uniform sampler2D tHeight, tNoise; uniform vec3 uSun, uSunCol, uSky, deepCol, shallowCol; uniform vec4 uGlow[8];
       varying vec3 vW; varying vec3 vN;
       #include <fog_pars_fragment>
       void main(){
@@ -234,10 +234,15 @@ export function buildIsland(scene, quality) {
         foam += smoothstep(0.72, 0.9, n) * 0.35 * (1.0 - smoothstep(0.0, 14.0, depth));
         foam = clamp(foam, 0.0, 1.0);
         vec3 V = normalize(cameraPosition - vW); vec3 Nn = normalize(vN);
+        // fine ripples on top of the waves, for the glints
+        vec2 rp = texture2D(tNoise, vW.xz * 0.33 + vec2(time * 0.06, time * 0.04)).rg - texture2D(tNoise, vW.xz * 0.27 - vec2(time * 0.05, -time * 0.03)).rg;
+        vec3 Nr = normalize(Nn + vec3(rp.x, 0.0, rp.y) * 0.45);
         float fres = pow(1.0 - max(dot(Nn, V), 0.0), 3.0);
         col = mix(col, uSky, fres * 0.75);
-        vec3 Hh = normalize(V + normalize(uSun)); float sp = max(dot(Nn, Hh), 0.0);
-        col += uSunCol * (pow(sp, 320.0) * 3.0 + pow(sp, 20.0) * 0.12) * (1.0 - uAsh * 0.8);
+        vec3 Hh = normalize(V + normalize(uSun)); float sp = max(dot(Nr, Hh), 0.0), sp2 = max(dot(Nn, Hh), 0.0);
+        col += uSunCol * (pow(sp, 420.0) * 4.0 + pow(sp2, 20.0) * 0.12) * (1.0 - uAsh * 0.8);
+        // the lava's glow on the water
+        for (int gi = 0; gi < 8; gi++) { float gd = distance(vW.xz, uGlow[gi].xy); col += vec3(1.0, 0.4, 0.1) * uGlow[gi].w * smoothstep(uGlow[gi].z * 2.2, 0.0, gd) * (0.5 + 0.3 * sin(time * 2.5 + gd * 0.4)); }
         col = mix(col, vec3(0.96, 0.98, 1.0), foam);
         float alpha = mix(0.6, 0.94, smoothstep(0.0, 7.0, depth)); alpha = max(alpha, foam);
         gl_FragColor = vec4(col, alpha);
@@ -309,23 +314,34 @@ export function buildIsland(scene, quality) {
   const flowerM = new THREE.MeshStandardMaterial({ map: flowerTexture(), alphaTest: 0.5, side: THREE.DoubleSide, roughness: 0.8 });
   const rockM = new THREE.MeshStandardMaterial({ map: tex.rock, roughness: 0.9, color: '#9a9690' });
   // wind sway for leaves, driven by uTime and uWind
-  const sway = (mat, strength) => {
-    mat.onBeforeCompile = (sh) => {
-      sh.uniforms.uTime = U.uTime; sh.uniforms.uWind = U.uWind;
-      sh.vertexShader = sh.vertexShader
-        .replace('#include <common>', '#include <common>\nuniform float uTime, uWind;')
-        .replace('#include <begin_vertex>', `#include <begin_vertex>
-          #ifdef USE_INSTANCING
-          float seed = instanceMatrix[3].x * 0.37 + instanceMatrix[3].z * 0.23;
-          #else
-          float seed = 0.0;
-          #endif
-          float k = smoothstep(0.0, 1.0, position.y / ${strength.toFixed(1)}) * uWind;
-          transformed.x += sin(uTime * 1.6 + seed) * 0.35 * k + sin(uTime * 4.1 + seed * 2.0) * 0.08 * k;
-          transformed.z += cos(uTime * 1.3 + seed * 1.7) * 0.3 * k;`);
-    };
-  };
-  sway(frondM, 9); sway(bushM, 1.5);
+  // chain shader hooks so a material can both sway and grey over with ash
+  const hook = (mat, fn) => { const prev = mat.onBeforeCompile; mat.onBeforeCompile = (sh) => { if (prev) prev(sh); fn(sh); }; };
+  // wind: the whole plant bends more the higher up it is (exp shapes the curve), leaves flutter on top of that
+  const sway = (mat, height, exp = 1, flutter = 1) => hook(mat, (sh) => {
+    sh.uniforms.uTime = U.uTime; sh.uniforms.uWind = U.uWind;
+    sh.vertexShader = sh.vertexShader
+      .replace('#include <common>', '#include <common>\nuniform float uTime, uWind;')
+      .replace('#include <begin_vertex>', `#include <begin_vertex>
+        #ifdef USE_INSTANCING
+        float seed = instanceMatrix[3].x * 0.37 + instanceMatrix[3].z * 0.23;
+        #else
+        float seed = 0.0;
+        #endif
+        float k = pow(smoothstep(0.0, 1.0, position.y / ${height.toFixed(1)}), ${exp.toFixed(1)}) * uWind;
+        float gust = sin(uTime * 1.6 + seed) + 0.5 * sin(uTime * 0.37 + seed * 0.3);
+        transformed.x += gust * 0.35 * k + sin(uTime * 4.1 + seed * 2.0) * 0.08 * k * ${flutter.toFixed(1)};
+        transformed.z += cos(uTime * 1.3 + seed * 1.7) * 0.3 * k;`);
+  });
+  // ash settles on everything: colours drain toward grey as it thickens
+  const ashify = (mat) => hook(mat, (sh) => {
+    sh.uniforms.uAsh = U.uAsh;
+    sh.fragmentShader = sh.fragmentShader
+      .replace('#include <common>', '#include <common>\nuniform float uAsh;')
+      .replace('#include <color_fragment>', '#include <color_fragment>\ndiffuseColor.rgb = mix(diffuseColor.rgb, vec3(dot(diffuseColor.rgb, vec3(0.3, 0.59, 0.11))) * vec3(0.78, 0.75, 0.72) + 0.12, uAsh * 0.8);');
+  });
+  sway(bark, 9, 1.6, 0); sway(frondM, 9, 1.6, 1); sway(bushM, 1.5, 1, 1); sway(flowerM, 1.0, 1, 1);
+  for (const m of [bark, frondM, bushM, flowerM, rockM]) ashify(m);
+  world.ashify = ashify;
   world.mats = { bark, frondM, bushM, flowerM, rockM };
 
   // palm variants: a leaning trunk and a crown of drooping fronds
@@ -356,7 +372,7 @@ export function buildIsland(scene, quality) {
     variants.push({ trunk, crown, h: Hh, lx, lz });
   }
   const counts = { palm: hi ? 1100 : 650, bush: hi ? 2600 : 1300, flower: hi ? 600 : 300, rock: hi ? 420 : 240, tuft: hi ? 6000 : 2500 };
-  const tuftM = new THREE.MeshStandardMaterial({ map: tuftTexture(), alphaTest: 0.5, side: THREE.DoubleSide, roughness: 0.9 }); sway(tuftM, 0.8);
+  const tuftM = new THREE.MeshStandardMaterial({ map: tuftTexture(), alphaTest: 0.5, side: THREE.DoubleSide, roughness: 0.9 }); sway(tuftM, 0.8, 1, 1); ashify(tuftM);
   const palmLists = variants.map(() => []);
   const bushes = [], flowers = [], rocks = [], tufts = [];
   const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), S = new THREE.Vector3(), P = new THREE.Vector3(), E = new THREE.Euler();

@@ -44,6 +44,7 @@ Version 1.0 is single player with NPC survivors. The world is seeded and determi
 
 ## Versions
 
+- **1.6**: trunks bend with their crowns in gusting wind; ash greys the jungle and buildings; sea glints, lava glow on the water and steam where flows meet it; crater glow, fireflies at dusk, blowing leaves; chromatic aberration and per-stage colour tints.
 - **1.5**: fixed the jeep's suspension leaning the wrong way on side slopes; each wheel now follows the ground under it.
 - **1.4**: the survey jeep (drive, passengers, headlights, damage, drowning); luminous pulsing lava with ground glow and lights on the fronts and bombs; heat haze, sun shafts, volcanic lightning with thunder, stars at dusk.
 - **1.3**: start at the foot of the volcano; 12 slow, staggered lava flows all round the cone; many more hot rocks and debris that kill survivors too; a billowing eruption plume with bursts; stride-driven walking and slope tilt so nobody floats; terrain bump detail, cloud shadows, seabed caustics, grass tufts, sun glare, seagulls, dust and spray, and a film-grade post pass on High.

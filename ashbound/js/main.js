@@ -66,20 +66,22 @@ function applyQuality() {
     composer.addPass(bloom);
     // a film grade: a soft vignette, a warm tint, grain, and the colour draining out as the ash thickens
     gradePass = new ShaderPass({
-      uniforms: { tDiffuse: { value: null }, uTime: { value: 0 }, uAsh: { value: 0 }, uHurt: { value: 0 }, uHeat: { value: 0 }, uSun: { value: new THREE.Vector2(0.5, 0.5) }, uShaft: { value: 0 } },
+      uniforms: { tDiffuse: { value: null }, uTime: { value: 0 }, uAsh: { value: 0 }, uHurt: { value: 0 }, uHeat: { value: 0 }, uSun: { value: new THREE.Vector2(0.5, 0.5) }, uShaft: { value: 0 }, uTint: { value: new THREE.Vector3(1, 1, 1) }, uAberr: { value: 0 } },
       vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
-      fragmentShader: `uniform sampler2D tDiffuse; uniform float uTime, uAsh, uHurt, uHeat, uShaft; uniform vec2 uSun; varying vec2 vUv;
+      fragmentShader: `uniform sampler2D tDiffuse; uniform float uTime, uAsh, uHurt, uHeat, uShaft, uAberr; uniform vec2 uSun; uniform vec3 uTint; varying vec2 vUv;
         float h21(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
         void main(){
           vec2 uv = vUv;
           // heat shimmer near the lava
           if (uHeat > 0.002) { float w = sin(uv.y * 70.0 + uTime * 7.0) * cos(uv.x * 50.0 - uTime * 5.0) + 0.5 * sin(uv.y * 160.0 - uTime * 11.0); uv += vec2(w, w * 0.6) * 0.0045 * uHeat * (1.2 - uv.y); }
           vec4 c = texture2D(tDiffuse, uv);
+          // the colours split at the edges when you are hurt, cooking or being shaken
+          if (uAberr > 0.002) { vec2 off = (uv - 0.5) * uAberr * 0.014; c.r = texture2D(tDiffuse, uv + off).r; c.b = texture2D(tDiffuse, uv - off).b; }
           // shafts of light: bright sky sampled along the line to the sun
           if (uShaft > 0.002) { vec2 dd = (uSun - uv) / 28.0; vec2 pp = uv; vec3 acc = vec3(0.0); float wgt = 1.0; for (int i = 0; i < 28; i++) { pp += dd; vec3 sm = texture2D(tDiffuse, pp).rgb; acc += max(sm - 1.1, 0.0) * wgt; wgt *= 0.95; } c.rgb += acc * 0.045 * uShaft; }
           vec2 d = vUv - 0.5; float vig = 1.0 - smoothstep(0.35, 1.05, dot(d, d) * 2.2);
           c.rgb *= mix(0.55, 1.0, vig);
-          c.rgb = mix(c.rgb, c.rgb * vec3(1.05, 1.0, 0.93), 0.5);
+          c.rgb = mix(c.rgb, c.rgb * vec3(1.05, 1.0, 0.93), 0.5) * uTint;
           float g = dot(c.rgb, vec3(0.3, 0.59, 0.11));
           c.rgb = mix(c.rgb, vec3(g), uAsh * 0.4 + uHurt * 0.5);
           c.rgb += (h21(vUv * 1000.0 + fract(uTime) * 100.0) - 0.5) * (0.03 + uAsh * 0.03);
@@ -127,7 +129,7 @@ const volcano = new Volcano(scene, world, quality, {
   onBurst: () => { if (distToVolcano(player.x, player.z) < 500) audio.noise(2.5, 160, 0.5 * (1 - distToVolcano(player.x, player.z) / 500), 'lowpass', 1, 0, 60); },
 });
 // small particle systems of our own: dust kicked up by feet, spray off the swimmer
-const fx = { dust: new Puffs(scene, 160, puffTexture(), '#e6d8b4', '#6a6058'), spray: new Puffs(scene, 160, puffTexture(), '#ffffff', '#cfe8f0'), stepT: 0 };
+const fx = { dust: new Puffs(scene, 160, puffTexture(), '#e6d8b4', '#6a6058'), spray: new Puffs(scene, 160, puffTexture(), '#ffffff', '#cfe8f0'), fireflies: new Puffs(scene, 120, glowTexture(), '#e8ff8a', '#8aff6a', THREE.AdditiveBlending), leaves: new Puffs(scene, 160, puffTexture(), '#7aa83a', '#c9a24a'), stepT: 0 };
 // the sun itself: a glare sprite far out along the light, hidden by the mountain when it stands in front
 const sunSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture(), color: '#fff4dc', transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, depthTest: true }));
 sunSprite.scale.set(260, 260, 1); scene.add(sunSprite);
@@ -628,7 +630,7 @@ function updateAtmosphere(dt, vfx) {
   const el = lerp(0.95, 0.12, p), az = lerp(2.2, 4.1, p);
   U.uSun.value.set(Math.cos(el) * Math.sin(az), Math.sin(el), Math.cos(el) * Math.cos(az));
   const dusk = smooth(0.5, 1, p);
-  U.uDusk.value = dusk; U.uAsh.value = ash; U.uPlume.value = vfx.plume; U.uTime.value = game.t; U.uWind.value = 0.35 + vfx.stageIdx * 0.3 + volcano.shake * 0.5; U.uCloud.value = 0.3 + 0.2 * dusk;
+  U.uDusk.value = dusk; U.uAsh.value = ash; U.uPlume.value = vfx.plume; U.uTime.value = game.t; U.uWind.value = (0.3 + vfx.stageIdx * 0.3) * (0.7 + 0.5 * Math.max(0, Math.sin(game.t * 0.21) * Math.sin(game.t * 0.07 + 1.3) + 0.3 * Math.sin(game.t * 0.9))) + volcano.shake * 0.5; U.uCloud.value = 0.3 + 0.2 * dusk;
   U.uSunCol.value.set('#fff2d0').lerp(tmpC.set('#ff9a50'), dusk).lerp(tmpC.set('#6a5a50'), ash * 0.8);
   U.uSkyTop.value.set('#2a72d6').lerp(tmpC.set('#3b4a7a'), dusk); U.uHorizon.value.set('#cfe4f5').lerp(tmpC.set('#ffb080'), dusk);
   U.uSky.value.copy(U.uHorizon.value).lerp(tmpC.set('#4a4542'), ash);
@@ -645,18 +647,26 @@ function updateAtmosphere(dt, vfx) {
   for (let i = 0; i < 8; i++) U.uGlow.value[i].copy(volcano.glow[i]);
   if (gradePass) {
     gradePass.uniforms.uTime.value = game.t; gradePass.uniforms.uAsh.value = ash; gradePass.uniforms.uHurt.value = player.stats.health < 30 ? (1 - player.stats.health / 30) * 0.6 : 0;
+    const tints = [[1, 1, 1], [1, 0.99, 0.97], [0.96, 0.94, 0.93], [1.06, 0.93, 0.87], [1.1, 0.9, 0.84]][vfx.stageIdx];
+    const tv = gradePass.uniforms.uTint.value; tv.x += (tints[0] - tv.x) * dt * 0.5; tv.y += (tints[1] - tv.y) * dt * 0.5; tv.z += (tints[2] - tv.z) * dt * 0.5;
+    gradePass.uniforms.uAberr.value = clamp(gradePass.uniforms.uHurt.value * 1.2 + gradePass.uniforms.uHeat.value * 0.8 + volcano.shake * 1.5 + cam.kick, 0, 1.5);
     const nf = vfx.nearFront == null ? 1e9 : vfx.nearFront;
     gradePass.uniforms.uHeat.value = player.inBunker ? 0 : clamp(volcano.heatAt(player.x, player.z) * 1.2 + Math.max(0, 1 - nf / 45) + (vfx.stageIdx >= 3 ? Math.max(0, 1 - distToVolcano(player.x, player.z) / 150) * 0.7 : 0), 0, 1);
     sunNdc.copy(camera.position).addScaledVector(U.uSun.value, 200).project(camera);
     const onScreen = sunNdc.z < 1 && Math.abs(sunNdc.x) < 1.6 && Math.abs(sunNdc.y) < 1.6;
     gradePass.uniforms.uSun.value.set(sunNdc.x * 0.5 + 0.5, sunNdc.y * 0.5 + 0.5);
     gradePass.uniforms.uShaft.value = onScreen && !player.inBunker ? (1 - ash * 0.9) * clamp(1.6 - Math.max(Math.abs(sunNdc.x), Math.abs(sunNdc.y)), 0, 1) : 0;
+    gradePass.uniforms.uAberr.value = clamp(gradePass.uniforms.uHurt.value * 1.2 + gradePass.uniforms.uHeat.value * 0.8 + volcano.shake * 1.5 + cam.kick, 0, 1.5);
   }
   sunSprite.position.copy(camera.position).addScaledVector(U.uSun.value, 1500);
   sunSprite.material.color.copy(U.uSunCol.value); sunSprite.material.opacity = (1 - ash * 0.85) * (player.inBunker ? 0 : 1);
   updateGulls(dt, vfx.stageIdx);
-  fx.dust.update(dt, 1.5, -0.3, 0.2); fx.spray.update(dt, 0.5, 5, 0);
-  for (const sys of [fx.dust, fx.spray]) { sys.u.uScale.value = innerHeight * 1.1; sys.u.uLight.value = 0.4 + 0.6 * Math.max(0.1, U.uSun.value.y); }
+  // fireflies drift through the jungle at dusk; leaves come loose in the gusts
+  const gh = heightAt(player.x, player.z), inJungle = gh > 2.5 && gh < 60 && !player.inBunker;
+  if (inJungle && dusk > 0.35 && ash < 0.5 && Math.random() < dt * 10 * dusk) { const a = Math.random() * 6.3, r = 4 + Math.random() * 18, x = player.x + Math.cos(a) * r, z = player.z + Math.sin(a) * r; fx.fireflies.emit(x, heightAt(x, z) + 0.6 + Math.random() * 1.8, z, (Math.random() - 0.5) * 0.5, (Math.random() - 0.3) * 0.3, (Math.random() - 0.5) * 0.5, 0.16, 1.5 + Math.random() * 2.5, Math.random(), 1, 0, 1); }
+  if (inJungle && U.uWind.value > 0.55 && Math.random() < dt * (U.uWind.value - 0.5) * 24) { const a = Math.random() * 6.3, r = 3 + Math.random() * 16, x = player.x + Math.cos(a) * r, z = player.z + Math.sin(a) * r; fx.leaves.emit(x, heightAt(x, z) + 5 + Math.random() * 6, z, 1.5 + Math.random() * 2, -0.4, (Math.random() - 0.5) * 1.5, 0.22 + Math.random() * 0.15, 4 + Math.random() * 3, Math.random(), 1, 0, 1); }
+  fx.dust.update(dt, 1.5, -0.3, 0.2); fx.spray.update(dt, 0.5, 5, 0); fx.fireflies.update(dt, 0.4, -0.05, 0.1); fx.leaves.update(dt, 0.3, 0.9, 1.2 * U.uWind.value);
+  for (const sys of [fx.dust, fx.spray, fx.fireflies, fx.leaves]) { sys.u.uScale.value = innerHeight * 1.1; sys.u.uLight.value = sys === fx.fireflies ? 1.6 : 0.4 + 0.6 * Math.max(0.1, U.uSun.value.y); }
   // campfire flicker
   for (const f of props.fires) { const k = 0.85 + Math.sin(game.t * 13) * 0.1 + Math.sin(game.t * 29) * 0.05; f.light.intensity = 14 * k; f.flame.scale.set(1.1 * k, 1.7 * k + Math.sin(game.t * 17) * 0.2, 1); }
   // sound levels

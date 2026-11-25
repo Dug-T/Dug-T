@@ -166,6 +166,8 @@ export function buildProps(scene, world, quality) {
   }
   // ---- the helicopter, parked off-stage until it is called ----
   P.heli = buildHelicopter(); P.heli.visible = false; scene.add(P.heli);
+  // ash settles on the buildings too
+  if (world.ashify) for (const m of [thatch, woodM, darkWood, metal, concrete, steel]) world.ashify(m);
   return P;
 }
 
