@@ -1,7 +1,18 @@
 // Bump VERSION for every update (1.1, 1.2, 1.3 ...) and add a line to CHANGES.
-export const VERSION = '3.9';
+export const VERSION = '4.0';
 
 export const CHANGES = [
+  ['4.0', [
+    'FPS counter in the top corner (turn it on or off in the pause menu)',
+    'Spent bullet cases and red shotgun shells fly out of the guns and bounce on the pavement, and guns leave a wisp of smoke',
+    'Explosions send a shockwave ring racing across the ground and leave scorch marks',
+    'A rainbow appears after the rain, and shooting stars streak across the night sky',
+    'Damaged motors steam, then pour black smoke before they catch fire',
+    'Raindrops splash on the ground, dust flies when Wally sprints, and a ring of dust when he lands',
+    'Badly hurt: the colour drains from the screen and the edges throb red with your heartbeat',
+    'Soft shadows under every car, so even distant ones sit on the road',
+    'Fixed: any grenade, haggis rocket or caber exploding anywhere killed Wally instantly if he was on foot',
+  ]],
   ['3.9', [
     'Sun shafts: on sunny days light streams past the buildings, with a lens flare when you look towards the sun',
     'Smoother edges on High graphics (multisampled anti-aliasing)',

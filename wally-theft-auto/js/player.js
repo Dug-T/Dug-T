@@ -159,6 +159,7 @@ export class Player {
     const g = Math.max(world.groundHeight(this.x, this.z, this.y + 0.6), cc.floor);
     if (this.y <= g) {
       if (prevVy < -15 && this.flyT <= 0) game.hurtPlayer((-prevVy - 15) * 6, 'fall');
+      if (!this.onGround && game.onLand) game.onLand(this, -prevVy);
       this.y = g; this.vy = 0;
       if (!this.onGround && this.flyT > 0 && !this.flail) { this.flyT = 0; }
       this.onGround = true;
