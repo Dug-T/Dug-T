@@ -145,6 +145,13 @@ export class Audio {
     if (!this.ctx || vol <= 0.02) return;
     this.tone(392 * pitch, 0.4, 'square', 0.1 * vol); this.tone(494 * pitch, 0.4, 'square', 0.08 * vol);
   }
+  // ice cream van chimes (a wee jingle, nothing copyrighted)
+  chimes() {
+    if (!this.ctx) return;
+    [784, 880, 988, 784, 659, 784, 880, 1047, 988, 784].forEach((f, i) => this.tone(f, 0.22, 'triangle', 0.09, 0, i * 0.2));
+  }
+  // a seagull overhead
+  gull() { if (!this.ctx) return; this.tone(1400, 0.25, 'sawtooth', 0.04, -700); this.tone(1300, 0.2, 'sawtooth', 0.035, -600, 0.3); }
   nextStation() { this.station = (this.station + 1) % this.stations.length; return this.stations[this.station]; }
   // ---------- generative radio ----------
   schedule() {

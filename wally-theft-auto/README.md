@@ -12,7 +12,11 @@ Open `wally-theft-auto/index.html` from any web server (GitHub Pages works). Not
 - **Traffic & pedestrians**: AI traffic drives on the left and follows the road network. Pedestrians walk the pavements, heckle Wally in Scots and run when trouble starts.
 - **Wanted level**: five stars. Polis cars use the road grid to hunt you down, foot cops try to arrest you and, from three stars, they open fire. Break line of sight to lose them, or pay $100 at the **Wally Wash** for a respray.
 - **Wally Power (Q)**: sometimes he flies, which lets you reach the rooftops. Sometimes he faceplants. Sometimes he gets one super punch that sends cars flying. Sometimes he discovers that his heat vision is just steamed-up specs.
-- **Six story missions**, started from the yellow marker outside Wally's Flat. In the first, *Special Delivery*, Wally follows his GPS (the purple route on the radar) to a white Pamazon van parked outside the depot, steals it, and has to deliver 10 parcels in 5 minutes. Then come *Fish Supper Run*, *Checkpoint Charlie*, *Pest Control*, *Hot Potato* and *The Big Flap*.
+- **Nine story missions**, started from the yellow marker outside Wally's Flat. In the first, *Special Delivery*, Wally follows his GPS (the purple route on the radar) to a white Pamazon van parked outside the depot, steals it, and has to deliver 10 parcels in 5 minutes. Then come *Fish Supper Run*, *Checkpoint Charlie*, *Pest Control*, *Hot Potato*, *The Big Flap*, *Mammy's Birthday*, *The Haggis Heist* and *Battle of Hero Square*.
+- **Side jobs**: get in a black cab for **Wally Cabs** (pick up fares, beat the clock), or park the **Mr Fudge** ice cream van near Hero Square so the chimes bring customers.
+- **Granda's Armoury** (red square on the radar): spend your cash on any weapon, ammo, body armour or health.
+- **Stunt ramps** (orange triangles on the radar): hit them fast for slow-motion jumps and cash, with a big bonus for doing all six.
+- **Wardrobe** in Wally's Flat: six outfits, from Classic to Golden Wally.
 - **14 weapons** lying about town, in different spots every game, plus ammo crates:
   - Melee: Granda's Golf Club, Frying Pan, Claymore, and the Battle Bagpipes (knock over everyone around you)
   - Guns: Wally Blaster, Scatter Blaster, Wally Laser, Gatling Blaster, Long Scope (a sniper rifle that zooms in when aiming) and the Super Soaker (knocks people over and puts out car fires)
@@ -50,6 +54,7 @@ On phones and tablets there's an on-screen stick, a drag-to-look area and button
 
 The version number is shown on the title screen (with a "What's new" list) and on the pause screen. It lives in `js/version.js`: bump it by 0.1 for every update (1.1, 1.2, 1.3...) and add a line to `CHANGES`.
 
+- **2.3**: three new missions (Mammy's Birthday, The Haggis Heist, Battle of Hero Square), Granda's Armoury shop, Wally Cabs taxi job, ice cream van job, 6 stunt ramps with slow-mo, a wardrobe with 6 outfits, and seagulls
 - **2.2**: cache-proof loading: the page checks the live version and loads every file stamped with it, so updates show up straight away
 - **2.1**: go inside Wally's Flat; sleep in the bed to save; quieter rain; 130 weapon pickups and 45 ammo crates; speed blur, lamp light pools, car light glows, skid marks, tyre smoke, muzzle flashes, raindrops on the lens
 - **2.0**: weapons and ammo crates hidden up the (now wider) alleyways and shown as gold squares on the radar; all car windows are clear see-through glass
@@ -73,6 +78,7 @@ The version number is shown on the title screen (with a "What's new" list) and o
 - `js/peds.js`: pedestrians and foot cops
 - `js/player.js`: Wally's controls, combat and powers
 - `js/weapons.js`: weapon stats and models
+- `js/content.js`: side jobs (taxi, ice cream), Granda's Armoury, stunt ramps and seagulls
 - `js/flat.js`: the inside of Wally's Flat and its bed save point
 - `js/ufo.js`: the flying saucer from the intro
 - `js/weather.js`: weather states, rain and snow particles, lightning

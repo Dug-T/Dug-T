@@ -3,6 +3,15 @@ import * as THREE from 'three';
 import { buildHuman, animateHuman } from './humans.js';
 import { WEAPONS, WEAPON_ORDER, HOLD, usesAmmo, buildWeaponModel } from './weapons.js';
 
+export const OUTFITS = [
+  { name: 'Classic Wally', suit: '#1f5fc4', red: '#e0471c', cape: '#e14a1e' },
+  { name: 'Midnight Wally', suit: '#1b1b2a', red: '#7b3fc4', cape: '#4a1f7a' },
+  { name: 'Golden Wally', suit: '#d4af37', red: '#ffffff', cape: '#f4f4f4' },
+  { name: 'Tartan Terror', suit: '#1d5a2e', red: '#b3122e', cape: '#1f3a93' },
+  { name: 'Hi-Vis Hero', suit: '#e8ff3a', red: '#ff7a00', cape: '#ff7a00' },
+  { name: 'Bubblegum Wally', suit: '#ff6fb0', red: '#ffffff', cape: '#8fd8ff' },
+];
+
 const POWER_FAILS = [
   'Up, up and... oh no.',
   'Heat vision! ...no, that\'s just steamed-up specs.',
@@ -25,6 +34,16 @@ export class Player {
       this.h.arms[1].grip.add(m); this.models[id] = m;
     }
     this.blaster = this.models.blaster;
+    // remember which materials are the suit, the red trim and the cape, so outfits can recolour them
+    this.outfitMats = { suit: new Set(), red: new Set(), cape: new Set() };
+    this.h.root.traverse((m) => {
+      if (!m.isMesh) return;
+      for (const mt of Array.isArray(m.material) ? m.material : [m.material]) {
+        const hx = mt.color && mt.color.getHexString();
+        if (hx === '1f5fc4') this.outfitMats.suit.add(mt); else if (hx === 'e0471c') this.outfitMats.red.add(mt); else if (hx === 'e14a1e') this.outfitMats.cape.add(mt);
+      }
+    });
+    this.outfit = 0;
     this.x = 0; this.y = 0.2; this.z = 0; this.vy = 0; this.heading = 0;
     this.vx = 0; this.vz = 0;
     this.health = 100; this.armour = 0; this.money = 0;
@@ -41,6 +60,15 @@ export class Player {
     this.owned[id] = true;
     if (id in this.ammoOf) this.ammoOf[id] += ammo;
     if (fresh || this.weapon === 'fists') this.weapon = id;
+  }
+  setOutfit(i, game) {
+    const o = OUTFITS[((i % OUTFITS.length) + OUTFITS.length) % OUTFITS.length];
+    this.outfit = OUTFITS.indexOf(o);
+    for (const m of this.outfitMats.suit) m.color.set(o.suit);
+    for (const m of this.outfitMats.red) m.color.set(o.red);
+    for (const m of this.outfitMats.cape) m.color.set(o.cape);
+    if (game) game.wallySuit = o.suit;
+    return o;
   }
   giveBlaster(ammo) { this.giveWeapon('blaster', ammo); }
   loseWeapons() { this.owned = { fists: true }; for (const k in this.ammoOf) this.ammoOf[k] = 0; this.weapon = 'fists'; }

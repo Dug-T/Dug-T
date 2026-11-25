@@ -17,6 +17,8 @@ import { WEAPONS, WEAPON_ORDER, usesAmmo, buildNeep, buildWeaponModel, buildProj
 import { Weather, WEATHERS } from './weather.js';
 import { buildUFO } from './ufo.js';
 import { buildFlat, FLAT } from './flat.js';
+import { initContent } from './content.js';
+import { OUTFITS } from './player.js';
 
 const $ = (id) => document.getElementById(id);
 // per-frame HUD writes only touch the page when the value actually changes
@@ -322,7 +324,9 @@ game.marker = (x, z, type = 'dest', r = 3, y = null) => {
   return m;
 };
 game.inMarker = (m, x, z) => m && Math.hypot(m.x - x, m.z - z) < m.r;
-game.clearMarkers = () => { for (const m of game.markers) if (m.type !== 'mission') scene.remove(m.obj); game.markers = game.markers.filter((m) => m.type === 'mission'); };
+game.removeMarker = (m) => { if (!m) return; scene.remove(m.obj); game.markers = game.markers.filter((q) => q !== m); };
+const keepMarker = (m) => m.type === 'mission' || m.persistent;
+game.clearMarkers = () => { for (const m of game.markers) if (!keepMarker(m)) scene.remove(m.obj); game.markers = game.markers.filter(keepMarker); };
 game.blip = (obj, kind, only) => { if (only && game.blips.some((b) => b.obj === obj)) return; game.blips.push({ obj, kind }); };
 game.clearBlips = () => { game.blips = []; };
 
@@ -928,7 +932,8 @@ window.addEventListener('keydown', (e) => {
   if (['Tab', 'Space', 'ArrowUp', 'ArrowDown'].includes(e.code)) e.preventDefault();
   if (!keys.has(e.code)) pressed.add(e.code);
   keys.add(e.code);
-  if ((e.code === 'Escape' || e.code === 'KeyP') && game.playing && performance.now() - (game._plT || 0) > 400) togglePause();
+  if (e.code === 'Escape' && game.shopOpen) { game.closeShop(); return; }
+  if ((e.code === 'Escape' || e.code === 'KeyP') && game.playing && !game.shopOpen && performance.now() - (game._plT || 0) > 400) togglePause();
 });
 window.addEventListener('keyup', (e) => keys.delete(e.code));
 window.addEventListener('blur', () => keys.clear());
@@ -949,7 +954,7 @@ document.addEventListener('mousemove', (e) => {
 });
 document.addEventListener('pointerlockchange', () => {
   game._plT = performance.now();
-  if (document.pointerLockElement !== canvas && game.playing && !game.paused && !isTouch) togglePause(true);
+  if (document.pointerLockElement !== canvas && game.playing && !game.paused && !game.shopOpen && !isTouch) togglePause(true);
 });
 
 // touch controls
@@ -1310,6 +1315,10 @@ function drawRadar() {
   dot(g.x, g.z - 6, BLIPC.garage, 7, false, 'sq');
   for (const car of cars) if (car.type === 'police' && car.driver === 'cop') dot(car.x, car.z, (Math.floor(performance.now() / 200) % 2) ? '#ff2f2f' : '#2f6dff', 6, false);
   for (const p of peds.list) if (p.cop && p.state !== 'dead' && game.wanted.level) dot(p.x, p.z, '#2f6dff', 4, false);
+  for (const b of game.staticBlips || []) {
+    if (b.shape === 'tri') { let [sx, sy] = toR(b.x, b.z); if (Math.hypot(sx - c, sy - c) > c - 12) continue; rctx.fillStyle = b.col; rctx.strokeStyle = '#000'; rctx.lineWidth = 3; rctx.beginPath(); rctx.moveTo(sx, sy - 8); rctx.lineTo(sx + 7, sy + 6); rctx.lineTo(sx - 7, sy + 6); rctx.closePath(); rctx.fill(); rctx.stroke(); }
+    else dot(b.x, b.z, b.col, 7, false, 'sq');
+  }
   for (const p of game.pickups) if ((p.kind === 'weapon' || p.kind === 'crate') && !(p.gone > 0) && Math.abs(p.x - px) < 90 && Math.abs(p.z - pz) < 90) dot(p.x, p.z, p.kind === 'crate' ? '#c9a23a' : '#ffd23f', 4, false, 'sq');
   for (const m of game.markers) dot(m.x, m.z, BLIPC[m.type] || '#fff', m.type === 'ghost' ? 6 : 9);
   for (const b of game.blips) { const o = b.obj; if (o.dead || o.state === 'dead') continue; dot(o.x, o.z, BLIPC[b.kind] || '#fff', 7); }
@@ -1389,7 +1398,7 @@ function updateMission(dt) {
 
 // ---------------- save ----------------
 function save(bed) {
-  store.set('wta-save', { v: 2, slept: !!(bed || (store.get('wta-save', {}) || {}).slept), money: player.money, missionIdx: game.missionIdx, specs: game.collected || [], weapons: Object.keys(player.owned), ammoOf: player.ammoOf, stats: game.stats, time: game.time });
+  store.set('wta-save', { v: 2, slept: !!(bed || (store.get('wta-save', {}) || {}).slept), money: player.money, missionIdx: game.missionIdx, specs: game.collected || [], weapons: Object.keys(player.owned), ammoOf: player.ammoOf, stats: game.stats, time: game.time, outfit: player.outfit, extra: content.save() });
 }
 function load(fresh) {
   const s = fresh ? {} : store.get('wta-save', {});
@@ -1401,6 +1410,8 @@ function load(fresh) {
   Object.assign(player.ammoOf, s.ammoOf || {});
   if (s.hasBlaster) { player.owned.blaster = true; player.ammoOf.blaster += s.ammo || 0; } // saves from v1.1 and earlier
   if (s.stats) Object.assign(game.stats, s.stats);
+  player.setOutfit(s.outfit || 0, game);
+  content.load(s.extra);
   game.stats.specs = game.collected.length;
   if (s.time) game.time = s.time;
   return s;
@@ -1418,7 +1429,7 @@ function updatePickups(dt) {
     if (p.obj.userData.ring) p.obj.userData.ring.position.y = -0.75 - Math.sin(p.t * 3) * 0.15;
     if (player.car || player.dead) continue;
     if (Math.abs(p.x - px) < 1.3 && Math.abs(p.z - pz) < 1.3 && Math.abs(p.y - 0.9 - py) < 1.6) {
-      if (p.kind === 'health') { if (player.health >= 100) continue; player.health = 100; game.toast('Irn... er, energy drink. Health restored.'); }
+      if (p.kind === 'health') { if (player.health >= 100) continue; player.health = 100; game.toast('Fizzy ginger juice. Health restored.'); }
       if (p.kind === 'armour') { if (player.armour >= 100) continue; player.armour = 100; game.toast('Body armour. Fits over the onesie.'); }
       if (p.kind === 'cash') { const a = p.amount || 250; player.money += a; audio.cash(); }
       if (p.kind === 'ammo') { player.giveWeapon('blaster', 30); game.toast('Blaster cells +30'); }
@@ -1646,6 +1657,11 @@ function updateFlat(dt, inp) {
   else {
     if (near(flat.exitMarker, 0.8)) exitFlat();
     else if (near(flat.bedMarker, 1.0)) { prompt = isTouch ? 'Tap ENTER to sleep and SAVE' : 'Press F to sleep and SAVE'; if (inp.enter) { inp.enter = false; sleepAndSave(); } }
+    else if (near(flat.wardMarker, 1.0)) {
+      const next = OUTFITS[(player.outfit + 1) % OUTFITS.length];
+      prompt = `${OUTFITS[player.outfit].name} · ${isTouch ? 'tap ENTER' : 'press F'} for ${next.name}`;
+      if (inp.enter) { inp.enter = false; const o = player.setOutfit(player.outfit + 1, game); audio.door(); game.toast(`👔 Wally changes into: ${o.name}`); if (player.car) player.car._who = null; }
+    }
   }
   $('prompt').textContent = prompt; $('prompt').classList.toggle('hidden', !prompt);
 }
@@ -1719,12 +1735,20 @@ function updateIntro(dt, inp) {
   if (T > 8.2) endIntro();
 }
 
+game.puff = puff;
+game.relock = () => { if (!isTouch && game.playing && !game.paused) canvas.requestPointerLock?.(); };
+const content = initContent(game, scene, world);
+
 let last = performance.now();
 let acc = 0;
 function frame(now) {
   requestAnimationFrame(frame);
   let dt = Math.max(0, Math.min(0.05, (now - last) / 1000)); last = now;
-  if (!game.playing || game.paused) { if (!game.playing) titleCam(dt); render(); return; }
+  if (!game.playing || game.paused || game.shopOpen) { if (!game.playing) titleCam(dt); if (game.shopOpen && pressed.has('Escape')) { pressed.clear(); game.closeShop(); } render(); return; }
+  // slow motion while Wally's car is flying off a stunt ramp
+  const wantScale = player.car && player.car.air ? 0.4 : 1;
+  game.timeScale += (wantScale - game.timeScale) * Math.min(1, dt * 6);
+  dt *= game.timeScale;
   const inp = readInput(); game._inp = inp;
   if (game.intro) { // during the intro, controls only skip it
     inp.any = inp.enter || inp.power || inp.weapon || inp.jumpPressed || inp.firePressed || inp.anyKey;
@@ -1767,6 +1791,7 @@ function frame(now) {
   if (Math.random() < dt) world.restoreLamps(player.x, player.z);
   if (game.intro) updateIntro(dt, inp); else updateCamera(dt, inp);
   updateWeather(dt);
+  content.update(dt, game._inp);
   updateSky(dt);
   // audio
   const c = player.car;
@@ -1823,7 +1848,7 @@ function togglePause(force) {
   if (game.paused) {
     if (document.pointerLockElement) document.exitPointerLock();
     const s = game.stats;
-    $('statsBox').innerHTML = `<div class="stat">Missions: ${game.missionIdx} / ${MISSIONS.length}</div><div class="stat">Golden Specs: ${s.specs} / 20</div><div class="stat">Motors borrowed: ${s.cars} · Successful flights: ${s.flights}</div><div class="stat">Times hopeless: ${s.wasted} · Times nicked: ${s.busted}</div>`;
+    $('statsBox').innerHTML = `<div class="stat">Missions: ${game.missionIdx} / ${MISSIONS.length}</div><div class="stat">Golden Specs: ${s.specs} / 20</div><div class="stat">Motors borrowed: ${s.cars} · Successful flights: ${s.flights}</div><div class="stat">Times hopeless: ${s.wasted} · Times nicked: ${s.busted}</div><div class="stat">${content.stats()}</div>`;
     if (audio.ctx) audio.ctx.suspend();
   } else {
     if (!isTouch) canvas.requestPointerLock?.();
@@ -1843,6 +1868,7 @@ function startGame(fresh) {
     if (player.car) exitCar(true);
     game.wanted.clear();
     placeMissionMarker();
+    content.placeVans();
     // a motor waiting at the kerb outside the flat
     if (!cars.some((c) => Math.hypot(c.x - h.x, c.z - h.z) < 12)) { const c = game.spawnCar('hatch', h.x - 7, h.z - 3.4, -Math.PI / 2); c.parked = true; }
     started = true;
@@ -1876,4 +1902,4 @@ $('news').innerHTML = `<b>What's new in v${VERSION}:</b><ul>${CHANGES[0][1].map(
 for (let i = 0; i < 6; i++) { player.x = world.specials.plaza.x; player.z = world.specials.plaza.z; spawnParked(); }
 $('loading').classList.add('hidden');
 requestAnimationFrame(frame);
-window.__game = game; game.flat = flat; game.camera = camera; game.scene = scene; game.renderer = renderer; // handy for debugging in the console
+window.__game = game; game.flat = flat; game.content = content; game.camera = camera; game.scene = scene; game.renderer = renderer; // handy for debugging in the console
