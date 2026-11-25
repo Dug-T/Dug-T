@@ -62,6 +62,7 @@ On phones and tablets there's a movement stick on the left, a camera stick next 
 
 The version number is shown on the title screen (with a "What's new" list) and on the pause screen. It lives in `js/version.js`: bump it by 0.1 for every update (1.1, 1.2, 1.3...) and add a line to `CHANGES`.
 
+- **3.6**: two new motors: the Steel Wedge (a stainless electric pickup) and the Wee Trike (a three-wheeled van that tips over in tight corners)
 - **3.5**: Nessie follows Wally everywhere, the Highland Rifle is Wally's default weapon, and loads more Scottish patter (including Wally-and-Nessie chats)
 - **3.4**: the Loch Ness Monster wriggles about outside Wally's flat and says "Och aye the noo!"
 - **3.3**: smaller touch buttons, and a camera joystick beside them instead of dragging on the screen to look

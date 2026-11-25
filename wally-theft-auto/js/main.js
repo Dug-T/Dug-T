@@ -272,6 +272,13 @@ game.addSign = (text, bg, fg, x, z, ry = Math.PI) => {
   g.position.set(x, 0, z); g.rotation.y = ry; scene.add(g); return g;
 };
 game.removeCar = (c) => removeCar(c);
+// the Wee Trike goes over on its side
+const TIP_LINES = ["Ach! Three wheels was always one short!", "Whit a plonker... I mean, whit a corner!", "This is why the shop had it on special offer!", "I'm fine! The motor's fine! Neither of us is fine!", "Nobody saw that. Nessie, ye didnae see that."];
+game.onTip = (car) => {
+  const d = Math.hypot(car.x - player.x, car.z - player.z);
+  if (d < 50) { audio.crash(8 * (1 - d / 50)); audio.tone(260, 0.25, 'triangle', 0.15, -120); }
+  if (car === player.car) { cam.shake = Math.max(cam.shake, 0.3); game.quip(TIP_LINES, 1, true); }
+};
 // lamp posts: a metallic clang and sparks when one gets snapped, a crash when it lands
 world.onLampKnock = (x, z, sp) => {
   const d = Math.hypot(x - player.x, z - player.z);
@@ -1042,7 +1049,9 @@ function endJack(ok) {
   if (!j.occupied && c.type === 'police') game.wanted.add(nearCop(60) ? 3 : 1);
   c.driver = 'player'; c.ai = null; c.parked = false; c.sirenOn = false;
   player.car = c; game.stats.cars++;
-  game.quip('car', 0.3);
+  if (c.type === 'wedge' && !game._saidWedge) { game._saidWedge = true; game.quip(["It's like driving a fridge! A very fast, very angry fridge!"], 1, true); }
+  else if (c.type === 'trike' && !game._saidTrike) { game._saidTrike = true; game.quip(["Three wheels! Lovely jubbly! Mind the corners, Wally."], 1, true); }
+  else game.quip('car', 0.3);
   audio.door();
   const vn = $('vehName'); vn.textContent = c.name; vn.style.opacity = 1; setTimeout(() => (vn.style.opacity = 0), 2500);
   showRadio();
@@ -2161,6 +2170,9 @@ function startGame(fresh) {
     content.placeVans();
     // a motor waiting at the kerb outside the flat
     if (!cars.some((c) => Math.hypot(c.x - h.x, c.z - h.z) < 12)) { const c = game.spawnCar('hatch', h.x - 7, h.z - 3.4, -Math.PI / 2); c.parked = true; }
+    // a Steel Wedge and a Wee Trike parked up the street for Wally to try
+    if (!cars.some((c) => c.type === 'wedge' && Math.hypot(c.x - h.x, c.z - h.z) < 30)) { const c = game.spawnCar('wedge', h.x - 16, h.z - 3.4, -Math.PI / 2); c.parked = true; }
+    if (!cars.some((c) => c.type === 'trike' && Math.hypot(c.x - h.x, c.z - h.z) < 30)) { const c = game.spawnCar('trike', h.x + 12, h.z - 3.4, -Math.PI / 2); c.parked = true; }
     // the Loch Ness Monster, on her holidays outside Wally's flat
     if (!nessie) { nessie = buildNessie(scene, world, h); game.nessie = nessie; }
     nessie.greeted = false; nessie.greetT = s.slept && !fresh ? 4 : 6.5;
