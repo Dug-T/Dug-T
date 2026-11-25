@@ -1,0 +1,90 @@
+// Survival rules: the stats, the items, the recipes, the eruption stages and the three ways off the island.
+
+export const DIFFICULTY = {
+  relaxed: { name: 'Relaxed', minutes: 40, desc: '40 minutes to the final surge. Time to explore.' },
+  standard: { name: 'Standard', minutes: 24, desc: '24 minutes. The intended experience.' },
+  hardcore: { name: 'Hardcore', minutes: 14, desc: '14 minutes, and everything hurts more.' },
+};
+
+export const ITEMS = {
+  wood: { name: 'Driftwood', icon: '🪵', desc: 'Dry logs. Rafts are made of these.' },
+  vine: { name: 'Vine', icon: '🌿', desc: 'Tough jungle vine. Three make a rope.' },
+  stone: { name: 'Stone', icon: '🪨', desc: 'A sharp piece of volcanic rock.' },
+  coconut: { name: 'Coconut', icon: '🥥', desc: 'Food and drink in one. Eat it.', use: { hunger: 22, thirst: 24 } },
+  banana: { name: 'Banana', icon: '🍌', desc: 'Quick energy.', use: { hunger: 16, stamina: 30 } },
+  mango: { name: 'Mango', icon: '🥭', desc: 'Sweet and juicy.', use: { hunger: 20, thirst: 10 } },
+  water: { name: 'Canteen water', icon: '💧', desc: 'A drink of fresh water.', use: { thirst: 40 } },
+  cloth: { name: 'Cloth', icon: '🧵', desc: 'Torn seat covers from the wreck.' },
+  rope: { name: 'Rope', icon: '🪢', desc: 'Braided vine rope. Holds a raft together.' },
+  axe: { name: 'Stone axe', icon: '🪓', desc: 'Chop palms for logs. Hold USE beside a palm.', tool: true },
+  mask: { name: 'Ash mask', icon: '😷', desc: 'Wet cloth over your mouth. Keeps the ash out of your lungs.', tool: true },
+  bandage: { name: 'Bandage', icon: '🩹', desc: 'Patches you up.', use: { health: 35 } },
+  tarp: { name: 'Tarpaulin', icon: '⛵', desc: 'A survival tarp from the wreck. A sail, if you had a raft.' },
+  battery: { name: 'Battery', icon: '🔋', desc: 'The plane\'s battery. Still holds a charge.' },
+  antenna: { name: 'Antenna', icon: '📶', desc: 'The mast from the ranger tower.' },
+  handset: { name: 'Radio handset', icon: '📻', desc: 'From the village radio hut.' },
+};
+export const FOOD = ['coconut', 'banana', 'mango'];
+
+export const RECIPES = [
+  { id: 'rope', name: 'Rope', needs: { vine: 3 }, gives: { rope: 1 } },
+  { id: 'axe', name: 'Stone axe', needs: { wood: 2, stone: 1, vine: 1 }, gives: { axe: 1 }, once: true },
+  { id: 'mask', name: 'Ash mask', needs: { cloth: 2, vine: 1 }, gives: { mask: 1 }, once: true },
+  { id: 'bandage', name: 'Bandage', needs: { cloth: 1 }, gives: { bandage: 1 } },
+];
+
+// what each escape needs
+export const ESCAPES = {
+  raft: { name: 'Build a raft', needs: { wood: 10, rope: 3, tarp: 1 }, where: 'boatyard' },
+  radio: { name: 'Repair the ranger radio', needs: { battery: 1, antenna: 1, handset: 1 }, where: 'tower' },
+  bunker: { name: 'Seal the old bunker', needs: { water: 4, food: 4, mask: 1 }, where: 'bunker' },
+};
+
+export const STAGES = [
+  { id: 'calm', from: 0, name: 'Calm', desc: 'Steam over the summit. Birdsong. Paradise.' },
+  { id: 'unrest', from: 0.22, name: 'Unrest', desc: 'Tremors. The plume is darkening. The birds have gone quiet.' },
+  { id: 'ashfall', from: 0.48, name: 'Ashfall', desc: 'Ash is falling. Cover your mouth. The sky is going dark.' },
+  { id: 'eruption', from: 0.72, name: 'Eruption', desc: 'Lava bombs and lava flows. Get off the mountain.' },
+  { id: 'surge', from: 0.94, name: 'Pyroclastic surge', desc: 'Nothing on the surface survives this. Be gone, or be underground.' },
+];
+export function stageAt(p) { let s = STAGES[0]; for (const st of STAGES) if (p >= st.from) s = st; return s; }
+
+export function newStats() { return { health: 100, stamina: 100, hunger: 100, thirst: 100, air: 100 }; }
+
+// advance the body by dt seconds. ctx: { sprinting, swimming, ash (0..1 ash in the air), sheltered, mask, hard, moving }
+export function tickStats(s, dt, ctx) {
+  const k = ctx.hard ? 1.45 : 1;
+  s.hunger -= dt * (100 / (30 * 60)) * k * (ctx.sprinting ? 1.6 : 1);
+  s.thirst -= dt * (100 / (17 * 60)) * k * (ctx.sprinting ? 2.0 : ctx.moving ? 1.25 : 1) * (ctx.hot ? 1.6 : 1);
+  if (ctx.sprinting) s.stamina -= dt * 13;
+  else if (ctx.swimming) s.stamina -= dt * 4.5;
+  else s.stamina += dt * (ctx.moving ? 9 : 16) * (s.hunger > 25 ? 1 : 0.4);
+  // ash in the lungs
+  const ash = ctx.sheltered ? 0 : ctx.ash;
+  if (ash > 0.02) s.air -= dt * ash * (ctx.mask ? 100 / (20 * 60) : 100 / (3.5 * 60)) * k;
+  else s.air += dt * 6;
+  // the damage all of that does
+  let dmg = 0;
+  if (s.hunger <= 0) dmg += 1.2; if (s.thirst <= 0) dmg += 2.0; if (s.air <= 0) dmg += 3.0;
+  if (ctx.swimming && s.stamina <= 0) dmg += 6;
+  if (dmg > 0) s.health -= dmg * dt * k; else if (s.hunger > 50 && s.thirst > 50 && s.air > 30) s.health += dt * 0.6;
+  for (const key of Object.keys(s)) s[key] = Math.max(0, Math.min(100, s[key]));
+  return dmg;
+}
+
+// the running inventory
+export class Inventory {
+  constructor(obj) { this.items = obj || {}; }
+  count(id) { return this.items[id] || 0; }
+  add(id, n = 1) { this.items[id] = (this.items[id] || 0) + n; if (this.items[id] <= 0) delete this.items[id]; }
+  has(needs) { return Object.entries(needs).every(([id, n]) => (id === 'food' ? FOOD.reduce((a, f) => a + this.count(f), 0) : this.count(id)) >= n); }
+  take(needs) {
+    for (const [id, n] of Object.entries(needs)) {
+      if (id === 'food') { let left = n; for (const f of FOOD) { const t = Math.min(left, this.count(f)); if (t) { this.add(f, -t); left -= t; } } }
+      else this.add(id, -n);
+    }
+  }
+  foodCount() { return FOOD.reduce((a, f) => a + this.count(f), 0); }
+  list() { return Object.keys(ITEMS).filter((id) => this.count(id) > 0); }
+  total() { return Object.values(this.items).reduce((a, b) => a + b, 0); }
+}
