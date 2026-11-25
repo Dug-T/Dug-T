@@ -1,7 +1,14 @@
 // Bump VERSION for every update (1.1, 1.2, 1.3 ...) and add a line to CHANGES.
-export const VERSION = '3.6';
+export const VERSION = '3.7';
 
 export const CHANGES = [
+  ['3.7', [
+    'Full game controller support for Bluetooth controllers on phones (and Xbox / PlayStation pads): every action is on a button, the triggers are proper analogue pedals, and the right stick turns the camera smoothly',
+    'Menus work on the controller too: D-pad to move, A to choose, B to go back',
+    'The on-screen touch buttons hide while you play on a controller, and come back when you touch the screen',
+    'New 🎮 CONTROLLER screen (title and pause menu): shows what is connected and the button layout, and SET UP BUTTONS lets you teach the game any controller whose buttons are muddled',
+    "Rumble on gunfire, crashes, explosions and getting hurt, where the controller supports it, and Android's back gesture no longer quits the game",
+  ]],
   ['3.6', [
     'New motor: the Steel Wedge, an angular stainless-steel electric pickup with a peaked roof and light bars. Fast, heavy, and it whines instead of roars',
     "New motor: the Wee Trike, a yellow three-wheeled van wi' one wheel at the front. Slow, light, and if you corner too fast it tips over on its side",

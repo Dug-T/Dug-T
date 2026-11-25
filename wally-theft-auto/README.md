@@ -42,19 +42,22 @@ Open `wally-theft-auto/index.html` from any web server (GitHub Pages works). Not
 
 | Action | Keyboard / mouse | Gamepad |
 |---|---|---|
-| Move / drive | WASD or arrows | Left stick, RT/LT for gas/brake |
+| Move / drive | WASD or arrows | Left stick |
+| Gas / brake & reverse | W / S | RT / LT |
 | Look | Mouse | Right stick |
-| Sprint | Shift | LB / L3 |
+| Sprint | Shift | Hold B (or L3) |
 | Jump / handbrake | Space | A |
 | Enter / exit car | F or Enter | Y |
 | Punch / fire | Left click | RT |
-| Aim Blaster | Right click | LT |
-| Switch weapon | Tab | B |
+| Aim | Right click | LT |
+| Switch weapon | Tab | RB or D-pad right |
 | Wally Power | Q | X |
-| Fly down | Ctrl | |
-| Horn / radio / camera | H / R / C | |
-| Set GPS destination | G, or tap the radar | |
+| Fly down | Ctrl | D-pad down |
+| Horn / radio / camera | H / R / C | B in a car / D-pad up / R3 |
+| Set GPS destination | G, or tap the radar | LB or D-pad left |
 | Mute / pause | M / Esc or P | Start |
+
+Game controllers work over Bluetooth or USB, including phone controllers. Menus work on the controller (D-pad, A, B), the touch buttons hide while you use it, and it rumbles where supported. If a controller's buttons come out muddled, open **🎮 CONTROLLER** from the title or pause menu and use **SET UP BUTTONS**.
 
 On phones and tablets there's a movement stick on the left, a camera stick next to the buttons on the right, and buttons. The **Graphics** toggle switches between High (2048 shadows, bloom, retina resolution, more traffic) and Low.
 
@@ -62,6 +65,7 @@ On phones and tablets there's a movement stick on the left, a camera stick next 
 
 The version number is shown on the title screen (with a "What's new" list) and on the pause screen. It lives in `js/version.js`: bump it by 0.1 for every update (1.1, 1.2, 1.3...) and add a line to `CHANGES`.
 
+- **3.7**: full game controller support (Bluetooth phone controllers too), controller menus, a button setup screen, hidden touch buttons while on a controller, and rumble
 - **3.6**: two new motors: the Steel Wedge (a stainless electric pickup) and the Wee Trike (a three-wheeled van that tips over in tight corners)
 - **3.5**: Nessie follows Wally everywhere, the Highland Rifle is Wally's default weapon, and loads more Scottish patter (including Wally-and-Nessie chats)
 - **3.4**: the Loch Ness Monster wriggles about outside Wally's flat and says "Och aye the noo!"

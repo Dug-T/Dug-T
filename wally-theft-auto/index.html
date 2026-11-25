@@ -118,6 +118,12 @@
   /* on phones the clock, weapon, health, cash and stars shrink a little so they clear the buttons */
   body.touch #topright { transform: scale(0.78); transform-origin: top right; }
   body.touch #power { left: calc(max(18px, env(safe-area-inset-left)) + 37px); bottom: calc(max(18px, env(safe-area-inset-bottom)) + 146px); }
+  /* on a game controller the on-screen buttons hide; the focused menu button glows */
+  body.pad #touch { display: none !important; }
+  .padfocus { outline: 4px solid #fff; outline-offset: 3px; transform: scale(1.04); }
+  #padscreen .card { max-width: 92vw; max-height: 88vh; overflow: auto; background: #0d1630ee; border: 3px solid var(--gold); border-radius: 12px; padding: 18px 26px; }
+  #padscreen .keys div { white-space: nowrap; }
+  #padStep { color: var(--gold); font: 400 24px 'Bangers', Impact; letter-spacing: 1px; min-height: 30px; }
   @media (max-width: 700px) { #title img { max-width: 60vw; height: 40vh; } .keys { columns: 1; } }
 /* phones and tablets held upright get a "turn it sideways" screen: the game is landscape only */
 #rotate { display: none; position: fixed; inset: 0; z-index: 99999; background: #0d1b2a; color: #fff; flex-direction: column; align-items: center; justify-content: center; text-align: center; font-family: Oswald, sans-serif; padding: 24px; }
@@ -180,6 +186,7 @@
     <button class="btn" id="play">▶ PLAY</button>
     <button class="btn alt" id="newgame">↺ NEW GAME</button>
     <button class="btn dim" id="howto">? CONTROLS</button>
+    <button class="btn dim" id="padOpen2">🎮 CONTROLLER</button>
     <button class="btn dim" id="gfx">GRAPHICS: HIGH</button>
     <button class="btn dim" id="vox">VOICES: ON</button>
   </div>
@@ -204,7 +211,7 @@
       <div><b>G</b> set GPS (or tap the map)</div>
       <div><b>M</b> mute</div>
       <div><b>Esc / P</b> pause</div>
-      <div><b>Gamepad</b> supported</div>
+      <div><b>Controller</b> see 🎮 CONTROLLER</div>
     </div>
     <p class="tag">Walk into the yellow <b style="color:var(--gold)">W</b> marker outside Wally's Flat to start a mission. Find the 20 hidden Golden Specs. Drive into the Wally Wash to lose the polis.</p>
     <button class="btn" id="helpBack">◀ BACK</button>
@@ -218,6 +225,7 @@
     <button class="btn dim" id="pauseHelp">? CONTROLS</button>
     <button class="btn dim" id="gfx2">GRAPHICS: HIGH</button>
     <button class="btn dim" id="vox2">VOICES: ON</button>
+    <button class="btn dim" id="padOpen">🎮 CONTROLLER</button>
     <button class="btn alt" id="quit">⌂ TITLE SCREEN</button>
   </div>
 </div>
@@ -237,6 +245,34 @@
   </div>
 </div>
 <div id="rotate"><div class="phone"></div><h2>TURN YER PHONE SIDEWAYS</h2><p>Wally Theft Auto only plays in landscape. Even Wally Man cannae drive sideways.</p></div>
+<div id="padscreen" class="screen hidden">
+  <div class="card">
+    <h2>🎮 Controller</h2>
+    <p class="tag" id="padName"></p>
+    <p class="tag" id="padMode"></p>
+    <div class="keys">
+      <div><b>Left stick</b> walk / steer</div>
+      <div><b>Right stick</b> look around</div>
+      <div><b>RT</b> fire / accelerate</div>
+      <div><b>LT</b> aim / brake &amp; reverse</div>
+      <div><b>A</b> jump / handbrake</div>
+      <div><b>B</b> sprint (hold) / horn</div>
+      <div><b>X</b> WALLY POWER</div>
+      <div><b>Y</b> get in or out</div>
+      <div><b>RB / D-pad →</b> next weapon</div>
+      <div><b>LB / D-pad ←</b> GPS</div>
+      <div><b>D-pad ↑</b> radio</div>
+      <div><b>D-pad ↓</b> fly down / horn</div>
+      <div><b>R3</b> camera</div>
+      <div><b>Start</b> pause</div>
+    </div>
+    <p class="tag">In menus: D-pad or left stick to move, A to choose, B to go back. If any buttons are muddled, SET UP BUTTONS and press each one when asked.</p>
+    <p id="padStep"></p>
+    <button class="btn" id="padSetup">SET UP BUTTONS</button>
+    <button class="btn dim" id="padReset">RESET TO STANDARD</button>
+    <button class="btn alt" id="padBack">◀ BACK</button>
+  </div>
+</div>
 <div id="fade"></div>
 <div id="loading">BUILDING WALLYPOOL...</div>
 <script>
@@ -244,7 +280,7 @@
 // every game file stamped with that version, so a browser can't mix old and new files.
 // If you add a new file to js/, add its name to this list too.
 (function () {
-  var files = ['main', 'audio', 'city', 'content', 'flat', 'humans', 'missions', 'nessie', 'peds', 'player', 'radio', 'textures', 'ufo', 'vehicles', 'version', 'voice', 'weapons', 'weather'];
+  var files = ['main', 'audio', 'city', 'content', 'flat', 'humans', 'gamepad', 'missions', 'nessie', 'peds', 'player', 'radio', 'textures', 'ufo', 'vehicles', 'version', 'voice', 'weapons', 'weather'];
   function boot(v) {
     var map = { imports: { 'three': './lib/three.module.min.js', 'three/addons/': './lib/' } };
     files.forEach(function (f) { map.imports['./js/' + f + '.js'] = './js/' + f + '.js?v=' + v; });
