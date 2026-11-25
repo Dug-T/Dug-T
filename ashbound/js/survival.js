@@ -37,6 +37,7 @@ export const RECIPES = [
 export const ESCAPES = {
   raft: { name: 'Build a raft', needs: { wood: 10, rope: 3, tarp: 1 }, where: 'boatyard' },
   radio: { name: 'Repair the ranger radio', needs: { battery: 1, antenna: 1, handset: 1 }, where: 'tower' },
+  boat: { name: 'Repair Kai\'s skiff', needs: { battery: 1, wood: 2, rope: 1 }, where: 'village' },
   bunker: { name: 'Seal the old bunker', needs: { water: 4, food: 4, mask: 1 }, where: 'bunker' },
 };
 

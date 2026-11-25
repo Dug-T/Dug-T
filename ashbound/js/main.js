@@ -8,7 +8,7 @@ import { buildIsland, heightAt, normalAt, POIS, VOLCANO, SEA, W, distToVolcano }
 import { buildProps, pickupMesh, setRaftStage } from './props.js';
 import { buildSurvivor, animateSurvivor, buildAxe, LOOKS, groundTilt } from './survivor.js';
 import { Volcano, Puffs } from './volcano.js';
-import { Jeep } from './vehicle.js';
+import { Jeep, Boat } from './vehicle.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { NpcManager, resolveObstacles } from './npcs.js';
 import { ITEMS, RECIPES, ESCAPES, STAGES, DIFFICULTY, FOOD, stageAt, newStats, tickStats, Inventory } from './survival.js';
@@ -124,6 +124,7 @@ const volcano = new Volcano(scene, world, quality, {
     if (sea) return;
     npcs.scare(x, z, r);
     if (!player.inBunker) npcs.blast(x, z, cold ? r : r * 1.1);
+    { const db = Math.hypot(x - boat.x, z - boat.z); if (db < r * 1.6) boat.damage((cold ? 90 : 70) * (1 - db / (r * 1.6)), { onDestroyed: () => { toast('The skiff is wrecked!', 3); } }); }
     { const dj = Math.hypot(x - jeep.x, z - jeep.z); if (dj < r * 1.6) jeep.damage((cold ? 90 : 70) * (1 - dj / (r * 1.6)), { onDestroyed: () => { toast('The jeep is wrecked!', 3); } }); }
     if (d < r * 1.5 && !player.inBunker) { const dmg = (cold ? 110 : 75) * (1 - d / (r * 1.5)); hurt(dmg, cold ? 'crushed by a falling rock' : 'blown apart by a lava bomb'); cam.kick = Math.min(1, cam.kick + 0.6); }
     else if (d < 60) cam.kick = Math.min(1, cam.kick + 0.25);
@@ -161,7 +162,36 @@ function updateGulls(dt, stageIdx) {
 }
 // the survey team's jeep, parked beside the camp
 const jeep = new Jeep(scene, POIS.camp.x + 13, POIS.camp.z - 7, 0.9);
+// Kai's skiff, hauled up in the shallows beside the village jetty
+const boat = new Boat(scene, POIS.village.x + 24.6, POIS.village.z + 31, 0); // moored alongside the jetty, bow out to sea
 const sunNdc = new THREE.Vector3();
+function enterBoat() {
+  player.inBoat = true; boat.driver = player; boat.seat(player.rig, 0);
+  const near = npcs.followers().filter((n) => !n.riding && Math.hypot(n.x - boat.x, n.z - boat.z) < 16).slice(0, 3);
+  near.forEach((n, i) => { n.riding = true; boat.riders.push(n); boat.seat(n.rig, i + 1); });
+  if (near.length) toast(`${near.map((n) => n.def.name.split(' ').pop()).join(', ')} climb${near.length > 1 ? '' : 's'} aboard`);
+  cam.distSel = 1; cam.dist = DISTS[1]; audio.ui(); voice.say('She floats. Hold on.', 'You', false);
+}
+function exitBoat() {
+  const spot = boat.exitSpot();
+  boat.unseat(player.rig, scene); player.inBoat = false; boat.driver = null;
+  player.x = spot.x; player.z = spot.z; player.y = Math.max(heightAt(spot.x, spot.z), SEA - 0.5); player.vy = 0; player.speed = 0; player.rig.root.rotation.set(0, player.yaw, 0);
+  boat.riders.forEach((n, i) => { boat.unseat(n.rig, scene); n.riding = false; n.x = spot.x + Math.cos(i * 2.1) * 1.4; n.z = spot.z + Math.sin(i * 2.1) * 1.4; n.y = heightAt(n.x, n.z); });
+  boat.riders = [];
+  cam.distSel = 0; cam.dist = DISTS[0]; audio.ui();
+}
+function boatTick(dt) {
+  const mv = input.move();
+  boat.update({ dt, move: mv, brake: input.down('jump'), world, fx: fx.spray,
+    onHit: (v) => { audio.crash(Math.min(1, v / 10)); cam.kick = Math.min(1, cam.kick + 0.25); if (boat.aground) toast('Aground! Back off the shallows.', 1.5); } });
+  animateSurvivor(player.rig, dt, { mode: 'drive', steer: boat.steer });
+  const s = player.stats;
+  tickStats(s, dt, { sprinting: false, swimming: false, ash: volcano.ash, sheltered: false, mask: player.inv.count('mask') > 0, hard: difficulty === 'hardcore', moving: false, hot: false });
+  if (s.health <= 0) die(s.air <= 0 ? 'choked by the ash' : s.thirst <= 0 ? 'lost to thirst' : 'lost to hunger');
+  if (boat.dead) { exitBoat(); toast('The skiff goes down under you', 3); }
+  const sea = heightAt(boat.x, boat.z);
+  if (sea < -24 && Math.hypot(boat.x - POIS.village.x, boat.z - POIS.village.z) > 120 && !game.flags.pastReef) { game.flags.pastReef = true; for (const n of boat.riders) { n.saved = true; n.state = 'saved'; game.saved++; } win('boat'); }
+}
 function enterJeep() {
   if (jeep.dead) { toast('The jeep is a burnt-out wreck'); return; }
   player.inJeep = true; jeep.driver = player; jeep.seat(player.rig, 0);
@@ -264,7 +294,8 @@ function objectiveText() {
   const raft = game.flags.launched ? '⛵ Paddle past the reef!' : raftDone() ? '⛵ Raft ready. Launch it at Raft Beach.' : `⛵ Raft: ${R.wood}/${n.raft.needs.wood} logs · ${R.rope}/${n.raft.needs.rope} rope · ${R.tarp}/${n.raft.needs.tarp} tarp (carrying ${player.inv.count('wood')}🪵 ${player.inv.count('rope')}🪢 ${player.inv.count('tarp')}⛵)`;
   const radio = game.flags.heliState === 'landed' ? '🚁 Helicopter on the pad. Board it!' : game.flags.radioFixed ? `🚁 Helicopter inbound: ${Math.ceil(game.flags.heliT)}s` : `📡 Radio: ${['battery', 'antenna', 'handset'].map((k) => (player.inv.count(k) ? ITEMS[k].icon : '▫')).join(' ')} → repair at the Ranger Station`;
   const bunker = game.flags.sealed ? '🚪 Sealed in. Wait it out.' : bunkerDone() ? '🚪 Bunker stocked. Seal the door.' : `🚪 Bunker: ${B.water}/${n.bunker.needs.water} water · ${B.food}/${n.bunker.needs.food} food · ${B.mask}/${n.bunker.needs.mask} mask`;
-  return [raft, radio, bunker].join('\n');
+  const skiff = boat.dead ? '🚤 Skiff wrecked' : boat.repaired ? '🚤 Skiff ready at the village jetty. Make for open water.' : `🚤 Skiff: ${['battery', 'wood', 'rope'].map((k) => `${Math.min(player.inv.count(k), ESCAPES.boat.needs[k])}/${ESCAPES.boat.needs[k]} ${ITEMS[k].icon}`).join(' · ')} → repair at the village jetty`;
+  return [raft, skiff, radio, bunker].join('\n');
 }
 
 // ---------------- interactions ----------------
@@ -291,6 +322,12 @@ function nearestInteractable() {
     if (bunkerDone()) return { kind: 'seal', label: '<b>Seal the bunker door</b>' + (npcs.followers().length ? ` with ${npcs.followers().length} survivor${npcs.followers().length > 1 ? 's' : ''}` : '') };
     const can = (player.inv.count('water') > 0 && game.flags.bunker.water < 4) || (player.inv.foodCount() > 0 && game.flags.bunker.food < 4) || (player.inv.count('mask') > 0 && game.flags.bunker.mask < 1);
     return { kind: 'bunker', label: can ? 'Stock the <b>bunker</b>' : `Bunker needs: ${needsText(ESCAPES.bunker.needs, (k) => game.flags.bunker[k])}`, can };
+  }
+  if (Math.hypot(boat.x - px, boat.z - pz) < 4.5) {
+    if (boat.dead) return { kind: 'none', label: 'The skiff is wrecked' };
+    if (!boat.repaired) return { kind: 'repairBoat', label: player.inv.has(ESCAPES.boat.needs) ? '<b>Repair the skiff</b>' : `Skiff needs: ${needsText(ESCAPES.boat.needs, (k) => player.inv.count(k))}`, can: player.inv.has(ESCAPES.boat.needs) };
+    const f = npcs.followers().filter((q) => !q.riding).length;
+    return { kind: 'boat', label: '<b>Board the skiff</b>' + (f ? ` with ${Math.min(3, f)} survivor${f > 1 ? 's' : ''}` : '') };
   }
   if (Math.hypot(jeep.x - px, jeep.z - pz) < 3.8) { const f = npcs.followers().filter((q) => !q.riding).length; return jeep.dead ? { kind: 'none', label: 'The jeep is a burnt-out wreck' } : { kind: 'jeep', label: '<b>Get in the jeep</b>' + (f ? ` with ${Math.min(3, f)} survivor${f > 1 ? 's' : ''}` : '') }; }
   const n = npcs.nearest(px, pz, 3.0);
@@ -328,6 +365,12 @@ function doInteract(it) {
     audio.craft(); toast(bunkerDone() ? 'The bunker is stocked. Seal the door when you are ready.' : 'Supplies stacked inside the bunker');
   } else if (it.kind === 'seal') sealBunker();
   else if (it.kind === 'jeep') enterJeep();
+  else if (it.kind === 'boat') enterBoat();
+  else if (it.kind === 'repairBoat') {
+    if (!it.can) { toast('You still need parts for the skiff'); return; }
+    player.inv.take(ESCAPES.boat.needs); boat.repair(); audio.craft(); banner('SKIFF REPAIRED', 'The Moana floats again. Board her and make for open water.');
+    const kai = npcs.byId('kai'); if (!kai.dead) say(kai.def.name, 'She\'s seaworthy! Head straight out past the reef, and keep clear of the shallows or you\'ll ground her.', 8);
+  }
 }
 function updateRaftVisual() {
   const R = game.flags.raft, n = ESCAPES.raft.needs;
@@ -381,6 +424,7 @@ function renderCraft() {
   $('escList').innerHTML = '';
   const rows = [
     ['⛵ Raft (Raft Beach)', needsText(ESCAPES.raft.needs, (k) => game.flags.raft[k]) + ' deposited'],
+    ['🚤 Kai\'s skiff (village jetty)', boat.repaired ? '<span class="ok">repaired</span>' : needsText(ESCAPES.boat.needs, (k) => player.inv.count(k)) + ' in your pack (the battery is also what the radio needs)'],
     ['📡 Radio (Ranger Station)', game.flags.radioFixed ? '<span class="ok">repaired, helicopter called</span>' : needsText(ESCAPES.radio.needs, (k) => player.inv.count(k)) + ' in your pack'],
     ['🚪 Bunker (south-west coast)', needsText(ESCAPES.bunker.needs, (k) => game.flags.bunker[k]) + ' stocked'],
   ];
@@ -415,6 +459,7 @@ function win(kind) {
   const texts = {
     raft: ['OPEN WATER', 'The reef falls behind you and the island becomes a smudge under a black sky. By nightfall the mountain is a red glow on the horizon, and you are still alive.'],
     rescue: ['AIRLIFTED', 'The helicopter banks away as the summit lets go. Below you the beaches go dark under the surge. Someone hands you a blanket. It is over.'],
+    boat: ['OPEN THROTTLE', 'The Moana climbs the swell past the reef and the island drops astern. Behind you the summit lets go and the sea boils where the flows meet it. Kai was right about the current.'],
     bunker: ['YOU HELD', 'The roar goes on for an hour. Dust sifts from the ceiling. Then silence. When you finally crank the door, the island is grey from shore to summit, and you are standing on it.'],
   };
   setTimeout(() => endScreen(texts[kind][0], texts[kind][1]), kind === 'bunker' ? 1500 : 4500);
@@ -424,7 +469,7 @@ function endScreen(title, text) {
   $('endTitle').textContent = title; $('endText').textContent = text; voice.say(title + '. ' + text, 'Narrator', true);
   const left = Math.max(0, game.duration - game.t), m = Math.floor(left / 60), s = Math.floor(left % 60);
   const alive = npcs.list.filter((n) => !n.dead).length;
-  $('endStats').innerHTML = `<span>Outcome</span><b>${game.ending === 'dead' ? 'Lost' : game.ending === 'raft' ? 'Escaped by raft' : game.ending === 'rescue' ? 'Rescued by helicopter' : 'Survived in the bunker'}</b>
+  $('endStats').innerHTML = `<span>Outcome</span><b>${game.ending === 'dead' ? 'Lost' : game.ending === 'raft' ? 'Escaped by raft' : game.ending === 'boat' ? 'Escaped in the skiff' : game.ending === 'rescue' ? 'Rescued by helicopter' : 'Survived in the bunker'}</b>
     <span>Survivors brought with you</span><b>${game.saved} of ${npcs.list.length}</b><span>Survivors still alive</span><b>${alive}</b>
     <span>Time to spare</span><b>${game.ending === 'dead' || game.ending === 'bunker' ? '—' : `${m}:${String(s).padStart(2, '0')}`}</b><span>Pace</span><b>${DIFFICULTY[difficulty].name}</b>`;
   game.running = false; if (document.pointerLockElement) document.exitPointerLock();
@@ -434,11 +479,12 @@ function endScreen(title, text) {
 function save() {
   if (game.over || !game.started) return;
   const data = {
-    v: 1, t: game.t, difficulty, player: { x: player.inJeep ? jeep.exitSpot().x : player.x, y: player.y, z: player.inJeep ? jeep.exitSpot().z : player.z, yaw: player.yaw, stats: player.stats, inv: player.inv.items, onRaft: player.onRaft, inBunker: player.inBunker },
+    v: 1, t: game.t, difficulty, player: { x: player.inJeep ? jeep.exitSpot().x : player.inBoat ? boat.exitSpot().x : player.x, y: player.y, z: player.inJeep ? jeep.exitSpot().z : player.inBoat ? boat.exitSpot().z : player.z, yaw: player.yaw, stats: player.stats, inv: player.inv.items, onRaft: player.onRaft, inBunker: player.inBunker },
     flags: game.flags, saved: game.saved, taken: pickups.filter((p) => p.taken).map((p) => p.idx), felled: world.trees.map((t, i) => (t.alive ? -1 : i)).filter((i) => i >= 0),
     npcs: npcs.list.map((n) => ({ id: n.def.id, x: n.x, z: n.z, state: n.state, hurt: n.hurt, dead: n.dead, saved: n.saved, healedSaid: n.healedSaid, fixedSaid: !!n.fixedSaid })),
     raft: props.raft.parent === scene ? { x: props.raft.position.x, z: props.raft.position.z } : null, cam: { yaw: cam.yaw, pitch: cam.pitch },
     jeep: { x: jeep.x, z: jeep.z, yaw: jeep.yaw, hp: jeep.hp, dead: jeep.dead },
+    boat: { x: boat.x, z: boat.z, yaw: boat.yaw, hp: boat.hp, dead: boat.dead, repaired: boat.repaired },
   };
   store.set(SAVE_KEY, data); game.lastSave = game.t;
 }
@@ -455,6 +501,7 @@ function load(data) {
   if (game.flags.radioFixed) props.radioLamp.material.emissiveIntensity = 3;
   if (game.flags.sealed) { props.bunkerDoor.rotation.y = 0; props.bunkerLight.intensity = 18; }
   if (data.cam) { cam.yaw = data.cam.yaw; cam.pitch = data.cam.pitch; }
+  if (data.boat) { boat.x = data.boat.x; boat.z = data.boat.z; boat.yaw = data.boat.yaw; boat.hp = data.boat.hp; if (data.boat.repaired) boat.repair(); if (data.boat.dead) boat.damage(1000); boat.group.position.set(boat.x, SEA, boat.z); boat.group.rotation.y = boat.yaw; }
   if (data.jeep) { jeep.x = data.jeep.x; jeep.z = data.jeep.z; jeep.yaw = data.jeep.yaw; jeep.y = heightAt(jeep.x, jeep.z); jeep.hp = data.jeep.hp; if (data.jeep.dead) jeep.damage(1000); jeep.group.position.set(jeep.x, jeep.y, jeep.z); jeep.group.rotation.y = jeep.yaw; }
   if (player.onRaft) { cam.distSel = 1; cam.dist = DISTS[1]; }
 }
@@ -524,6 +571,7 @@ function updatePlayer(dt) {
   const s = player.stats, mv = input.move();
   if (player.inHeli) return;
   if (player.inJeep) { driveTick(dt); return; }
+  if (player.inBoat) { boatTick(dt); return; }
   if (player.onRaft) { updateRaft(dt, mv); return; }
   if (player.inBunker) {
     // inside: nothing to do but wait (and eat)
@@ -602,11 +650,12 @@ function updateCamera(dt) {
   if (player.inHeli) { camera.lookAt(props.heli.position); return; }
   const look = input.lookDelta(dt);
   cam.yaw -= look.x; cam.pitch = clamp(cam.pitch + look.y, -0.45, 1.1);
-  if (player.inJeep && Math.abs(look.x) < 0.0005 && Math.abs(jeep.speed) > 1.5) { let d = jeep.yaw + (jeep.speed < 0 ? Math.PI : 0) - cam.yaw; while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2; cam.yaw += d * Math.min(1, dt * 1.6); }
+  const veh = player.inJeep ? jeep : player.inBoat ? boat : null;
+  if (veh && Math.abs(look.x) < 0.0005 && Math.abs(veh.speed) > 1.5) { let d = veh.yaw + (veh.speed < 0 ? Math.PI : 0) - cam.yaw; while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2; cam.yaw += d * Math.min(1, dt * 1.6); }
   if (input.pressed('camera')) { cam.distSel = (cam.distSel + 1) % DISTS.length; cam.dist = DISTS[cam.distSel]; }
-  let dist = player.inJeep ? Math.max(cam.dist, 8.5) : cam.dist;
+  let dist = (player.inJeep || player.inBoat) ? Math.max(cam.dist, 8.5) : cam.dist;
   if (game.intro > 0) { const k = smooth(0, 1, 1 - game.intro / 7); dist = lerp(90, cam.dist, k); cam.pitch = lerp(0.9, 0.28, k); cam.yaw = lerp(Math.PI + 1.8, Math.PI + 0.4, k); }
-  const head = { x: player.x, y: player.y + (player.inJeep ? 1.9 : player.swimming ? 0.9 : 1.55), z: player.z };
+  const head = { x: player.x, y: player.y + (player.inJeep ? 1.9 : player.inBoat ? 1.6 : player.swimming ? 0.9 : 1.55), z: player.z };
   camTarget.set(head.x, head.y, head.z);
   const cx = head.x - Math.sin(cam.yaw) * Math.cos(cam.pitch) * dist, cz = head.z - Math.cos(cam.yaw) * Math.cos(cam.pitch) * dist, cy = head.y + Math.sin(cam.pitch) * dist;
   // keep the camera out of the ground and above the sea
@@ -678,7 +727,7 @@ function updateAtmosphere(dt, vfx) {
     waves: player.inBunker ? 0 : clamp(1 - seaD / 25, 0.08, 1) * (player.swimming || player.onRaft ? 1 : 0.8),
     wind: player.inBunker ? 0.1 : 0.25 + vfx.stageIdx * 0.18 + (player.y > 60 ? 0.3 : 0),
     rumble: player.inBunker ? vfx.rumble * 1.2 : vfx.rumble, heli: audio.vol.heli, fire: clamp(volcano.heatAt(player.x, player.z) * 1.5 + (vfx.stageIdx >= 3 ? 0.15 * (1 - clamp((distToVolcano(player.x, player.z) - 100) / 200, 0, 1)) : 0), 0, 1),
-    birds: player.inBunker ? 0 : [0.9, 0.25, 0.03, 0, 0][vfx.stageIdx] * clamp(1 - seaD / 90, 0.3, 1) * (player.y > 2 ? 1 : 0.5), hurt: player.stats.health < 30 ? 1 - player.stats.health / 30 : 0, engine: player.inJeep ? jeep.rpm : 0,
+    birds: player.inBunker ? 0 : [0.9, 0.25, 0.03, 0, 0][vfx.stageIdx] * clamp(1 - seaD / 90, 0.3, 1) * (player.y > 2 ? 1 : 0.5), hurt: player.stats.health < 30 ? 1 - player.stats.health / 30 : 0, engine: player.inJeep ? jeep.rpm : player.inBoat ? boat.rpm * 0.8 : 0,
   });
   audio.vol.heli = 0;
 }
@@ -698,7 +747,7 @@ function updateHUD(dt) {
   const sb = $('stageBar').firstElementChild, sw = (game.progress * 100).toFixed(1) + '%'; if (domCache.get('sb') !== sw) { domCache.set('sb', sw); sb.style.width = sw; }
   const fol = npcs.followers(); setHTML('companions', fol.length ? `👥 ${fol.map((n) => n.def.name.split(' ').pop()).join(', ')}` : '');
   setText('objective', objectiveText());
-  setHTML('speed', player.inJeep ? `${Math.round(Math.abs(jeep.speed) * 3.6)}<small>km/h</small>` : '');
+  setHTML('speed', player.inJeep ? `${Math.round(Math.abs(jeep.speed) * 3.6)}<small>km/h</small>` : player.inBoat ? `${Math.round(Math.abs(boat.speed) * 1.94)}<small>knots</small>` : '');
   // compass
   const items = [];
   for (const [k, p] of Object.entries(POIS)) { if (k === 'cave') continue; items.push({ x: p.x, z: p.z, icon: p.icon, name: p.name }); }
@@ -730,6 +779,7 @@ function updateHUD(dt) {
   // interaction prompt
   const it = currentInteract;
   if (player.inJeep) { show('prompt'); setHTML('prompt', Math.abs(jeep.speed) < 4 ? (input.isTouch ? '' : '<b>E</b> ') + 'Get out of the jeep' : 'Slow down to get out'); }
+  else if (player.inBoat) { show('prompt'); setHTML('prompt', Math.abs(boat.speed) < 3 ? (input.isTouch ? '' : '<b>E</b> ') + 'Climb out of the skiff' : 'Slow down to climb out'); }
   else if (it && !player.onRaft && !player.inBunker && !player.inHeli) {
     show('prompt');
     let html2 = (input.isTouch ? '' : '<b>E</b> ') + it.label;
@@ -832,11 +882,13 @@ function frame(now) {
   if (game.started && !game.paused) {
     game.t += dt; game.progress = clamp(game.t / game.duration, 0, 1); game.stage = stageAt(game.progress);
     if (game.intro > 0) game.intro -= dt;
-    currentInteract = (player.onRaft || player.inBunker || player.inHeli || player.inJeep || game.intro > 0) ? null : nearestInteractable();
+    currentInteract = (player.onRaft || player.inBunker || player.inHeli || player.inJeep || player.inBoat || game.intro > 0) ? null : nearestInteractable();
     if (player.inJeep && input.pressed('interact') && !game.over && Math.abs(jeep.speed) < 4) exitJeep();
+    else if (player.inBoat && input.pressed('interact') && !game.over && Math.abs(boat.speed) < 3) exitBoat();
     else if (currentInteract && !currentInteract.hold && currentInteract.kind !== 'none' && input.pressed('interact') && !game.over) doInteract(currentInteract);
     updatePlayer(dt);
     if (!player.inJeep) jeep.update({ dt, move: { x: 0, y: 0 }, brake: false, world, heatAt: (x, z) => volcano.heatAt(x, z), dark: false, fx: fx.dust });
+    if (!player.inBoat) boat.update({ dt, move: { x: 0, y: 0 }, brake: false, world, fx: null });
     const vfx = volcano.update({ dt, progress: game.progress, duration: game.duration, playerPos: player, camera, sunHeight: Math.max(0.1, U.uSun.value.y) });
     npcs.update(dt, { player, heatAt: (x, z) => volcano.heatAt(x, z), surgeR: volcano.surgeR, volcano: VOLCANO, hiddenInBunker: player.inBunker, followIndex: (n) => npcs.followers().indexOf(n) });
     updateHeli(dt);
@@ -844,9 +896,9 @@ function frame(now) {
     // the end of the world
     if (!game.over) {
       if (volcano.surgeR > 0 && !player.inBunker && !player.inHeli && distToVolcano(player.x, player.z) < volcano.surgeR) {
-        if (player.onRaft && heightAt(player.x, player.z) < -16) { /* far enough out: the surge dies over the water */ } else die('swallowed by the pyroclastic surge');
+        if ((player.onRaft || player.inBoat) && heightAt(player.x, player.z) < -16) { /* far enough out: the surge dies over the water */ } else die('swallowed by the pyroclastic surge');
       }
-      if (game.progress >= 1) { if (player.inBunker) win('bunker'); else if (player.onRaft) win('raft'); else die('swallowed by the pyroclastic surge'); }
+      if (game.progress >= 1) { if (player.inBunker) win('bunker'); else if (player.onRaft) win('raft'); else if (player.inBoat) win('boat'); else die('swallowed by the pyroclastic surge'); }
     }
     cullT -= dt; if (cullT <= 0) { cullT = 0.5; cullPickups(); }
     if (game.t - game.lastSave > 25 && !game.over) save();
@@ -866,7 +918,7 @@ function frame(now) {
   catch (e) { console.error(e); save(); show('crash'); throw e; }
 }
 renderer.domElement.addEventListener('webglcontextlost', (e) => { e.preventDefault(); save(); show('crash'); });
-window.ASH = { game, player, volcano, npcs, props, world, cam, save, load, die, win, jeep, enterJeep, exitJeep, voice };
+window.ASH = { game, player, volcano, npcs, props, world, cam, save, load, die, win, jeep, enterJeep, exitJeep, voice, boat, enterBoat, exitBoat };
 applyQuality();
 $('loading').classList.add('hidden');
 requestAnimationFrame(frame);

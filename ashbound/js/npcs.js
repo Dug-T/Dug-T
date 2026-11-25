@@ -18,7 +18,7 @@ export const SURVIVORS = [
   {
     id: 'kai', name: 'Kai Tane', role: 'Fisherman', home: 'village', offset: [-4, 4], pose: 'stand',
     lines: {
-      calm: ['My boat went down on the reef in the storm. Everyone else took the ferry to the mainland. I stayed for the fish.', 'A raft would do it: ten good logs, three ropes, and something for a sail. Build it on Raft Beach, east side, the current carries you off the reef there.', 'There\'s a survival tarp in that plane that came down in the jungle. Makes a fine sail.'],
+      calm: ['My skiff, the Moana, is hauled up by the jetty with a split hull and a dead starter. Two logs and a rope to patch her, and a battery for the motor, and she\'ll run you past the reef in minutes.', 'There\'s only one battery on this island that I know of, in the nose of that plane. The ranger wants it for her radio. Your call.', 'A raft would do it: ten good logs, three ropes, and something for a sail. Build it on Raft Beach, east side, the current carries you off the reef there.', 'There\'s a survival tarp in that plane that came down in the jungle. Makes a fine sail.'],
       unrest: ['The sea is wrong today. Fish are leaving. Fish know.', 'Braid vines for rope. Three strands, tight.'],
       ashfall: ['Ash on the water. Never seen that. Get building, friend.'],
       eruption: ['Paddle straight out from Raft Beach and don\'t look back. Past the reef is far enough.'],
