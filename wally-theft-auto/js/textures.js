@@ -188,15 +188,20 @@ export function roofTexture() {
 
 // Wally Man chest emblem: orange oval, green rim, green lettering and a blue swoosh
 export function emblemTexture() {
-  const [c, x] = canvas(512, 320);
+  const [c, x] = canvas(1024, 640);
+  x.scale(2, 2);
   x.clearRect(0, 0, 512, 320);
   x.fillStyle = '#2f9a2f';
   x.beginPath(); x.ellipse(256, 160, 250, 150, 0, 0, 7); x.fill();
   x.fillStyle = '#ef5a1c';
   x.beginPath(); x.ellipse(256, 160, 232, 134, 0, 0, 7); x.fill();
-  x.fillStyle = '#2a8a2a';
-  x.font = 'bold 92px Impact, "Arial Black", sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle';
-  x.save(); x.translate(256, 140); x.scale(1, 1.15); x.fillText('WALLY MAN', 0, 0); x.restore();
+  // shrink the lettering until the whole of "WALLY MAN" sits comfortably inside the oval
+  let fs = 96;
+  do { x.font = `bold ${fs}px Impact, "Arial Black", sans-serif`; fs -= 2; } while (x.measureText('WALLY MAN').width > 380 && fs > 30);
+  x.textAlign = 'center'; x.textBaseline = 'middle';
+  x.save(); x.translate(256, 140); x.scale(1, 1.2);
+  x.lineWidth = 8; x.strokeStyle = '#1d5e1d'; x.lineJoin = 'round'; x.strokeText('WALLY MAN', 0, 0);
+  x.fillStyle = '#35a835'; x.fillText('WALLY MAN', 0, 0); x.restore();
   x.strokeStyle = '#1e5fb4'; x.lineWidth = 16; x.lineCap = 'round';
   x.beginPath(); x.moveTo(170, 240); x.quadraticCurveTo(300, 285, 380, 205); x.stroke();
   const t = tex(c, false);

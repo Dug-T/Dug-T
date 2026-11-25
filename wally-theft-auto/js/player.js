@@ -213,15 +213,18 @@ export class Player {
     if (r < flyChance) {
       this.flyT = 4.5; this.flail = false; this.vy = 9; this.onGround = false;
       game.bigText('WALLY POWER!', 'He... he\'s actually flying!', 1.6);
+      game.quip && game.quip('powerFly', 1, true);
       game.stats.flights++;
     } else if (r < flyChance + 0.27) {
       this.flyT = 1.6; this.flail = true; this.vy = 8; this.onGround = false;
       game.toast(POWER_FAILS[0]);
+      game.voice && game.voice.say(POWER_FAILS[0], 'WALLY', true);
     } else if (r < flyChance + 0.45) {
       this.superPunch = 6; game.bigText('WALLY STRENGTH!', 'Next punch packs a wallop', 1.4);
       if (this.weapon !== 'fists') this.weapon = 'fists';
     } else {
-      game.toast(POWER_FAILS[1 + ((Math.random() * (POWER_FAILS.length - 1)) | 0)]);
+      const f = POWER_FAILS[1 + ((Math.random() * (POWER_FAILS.length - 1)) | 0)];
+      game.toast(f); game.voice && game.voice.say(f, 'WALLY', true);
     }
   }
 }

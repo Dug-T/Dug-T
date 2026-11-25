@@ -54,6 +54,7 @@ On phones and tablets there's an on-screen stick, a drag-to-look area and button
 
 The version number is shown on the title screen (with a "What's new" list) and on the pause screen. It lives in `js/version.js`: bump it by 0.1 for every update (1.1, 1.2, 1.3...) and add a line to `CHANGES`.
 
+- **2.4**: spoken dialogue for missions, pedestrians, drivers, polis, the radio DJ and Wally (VOICES toggle), lots more Scottish patter, the full WALLY MAN badge on his chest, and clear cab glass on vans
 - **2.3**: three new missions (Mammy's Birthday, The Haggis Heist, Battle of Hero Square), Granda's Armoury shop, Wally Cabs taxi job, ice cream van job, 6 stunt ramps with slow-mo, a wardrobe with 6 outfits, and seagulls
 - **2.2**: cache-proof loading: the page checks the live version and loads every file stamped with it, so updates show up straight away
 - **2.1**: go inside Wally's Flat; sleep in the bed to save; quieter rain; 130 weapon pickups and 45 ammo crates; speed blur, lamp light pools, car light glows, skid marks, tyre smoke, muzzle flashes, raindrops on the lens
@@ -77,6 +78,7 @@ The version number is shown on the title screen (with a "What's new" list) and o
 - `js/vehicles.js`: car models, drift physics, traffic AI and police pursuit AI
 - `js/peds.js`: pedestrians and foot cops
 - `js/player.js`: Wally's controls, combat and powers
+- `js/voice.js`: spoken dialogue (browser speech, a Scottish voice where the device has one) and Wally's quips
 - `js/weapons.js`: weapon stats and models
 - `js/content.js`: side jobs (taxi, ice cream), Granda's Armoury, stunt ramps and seagulls
 - `js/flat.js`: the inside of Wally's Flat and its bed save point

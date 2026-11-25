@@ -1,7 +1,13 @@
 // Bump VERSION for every update (1.1, 1.2, 1.3 ...) and add a line to CHANGES.
-export const VERSION = '2.3';
+export const VERSION = '2.4';
 
 export const CHANGES = [
+  ['2.4', [
+    'Spoken dialogue: mission briefings, pedestrians, angry drivers, the polis, the radio DJ and Wally himself (VOICES on/off on the title and pause screens)',
+    'Loads more Scottish patter from Wally and the people of Wallypool',
+    'The full WALLY MAN badge now shows on his chest',
+    'Clear glass in the cab of the Pamazon van and other vans',
+  ]],
   ['2.3', [
     "3 new story missions: Mammy's Birthday, The Haggis Heist and Battle of Hero Square",
     "Granda's Armoury: a shop to spend your cash on weapons, ammo, armour and health",

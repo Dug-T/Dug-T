@@ -47,6 +47,7 @@ export function initContent(game, scene, world) {
     if (car.lastRamp && !C.stunts.has(car.lastRamp.idx)) { C.stunts.add(car.lastRamp.idx); cash += 250; line += ` · Unique jump ${C.stunts.size}/${game.ramps.length}`; if (C.stunts.size === game.ramps.length) { cash += 5000; line += ' · ALL JUMPS! +$5000'; } }
     game.player.money += cash; game.audio.pass();
     game.bigText(insane ? 'INSANE STUNT BONUS!' : 'STUNT BONUS', `+$${cash} · ${line}`, 2.6);
+    game.quip && game.quip('stunt', insane ? 1 : 0.5, true);
     game.stats.stunts = (game.stats.stunts || 0) + 1;
   };
 
