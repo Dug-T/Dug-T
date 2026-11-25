@@ -14,6 +14,7 @@ import { NpcManager, resolveObstacles } from './npcs.js';
 import { ITEMS, RECIPES, ESCAPES, STAGES, DIFFICULTY, FOOD, stageAt, newStats, tickStats, Inventory } from './survival.js';
 import { Input } from './input.js';
 import { Audio } from './audio.js';
+import { Voice } from './voice.js';
 import { rng, puffTexture, glowTexture } from './textures.js';
 import { VERSION, CHANGES } from './version.js';
 
@@ -33,6 +34,7 @@ let quality = store.get('ash-gfx', 'high');
 let soundOn = store.get('ash-snd', true);
 let difficulty = store.get('ash-diff', 'standard');
 let showFps = store.get('ash-fps', true);
+let voicesOn = store.get('ash-voice', true);
 const SAVE_KEY = 'ashbound-save';
 
 // ---------------- renderer, scene, camera ----------------
@@ -49,6 +51,7 @@ sun.shadow.camera.left = -55; sun.shadow.camera.right = 55; sun.shadow.camera.to
 sun.shadow.bias = -0.0005; sun.shadow.normalBias = 0.05;
 scene.add(sun, sun.target);
 const audio = new Audio();
+const voice = new Voice(voicesOn);
 const input = new Input(canvas);
 input.onAny = () => audio.init();
 input.bindTouch($);
@@ -179,7 +182,7 @@ function driveTick(dt) {
   const mv = input.move();
   jeep.update({ dt, move: mv, brake: input.down('jump') || input.down('sprint'), world, heatAt: (x, z) => volcano.heatAt(x, z), dark: game.progress > 0.55 || volcano.ash > 0.3, fx: fx.dust,
     onHit: (v) => { audio.crash(Math.min(1, v / 15)); cam.kick = Math.min(1, cam.kick + 0.3); if (v > 11) hurt((v - 11) * 3, 'killed in a crash'); },
-    onFlood: () => { audio.flood(); toast('The engine floods. Deep water and jeeps don\'t mix.', 3); },
+    onFlood: () => { audio.flood(); toast('The engine floods. Deep water and jeeps don\'t mix.', 3); voice.say('The engine\'s flooded. Out, out!', 'You', true); },
     onDestroyed: () => { toast('The jeep is wrecked!', 3); audio.explosion(0); } });
   animateSurvivor(player.rig, dt, { mode: 'drive', steer: jeep.steer });
   const s = player.stats, nearLava = volcano.heatAt(player.x, player.z);
@@ -190,7 +193,7 @@ function driveTick(dt) {
 }
 const npcs = new NpcManager(scene, world, {
   onHeal: (n) => { toast(n.def.name + ' can walk again'); audio.success(); },
-  onDeath: (n, how) => { toast(n.def.name + (how === 'rock' ? ' was hit by a falling rock' : ' didn\'t make it'), 4); audio.fail(); },
+  onDeath: (n, how) => { toast(n.def.name + (how === 'rock' ? ' was hit by a falling rock' : ' didn\'t make it'), 4); audio.fail(); voice.say(n.def.name + (how === 'rock' ? ' was hit by a falling rock.' : ' didn\'t make it.'), 'Narrator', false); },
 });
 
 // ---------------- the player ----------------
@@ -244,8 +247,8 @@ function cullPickups() {
 // ---------------- HUD helpers ----------------
 let toastT = 0, bannerT = 0, subsT = 0;
 function toast(msg, secs = 2.5) { $('toast').textContent = msg; $('toast').classList.add('on'); toastT = secs; }
-function banner(h, p, secs = 4) { $('banner').querySelector('h1').textContent = h; $('banner').querySelector('p').textContent = p || ''; $('banner').classList.add('on'); bannerT = secs; }
-function say(name, text, secs = 7) { $('subs').innerHTML = `<b>${name}:</b> ${text}`; $('subs').classList.add('on'); subsT = secs; audio.talk(); }
+function banner(h, p, secs = 4) { $('banner').querySelector('h1').textContent = h; $('banner').querySelector('p').textContent = p || ''; $('banner').classList.add('on'); bannerT = secs; if (p) voice.say(h.toLowerCase() === 'ashbound' ? p : h + '. ' + p, 'Narrator', true); }
+function say(name, text, secs = 7) { $('subs').innerHTML = `<b>${name}:</b> ${text}`; $('subs').classList.add('on'); subsT = secs; if (voice.on && voice.ok) voice.say(text, name, true); else audio.talk(); }
 function show(id, on = true) { $(id).classList.toggle('hidden', !on); }
 
 // ---------------- objectives and escapes ----------------
@@ -304,11 +307,11 @@ function doInteract(it) {
   if (!it) return;
   if (it.kind === 'pickup') { it.p.taken = true; scene.remove(it.p.m); player.inv.add(it.p.id); audio.pickup(); toast(`+1 ${ITEMS[it.p.id].name}`, 1.2); if (it.p.id === 'axe') { /* n/a */ } }
   else if (it.kind === 'npc') { const r = npcs.interact(it.n, { inventory: player.inv, stageId: game.stage.id, radioFixed: game.flags.radioFixed }); say(r.name, r.text); if (it.n.def.id === 'amara') game.flags.talkedAmara = true; }
-  else if (it.kind === 'water') { player.stats.thirst = 100; const add = Math.max(0, 4 - player.inv.count('water')); if (add) player.inv.add('water', add); audio.drink(); toast(add ? `You drink your fill and refill the canteen (+${add} water)` : 'You drink your fill'); }
+  else if (it.kind === 'water') { voice.say('Fresh water. That\'s better.', 'You', false); player.stats.thirst = 100; const add = Math.max(0, 4 - player.inv.count('water')); if (add) player.inv.add('water', add); audio.drink(); toast(add ? `You drink your fill and refill the canteen (+${add} water)` : 'You drink your fill'); }
   else if (it.kind === 'raft') {
     if (!it.can) { toast('You have nothing the raft needs right now'); return; }
     for (const k of ['wood', 'rope', 'tarp']) { const give = Math.min(player.inv.count(k), ESCAPES.raft.needs[k] - game.flags.raft[k]); if (give > 0) { player.inv.add(k, -give); game.flags.raft[k] += give; } }
-    audio.craft(); updateRaftVisual(); toast(raftDone() ? 'The raft is finished!' : 'Materials added to the raft');
+    audio.craft(); updateRaftVisual(); toast(raftDone() ? 'The raft is finished!' : 'Materials added to the raft'); if (raftDone()) voice.say('The raft is finished. Time to go.', 'You', false);
   } else if (it.kind === 'launch') launchRaft();
   else if (it.kind === 'radio') {
     if (!it.can) { toast('You still need parts for the radio'); return; }
@@ -418,7 +421,7 @@ function win(kind) {
 }
 function endScreen(title, text) {
   show('hud', false); show('end');
-  $('endTitle').textContent = title; $('endText').textContent = text;
+  $('endTitle').textContent = title; $('endText').textContent = text; voice.say(title + '. ' + text, 'Narrator', true);
   const left = Math.max(0, game.duration - game.t), m = Math.floor(left / 60), s = Math.floor(left % 60);
   const alive = npcs.list.filter((n) => !n.dead).length;
   $('endStats').innerHTML = `<span>Outcome</span><b>${game.ending === 'dead' ? 'Lost' : game.ending === 'raft' ? 'Escaped by raft' : game.ending === 'rescue' ? 'Rescued by helicopter' : 'Survived in the bunker'}</b>
@@ -777,13 +780,17 @@ const toggleGfx = () => { quality = quality === 'high' ? 'low' : 'high'; store.s
 $('gfx').onclick = toggleGfx; $('gfx2').onclick = toggleGfx;
 const toggleSnd = () => { soundOn = !soundOn; store.set('ash-snd', soundOn); audio.init(); audio.setOn(soundOn); for (const id of ['snd', 'snd2']) $(id).textContent = 'SOUND: ' + (soundOn ? 'ON' : 'OFF'); };
 $('snd').onclick = toggleSnd; $('snd2').onclick = toggleSnd;
+const toggleVox = () => { voicesOn = !voicesOn; store.set('ash-voice', voicesOn); voice.setOn(voicesOn); for (const id of ['vox', 'vox2']) $(id).textContent = 'VOICES: ' + (voicesOn ? 'ON' : 'OFF'); if (voicesOn) voice.say('Voices on. Everything spoken also appears as text.', 'Narrator', true); };
+$('vox').onclick = toggleVox; $('vox2').onclick = toggleVox;
+for (const id of ['vox', 'vox2']) $(id).textContent = 'VOICES: ' + (voicesOn ? 'ON' : 'OFF');
+if (!voice.ok) for (const id of ['vox', 'vox2']) { $(id).textContent = 'VOICES: N/A'; $(id).disabled = true; }
 for (const id of ['snd', 'snd2']) $(id).textContent = 'SOUND: ' + (soundOn ? 'ON' : 'OFF');
 const diffs = Object.keys(DIFFICULTY);
 $('diff').onclick = () => { difficulty = diffs[(diffs.indexOf(difficulty) + 1) % diffs.length]; store.set('ash-diff', difficulty); $('diff').textContent = 'PACE: ' + DIFFICULTY[difficulty].name.toUpperCase(); toast(DIFFICULTY[difficulty].desc, 3); };
 $('diff').textContent = 'PACE: ' + DIFFICULTY[difficulty].name.toUpperCase();
 $('fpsBtn').onclick = () => { showFps = !showFps; store.set('ash-fps', showFps); $('fps').style.display = showFps ? 'block' : 'none'; $('fpsBtn').textContent = 'FPS COUNTER: ' + (showFps ? 'ON' : 'OFF'); };
 $('fpsBtn').textContent = 'FPS COUNTER: ' + (showFps ? 'ON' : 'OFF'); $('fps').style.display = showFps ? 'block' : 'none';
-$('quit').onclick = () => { save(); location.reload(); };
+$('quit').onclick = () => { voice.stop(); save(); location.reload(); };
 $('endAgain').onclick = () => { store.del(SAVE_KEY); location.reload(); };
 $('endTitleBtn').onclick = () => { location.reload(); };
 $('verTitle').textContent = 'v' + VERSION; $('verPause').textContent = 'v' + VERSION;
@@ -803,7 +810,7 @@ function startGame(data) {
   if (!input.isTouch) setTimeout(() => toast('Click the game to look around with the mouse', 4), data ? 500 : 7500);
 }
 function togglePause() { if (!game.started || game.over) return; if (menu === 'pause') closeMenu(); else if (!menu) { openMenu('pause'); $('statsBox').innerHTML = `${game.stage.name}: ${game.stage.desc}<br>Survivors with you: ${npcs.followers().length} · Saved so far: ${game.saved}`; save(); } }
-document.addEventListener('visibilitychange', () => { if (document.hidden && game.started && !game.over && !menu) togglePause(); });
+document.addEventListener('visibilitychange', () => { if (document.hidden) { voice.stop(); if (game.started && !game.over && !menu) togglePause(); } else voice.resume(); });
 addEventListener('beforeunload', () => save());
 
 // ---------------- main loop ----------------
@@ -859,7 +866,7 @@ function frame(now) {
   catch (e) { console.error(e); save(); show('crash'); throw e; }
 }
 renderer.domElement.addEventListener('webglcontextlost', (e) => { e.preventDefault(); save(); show('crash'); });
-window.ASH = { game, player, volcano, npcs, props, world, cam, save, load, die, win, jeep, enterJeep, exitJeep };
+window.ASH = { game, player, volcano, npcs, props, world, cam, save, load, die, win, jeep, enterJeep, exitJeep, voice };
 applyQuality();
 $('loading').classList.add('hidden');
 requestAnimationFrame(frame);
