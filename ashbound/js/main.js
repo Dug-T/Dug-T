@@ -6,13 +6,14 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { buildIsland, heightAt, normalAt, POIS, VOLCANO, SEA, W, distToVolcano } from './island.js';
 import { buildProps, pickupMesh, setRaftStage } from './props.js';
-import { buildSurvivor, animateSurvivor, buildAxe, LOOKS } from './survivor.js';
-import { Volcano } from './volcano.js';
+import { buildSurvivor, animateSurvivor, buildAxe, LOOKS, groundTilt } from './survivor.js';
+import { Volcano, Puffs } from './volcano.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { NpcManager, resolveObstacles } from './npcs.js';
 import { ITEMS, RECIPES, ESCAPES, STAGES, DIFFICULTY, FOOD, stageAt, newStats, tickStats, Inventory } from './survival.js';
 import { Input } from './input.js';
 import { Audio } from './audio.js';
-import { rng } from './textures.js';
+import { rng, puffTexture, glowTexture } from './textures.js';
 import { VERSION, CHANGES } from './version.js';
 
 const $ = (id) => document.getElementById(id);
@@ -51,7 +52,7 @@ const input = new Input(canvas);
 input.onAny = () => audio.init();
 input.bindTouch($);
 
-let composer = null, bloom = null;
+let composer = null, bloom = null, gradePass = null;
 function applyQuality() {
   const hi = quality === 'high';
   renderer.setPixelRatio(Math.min(devicePixelRatio || 1, hi ? 2 : 1.25));
@@ -61,7 +62,26 @@ function applyQuality() {
     composer = new EffectComposer(renderer, rt);
     composer.addPass(new RenderPass(scene, camera));
     bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.32, 0.55, 0.88);
-    composer.addPass(bloom); composer.addPass(new OutputPass());
+    composer.addPass(bloom);
+    // a film grade: a soft vignette, a warm tint, grain, and the colour draining out as the ash thickens
+    gradePass = new ShaderPass({
+      uniforms: { tDiffuse: { value: null }, uTime: { value: 0 }, uAsh: { value: 0 }, uHurt: { value: 0 } },
+      vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+      fragmentShader: `uniform sampler2D tDiffuse; uniform float uTime, uAsh, uHurt; varying vec2 vUv;
+        float h21(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+        void main(){
+          vec4 c = texture2D(tDiffuse, vUv);
+          vec2 d = vUv - 0.5; float vig = 1.0 - smoothstep(0.35, 1.05, dot(d, d) * 2.2);
+          c.rgb *= mix(0.55, 1.0, vig);
+          c.rgb = mix(c.rgb, c.rgb * vec3(1.05, 1.0, 0.93), 0.5);
+          float g = dot(c.rgb, vec3(0.3, 0.59, 0.11));
+          c.rgb = mix(c.rgb, vec3(g), uAsh * 0.4 + uHurt * 0.5);
+          c.rgb += (h21(vUv * 1000.0 + fract(uTime) * 100.0) - 0.5) * (0.03 + uAsh * 0.03);
+          gl_FragColor = c;
+        }`,
+    });
+    composer.addPass(gradePass);
+    composer.addPass(new OutputPass());
   }
   for (const id of ['gfx', 'gfx2']) $(id).textContent = 'GRAPHICS: ' + quality.toUpperCase();
   resize();
@@ -87,18 +107,48 @@ const volcano = new Volcano(scene, world, quality, {
   onTremor: (v) => audio.tremor(v),
   onWhistle: () => audio.whistle(),
   onLaunch: () => {},
-  onExplode: (x, y, z, r, sea) => {
+  onExplode: (x, y, z, r, sea, cold) => {
     const d = Math.hypot(x - player.x, z - player.z);
-    audio.explosion(d);
+    if (cold) audio.noise(0.5, 300, Math.max(0.05, 0.8 - d / 200), 'lowpass'); else audio.explosion(d);
     if (sea) return;
     npcs.scare(x, z, r);
-    if (d < r * 1.5 && !player.inBunker) { const dmg = 75 * (1 - d / (r * 1.5)); hurt(dmg, 'blown apart by a lava bomb'); cam.kick = Math.min(1, cam.kick + 0.6); }
+    if (!player.inBunker) npcs.blast(x, z, cold ? r : r * 1.1);
+    if (d < r * 1.5 && !player.inBunker) { const dmg = (cold ? 110 : 75) * (1 - d / (r * 1.5)); hurt(dmg, cold ? 'crushed by a falling rock' : 'blown apart by a lava bomb'); cam.kick = Math.min(1, cam.kick + 0.6); }
     else if (d < 60) cam.kick = Math.min(1, cam.kick + 0.25);
   },
+  onBurst: () => { if (distToVolcano(player.x, player.z) < 500) audio.noise(2.5, 160, 0.5 * (1 - distToVolcano(player.x, player.z) / 500), 'lowpass', 1, 0, 60); },
 });
+// small particle systems of our own: dust kicked up by feet, spray off the swimmer
+const fx = { dust: new Puffs(scene, 160, puffTexture(), '#e6d8b4', '#6a6058'), spray: new Puffs(scene, 160, puffTexture(), '#ffffff', '#cfe8f0'), stepT: 0 };
+// the sun itself: a glare sprite far out along the light, hidden by the mountain when it stands in front
+const sunSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture(), color: '#fff4dc', transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, depthTest: true }));
+sunSprite.scale.set(260, 260, 1); scene.add(sunSprite);
+// seagulls wheeling over the coast until the mountain frightens them off
+const gulls = [];
+{
+  const gm = new THREE.MeshStandardMaterial({ color: '#f4f4f4', roughness: 0.9, side: THREE.DoubleSide });
+  for (let i = 0; i < 14; i++) {
+    const g = new THREE.Group(), body = new THREE.Mesh(new THREE.CapsuleGeometry(0.08, 0.35, 4, 8), gm); body.rotation.x = Math.PI / 2; g.add(body);
+    const wings = [];
+    for (const sd of [-1, 1]) { const w = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 0.3), gm); w.geometry.translate(sd * 0.45, 0, 0); w.rotation.x = -Math.PI / 2; g.add(w); wings.push(w); }
+    const cx = [POIS.village.x + 30, POIS.boatyard.x - 10, POIS.camp.x + 20][i % 3], cz = [POIS.village.z + 30, POIS.boatyard.z + 20, POIS.camp.z + 40][i % 3];
+    gulls.push({ g, wings, cx, cz, r: 18 + Math.random() * 30, h: 14 + Math.random() * 16, a: Math.random() * 6.3, sp: 0.25 + Math.random() * 0.2, dir: Math.random() < 0.5 ? 1 : -1, flap: Math.random() * 6, gone: 0 });
+    scene.add(g);
+  }
+}
+function updateGulls(dt, stageIdx) {
+  for (const b of gulls) {
+    if (stageIdx >= 1) b.gone = Math.min(1, b.gone + dt * 0.08);
+    b.a += dt * b.sp * b.dir; b.flap += dt * (6 + b.gone * 4);
+    const x = b.cx + Math.cos(b.a) * (b.r + b.gone * 900), z = b.cz + Math.sin(b.a) * (b.r + b.gone * 900), y = Math.max(heightAt(x, z), 0) + b.h + Math.sin(b.a * 3) * 2 + b.gone * 60;
+    b.g.visible = b.gone < 0.99;
+    b.g.position.set(x, y, z); b.g.rotation.y = -b.a - (b.dir > 0 ? Math.PI / 2 : -Math.PI / 2) + Math.PI; b.g.rotation.z = b.dir * 0.25;
+    const f = Math.sin(b.flap) * 0.55; b.wings[0].rotation.y = f; b.wings[1].rotation.y = -f;
+  }
+}
 const npcs = new NpcManager(scene, world, {
   onHeal: (n) => { toast(n.def.name + ' can walk again'); audio.success(); },
-  onDeath: (n) => { toast(n.def.name + ' didn\'t make it', 4); audio.fail(); },
+  onDeath: (n, how) => { toast(n.def.name + (how === 'rock' ? ' was hit by a falling rock' : ' didn\'t make it'), 4); audio.fail(); },
 });
 
 // ---------------- the player ----------------
@@ -438,7 +488,7 @@ function updatePlayer(dt) {
   player.swimming = depth > 1.15;
   const sprint = input.down('sprint') && s.stamina > 2 && mv.l > 0.2 && !player.swimming;
   const tired = s.stamina <= 0.5;
-  let maxSpeed = player.swimming ? 1.9 : sprint ? 6.4 : 3.6;
+  let maxSpeed = player.swimming ? 1.9 : sprint ? 6.0 : 2.7;
   if (tired) maxSpeed *= 0.55; if (s.health < 25) maxSpeed *= 0.8;
   const slope = normalAt(player.x, player.z, tmpN);
   // steep ground slows you going up and stops you on cliffs
@@ -485,7 +535,15 @@ function updatePlayer(dt) {
   if (nearLava > 0) { hurt(nearLava * nearLava * 70 * dt, 'taken by the lava'); if (nearLava >= 0.999) die('taken by the lava'); }
   // the rig
   player.rig.root.position.set(player.x, player.y, player.z); player.rig.root.rotation.y = player.yaw;
-  animateSurvivor(player.rig, dt, { speed: player.speed, mode: player.swimming ? 'swim' : 'move', air: !player.onGround, hurt: s.health < 30 });
+  animateSurvivor(player.rig, dt, { speed: player.speed, mode: player.swimming ? 'swim' : 'move', air: !player.onGround, hurt: s.health < 30, tilt: player.onGround && !player.swimming ? groundTilt(slope, player.yaw) : [0, 0] });
+  // dust off your heels on sand and ash, spray when you swim
+  fx.stepT -= dt * Math.max(0.3, player.speed);
+  if (fx.stepT <= 0 && player.onGround && !player.swimming && player.speed > 1.5) {
+    fx.stepT = 1.1;
+    const sandy = g2 < 6 || volcano.ash > 0.3 || g2 > 90;
+    if (sandy) fx.dust.emit(player.x - Math.sin(player.yaw) * 0.3, player.y + 0.15, player.z - Math.cos(player.yaw) * 0.3, (Math.random() - 0.5) * 0.6, 0.5 + Math.random() * 0.4, (Math.random() - 0.5) * 0.6, 0.5, 0.9, g2 > 90 || volcano.ash > 0.3 ? 0.8 : 0.1, 0.45, 1.2);
+  }
+  if (player.swimming && player.speed > 0.4 && Math.random() < dt * 14) fx.spray.emit(player.x + (Math.random() - 0.5) * 1.2, SEA + 0.05, player.z + (Math.random() - 0.5) * 1.2, (Math.random() - 0.5) * 1.5, 1.2 + Math.random() * 1.5, (Math.random() - 0.5) * 1.5, 0.35, 0.7, 0.1, 0.8, 1.0);
 }
 
 // ---------------- camera ----------------
@@ -537,6 +595,12 @@ function updateAtmosphere(dt, vfx) {
   if (player.inBunker) { scene.fog.near = 2; scene.fog.far = 16; scene.fog.color.set('#2a2320'); }
   // crater glow colours the underside of the ash cloud at dusk
   if (bloom) bloom.strength = 0.3 + 0.25 * dusk + 0.2 * (vfx.stageIdx >= 3 ? 1 : 0);
+  if (gradePass) { gradePass.uniforms.uTime.value = game.t; gradePass.uniforms.uAsh.value = ash; gradePass.uniforms.uHurt.value = player.stats.health < 30 ? (1 - player.stats.health / 30) * 0.6 : 0; }
+  sunSprite.position.copy(camera.position).addScaledVector(U.uSun.value, 1500);
+  sunSprite.material.color.copy(U.uSunCol.value); sunSprite.material.opacity = (1 - ash * 0.85) * (player.inBunker ? 0 : 1);
+  updateGulls(dt, vfx.stageIdx);
+  fx.dust.update(dt, 1.5, -0.3, 0.2); fx.spray.update(dt, 0.5, 5, 0);
+  for (const sys of [fx.dust, fx.spray]) { sys.u.uScale.value = innerHeight * 1.1; sys.u.uLight.value = 0.4 + 0.6 * Math.max(0.1, U.uSun.value.y); }
   // campfire flicker
   for (const f of props.fires) { const k = 0.85 + Math.sin(game.t * 13) * 0.1 + Math.sin(game.t * 29) * 0.05; f.light.intensity = 14 * k; f.flame.scale.set(1.1 * k, 1.7 * k + Math.sin(game.t * 17) * 0.2, 1); }
   // sound levels
@@ -696,7 +760,7 @@ function frame(now) {
     currentInteract = (player.onRaft || player.inBunker || player.inHeli || game.intro > 0) ? null : nearestInteractable();
     if (currentInteract && !currentInteract.hold && input.pressed('interact') && !game.over) doInteract(currentInteract);
     updatePlayer(dt);
-    const vfx = volcano.update({ dt, progress: game.progress, playerPos: player, camera, sunHeight: Math.max(0.1, U.uSun.value.y) });
+    const vfx = volcano.update({ dt, progress: game.progress, duration: game.duration, playerPos: player, camera, sunHeight: Math.max(0.1, U.uSun.value.y) });
     npcs.update(dt, { player, heatAt: (x, z) => volcano.heatAt(x, z), surgeR: volcano.surgeR, volcano: VOLCANO, hiddenInBunker: player.inBunker, followIndex: (n) => npcs.followers().indexOf(n) });
     updateHeli(dt);
     updateAtmosphere(dt, vfx);
@@ -714,7 +778,7 @@ function frame(now) {
     // the title screen: a slow drift over the island
     game.t += dt; U.uTime.value = game.t;
     const a = game.t * 0.04; camera.position.set(Math.cos(a) * 420, 120 + Math.sin(game.t * 0.1) * 10, 200 + Math.sin(a) * 300); camera.lookAt(VOLCANO.x, 60, VOLCANO.z);
-    volcano.update({ dt, progress: 0.3, playerPos: { x: 0, z: 300 }, camera, sunHeight: 0.8 });
+    volcano.update({ dt, progress: 0.3, duration: 1440, playerPos: { x: 0, z: 300 }, camera, sunHeight: 0.8 });
     updateAtmosphere(dt, { ash: 0, plume: 0.3, stageIdx: 1, rumble: 0 });
   }
   if (game.started && !player.inHeli) updateCamera(dt);

@@ -1,6 +1,6 @@
 // The island: a seeded heightfield with a volcano, splat-shaded terrain, the sea, the sky and the jungle.
 import * as THREE from 'three';
-import { makeNoise, rng, sandTexture, grassTexture, rockTexture, ashTexture, barkTexture, frondTexture, bushTexture, flowerTexture, noiseTexture } from './textures.js';
+import { makeNoise, rng, sandTexture, grassTexture, rockTexture, ashTexture, barkTexture, frondTexture, bushTexture, flowerTexture, noiseTexture, tuftTexture } from './textures.js';
 
 export const W = 800;            // the world is W x W metres, centred on 0,0
 export const N = 256;            // heightfield cells per side
@@ -11,7 +11,7 @@ export const VOLCANO = { x: 0, z: -110, peak: 0 }; // the summit height is fille
 // Places on the island. The terrain is flattened around each so buildings sit level.
 // y is the ground height wanted there (the raft beach sits just above the tide line).
 export const POIS = {
-  camp: { x: 118, z: 196, r: 18, y: 4.2, name: 'Survivors\' Camp', icon: '⛺' },
+  camp: { x: 42, z: 72, r: 18, y: null, name: 'Survivors\' Camp', icon: '⛺' }, // right at the foot of the mountain; y is read off the terrain
   village: { x: 30, z: 236, r: 34, y: 5.0, name: 'Fishing Village', icon: '🛖' },
   wreck: { x: 158, z: -62, r: 26, y: 26, name: 'Plane Wreck', icon: '✈' },
   tower: { x: 226, z: 34, r: 26, y: 46, name: 'Ranger Station', icon: '📡' },
@@ -78,8 +78,9 @@ function generateHeights() {
     h = h < 6 ? h * 0.55 : h - 2.7;
     H[idx(i, j)] = h;
   }
-  // flatten around each place
+  // flatten around each place (a place with no height set sits at whatever the ground is there)
   for (const p of Object.values(POIS)) {
+    if (p.y == null) { const ci = Math.round((p.x + W / 2) / CELL), cj = Math.round((p.z + W / 2) / CELL); p.y = H[idx(ci, cj)]; }
     const i0 = Math.max(0, ((p.x - p.r * 1.3 + W / 2) / CELL) | 0), i1 = Math.min(N, ((p.x + p.r * 1.3 + W / 2) / CELL) | 0);
     const j0 = Math.max(0, ((p.z - p.r * 1.3 + W / 2) / CELL) | 0), j1 = Math.min(N, ((p.z + p.r * 1.3 + W / 2) / CELL) | 0);
     for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
@@ -96,7 +97,8 @@ function generateHeights() {
 function lavaPaths() {
   const paths = [];
   const Nz = makeNoise(13);
-  for (const deg of [62, 100, 148, 215, 290, 345]) {
+  for (let k = 0; k < 12; k++) {
+    const deg = k * 30 + 8 + Nz.n2(k * 3.1, 2) * 14;
     const a = deg * Math.PI / 180;
     let x = VOLCANO.x + Math.cos(a) * 30, z = VOLCANO.z + Math.sin(a) * 30;
     const pts = [];
@@ -148,15 +150,16 @@ export function buildIsland(scene, quality) {
   geo.computeVertexNormals();
   const tex = { sand: sandTexture(), grass: grassTexture(), rock: rockTexture(), ash: ashTexture(), noise: noiseTexture() };
   const U = world.uniforms;
-  U.uAsh = { value: 0 }; U.uTime = { value: 0 }; U.uWind = { value: 0.4 };
-  const ground = new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.95, metalness: 0 });
+  U.uAsh = { value: 0 }; U.uTime = { value: 0 }; U.uWind = { value: 0.4 }; U.uCloud = { value: 0.35 };
+  const bumpTex = tex.noise.clone(); bumpTex.repeat.set(140, 140); bumpTex.needsUpdate = true;
+  const ground = new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.95, metalness: 0, bumpMap: bumpTex, bumpScale: hi ? 0.9 : 0.5 });
   ground.onBeforeCompile = (sh) => {
-    Object.assign(sh.uniforms, { tSand: { value: tex.sand }, tGrass: { value: tex.grass }, tRock: { value: tex.rock }, tAsh: { value: tex.ash }, tNoise: { value: tex.noise }, uAsh: U.uAsh });
+    Object.assign(sh.uniforms, { tSand: { value: tex.sand }, tGrass: { value: tex.grass }, tRock: { value: tex.rock }, tAsh: { value: tex.ash }, tNoise: { value: tex.noise }, uAsh: U.uAsh, uTime: U.uTime, uCloud: U.uCloud });
     sh.vertexShader = sh.vertexShader
       .replace('#include <common>', '#include <common>\nvarying vec3 vWPos; varying vec3 vWNormal;')
       .replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\nvWPos = (modelMatrix * vec4(transformed, 1.0)).xyz; vWNormal = normalize(mat3(modelMatrix) * objectNormal);');
     sh.fragmentShader = sh.fragmentShader
-      .replace('#include <common>', '#include <common>\nvarying vec3 vWPos; varying vec3 vWNormal; uniform sampler2D tSand, tGrass, tRock, tAsh, tNoise; uniform float uAsh;')
+      .replace('#include <common>', '#include <common>\nvarying vec3 vWPos; varying vec3 vWNormal; uniform sampler2D tSand, tGrass, tRock, tAsh, tNoise; uniform float uAsh, uTime, uCloud;')
       .replace('#include <map_fragment>', `#include <map_fragment>
         float hgt = vWPos.y; float slope = 1.0 - vWNormal.y;
         float n = texture2D(tNoise, vWPos.xz * 0.011).r;
@@ -172,6 +175,11 @@ export function buildIsland(scene, quality) {
         col = mix(col, col * vec3(1.15, 1.0, 0.62), smoothstep(45.0, 95.0, hgt) * (1.0 - rockW) * (1.0 - ashW) * n2);
         col *= mix(0.68, 1.0, smoothstep(-0.6, 1.3, hgt));
         col = mix(col, vec3(0.4, 0.38, 0.36) * (0.7 + 0.6 * n), uAsh * smoothstep(0.4, 3.0, hgt) * 0.9);
+        // sunlight dancing on the shallow seabed
+        if (hgt < 0.2) { float ca = texture2D(tNoise, vWPos.xz * 0.07 + uTime * 0.025).r * texture2D(tNoise, vWPos.xz * 0.1 - uTime * 0.02 + 0.5).r; col += vec3(0.5, 0.6, 0.55) * pow(ca, 2.2) * 4.0 * smoothstep(-14.0, -1.0, hgt) * (1.0 - uAsh); }
+        // cloud shadows drifting over the island
+        float cs = texture2D(tNoise, vWPos.xz * 0.0014 + vec2(uTime * 0.0035, uTime * 0.0012)).r;
+        col *= mix(1.0, 0.62, smoothstep(0.52, 0.72, cs) * (0.5 + uCloud) * (1.0 - uAsh * 0.7));
         diffuseColor.rgb *= col;`);
   };
   const terrain = new THREE.Mesh(geo, ground);
@@ -240,7 +248,7 @@ export function buildIsland(scene, quality) {
   world.sea = sea;
 
   // ---- the sky ----
-  U.uSkyTop = { value: new THREE.Color('#2a72d6') }; U.uHorizon = { value: new THREE.Color('#cfe4f5') }; U.uCloud = { value: 0.35 }; U.uPlume = { value: 0 }; U.uDusk = { value: 0 };
+  U.uSkyTop = { value: new THREE.Color('#2a72d6') }; U.uHorizon = { value: new THREE.Color('#cfe4f5') }; U.uPlume = { value: 0 }; U.uDusk = { value: 0 };
   const sky = new THREE.Mesh(new THREE.SphereGeometry(1900, 32, 16), new THREE.ShaderMaterial({
     uniforms: { top: U.uSkyTop, horizon: U.uHorizon, sunDir: U.uSun, sunCol: U.uSunCol, time: U.uTime, cover: U.uCloud, ash: U.uAsh, dusk: U.uDusk, plume: U.uPlume, volc: { value: new THREE.Vector3(VOLCANO.x, 0, VOLCANO.z) } },
     side: THREE.BackSide, depthWrite: false, fog: false,
@@ -339,9 +347,10 @@ export function buildIsland(scene, quality) {
     const crown = mergeGeos(fronds);
     variants.push({ trunk, crown, h: Hh, lx, lz });
   }
-  const counts = { palm: hi ? 1100 : 650, bush: hi ? 2600 : 1300, flower: hi ? 600 : 300, rock: hi ? 420 : 240 };
+  const counts = { palm: hi ? 1100 : 650, bush: hi ? 2600 : 1300, flower: hi ? 600 : 300, rock: hi ? 420 : 240, tuft: hi ? 6000 : 2500 };
+  const tuftM = new THREE.MeshStandardMaterial({ map: tuftTexture(), alphaTest: 0.5, side: THREE.DoubleSide, roughness: 0.9 }); sway(tuftM, 0.8);
   const palmLists = variants.map(() => []);
-  const bushes = [], flowers = [], rocks = [];
+  const bushes = [], flowers = [], rocks = [], tufts = [];
   const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), S = new THREE.Vector3(), P = new THREE.Vector3(), E = new THREE.Euler();
   const nearPoi = (x, z, pad) => Object.values(POIS).some((p) => Math.hypot(x - p.x, z - p.z) < p.r + pad);
   let tries = 0;
@@ -379,6 +388,12 @@ export function buildIsland(scene, quality) {
     rocks.push({ x, z, y: h - s * 0.3, yaw: r() * Math.PI * 2, s, sy: 0.5 + r() * 0.6 });
     if (s > 1.1) world.rocks.push({ x, z, r: s * 0.8 });
   }
+  tries = 0;
+  while (tufts.length < counts.tuft && tries++ < 90000) {
+    const x = (r() - 0.5) * W * 0.85, z = (r() - 0.5) * W * 0.85, h = heightAt(x, z);
+    if (h < 2.6 || h > 70 || slopeAt(x, z) > 0.45 || distToVolcano(x, z) < 100) continue;
+    tufts.push({ x, z, y: h - 0.03, yaw: r() * Math.PI * 2, s: 0.5 + r() * 0.7 });
+  }
   const place = (list, mesh, extraY = 0) => {
     list.forEach((o, i) => {
       E.set(0, o.yaw, 0); Q.setFromEuler(E); S.set(o.s, o.sy ? o.s * o.sy : o.s, o.s); P.set(o.x, o.y + extraY, o.z);
@@ -399,6 +414,8 @@ export function buildIsland(scene, quality) {
   const bushMesh = new THREE.InstancedMesh(bushG, bushM, Math.max(1, bushes.length)); place(bushes, bushMesh);
   const flowerG = mergeGeos([0, 1].map((k) => { const g = new THREE.PlaneGeometry(1.3, 1.1); g.translate(0, 0.55, 0); g.rotateY(k * Math.PI / 2); return g; }));
   const flowerMesh = new THREE.InstancedMesh(flowerG, flowerM, Math.max(1, flowers.length)); place(flowers, flowerMesh);
+  const tuftG = mergeGeos([0, 1].map((k) => { const g = new THREE.PlaneGeometry(0.9, 0.6); g.translate(0, 0.3, 0); g.rotateY(k * Math.PI / 2 + 0.4); return g; }));
+  const tuftMesh = new THREE.InstancedMesh(tuftG, tuftM, Math.max(1, tufts.length)); place(tufts, tuftMesh);
   const rockG = new THREE.IcosahedronGeometry(1, 2);
   { const p = rockG.attributes.position, rr = rng(55); for (let i = 0; i < p.count; i++) { const k = 0.8 + rr() * 0.4; p.setXYZ(i, p.getX(i) * k, p.getY(i) * k, p.getZ(i) * k); } rockG.computeVertexNormals(); }
   const rockMesh = new THREE.InstancedMesh(rockG, rockM, Math.max(1, rocks.length)); rockMesh.castShadow = hi; rockMesh.receiveShadow = true; place(rocks, rockMesh);

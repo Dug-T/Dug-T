@@ -50,7 +50,7 @@ export function buildSurvivor(o = {}) {
   const skin = mat(o.skin || '#d9a57c', 0.62), hairM = mat(o.hair || '#2c1a0f', 0.9);
   const shirt = mat(o.shirt || '#2d8c7a', 0.82), pants = mat(o.pants || '#5a4a3a', 0.86), shoe = mat('#2a2420', 0.6), sole = mat('#d8d2c4', 0.8);
   const female = !!o.female;
-  const root = new THREE.Group();
+  const root = new THREE.Group(); root.rotation.order = 'YXZ'; // yaw first, then the lean into a slope
   const hips = new THREE.Bone(); hips.position.y = 0.92; root.add(hips);
   const pelvis = sphere(0.205, pants); pelvis.scale.set(female ? 1.3 : 1.22, 0.74, 0.92); hips.add(pelvis);
   const belt = new THREE.Mesh(new THREE.TorusGeometry(0.235, 0.022, 10, 36), mat('#3a2a1a', 0.7)); belt.rotation.x = Math.PI / 2; belt.position.y = 0.1; belt.scale.set(1.08, 0.9, 1); hips.add(belt);
@@ -259,9 +259,12 @@ export function animateSurvivor(h, dt, st) {
     ll.hip.rotation.x = -0.7; ll.knee.rotation.x = 1.1; rl.hip.rotation.x = 0.15; rl.knee.rotation.x = 0.5;
     h.spine.rotation.x = 0.1;
   } else if (speed > 0.15) {
-    const run = Math.min(1, Math.max(0, (speed - 2.6) / 3.2));
-    const p = h.phase += dt * (3.6 + speed * 1.55);
-    const s = S(p), c = C(p), amp = 0.48 + run * 0.5;
+    const run = Math.min(1, Math.max(0, (speed - 2.4) / 3.0));
+    const amp = 0.5 + run * 0.48;
+    // the phase advances so that each step covers the stride the legs are actually making (leg ~0.9 m)
+    const stride = 2 * S(amp) * 0.9 * (1 + run * 0.25);
+    const p = h.phase += dt * Math.PI * speed / stride;
+    const s = S(p), c = C(p);
     // legs: hips swing, knees bend most as the leg swings through, heel lifts behind
     ll.hip.rotation.x = s * amp; rl.hip.rotation.x = -s * amp;
     ll.knee.rotation.x = 0.1 + Math.max(0, S(p - 1.1)) * (0.75 + run * 1.1) + Math.max(0, -s) * 0.15 * run;
@@ -308,4 +311,15 @@ export function animateSurvivor(h, dt, st) {
   if (h.waveT > 0) { h.waveT -= dt; ra.sh.rotation.x = -2.9; ra.sh.rotation.z = -0.4 + S(t * 9) * 0.35; ra.el.rotation.x = -0.4; }
   h.spine.rotation.x += lean;
   h.hips.position.y = hipY;
+  // stand on the slope rather than hover over it: tilt a little with the ground (st.tilt = [pitch, roll])
+  const tp = st.tilt && st.mode !== 'swim' ? st.tilt[0] : 0, tr = st.tilt && st.mode !== 'swim' ? st.tilt[1] : 0;
+  h.root.rotation.x = lerp(h.root.rotation.x, tp, Math.min(1, dt * 6)); h.root.rotation.z = lerp(h.root.rotation.z, tr, Math.min(1, dt * 6));
+}
+
+// how much a character standing at (x, z) and facing yaw should tilt with the ground
+export function groundTilt(normal, yaw, k = 0.55) {
+  const fx = Math.sin(yaw), fz = Math.cos(yaw), rx = -Math.cos(yaw), rz = Math.sin(yaw);
+  const nf = normal.x * fx + normal.z * fz, nr = normal.x * rx + normal.z * rz;
+  const clamp = (v) => Math.max(-0.32, Math.min(0.32, v));
+  return [clamp(Math.asin(Math.max(-1, Math.min(1, nf))) * k), clamp(-Math.asin(Math.max(-1, Math.min(1, nr))) * k)];
 }

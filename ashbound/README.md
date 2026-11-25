@@ -42,6 +42,7 @@ Version 1.0 is single player with NPC survivors. The world is seeded and determi
 
 ## Versions
 
+- **1.3**: start at the foot of the volcano; 12 slow, staggered lava flows all round the cone; many more hot rocks and debris that kill survivors too; a billowing eruption plume with bursts; stride-driven walking and slope tilt so nobody floats; terrain bump detail, cloud shadows, seabed caustics, grass tufts, sun glare, seagulls, dust and spray, and a film-grade post pass on High.
 - **1.2**: every character is one skinned mesh with blended joints and far more detail (fingers, kneecaps, collars, soles, eyes with lids); reworked walk, run, idle, sit, talk, chop and a proper front-crawl swim; Standard pace temporarily 5 minutes for testing.
 - **1.1**: fixed left/right movement being mirrored on the joystick, keyboard, controller and raft; fixed the mirrored compass and map (north is up); FPS counter shown under the stat bars, with a switch in the pause menu.
 - **1.0**: first release. A procedurally built tropical island with a live volcano; third-person survival with health, stamina, hunger, thirst and clean air; the five eruption stages (calm, unrest, ashfall, eruption, surge); three escapes (raft, radio and helicopter, bunker); five survivors to find, help and bring along; phone, PC/Mac and controller support.

@@ -1,7 +1,15 @@
 // Bump VERSION for every update (1.1, 1.2, 1.3 ...) and add a line to CHANGES.
-export const VERSION = '1.2';
+export const VERSION = '1.3';
 
 export const CHANGES = [
+  ['1.3', [
+    'You now start right at the foot of the volcano: the camp has moved to the base of the cone',
+    'Lava comes down all round the mountain: 12 flows instead of 6, creeping at a realistic few metres a second with staggered starts',
+    'Hot rocks: far more lava bombs once the eruption starts, plus dark rock debris, and a landing rock kills any survivor beneath it',
+    'Smoke billows out of the summit during the eruption: a much bigger plume with great dark bursts every few seconds',
+    'Characters no longer float along: the walk cycle is driven by stride length so feet plant, walking is a natural pace, and bodies tilt with the slope',
+    'Graphics: bump detail on the ground, cloud shadows drifting over the island, sunlight caustics on the shallow seabed, thousands of grass tufts, a sun glare, seagulls that flee the eruption, dust off your heels and spray when you swim, and a film grade (vignette, grain, colour draining with the ash) on High',
+  ]],
   ['1.2', [
     'Every character is now one skinned mesh with weight-blended joints: shoulders, elbows, hips, knees and the neck bend as one body',
     'Much more detail: hands with fingers, elbows and kneecaps, tapering forearms and calves, collars, belts, shoes with soles, eyes with lids, and sharper hats and packs',

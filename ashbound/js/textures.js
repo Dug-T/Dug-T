@@ -226,3 +226,24 @@ export function signTexture(text, bg = '#3b2a1a', fg = '#f4e7c3') {
   x.fillStyle = fg; x.font = 'bold 30px Arial'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(text, 128, 34);
   const t = tex(c, false); t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping; return t;
 }
+
+// a clump of grass blades with a transparent background
+export function tuftTexture() {
+  const r = rng(29), [c, x] = canvas(128, 128);
+  x.clearRect(0, 0, 128, 128);
+  for (let i = 0; i < 34; i++) {
+    const a = (r() - 0.5) * 1.3, len = 60 + r() * 60;
+    x.strokeStyle = `rgba(${50 + r() * 60 | 0},${120 + r() * 80 | 0},${30 + r() * 40 | 0},0.95)`; x.lineWidth = 2 + r() * 2.5; x.lineCap = 'round';
+    x.beginPath(); x.moveTo(64 + (r() - 0.5) * 20, 128); x.quadraticCurveTo(64 + Math.sin(a) * len * 0.5, 128 - len * 0.55, 64 + Math.sin(a) * len * 1.1, 128 - len); x.stroke();
+  }
+  const t = tex(c, false); t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping; return t;
+}
+
+// a bright core with a long soft falloff, for the sun
+export function glowTexture() {
+  const [c, x] = canvas(256, 256);
+  const g = x.createRadialGradient(128, 128, 4, 128, 128, 128);
+  g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(0.08, 'rgba(255,250,235,0.9)'); g.addColorStop(0.25, 'rgba(255,230,180,0.35)'); g.addColorStop(0.6, 'rgba(255,200,140,0.08)'); g.addColorStop(1, 'rgba(255,180,120,0)');
+  x.fillStyle = g; x.fillRect(0, 0, 256, 256);
+  const t = tex(c, false); t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping; return t;
+}
