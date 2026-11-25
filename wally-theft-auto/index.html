@@ -63,6 +63,9 @@
   body.cine #hud::before { top: 0; } body.cine #hud::after { bottom: 0; }
   #skip { display: none; position: fixed; right: 16px; bottom: calc(11vh + 10px); font: 700 14px 'Oswald'; color: #fff9; z-index: 3; }
   body.cine #skip { display: block; }
+  #arrest { position: absolute; left: 50%; top: 22%; transform: translateX(-50%); width: min(60vw, 340px); height: 26px; background: #000b; border: 3px solid #2f6dff; border-radius: 14px; overflow: hidden; }
+  #arrest i { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: linear-gradient(90deg, #2f6dff, #ff3b30); }
+  #arrest span { position: relative; display: block; text-align: center; font: 400 20px/26px 'Bangers', Impact; letter-spacing: 2px; color: #fff; text-shadow: 0 2px 0 #000; }
   #prompt { position: absolute; left: 50%; bottom: 30%; transform: translateX(-50%); padding: 8px 16px; background: #000b; border: 2px solid var(--gold); border-radius: 8px; font: 700 18px 'Oswald'; color: var(--gold); }
   #fade { position: fixed; inset: 0; background: #000; opacity: 0; pointer-events: none; transition: opacity .35s; z-index: 30; display: grid; place-items: center; font: 400 48px 'Bangers', Impact; color: #9fb6ff; letter-spacing: 8px; }
   body.inside #radarWrap { display: none; }
@@ -139,6 +142,7 @@
   <canvas id="lens"></canvas>
   <div id="damage"></div>
   <div id="prompt" class="hidden"></div>
+  <div id="arrest" class="hidden"><i></i><span>GETTING NICKED! RUN!</span></div>
   <div id="skip">Tap or press any key to skip ▶</div>
 </div>
 <div id="touch">

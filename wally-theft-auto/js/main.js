@@ -770,8 +770,45 @@ function die(cause) {
   failMission();
   setTimeout(() => respawn('hospital'), 4200);
 }
+// ---- arrests: a cop has to get hold of Wally, and he can wriggle free by running ----
+const arrest = { p: 0, last: 0, cop: null, pull: 0 };
+game.arrestTick = (cop, dt) => {
+  if (game.cuffs || player.dead || game.wanted.level === 0) return;
+  const still = player.speed < 1.6 && !player.car;
+  arrest.p = Math.min(1, arrest.p + dt / 1.7 * (still ? 1 : 0.3));
+  arrest.last = performance.now(); arrest.cop = cop;
+  if (arrest.p >= 1) startCuffs(cop);
+};
+game.pullOutTick = (cop, dt) => {
+  if (game.cuffs || player.dead || game.wanted.level === 0 || !player.car) return;
+  arrest.pull += dt; arrest.last = performance.now(); arrest.p = Math.min(0.5, arrest.pull / 3);
+  if (arrest.pull > 1.4) { // yank the door open and haul him out
+    arrest.pull = 0;
+    const c = player.car; c.doorOpen = 1; setTimeout(() => { c.doorOpen = 0; }, 900);
+    game.say(cop, 'Oot the car, Wally!'); audio.door();
+    exitCar(true); player.vx = 0; player.vz = 0; player.faceplantT = 0.6;
+  }
+};
+function startCuffs(cop) {
+  game.cuffs = { t: 0, cop };
+  cop.state = 'cuffing';
+  const fx = Math.sin(player.heading), fz = Math.cos(player.heading);
+  cop.x = player.x - fx * 0.75; cop.z = player.z - fz * 0.75; cop.heading = player.heading;
+  player.jackPose = { speed: 0, cuffed: true };
+  game.say(cop, ["You're nicked, cape boy.", 'Anything ye say will be taken doon and laughed at.', 'Mind yer heid getting in the van.'][(Math.random() * 3) | 0]);
+  audio.tone(1800, 0.06, 'square', 0.12); audio.tone(1500, 0.06, 'square', 0.12, 0, 0.12); // click click
+}
+function updateArrest(dt) {
+  if (game.cuffs) {
+    game.cuffs.t += dt;
+    if (game.cuffs.t > 1.8) { const cop = game.cuffs.cop; game.cuffs = null; player.jackPose = null; if (cop) cop.state = 'chase'; game.bust(true); }
+  } else if (performance.now() - arrest.last > 250) { arrest.p = Math.max(0, arrest.p - dt * 0.9); arrest.pull = 0; }
+  const bar = $('arrest');
+  bar.classList.toggle('hidden', !(arrest.p > 0.02 || game.cuffs));
+  bar.firstElementChild.style.width = (game.cuffs ? 100 : arrest.p * 100) + '%';
+}
 game.bust = () => {
-  if (player.dead || game.busting || game.wanted.level === 0) return;
+  if (player.dead || game.busting) return;
   game.busting = true; game.stats.busted++;
   if (game.jack) endJack(false);
   audio.fail();
@@ -789,7 +826,7 @@ function respawn(where) {
   player.money = Math.max(0, player.money - 100);
   player.place(s.x, s.z - 0.2, Math.PI);
   player.h.root.rotation.set(0, Math.PI, 0);
-  game.wanted.clear();
+  game.wanted.clear(); game.cuffs = null; arrest.p = 0; player.jackPose = null;
   for (const p of peds.list.slice()) if (p.cop) { p.remove(); peds.list.splice(peds.list.indexOf(p), 1); }
   for (const c of cars.slice()) if (c.type === 'police' && c.ai) removeCar(c);
   cam.yaw = Math.PI;
@@ -1551,9 +1588,14 @@ function updateTraffic(dt) {
       if (c.health > 0) c.ai.drive(dt, cars, game);
       else { c.input.throttle = 0; c.input.steer = 0; }
       // cops jump out when Wally is on foot nearby
-      if (c.ai instanceof PoliceAI && !player.car && !c.copsOut && d < 14 && c.speed < 4) {
-        c.copsOut = true; c.ai = null; c.driver = null; c.sirenOn = true; c.input = { throttle: 0, steer: 0, hand: false };
-        for (let k = 0; k < 2; k++) { const [dx, dz] = c.doorPos(); const p = game.spawnPed(dx + k * 1.2, dz, { cop: true }); p.state = 'chase'; }
+      if (c.ai instanceof PoliceAI && !c.copsOut && d < 16 && c.speed < 4 && (!player.car || player.car.speed < 5)) {
+        c.copsOut = true; c.ai = null; c.driver = null; c.sirenOn = true; c.input = { throttle: 0, steer: 0, hand: true };
+        c.doorOpen = 1; setTimeout(() => { c.doorOpen = 0; }, 1200);
+        // one out of each side
+        const [dx, dz] = c.doorPos(), fx = Math.sin(c.heading), fz = Math.cos(c.heading);
+        const sides = [[dx, dz], [2 * c.x - dx + fx * 0.6, 2 * c.z - dz + fz * 0.6]];
+        sides.forEach(([sx, sz], k) => { const p = game.spawnPed(sx, sz, { cop: true }); p.state = 'chase'; p.aggro = false; if (k === 0) game.say(p, 'Polis! Hands where I can see them!'); });
+        audio.door();
       }
     }
     if (c === player.car) {
@@ -1824,12 +1866,14 @@ function frame(now) {
   if (inp.camera) cam.far = !cam.far;
   if (inp.gps) cycleGps();
   if (inp.radio && player.car) { audio.nextStation(); showRadio(); if (audio.station < 3) voice.say(DJ[audio.station + (Math.random() < 0.5 ? 0 : 3)], 'DJ', true); }
+  if (game.cuffs) { inp.enter = false; inp.mx = inp.my = 0; }
   updateFlat(dt, inp);
   if (inp.enter && !game.jack && !game.inside) { if (player.car) exitCar(); else enterCar(); }
   if (inp.aimPressed && !player.car && WEAPONS[player.weapon].melee) game.toast(player.hasWeapons ? 'You can only aim with a gun or neeps. Tap WEAPON to switch.' : 'Nothing to aim yet! Find a gun lying about town (gold rings on the radar... well, on the pavement).');
   if (inp.weapon && !player.car) { player.cycleWeapon(); if (!player.hasWeapons) game.toast('No weapons yet. Just fists of mild fury.'); else game.toast(`${WEAPONS[player.weapon].icon} ${WEAPONS[player.weapon].name}`); }
   if (inp.power && player.car) { player.usePower(game); inp.powerPressed = false; }
   updateJack(dt);
+  updateArrest(dt);
   player.update(dt, inp, game);
   updateLockOn(dt);
   game.wanted.update(dt);

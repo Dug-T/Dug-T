@@ -406,6 +406,11 @@ export function animateHuman(h, dt, st) {
     h.spine.rotation.y += -h.punchSide * 0.35 * k;
   }
   // aiming overlay (gun arm out)
+  // hands cuffed behind the back, head down
+  if (st.cuffed) {
+    for (const a of h.arms) { a.sh.rotation.set(0.75, 0, -a.side * 0.12); a.el.rotation.set(0, 0, -a.side * 1.05); }
+    h.head.rotation.x = 0.35; h.spine.rotation.x = 0.08;
+  }
   // grabbing someone by the collar and hauling them out of a car
   if (st.reach) {
     const k = st.reach;

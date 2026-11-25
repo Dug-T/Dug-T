@@ -69,6 +69,12 @@ export class Ped {
       animateHuman(h, dt, anim);
       return;
     }
+    if (this.state === 'cuffing') {
+      // standing behind Wally, snapping the cuffs on
+      h.root.position.set(this.x, this.y, this.z); h.root.rotation.set(0, this.heading, 0);
+      animateHuman(h, dt, { speed: 0, reach: 0.8 });
+      return;
+    }
     if (this.state === 'held') {
       // being dragged out of a car: position is set by the carjack, we just flail
       h.root.position.set(this.x, this.y, this.z);
@@ -119,11 +125,11 @@ export class Ped {
           game.npcShoot(this, px, pz);
         }
       }
-      if (!shooter && d < 1.6 && !pl.car && !pl.dead) {
-        this.bustT += dt;
-        if (this.bustT > 0.9) game.bust();
-      } else this.bustT = Math.max(0, this.bustT - dt);
-      if (!shooter && pl.car && d < 3.5 && pl.car.speed < 1.0) { this.bustT += dt; if (this.bustT > 1.6) game.bust(); }
+      // close enough to grab him: start the arrest (or drag him out of a stopped car first)
+      if (!pl.dead && game.arrestTick) {
+        if (!pl.car && d < 1.8) { spd = 0; game.arrestTick(this, dt); }
+        else if (pl.car && pl.car.speed < 1.5 && d < 3.6) { spd = 0; game.pullOutTick(this, dt); }
+      }
       if (Math.random() < dt * 0.15 && d < 20) game.say(this, pick(LINES.cop));
       anim.aim = shooter && d < 30;
     } else if (this.state === 'argue') {
