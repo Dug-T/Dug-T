@@ -60,6 +60,7 @@ export function initContent(game, scene, world) {
   const STOCK = [
     ['blaster', 150], ['scatter', 300], ['laser', 500], ['gatling', 900], ['sniper', 700], ['soaker', 100], ['tattie', 200],
     ['haggis', 1200], ['flame', 800], ['neep', 250], ['claymore', 250], ['pan', 60], ['bagpipes', 400], ['club', 80],
+    ['revolver', 350], ['smg', 600], ['rifle', 1000], ['double', 450], ['nailgun', 250], ['taser', 200], ['crossbow', 550], ['shinty', 90], ['caber', 1500], ['flamer', 1400],
   ];
   function renderShop() {
     const pl = game.player;

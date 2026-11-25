@@ -19,11 +19,23 @@ export const WEAPONS = {
   haggis: { name: 'Haggis Launcher', icon: '🚀', proj: 'haggis', rate: 1.3, pickup: 4 },
   flame: { name: "Dragon's Breath", icon: '🔥', flame: true, rate: 0.06, dmg: 5, range: 9, pickup: 120 },
   neep: { name: 'Neep Grenades', icon: '💣', thrown: true, rate: 0.9, pickup: 4 },
+  // ---- v3.0 ----
+  shinty: { name: 'Shinty Stick', icon: '🏑', melee: true, range: 2.4, dmg: 55, cool: 0.55 },
+  revolver: { name: 'Auld Revolver', icon: '🤠', ranged: true, rate: 0.55, dmg: 75, pellets: 1, spread: 0.004, range: 80, pickup: 18, tracer: '#ffe7b0', kick: 0.08 },
+  taser: { name: 'Polis Taser', icon: '🔌', ranged: true, rate: 0.9, dmg: 12, pellets: 1, spread: 0, range: 14, pickup: 10, tracer: '#8fd0ff', beam: true, stun: true },
+  double: { name: "Gamekeeper's Double", icon: '🦌', ranged: true, rate: 0.95, dmg: 26, pellets: 10, spread: 0.09, range: 30, pickup: 10, tracer: '#ffd27a', kick: 0.2 },
+  smg: { name: 'Wee Rattler', icon: '🐍', ranged: true, rate: 0.075, dmg: 17, pellets: 1, spread: 0.045, range: 55, pickup: 90, tracer: '#ffd27a' },
+  nailgun: { name: 'Nail Gun', icon: '🔩', ranged: true, rate: 0.1, dmg: 15, pellets: 1, spread: 0.02, range: 35, pickup: 100, tracer: '#b8c0c8' },
+  rifle: { name: 'Highland Rifle', icon: '🏔', ranged: true, rate: 0.12, dmg: 34, pellets: 1, spread: 0.012, range: 130, pickup: 60, tracer: '#fff0c0', kick: 0.04 },
+  crossbow: { name: 'Thistle Crossbow', icon: '🏹', proj: 'bolt', rate: 1.0, dmg: 140, pickup: 12 },
+  caber: { name: 'Caber Launcher', icon: '🪵', proj: 'caber', rate: 1.6, pickup: 4 },
+  flamer: { name: 'Flamethrower', icon: '☄️', flame: true, big: true, rate: 0.045, dmg: 8, range: 15, pickup: 200 },
 };
-export const WEAPON_ORDER = ['fists', 'club', 'pan', 'claymore', 'bagpipes', 'blaster', 'scatter', 'laser', 'gatling', 'sniper', 'soaker', 'tattie', 'haggis', 'flame', 'neep'];
+for (const k in WEAPONS) WEAPONS[k].id = k;
+export const WEAPON_ORDER = ['fists', 'club', 'pan', 'shinty', 'claymore', 'bagpipes', 'blaster', 'revolver', 'taser', 'scatter', 'double', 'smg', 'nailgun', 'laser', 'rifle', 'gatling', 'sniper', 'soaker', 'tattie', 'crossbow', 'haggis', 'caber', 'flame', 'flamer', 'neep'];
 export const usesAmmo = (id) => !WEAPONS[id].melee;
 // how a model sits in Wally's hand: melee weapons angle down and forward, guns point along the forearm
-export const HOLD = { club: [Math.PI - 0.5, 0], pan: [Math.PI - 0.5, 0], claymore: [Math.PI - 0.45, 0], bagpipes: [0, 0], neep: [0, 0] };
+export const HOLD = { club: [Math.PI - 0.5, 0], pan: [Math.PI - 0.5, 0], shinty: [Math.PI - 0.5, 0], claymore: [Math.PI - 0.45, 0], bagpipes: [0, 0], neep: [0, 0] };
 
 const M = {};
 export const SHARED_WEAPON = new Set();
@@ -144,6 +156,102 @@ function buildFlame() {
   return done(muzzle(g, 0.4, 0.03));
 }
 
+// ---------------- v3.0 weapons ----------------
+const walnut = () => mat('walnut', { color: '#5a3820', roughness: 0.5 });
+const gun = () => mat('gunm', { color: '#2b2e33', metalness: 0.85, roughness: 0.35 });
+function buildRevolver() {
+  const g = new THREE.Group();
+  g.add(alongZ(cyl(0.013, 0.013, 0.2, gun(), 12), 0.16, 0.045));
+  const drum = cyl(0.033, 0.033, 0.06, gun(), 12); drum.rotation.x = Math.PI / 2; drum.position.set(0, 0.035, 0.04); g.add(drum);
+  for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2, h = cyl(0.007, 0.007, 0.062, black(), 6); h.rotation.x = Math.PI / 2; h.position.set(Math.cos(a) * 0.019, 0.035 + Math.sin(a) * 0.019, 0.04); g.add(h); }
+  const frame = box(0.03, 0.05, 0.1, gun()); frame.position.set(0, 0.03, 0.0); g.add(frame);
+  const grip = box(0.035, 0.11, 0.045, walnut()); grip.position.set(0, -0.045, -0.035); grip.rotation.x = -0.35; g.add(grip);
+  const hammer = box(0.01, 0.03, 0.02, gun()); hammer.position.set(0, 0.07, -0.03); hammer.rotation.x = -0.5; g.add(hammer);
+  return done(muzzle(g, 0.27, 0.045));
+}
+function buildTaser() {
+  const g = new THREE.Group();
+  const body = box(0.045, 0.06, 0.16, mat('taserY', { color: '#f2c200', roughness: 0.4 })); body.position.set(0, 0.03, 0.05); g.add(body);
+  const cart = box(0.05, 0.065, 0.05, mat('taserB', { color: '#1d4fd6', roughness: 0.4 })); cart.position.set(0, 0.03, 0.15); g.add(cart);
+  const grip = box(0.04, 0.1, 0.045, black()); grip.position.set(0, -0.05, -0.01); grip.rotation.x = -0.25; g.add(grip);
+  const led = new THREE.Mesh(new THREE.SphereGeometry(0.007, 8, 6), mat('taserLed', { color: '#9fe0ff', emissive: '#40b0ff', emissiveIntensity: 3 })); led.position.set(0, 0.065, -0.01); g.add(led);
+  return done(muzzle(g, 0.18, 0.03));
+}
+function buildDouble() {
+  const g = new THREE.Group();
+  for (const sx of [-0.017, 0.017]) { const b = alongZ(cyl(0.016, 0.016, 0.62, gun(), 12), 0.33, 0.045); b.position.x = sx; g.add(b); }
+  const fore = box(0.05, 0.03, 0.22, walnut()); fore.position.set(0, 0.018, 0.2); g.add(fore);
+  const action = box(0.05, 0.05, 0.08, mat('steelc', { color: '#9aa0a8', metalness: 1, roughness: 0.3 })); action.position.set(0, 0.03, 0.03); g.add(action);
+  const stock = box(0.045, 0.08, 0.3, walnut()); stock.position.set(0, -0.01, -0.15); stock.rotation.x = 0.12; g.add(stock);
+  return done(muzzle(g, 0.65, 0.045));
+}
+function buildSMG() {
+  const g = new THREE.Group();
+  const body = box(0.045, 0.07, 0.2, black()); body.position.set(0, 0.03, 0.06); g.add(body);
+  g.add(alongZ(cyl(0.011, 0.011, 0.1, gun(), 10), 0.2, 0.04));
+  const mag = box(0.03, 0.15, 0.035, gun()); mag.position.set(0, -0.07, 0.09); mag.rotation.x = 0.12; g.add(mag);
+  const grip = box(0.035, 0.09, 0.04, black()); grip.position.set(0, -0.04, -0.02); grip.rotation.x = -0.2; g.add(grip);
+  const stock = box(0.012, 0.04, 0.16, gun()); stock.position.set(0, 0.02, -0.1); g.add(stock);
+  return done(muzzle(g, 0.26, 0.04));
+}
+function buildNailgun() {
+  const g = new THREE.Group();
+  const yel = mat('toolY', { color: '#f0b400', roughness: 0.45 });
+  const body = box(0.06, 0.1, 0.22, yel); body.position.set(0, 0.04, 0.05); g.add(body);
+  const nose = box(0.03, 0.03, 0.08, mat('steelc', { color: '#9aa0a8', metalness: 1, roughness: 0.3 })); nose.position.set(0, 0.0, 0.19); g.add(nose);
+  const coil = new THREE.Mesh(new THREE.TorusGeometry(0.045, 0.02, 8, 18), black()); coil.position.set(0, -0.05, 0.12); g.add(coil);
+  const grip = box(0.035, 0.1, 0.045, black()); grip.position.set(0, -0.05, -0.03); grip.rotation.x = -0.2; g.add(grip);
+  return done(muzzle(g, 0.24, 0.0));
+}
+function buildRifle() {
+  const g = new THREE.Group();
+  const body = box(0.045, 0.075, 0.3, black()); body.position.set(0, 0.03, 0.08); g.add(body);
+  g.add(alongZ(cyl(0.011, 0.012, 0.32, gun(), 10), 0.38, 0.045));
+  const hand = box(0.05, 0.05, 0.16, mat('olive', { color: '#4b5320', roughness: 0.6 })); hand.position.set(0, 0.035, 0.28); g.add(hand);
+  const mag = box(0.03, 0.14, 0.05, gun()); mag.position.set(0, -0.07, 0.1); mag.rotation.x = 0.3; g.add(mag);
+  const grip = box(0.035, 0.09, 0.04, black()); grip.position.set(0, -0.045, -0.02); grip.rotation.x = -0.25; g.add(grip);
+  const stock = box(0.04, 0.08, 0.22, black()); stock.position.set(0, 0.015, -0.17); g.add(stock);
+  const sight = box(0.012, 0.04, 0.012, black()); sight.position.set(0, 0.09, 0.45); g.add(sight);
+  return done(muzzle(g, 0.55, 0.045));
+}
+function buildCrossbow() {
+  const g = new THREE.Group();
+  const stock = box(0.04, 0.05, 0.5, walnut()); stock.position.set(0, 0.02, 0.08); g.add(stock);
+  for (const s of [-1, 1]) { const limb = box(0.24, 0.02, 0.025, black()); limb.position.set(s * 0.12, 0.04, 0.3 - 0.03); limb.rotation.y = s * 0.25; g.add(limb); }
+  const string = cyl(0.002, 0.002, 0.44, mat('string', { color: '#e8e2d0' }), 4); string.rotation.z = Math.PI / 2; string.position.set(0, 0.045, 0.14); g.add(string);
+  const bolt = alongZ(cyl(0.006, 0.006, 0.34, mat('bolt', { color: '#7a5a3a' }), 6), 0.26, 0.055); g.add(bolt);
+  const thistle = new THREE.Mesh(new THREE.SphereGeometry(0.018, 10, 8), mat('thistle', { color: '#9b4fd1', roughness: 0.6 })); thistle.position.set(0, 0.055, 0.44); g.add(thistle);
+  const grip = box(0.035, 0.09, 0.04, black()); grip.position.set(0, -0.04, -0.02); g.add(grip);
+  return done(muzzle(g, 0.46, 0.055));
+}
+function buildShinty() {
+  const g = new THREE.Group();
+  const ash = mat('ash', { color: '#c9a46a', roughness: 0.55 });
+  const shaft = cyl(0.016, 0.018, 0.9, ash, 10); shaft.position.y = 0.4; g.add(shaft);
+  const tape = cyl(0.02, 0.02, 0.2, mat('tape', { color: '#1b2f6b', roughness: 0.8 }), 10); tape.position.y = 0.02; g.add(tape);
+  const head = box(0.09, 0.16, 0.035, ash); head.position.set(0.035, 0.9, 0); head.rotation.z = -0.5; g.add(head);
+  return done(g);
+}
+function buildCaberLauncher() {
+  const g = new THREE.Group();
+  g.add(alongZ(cyl(0.07, 0.07, 0.7, mat('tartanR', { color: '#8e1b1b', roughness: 0.6 }), 16), 0.12, 0.08));
+  const log = alongZ(cyl(0.05, 0.055, 0.3, mat('bark', { color: '#6b4a2b', roughness: 0.95 }), 10), 0.52, 0.08); g.add(log);
+  const rim = new THREE.Mesh(new THREE.TorusGeometry(0.072, 0.012, 8, 20), M.steel || steel()); rim.position.set(0, 0.08, 0.47); g.add(rim);
+  const grip = box(0.04, 0.12, 0.045, black()); grip.position.set(0, -0.04, 0); g.add(grip);
+  return done(muzzle(g, 0.7, 0.08));
+}
+function buildFlamethrower() {
+  const g = new THREE.Group();
+  const tankM = mat('flamerTank', { color: '#c9a21a', metalness: 0.5, roughness: 0.35 });
+  for (const sx of [0.06, 0.14]) { const t = new THREE.Mesh(new THREE.CapsuleGeometry(0.045, 0.2, 4, 12), tankM); t.position.set(sx, 0.02, -0.05); g.add(t); }
+  const hose = new THREE.Mesh(new THREE.TorusGeometry(0.08, 0.012, 6, 16, Math.PI), black()); hose.position.set(0.06, -0.04, 0.05); hose.rotation.y = Math.PI / 2; g.add(hose);
+  g.add(alongZ(cyl(0.02, 0.03, 0.55, gun(), 12), 0.22));
+  const shroud = alongZ(cyl(0.04, 0.035, 0.12, mat('shroud', { color: '#3a3a3a', metalness: 0.7, roughness: 0.5 }), 14), 0.46); g.add(shroud);
+  const grip = box(0.04, 0.1, 0.045, black()); grip.position.set(0, -0.05, 0.02); g.add(grip);
+  const pilot = new THREE.Mesh(new THREE.SphereGeometry(0.02, 8, 6), mat('pilot', { color: '#4fb6ff', emissive: '#2a8cff', emissiveIntensity: 3 })); pilot.position.set(0, 0.03, 0.53); g.add(pilot);
+  return done(muzzle(g, 0.55, 0.03));
+}
+
 // A neep (a Scottish turnip): purple top, cream bottom, with a wee fuse
 export function buildNeep(r = 0.07) {
   const g = new THREE.Group();
@@ -169,6 +277,20 @@ export function buildProjectile(kind) {
     flame.rotation.x = -Math.PI / 2; flame.position.z = -0.28; g.add(flame);
     return g;
   }
+  if (kind === 'bolt') {
+    const g = new THREE.Group();
+    const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.6, 6), mat('bolt', { color: '#7a5a3a' })); shaft.rotation.x = Math.PI / 2; g.add(shaft);
+    const tip = new THREE.Mesh(new THREE.ConeGeometry(0.025, 0.08, 6), steel()); tip.rotation.x = Math.PI / 2; tip.position.z = 0.33; g.add(tip);
+    const th = new THREE.Mesh(new THREE.SphereGeometry(0.03, 8, 6), mat('thistle', { color: '#9b4fd1', roughness: 0.6 })); th.position.z = -0.3; g.add(th);
+    return g;
+  }
+  if (kind === 'caber') {
+    const g = new THREE.Group();
+    const log = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.15, 1.6, 10), mat('bark', { color: '#6b4a2b', roughness: 0.95 })); log.rotation.x = Math.PI / 2; g.add(log);
+    const flame = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.5, 10), mat('jet', { color: '#ffb030', emissive: '#ff7a10', emissiveIntensity: 4 }));
+    flame.rotation.x = -Math.PI / 2; flame.position.z = -1.0; g.add(flame);
+    return g;
+  }
   const s = new THREE.Mesh(new THREE.SphereGeometry(0.07, 10, 8), mat('spud', { color: '#b58a4f', roughness: 0.9 })); s.scale.set(1, 0.8, 1.3);
   return s;
 }
@@ -188,6 +310,16 @@ export function buildWeaponModel(id) {
     case 'haggis': return buildHaggisLauncher();
     case 'flame': return buildFlame();
     case 'neep': return buildNeep();
+    case 'shinty': return buildShinty();
+    case 'revolver': return buildRevolver();
+    case 'taser': return buildTaser();
+    case 'double': return buildDouble();
+    case 'smg': return buildSMG();
+    case 'nailgun': return buildNailgun();
+    case 'rifle': return buildRifle();
+    case 'crossbow': return buildCrossbow();
+    case 'caber': return buildCaberLauncher();
+    case 'flamer': return buildFlamethrower();
     default: return buildBlaster();
   }
 }
