@@ -19,6 +19,7 @@ const KEEP = { has: (x) => SHARED.has(x) || SHARED_WEAPON.has(x) || SHARED_HUMAN
 const dropObject = (o) => { scene.remove(o); disposeObject(o, KEEP); };
 import { Weather, WEATHERS } from './weather.js';
 import { buildUFO } from './ufo.js';
+import { buildNessie } from './nessie.js';
 import { buildFlat, FLAT } from './flat.js';
 import { initContent } from './content.js';
 import { Voice, QUIPS, DJ, WEAPON_QUIPS, CHATS, CALLS } from './voice.js';
@@ -1897,6 +1898,23 @@ function updateFlat(dt, inp) {
 // ---------------- intro: a UFO drops Wally off outside his flat ----------------
 let ufo = null;
 const ease = (k) => { k = Math.max(0, Math.min(1, k)); return k * k * (3 - 2 * k); };
+function updateNessie(dt) {
+  nessie.update(dt, player);
+  nessie.group.visible = !game.inside;
+  if (game.intro || game.inside || player.dead) return;
+  const d = Math.hypot(player.x - nessie.x, player.z - nessie.z);
+  const speak = (line, prio) => {
+    game.say(nessie, line); nessie.talkT = 1.6; nessie.sayCool = 25 + Math.random() * 15;
+    if (d < 30) voice.say(line, 'NESSIE', prio);
+  };
+  if (!nessie.greeted) {
+    nessie.greetT -= dt;
+    if (nessie.greetT <= 0) {
+      nessie.greeted = true; speak('Och aye the noo!', true);
+      setTimeout(() => game.quip(["Is that... Nessie?! Mammy'll never believe this."], 1, true), 2600);
+    }
+  } else if (d < 9 && nessie.sayCool <= 0 && !player.car) speak(NESSIE_LINES[(Math.random() * NESSIE_LINES.length) | 0], false);
+}
 function startIntro() {
   if (!ufo) ufo = buildUFO();
   scene.add(ufo.group);
@@ -2027,6 +2045,7 @@ function frame(now) {
   content.update(dt, game._inp);
   if (!player.car && !game.mission && !game.intro && !player.dead) { idleQuipT -= dt; if (idleQuipT <= 0) { idleQuipT = 45 + Math.random() * 40; game.quip('idle', 1); } }
   updateChatter(dt);
+  if (nessie) updateNessie(dt);
   updateSky(dt);
   // audio
   const c = player.car;
@@ -2092,7 +2111,8 @@ function togglePause(force) {
     last = performance.now();
   }
 }
-let started = false;
+let started = false, nessie = null;
+const NESSIE_LINES = ['Och aye the noo!', 'Och aye the noo! Fancy a deep-fried Mars bar?', 'Och aye the noo! Seen ma loch anywhere?', 'Och aye the noo! Nae photos, I\'m shy.', 'Och aye the noo, Wally!'];
 function startGame(fresh) {
   audio.init();
   if (!started || fresh) {
@@ -2107,6 +2127,9 @@ function startGame(fresh) {
     content.placeVans();
     // a motor waiting at the kerb outside the flat
     if (!cars.some((c) => Math.hypot(c.x - h.x, c.z - h.z) < 12)) { const c = game.spawnCar('hatch', h.x - 7, h.z - 3.4, -Math.PI / 2); c.parked = true; }
+    // the Loch Ness Monster, on her holidays outside Wally's flat
+    if (!nessie) { nessie = buildNessie(scene, world, h); game.nessie = nessie; }
+    nessie.greeted = false; nessie.greetT = s.slept && !fresh ? 4 : 6.5;
     started = true;
     if (s.slept && !fresh) { // you saved in bed last time: wake up in the flat
       game.inside = true; document.body.classList.add('inside');
