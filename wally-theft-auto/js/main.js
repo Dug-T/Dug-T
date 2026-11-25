@@ -57,12 +57,12 @@ scene.fog = new THREE.Fog('#c9d6e3', 120, 520);
 // sky dome
 const skyU = {
   top: { value: new THREE.Color('#3a6fc0') }, horizon: { value: new THREE.Color('#cfe0f0') }, bottom: { value: new THREE.Color('#2a4a60') },
-  sunDir: { value: new THREE.Vector3(0, 1, 0) }, sunCol: { value: new THREE.Color('#fff2cc') }, night: { value: 0 }, time: { value: 0 }, cover: { value: 0.12 }, flash: { value: 0 },
+  sunDir: { value: new THREE.Vector3(0, 1, 0) }, sunCol: { value: new THREE.Color('#fff2cc') }, night: { value: 0 }, time: { value: 0 }, cover: { value: 0.12 }, flash: { value: 0 }, rainbow: { value: 0 },
 };
 const sky = new THREE.Mesh(new THREE.SphereGeometry(2000, 32, 16), new THREE.ShaderMaterial({
   uniforms: skyU, side: THREE.BackSide, depthWrite: false, fog: false,
   vertexShader: 'varying vec3 vP; void main(){ vP = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
-  fragmentShader: `uniform vec3 top, horizon, bottom, sunCol, sunDir; uniform float night, time, cover, flash; varying vec3 vP;
+  fragmentShader: `uniform vec3 top, horizon, bottom, sunCol, sunDir; uniform float night, time, cover, flash, rainbow; varying vec3 vP;
     float h21(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7))) * 43758.5453); }
     float vnoise(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
       return mix(mix(h21(i), h21(i + vec2(1,0)), f.x), mix(h21(i + vec2(0,1)), h21(i + vec2(1,1)), f.x), f.y); }
@@ -79,6 +79,28 @@ const sky = new THREE.Mesh(new THREE.SphereGeometry(2000, 32, 16), new THREE.Sha
         c = mix(c, cc * (0.75 + 0.25 * fbm(cp * 2.0 + 3.0)) * (1.0 - cover * 0.5), cl * 0.92);
       }
       if (h > 0.0 && night > 0.0) { vec2 g = floor(d.xz / (d.y + 0.3) * 260.0); float st = step(0.9965, h21(g)); c += vec3(st) * night * smoothstep(0.0, 0.3, h); }
+      // a rainbow, 42 degrees round from the point opposite the sun, after the rain clears
+      if (rainbow > 0.01 && h > 0.0) {
+        float ang = degrees(acos(clamp(dot(d, -normalize(sunDir)), -1.0, 1.0)));
+        float t = (ang - 39.5) / 4.0;
+        if (t > 0.0 && t < 1.0) {
+          vec3 rb = clamp(abs(mod(t * 0.8 * 6.0 + vec3(0.0, 4.0, 2.0), 6.0) - 3.0) - 1.0, 0.0, 1.0);
+          c += rb * sin(t * 3.14159) * 0.38 * rainbow * smoothstep(0.0, 0.12, h) * (1.0 - night);
+        }
+      }
+      // shooting stars: every few seconds one streaks across the night sky
+      if (night > 0.3 && h > 0.05) {
+        float slot = floor(time / 6.0), ph = fract(time / 6.0) * 6.0;
+        if (ph < 0.9) {
+          vec2 p = d.xz / (d.y + 0.3);
+          vec2 a = (vec2(h21(vec2(slot, 1.3)), h21(vec2(slot, 7.1))) - 0.5) * 2.4;
+          vec2 dir = normalize(vec2(h21(vec2(slot, 3.7)) - 0.5, h21(vec2(slot, 9.2)) - 0.5));
+          vec2 head = a + dir * ph * 0.9, tail = head - dir * 0.35;
+          vec2 pa = p - tail, ba = head - tail; float k = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0);
+          float dd = length(pa - ba * k);
+          c += vec3(0.9, 0.95, 1.0) * smoothstep(0.012, 0.0, dd) * k * (1.0 - ph / 0.9) * night * 1.6;
+        }
+      }
       c += vec3(0.75, 0.8, 1.0) * flash;
       gl_FragColor = vec4(c, 1.0);
       #include <tonemapping_fragment>
@@ -118,9 +140,9 @@ function applyQuality() {
     // gentle colour grade: a touch more contrast and colour, darker corners
     // colour grade + speed blur + chromatic fringe + film grain
     gradePass = new ShaderPass({
-      uniforms: { tDiffuse: { value: null }, uBlur: { value: 0 }, uTime: { value: 0 }, uFringe: { value: 0.0015 }, uSun: { value: new THREE.Vector2(0.5, 0.5) }, uSunVis: { value: 0 }, uSunCol: { value: new THREE.Color('#ffe2a8') }, uAspect: { value: 1.7 } },
+      uniforms: { tDiffuse: { value: null }, uBlur: { value: 0 }, uTime: { value: 0 }, uFringe: { value: 0.0015 }, uSun: { value: new THREE.Vector2(0.5, 0.5) }, uSunVis: { value: 0 }, uSunCol: { value: new THREE.Color('#ffe2a8') }, uAspect: { value: 1.7 }, uHurt: { value: 0 } },
       vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
-      fragmentShader: `uniform sampler2D tDiffuse; uniform float uBlur, uTime, uFringe, uSunVis, uAspect; uniform vec2 uSun; uniform vec3 uSunCol; varying vec2 vUv;
+      fragmentShader: `uniform sampler2D tDiffuse; uniform float uBlur, uTime, uFringe, uSunVis, uAspect, uHurt; uniform vec2 uSun; uniform vec3 uSunCol; varying vec2 vUv;
         float rnd(vec2 p){ return fract(sin(dot(p, vec2(12.9898, 78.233)) + uTime) * 43758.5453); }
         void main(){
           vec2 q = vUv - 0.5; float r2 = dot(q, q);
@@ -153,6 +175,8 @@ function applyQuality() {
           c = mix(vec3(l), c, 1.12);
           c = (c - 0.5) * 1.06 + 0.5;
           c *= 1.0 - r2 * 0.55;
+          // badly hurt: the colour drains and the edges throb red with your heartbeat
+          if (uHurt > 0.01) { float lum = dot(c, vec3(0.299, 0.587, 0.114)); c = mix(c, vec3(lum), uHurt * 0.6); c = mix(c, vec3(0.55, 0.02, 0.02), smoothstep(0.08, 0.32, r2) * uHurt * (0.45 + 0.35 * sin(uTime * 7.0))); }
           c += (rnd(vUv * 731.0) - 0.5) * 0.028; // fine film grain
           gl_FragColor = vec4(clamp(c, 0.0, 1.0), 1.0); }`,
     });
@@ -188,7 +212,7 @@ const particles = [];
 function puff(x, y, z, o = {}) {
   let p = particles.find((q) => !q.alive);
   if (!p) {
-    if (particles.length > 320) return;
+    if (particles.length > 380) return;
     const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: smokeTex, transparent: true, depthWrite: false, fog: true }));
     p = { s, alive: false }; particles.push(p); scene.add(s);
   }
@@ -618,6 +642,8 @@ game.playerShoot = (W = WEAPONS.blaster) => {
   const model = player.models[player.weapon] || player.blaster;
   const muzzle = model.localToWorld((model.userData.muzzle || player.blaster.userData.muzzle).clone());
   puff(muzzle.x, muzzle.y, muzzle.z, { color: W.pellets > 1 ? '#ffd27a' : '#9ff', add: true, life: 0.12, size: W.pellets > 1 ? 0.7 : 0.4, grow: 1, vy: 0, opacity: 1 });
+  if (!W.soak && !W.beam) puff(muzzle.x, muzzle.y + 0.05, muzzle.z, { color: '#b8b8b8', life: 0.9, size: W.pellets > 1 ? 0.35 : 0.18, grow: 2.5, vx: (Math.random() - 0.5) * 0.4, vy: 0.6, vz: (Math.random() - 0.5) * 0.4, opacity: 0.35 });
+  if (CASINGS[W.id]) ejectCasing(muzzle, CASINGS[W.id]);
   flashLight.position.copy(muzzle); flashLight.color.set(W.tracer || '#ffcc88'); flashLight.intensity = Math.max(flashLight.intensity, W.pellets > 1 ? 60 : 30);
   game.raiseAlarm(player.x, player.z, 1.5);
   for (let k = 0; k < W.pellets; k++) {
@@ -675,6 +701,62 @@ game.playerShoot = (W = WEAPONS.blaster) => {
     } else impactFx(end, dir, hit.kind);
   }
 };
+// spent cases fly out of the gun, bounce on the pavement and lie there a few seconds
+const CASINGS = { smg: 'brass', rifle: 'brass', gatling: 'brass', sniper: 'brass', scatter: 'shell', double: 'shell' };
+const CASES = 48, caseMesh = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.012, 0.012, 0.045, 6), new THREE.MeshStandardMaterial({ color: '#d4a63a', metalness: 0.9, roughness: 0.3 }), CASES);
+caseMesh.count = 0; caseMesh.frustumCulled = false; caseMesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(CASES * 3).fill(1), 3); scene.add(caseMesh);
+const cases = [], caseDummy = new THREE.Object3D(), shellCol = new THREE.Color('#c0392b'), brassCol = new THREE.Color('#ffffff');
+let caseI = 0;
+function ejectCasing(from, kind) {
+  const rx = Math.cos(player.heading), rz = -Math.sin(player.heading); // out to Wally's right
+  const c = cases[caseI] || (cases[caseI] = {});
+  Object.assign(c, { x: from.x, y: from.y, z: from.z, vx: rx * (2 + Math.random() * 1.5) + player.vx, vy: 2 + Math.random() * 1.5, vz: rz * (2 + Math.random() * 1.5) + player.vz, t: 0, rx: Math.random() * 6, ry: Math.random() * 6, spin: 12 + Math.random() * 10, bounced: 0, scale: kind === 'shell' ? 1.8 : 1 });
+  caseMesh.setColorAt(caseI, kind === 'shell' ? shellCol : brassCol); caseMesh.instanceColor.needsUpdate = true;
+  caseI = (caseI + 1) % CASES; caseMesh.count = Math.max(caseMesh.count, caseI === 0 ? CASES : caseI);
+}
+function updateCasings(dt) {
+  if (!caseMesh.count) return;
+  for (let i = 0; i < caseMesh.count; i++) {
+    const c = cases[i]; if (!c) continue;
+    c.t += dt;
+    if (c.t < 6) {
+      c.vy -= 14 * dt; c.x += c.vx * dt; c.y += c.vy * dt; c.z += c.vz * dt; c.rx += c.spin * dt; c.ry += c.spin * 0.6 * dt;
+      const g = world.groundHeight(c.x, c.z, c.y + 0.3) + 0.012;
+      if (c.y < g) {
+        c.y = g; if (Math.abs(c.vy) > 1 && c.bounced < 3) { c.vy = -c.vy * 0.35; c.bounced++; if (c.bounced === 1 && Math.random() < 0.5) audio.casing(0, 0.04); } else c.vy = 0;
+        c.vx *= 0.5; c.vz *= 0.5; c.spin *= 0.5; if (c.vy === 0) c.rx = Math.PI / 2;
+      }
+    }
+    caseDummy.position.set(c.x, c.t < 6 ? c.y : -50, c.z); caseDummy.rotation.set(c.rx, c.ry, 0); caseDummy.scale.setScalar(c.scale); caseDummy.updateMatrix();
+    caseMesh.setMatrixAt(i, caseDummy.matrix);
+  }
+  caseMesh.instanceMatrix.needsUpdate = true;
+}
+// scorch marks left by explosions
+const SCORCH = 30, scorchTex = (() => {
+  const c = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d');
+  const g = x.createRadialGradient(32, 32, 2, 32, 32, 32); g.addColorStop(0, 'rgba(0,0,0,0.9)'); g.addColorStop(0.6, 'rgba(10,8,6,0.6)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+  x.fillStyle = g; x.fillRect(0, 0, 64, 64); return new THREE.CanvasTexture(c);
+})();
+const scorchMesh = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: scorchTex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }), SCORCH);
+scorchMesh.count = 0; scorchMesh.frustumCulled = false; scene.add(scorchMesh);
+let scorchI = 0;
+// the shockwave: a bright ring racing outward along the ground
+const waveMat = new THREE.MeshBasicMaterial({ color: '#ffd9a0', transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
+const wave = new THREE.Mesh(new THREE.RingGeometry(0.85, 1, 48).rotateX(-Math.PI / 2), waveMat); wave.visible = false; scene.add(wave);
+let waveT = -1;
+function blastFx(x, y, z) {
+  const g = world.groundHeight(x, z, y + 1);
+  const m = new THREE.Object3D(); m.position.set(x, g + 0.02, z); m.rotation.y = Math.random() * 6; m.scale.setScalar(5 + Math.random() * 2); m.updateMatrix();
+  scorchMesh.setMatrixAt(scorchI, m.matrix); scorchI = (scorchI + 1) % SCORCH; scorchMesh.count = Math.max(scorchMesh.count, scorchI === 0 ? SCORCH : scorchI); scorchMesh.instanceMatrix.needsUpdate = true;
+  wave.position.set(x, g + 0.15, z); waveT = 0; wave.visible = true;
+}
+function updateWave(dt) {
+  if (waveT < 0) return;
+  waveT += dt; const k = waveT / 0.55;
+  if (k >= 1) { waveT = -1; wave.visible = false; return; }
+  wave.scale.setScalar(1 + k * 14); waveMat.opacity = (1 - k) * 0.7;
+}
 // bullet holes: a pool of small dark marks stuck to walls and the road, oldest reused first
 const HOLES = 240, holeMesh = new THREE.InstancedMesh(new THREE.CircleGeometry(0.06, 10), new THREE.MeshBasicMaterial({ color: '#1b1714', transparent: true, opacity: 0.85, polygonOffset: true, polygonOffsetFactor: -4, depthWrite: false }), HOLES);
 holeMesh.count = 0; holeMesh.frustumCulled = false; scene.add(holeMesh);
@@ -881,13 +963,14 @@ game.onCarImpact = (car, v) => {
   if (car === player.car) { cam.shake = Math.min(0.5, v * 0.03); pad.rumble(Math.min(1, v * 0.05), Math.min(1, v * 0.04), 180); if (v > 14) game.quip('crash', 0.35); }
 };
 game.onExplosion = (x, y, z, src) => {
+  blastFx(x, y, z);
   const d = Math.hypot(x - player.x, z - player.z);
   if (d < 120) audio.boom();
   flashLight.position.set(x, y + 1, z); flashLight.color.set('#ffaa55'); flashLight.intensity = 400;
   for (let i = 0; i < 26; i++) puff(x, y, z, { color: i < 12 ? '#ffb030' : '#ff6010', add: true, life: 0.6 + Math.random() * 0.5, size: 2 + Math.random() * 2, vx: (Math.random() - 0.5) * 10, vy: Math.random() * 8, vz: (Math.random() - 0.5) * 10, opacity: 1, grow: 1.5 });
   for (let i = 0; i < 16; i++) puff(x, y + 1, z, { color: '#2a2a2a', life: 2.5 + Math.random() * 2, size: 2.5, vx: (Math.random() - 0.5) * 4, vy: 2 + Math.random() * 3, vz: (Math.random() - 0.5) * 4, opacity: 0.8, grow: 3 });
   if (d < 60) { cam.shake = Math.max(cam.shake, 0.8 * (1 - d / 60)); pad.rumble(1 - d / 60, 0.8 * (1 - d / 60), 450); }
-  if (src === player.car) { game.hurtPlayer(999, 'boom'); }
+  if (src && src === player.car) { game.hurtPlayer(999, 'boom'); } // only if it's Wally's own motor going up
   else if (!player.car && d < 8) game.hurtPlayer((8 - d) * 12, 'boom');
   for (const p of peds.list) { const pd = Math.hypot(p.x - x, p.z - z); if (pd < 8 && p.state !== 'dead') { p.vx = (p.x - x) / pd * 10; p.vz = (p.z - z) / pd * 10; p.vy = 7; p.state = 'tumble'; p.hurt(200, game, x, z, 'car'); } }
   for (const c of cars) { if (c === src || c.dead) continue; const cd = Math.hypot(c.x - x, c.z - z); if (cd < 9) { c.damage((9 - cd) * 140, game); c.vx += (c.x - x) / cd * 6; c.vz += (c.z - z) / cd * 6; } }
@@ -1512,10 +1595,14 @@ function updateLens(dt, rain) {
 }
 
 // ---------------- weather ----------------
-let lastWet = -1;
+let lastWet = -1, lastWeatherId = 'clear', rainbowT = 0;
+game.showRainbow = (t = 150) => { rainbowT = t; };
 function updateWeather(dt) {
   const changed = weather.update(dt, camera.position, () => audio.thunder((game.inside ? 0.25 : 0.5) + Math.random() * 0.2));
   if (game.inside) { weather.rain.visible = false; weather.snow.visible = false; }
+  if (changed) { if ((lastWeatherId === 'rain' || lastWeatherId === 'storm') && changed !== 'rain' && changed !== 'storm') rainbowT = 150; lastWeatherId = changed; }
+  rainbowT = Math.max(0, rainbowT - dt);
+  skyU.rainbow.value += ((rainbowT > 0 && changed !== 'rain' ? Math.min(1, rainbowT / 20) : 0) - skyU.rainbow.value) * Math.min(1, dt * 0.5);
   if (changed && game.playing) { game.toast(`${WEATHERS[changed].icon} Weather: ${WEATHERS[changed].name}`); if (!game.inside) game.quip({ rain: 'rain', storm: 'rain', snow: 'snow', clear: 'sun', haar: 'fog' }[changed], 0.7); }
   const wv = weather.v;
   const wet = Math.min(1, wv.wet);
@@ -2041,8 +2128,39 @@ const ease = (k) => { k = Math.max(0, Math.min(1, k)); return k * k * (3 - 2 * k
 // exhaust puffs from Wally's motor, and litter blowing about the streets
 const litter = [];
 let litterMat = null, litterGeo = null;
+game.onLand = (pl, v) => {
+  if (v < 7 || game.inside) return;
+  const n = Math.min(16, 6 + v * 0.6);
+  for (let k = 0; k < n; k++) { const a = k / n * Math.PI * 2; puff(pl.x + Math.cos(a) * 0.3, pl.y + 0.1, pl.z + Math.sin(a) * 0.3, { color: '#c9bfae', life: 0.8, size: 0.35, grow: 2.2, vx: Math.cos(a) * (2 + v * 0.15), vy: 0.4, vz: Math.sin(a) * (2 + v * 0.15), opacity: 0.45 }); }
+  if (v > 14) cam.shake = Math.max(cam.shake, 0.2);
+};
+let dustT = 0;
 function updateAmbientFx(dt) {
   const c = player.car;
+  updateCasings(dt); updateWave(dt);
+  // dust kicked up when Wally sprints
+  if (!c && player.onGround && player.speed > 6 && !game.inside && (dustT -= dt) <= 0) {
+    dustT = 0.12;
+    puff(player.x - Math.sin(player.heading) * 0.3, player.y + 0.08, player.z - Math.cos(player.heading) * 0.3, { color: weather.v.wet > 0.5 ? '#b8c4cc' : '#cbbfa8', life: 0.6, size: 0.18, grow: 2, vx: (Math.random() - 0.5) * 0.6, vy: 0.4, vz: (Math.random() - 0.5) * 0.6, opacity: 0.3 });
+  }
+  // damaged motors steam, then pour black smoke, before they catch fire
+  for (const car of cars) {
+    if (car.dead || car.health > 450 || car.burnT > 0) continue;
+    if (Math.abs(car.x - player.x) + Math.abs(car.z - player.z) > 80) continue;
+    if (Math.random() < dt * (car.health < 200 ? 14 : 7)) {
+      const [fx, fz] = car.forward(), fr = car.T.len / 2 - 0.6;
+      puff(car.x + fx * fr, car.y + 1.0, car.z + fz * fr, { color: car.health < 200 ? '#2b2b2b' : '#e6e6e6', life: 1.4, size: 0.35, grow: 3, vx: (Math.random() - 0.5) * 0.5 - car.vx * 0.3, vy: 1.4, vz: (Math.random() - 0.5) * 0.5 - car.vz * 0.3, opacity: car.health < 200 ? 0.55 : 0.3 });
+    }
+  }
+  // raindrops splashing on the ground round about
+  if (!game.inside && weather.v.rain > 0.15) {
+    const n = dt * weather.v.rain * (quality === 'high' ? 45 : 18);
+    const m = Math.floor(n) + (Math.random() < n % 1 ? 1 : 0);
+    for (let k = 0; k < m; k++) {
+      const a = Math.random() * Math.PI * 2, r = 2 + Math.random() * 14, x = player.x + Math.cos(a) * r, z = player.z + Math.sin(a) * r;
+      puff(x, world.groundHeight(x, z, 1) + 0.03, z, { color: '#d8e6f2', add: true, life: 0.22, size: 0.1, grow: 2.5, vx: 0, vy: 0.3, vz: 0, opacity: 0.6 });
+    }
+  }
   if (c && !c.dead && c.type !== 'wedge' && c.input.throttle > 0.2 && Math.random() < dt * (6 + c.input.throttle * 10)) {
     const [fx, fz] = c.forward(), lx = fz, lz = -fx, ex = c.T.wid / 2 - 0.4;
     puff(c.x - fx * (c.T.len / 2 + 0.1) + lx * ex, c.y + 0.3, c.z - fz * (c.T.len / 2 + 0.1) + lz * ex, { color: game.night > 0.5 ? '#6d6d70' : '#9a9a9c', life: 0.9, size: 0.18, grow: 2.5, vx: -fx * 1.5 + (Math.random() - 0.5), vy: 0.6, vz: -fz * 1.5 + (Math.random() - 0.5), opacity: 0.35 });
@@ -2258,6 +2376,18 @@ function frame(now) {
   render();
 }
 const sunScr = new THREE.Vector3(); game.skyU = skyU;
+// frames-per-second counter (toggle in the pause menu), averaged over half a second
+let fpsOn = store.get('wta-fps', true), fpsN = 0, fpsT = 0, fpsLast = performance.now();
+function updateFps() {
+  const now = performance.now(); fpsN++; fpsT += now - fpsLast; fpsLast = now;
+  if (fpsT < 500) return;
+  const fps = Math.round(fpsN * 1000 / fpsT), ms = (fpsT / fpsN).toFixed(1); fpsN = 0; fpsT = 0;
+  const e = $('fps'); e.style.display = fpsOn ? 'block' : 'none'; if (!fpsOn) return;
+  e.textContent = `${fps} FPS · ${ms} ms`;
+  e.style.color = fps >= 50 ? '#7dff8a' : (fps >= 30 ? '#ffe066' : '#ff6b6b');
+}
+const toggleFps = () => { fpsOn = !fpsOn; store.set('wta-fps', fpsOn); $('fpsBtn').textContent = 'FPS COUNTER: ' + (fpsOn ? 'ON' : 'OFF'); $('fps').style.display = fpsOn ? 'block' : 'none'; };
+$('fpsBtn').onclick = toggleFps; $('fpsBtn').textContent = 'FPS COUNTER: ' + (fpsOn ? 'ON' : 'OFF');
 function updatePost() {
   if (!gradePass) return;
   const c = player.car;
@@ -2276,9 +2406,11 @@ function updatePost() {
   u.uAspect.value = camera.aspect;
   u.uSunCol.value.copy(skyU.sunCol.value).lerp(new THREE.Color('#ffffff'), 0.2);
   u.uTime.value = (performance.now() / 1000) % 100;
+  const hurtWant = player.dead || !game.playing ? 0 : Math.max(0, Math.min(1, (35 - player.health) / 25));
+  u.uHurt.value += (hurtWant - u.uHurt.value) * 0.06;
 }
 function render() {
-  updatePost(); if (composer && quality === 'high') composer.render(); else renderer.render(scene, camera); }
+  updateFps(); updatePost(); if (composer && quality === 'high') composer.render(); else renderer.render(scene, camera); }
 
 // slow orbit behind the title screen
 let titleT = 0;

@@ -289,7 +289,21 @@ function buildTrike(T, paint) {
 }
 
 // a soft cone of light in front of the headlights at night: one shared geometry and material for every car
-let beamGeo = null, beamMat = null;
+let beamGeo = null, beamMat = null, blobGeo = null, blobMat = null;
+// a soft dark patch under every car, so even distant ones (beyond the sun's shadows) sit on the road
+function contactShadow(T) {
+  if (!blobGeo) {
+    const c = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d');
+    const g = x.createRadialGradient(32, 32, 4, 32, 32, 32); g.addColorStop(0, 'rgba(0,0,0,0.75)'); g.addColorStop(0.55, 'rgba(0,0,0,0.45)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+    x.fillStyle = g; x.fillRect(0, 0, 64, 64);
+    const t = new THREE.CanvasTexture(c);
+    blobGeo = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2);
+    blobMat = new THREE.MeshBasicMaterial({ map: t, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 });
+    SHARED.add(blobGeo); SHARED.add(blobMat); SHARED.add(t);
+  }
+  const m = new THREE.Mesh(blobGeo, blobMat); m.scale.set(T.wid * 1.35, 1, T.len * 1.15); m.position.y = 0.025; m.renderOrder = 1;
+  return m;
+}
 function headBeam(T) {
   if (!beamGeo) {
     beamGeo = new THREE.ConeGeometry(1.6, 9, 24, 1, true); beamGeo.translate(0, -4.5, 0); beamGeo.rotateX(-Math.PI / 2 + 0.08);
@@ -549,6 +563,7 @@ export class Car {
     if (type === 'trike') this.paint = paint || '#f0c419';
     const m = buildCarModel(type, this.paint);
     Object.assign(this, m);
+    this.blob = contactShadow(this.T); this.group.add(this.blob);
     this.beam = headBeam(this.T); this.beam.position.set(0, 0.7, this.T.len / 2 + 0.1); this.body.add(this.beam);
     this.name = this.T.names[(Math.random() * this.T.names.length) | 0];
     this.x = x; this.z = z; this.y = 0; this.heading = heading;

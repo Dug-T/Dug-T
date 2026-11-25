@@ -65,6 +65,7 @@ On phones and tablets there's a movement stick on the left, a camera stick next 
 
 The version number is shown on the title screen (with a "What's new" list) and on the pause screen. It lives in `js/version.js`: bump it by 0.1 for every update (1.1, 1.2, 1.3...) and add a line to `CHANGES`.
 
+- **4.0**: FPS counter, bullet casings and muzzle smoke, explosion shockwaves and scorch marks, a rainbow after rain, shooting stars, smoking damaged cars, rain splashes, dust, a low-health effect and contact shadows under cars; fixed explosions killing Wally from anywhere when on foot
 - **3.9**: sun shafts and lens flare, smoother edges, headlight beams, bullet holes and sparks, tyre smoke, exhaust, crash sparks and blowing litter
 - **3.8**: fixed controllers (e.g. Nacon MG-X Pro) firing on their own and cars not driving forward; stuck controls are ignored; live controller readings
 - **3.7**: full game controller support (Bluetooth phone controllers too), controller menus, a button setup screen, hidden touch buttons while on a controller, and rumble
