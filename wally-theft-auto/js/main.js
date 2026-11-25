@@ -964,6 +964,7 @@ canvas.addEventListener('mousedown', (e) => {
 });
 window.addEventListener('mouseup', (e) => { if (e.button === 0) mouse.l = false; if (e.button === 2) mouse.r = false; });
 canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+$('radarWrap').addEventListener('click', () => { if (game.playing && !game.paused) cycleGps(); });
 window.addEventListener('wheel', (e) => { if (game.playing && !game.paused && !player.car && Math.abs(e.deltaY) > 4) { pressed.add('Tab'); } }, { passive: true });
 document.addEventListener('touchstart', () => { if (game.intro) game._tapSkip = true; }, { passive: true });
 document.addEventListener('mousemove', (e) => {
@@ -1031,7 +1032,7 @@ function readInput() {
     jump: k('Space'), jumpPressed: p('Space'),
     fire: mouse.l, firePressed: mouse.lp, aim: mouse.r,
     enter: p('KeyF') || p('Enter'), power: p('KeyQ'), weapon: p('Tab') || p('Digit1') || p('Digit2'),
-    crouch: k('ControlLeft') || k('KeyC') && player.flyT > 0, horn: k('KeyH'), radio: p('KeyR'), camera: p('KeyC') && !(player.flyT > 0), mute: p('KeyM'),
+    crouch: k('ControlLeft') || k('KeyC') && player.flyT > 0, horn: k('KeyH'), radio: p('KeyR'), gps: p('KeyG'), camera: p('KeyC') && !(player.flyT > 0), mute: p('KeyM'),
   };
   if (isTouch) {
     inp.mx += touch.mx; inp.my += touch.my;
@@ -1039,6 +1040,7 @@ function readInput() {
     if (Math.hypot(touch.mx, touch.my) > 0.95 && !player.car) inp.sprint = true;
     inp.sprint ||= b('sprint'); inp.jump ||= b('jump'); inp.jumpPressed ||= tp('jump');
     inp.fire ||= b('fire'); inp.firePressed ||= tp('fire'); inp.aim ||= b('aim'); inp.aimPressed = tp('aim');
+    inp.gps ||= tp('gps');
     inp.enter ||= tp('enter'); inp.power ||= tp('power'); inp.weapon ||= tp('weapon'); inp.horn ||= b('horn');
     if (tp('horn') && player.car) inp.radio = true;
     inp.hand = b('hand');
@@ -1292,6 +1294,31 @@ function gpsRoute(px, pz, tx, tz) {
   return pts;
 }
 game.setGps = (x, z) => { game.gps = x == null ? null : { x, z }; };
+// places you can set the GPS to (G key, GPS button, or tap the radar)
+let userGps = -1;
+function gpsPlaces() {
+  const S = world.specials, list = [
+    { name: 'Home', x: S.home.x, z: S.home.z - 2 },
+    { name: "Granda's Armoury", x: game.shopPos.x, z: game.shopPos.z },
+  ];
+  if (missionMarker && !game.mission) list.push({ name: 'Next mission', x: missionMarker.x, z: missionMarker.z });
+  list.push({ name: 'Wally Wash', x: S.garage.x, z: S.garage.z - 6 }, { name: 'Infirmary', x: S.hospital.x, z: S.hospital.z }, { name: 'Polis Station', x: S.police.x, z: S.police.z });
+  return list;
+}
+function cycleGps() {
+  if (game.inside) { game.toast('Nae signal in here.'); return; }
+  const list = gpsPlaces();
+  userGps = userGps + 1 >= list.length ? -1 : userGps + 1;
+  game.toast(userGps < 0 ? '🧭 GPS: off' : `🧭 GPS: ${list[userGps].name}`);
+  audio.tone(880, 0.08, 'sine', 0.08); audio.tone(1320, 0.1, 'sine', 0.06, 0, 0.08);
+}
+function userGpsTarget() {
+  if (userGps < 0) return null;
+  const list = gpsPlaces(), p = list[Math.min(userGps, list.length - 1)];
+  const px = player.car ? player.car.x : player.x, pz = player.car ? player.car.z : player.z;
+  if (Math.hypot(p.x - px, p.z - pz) < 12) { userGps = -1; game.toast(`🧭 You have arrived at ${p.name}. Probably.`); return null; }
+  return p;
+}
 function drawRadar() {
   const W = RAD.width, c = W / 2, s = 1.1 * (W / 190) / 1.15;
   const px = player.car ? player.car.x : player.x, pz = player.car ? player.car.z : player.z;
@@ -1315,8 +1342,9 @@ function drawRadar() {
   };
   // specials
   // GPS route along the roads to the current target
-  if (game.gps) {
-    const pts = gpsRoute(px, pz, game.gps.x, game.gps.z).map(([x, z]) => toR(x, z));
+  const tgt = game.gps || (game.inside ? null : userGpsTarget());
+  if (tgt) {
+    const pts = gpsRoute(px, pz, tgt.x, tgt.z).map(([x, z]) => toR(x, z));
     rctx.save(); rctx.beginPath(); rctx.arc(c, c, c - 2, 0, 7); rctx.clip();
     rctx.lineJoin = 'round'; rctx.lineCap = 'round';
     for (const [w, col] of [[13, '#000'], [8, '#c86bff']]) {
@@ -1324,14 +1352,31 @@ function drawRadar() {
       pts.forEach(([x, y], i) => (i ? rctx.lineTo(x, y) : rctx.moveTo(x, y))); rctx.stroke();
     }
     rctx.restore();
-    const dist = Math.round(Math.hypot(game.gps.x - px, game.gps.z - pz));
+    const dist = Math.round(Math.hypot(tgt.x - px, tgt.z - pz));
+    const label = game.gps ? 'GPS' : (tgt.name.length > 12 ? tgt.name.split(' ').pop() : tgt.name);
     rctx.font = 'bold 26px Oswald, sans-serif'; rctx.textAlign = 'center'; rctx.textBaseline = 'middle';
     rctx.strokeStyle = '#000'; rctx.lineWidth = 6; rctx.fillStyle = '#e7c6ff';
-    rctx.strokeText(`GPS ${dist}m`, c, W - 44); rctx.fillText(`GPS ${dist}m`, c, W - 44);
+    rctx.strokeText(`${label} ${dist}m`, c, W - 44); rctx.fillText(`${label} ${dist}m`, c, W - 44);
   }
-  const h = world.specials.home, g = world.specials.garage;
-  dot(h.x, h.z, BLIPC.home, 8, true, 'sq');
-  dot(g.x, g.z - 6, BLIPC.garage, 7, false, 'sq');
+  // labelled icons for the important places; the key ones stick to the rim when off the map
+  const icon = (x, z, col, letter, clamp, pulse, ox = 0, oy = 0) => {
+    let [sx, sy] = toR(x, z); sx += ox; sy += oy;
+    const dx = sx - c, dy = sy - c, l = Math.hypot(dx, dy), lim = c - 16;
+    if (l > lim) { if (!clamp) return; sx = c + dx / l * lim; sy = c + dy / l * lim; }
+    const r = 13 + (pulse ? Math.sin(performance.now() / 180) * 2 : 0);
+    rctx.fillStyle = col; rctx.strokeStyle = '#000'; rctx.lineWidth = 3;
+    rctx.beginPath(); rctx.arc(sx, sy, r, 0, 7); rctx.fill(); rctx.stroke();
+    rctx.fillStyle = '#fff'; rctx.font = 'bold 17px Oswald, sans-serif'; rctx.textAlign = 'center'; rctx.textBaseline = 'middle';
+    rctx.lineWidth = 3; rctx.strokeText(letter, sx, sy + 1); rctx.fillText(letter, sx, sy + 1);
+  };
+  const S = world.specials;
+  icon(S.hospital.x, S.hospital.z, '#d63031', '+', false);
+  icon(S.police.x, S.police.z, '#2f6dff', 'P', false);
+  icon(S.garage.x, S.garage.z - 6, '#e67e22', 'W', true);
+  if (game.shopPos) icon(game.shopPos.x, game.shopPos.z, '#8e1b1b', 'A', true);
+  const mOn = missionMarker && !game.mission, together = mOn && Math.hypot(missionMarker.x - S.home.x, missionMarker.z - S.home.z) < 20;
+  icon(S.home.x, S.home.z, '#27ae60', 'H', true, false, together ? -13 : 0);
+  if (mOn) icon(missionMarker.x, missionMarker.z, '#e1a500', 'M', true, true, together ? 13 : 0);
   for (const car of cars) if (car.type === 'police' && car.driver === 'cop') dot(car.x, car.z, (Math.floor(performance.now() / 200) % 2) ? '#ff2f2f' : '#2f6dff', 6, false);
   for (const p of peds.list) if (p.cop && p.state !== 'dead' && game.wanted.level) dot(p.x, p.z, '#2f6dff', 4, false);
   for (const b of game.staticBlips || []) {
@@ -1339,7 +1384,7 @@ function drawRadar() {
     else dot(b.x, b.z, b.col, 7, false, 'sq');
   }
   for (const p of game.pickups) if ((p.kind === 'weapon' || p.kind === 'crate') && !(p.gone > 0) && Math.abs(p.x - px) < 90 && Math.abs(p.z - pz) < 90) dot(p.x, p.z, p.kind === 'crate' ? '#c9a23a' : '#ffd23f', 4, false, 'sq');
-  for (const m of game.markers) dot(m.x, m.z, BLIPC[m.type] || '#fff', m.type === 'ghost' ? 6 : 9);
+  for (const m of game.markers) if (m.type !== 'mission' && !m.persistent) dot(m.x, m.z, BLIPC[m.type] || '#fff', m.type === 'ghost' ? 6 : 9);
   for (const b of game.blips) { const o = b.obj; if (o.dead || o.state === 'dead') continue; dot(o.x, o.z, BLIPC[b.kind] || '#fff', 7); }
   // north
   const [nx, ny] = toR(px, pz - 1000); const nd = Math.hypot(nx - c, ny - c);
@@ -1777,6 +1822,7 @@ function frame(now) {
   }
   if (inp.mute) { audio.on = !audio.on; if (audio.master) audio.master.gain.value = audio.on ? 0.7 : 0; game.toast(audio.on ? 'Sound on' : 'Sound off'); }
   if (inp.camera) cam.far = !cam.far;
+  if (inp.gps) cycleGps();
   if (inp.radio && player.car) { audio.nextStation(); showRadio(); if (audio.station < 3) voice.say(DJ[audio.station + (Math.random() < 0.5 ? 0 : 3)], 'DJ', true); }
   updateFlat(dt, inp);
   if (inp.enter && !game.jack && !game.inside) { if (player.car) exitCar(); else enterCar(); }

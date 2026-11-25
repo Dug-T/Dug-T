@@ -56,7 +56,7 @@ export function initContent(game, scene, world) {
   const shopX = (shopBlock.x0 + shopBlock.x1) / 2, shopZ = shopBlock.z0 + 2.2;
   game.addSign("GRANDA'S ARMOURY", '#4a1010', '#ffd23f', shopX, shopBlock.z0 + 3.2);
   const shopMk = game.marker(shopX, shopZ, 'pickup', 1.1); shopMk.persistent = true;
-  game.staticBlips.push({ x: shopX, z: shopZ, col: '#ff3b30', shape: 'sq' });
+  game.shopPos = { x: shopX, z: shopZ };
   const STOCK = [
     ['blaster', 150], ['scatter', 300], ['laser', 500], ['gatling', 900], ['sniper', 700], ['soaker', 100], ['tattie', 200],
     ['haggis', 1200], ['flame', 800], ['neep', 250], ['claymore', 250], ['pan', 60], ['bagpipes', 400], ['club', 80],
