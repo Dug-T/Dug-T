@@ -1,7 +1,10 @@
 // Bump VERSION for every update (1.1, 1.2, 1.3 ...) and add a line to CHANGES.
-export const VERSION = '3.2';
+export const VERSION = '3.3';
 
 export const CHANGES = [
+  ['3.3', [
+    'Touch controls: smaller buttons on the right, and a new camera joystick just left of them (level with the movement stick) to look around, instead of dragging on the screen',
+  ]],
   ['3.2', [
     "Loads more funny dialogue: over 150 new spoken lines for Wally, folk on the street, drivers, the polis and the Red Shirts",
     'Phone calls: Mammy, Granda, Big Davie, Uncle Tam and others ring Wally for a blether between jobs',

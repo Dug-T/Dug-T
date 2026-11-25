@@ -1106,7 +1106,7 @@ document.addEventListener('pointerlockchange', () => {
 });
 
 // touch controls
-const touch = { mx: 0, my: 0, btn: new Set(), pressed: new Set(), stickId: null, lookId: null, lx: 0, ly: 0 };
+const touch = { mx: 0, my: 0, btn: new Set(), pressed: new Set(), stickId: null, lookId: null, lx: 0, ly: 0, lookX: 0, lookY: 0 };
 if (isTouch) {
   const stick = $('stick'), knob = $('knob');
   const setStick = (t) => {
@@ -1118,18 +1118,20 @@ if (isTouch) {
   stick.addEventListener('touchmove', (e) => { e.preventDefault(); for (const t of e.changedTouches) if (t.identifier === touch.stickId) setStick(t); }, { passive: false });
   const endStick = (e) => { for (const t of e.changedTouches) if (t.identifier === touch.stickId) { touch.stickId = null; touch.mx = touch.my = 0; knob.style.transform = ''; } };
   stick.addEventListener('touchend', endStick); stick.addEventListener('touchcancel', endStick);
-  const look = $('tlook');
-  look.addEventListener('touchstart', (e) => { e.preventDefault(); const t = e.changedTouches[0]; touch.lookId = t.identifier; touch.lx = t.clientX; touch.ly = t.clientY; }, { passive: false });
-  look.addEventListener('touchmove', (e) => {
-    e.preventDefault();
-    for (const t of e.changedTouches) if (t.identifier === touch.lookId) {
-      cam.yaw -= (t.clientX - touch.lx) * 0.006; cam.pitch -= (t.clientY - touch.ly) * 0.005; cam.pitch = Math.max(-1.2, Math.min(0.7, cam.pitch));
-      touch.lx = t.clientX; touch.ly = t.clientY; cam.lastLook = performance.now(); touch.dragT = performance.now();
-    }
-  }, { passive: false });
+  // camera joystick: push it and the view keeps turning, faster the further you push
+  const lstick = $('lstick'), lknob = $('lknob');
+  const setLook = (t) => {
+    const r = lstick.getBoundingClientRect(); const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    let dx = (t.clientX - cx) / (r.width / 2), dy = (t.clientY - cy) / (r.height / 2); const l = Math.hypot(dx, dy); if (l > 1) { dx /= l; dy /= l; }
+    touch.lookX = dx; touch.lookY = dy; lknob.style.transform = `translate(${dx * 40}px, ${dy * 40}px)`;
+  };
+  lstick.addEventListener('touchstart', (e) => { e.preventDefault(); audio.init(); touch.lookId = e.changedTouches[0].identifier; setLook(e.changedTouches[0]); }, { passive: false });
+  lstick.addEventListener('touchmove', (e) => { e.preventDefault(); for (const t of e.changedTouches) if (t.identifier === touch.lookId) setLook(t); }, { passive: false });
+  const endLook = (e) => { for (const t of e.changedTouches) if (t.identifier === touch.lookId) { touch.lookId = null; touch.lookX = touch.lookY = 0; lknob.style.transform = ''; } };
+  lstick.addEventListener('touchend', endLook); lstick.addEventListener('touchcancel', endLook);
   for (const b of document.querySelectorAll('#tbtns button, #tfire')) {
     const k = b.dataset.k;
-    // AIM and FIRE can be held and dragged: sliding your thumb moves the aim, like the look area
+    // AIM and FIRE can also be held and dragged to nudge the aim
     const drag = k === 'aim' || k === 'fire';
     let id = null, lx = 0, ly = 0;
     b.addEventListener('touchstart', (e) => {
@@ -1151,6 +1153,16 @@ if (isTouch) {
   $('tpause').addEventListener('click', () => togglePause());
 }
 
+// turn the camera from the touch camera joystick: a gentle curve so small pushes give fine control
+function lookStick(dt) {
+  const x = touch.lookX, y = touch.lookY;
+  if (!x && !y) return;
+  const curve = (v) => Math.sign(v) * Math.max(0, Math.abs(v) - 0.08) ** 1.6;
+  const slow = player.aiming ? (WEAPONS[player.weapon].zoom ? 0.3 : 0.55) : 1;
+  cam.yaw -= curve(x) * 3.2 * slow * dt;
+  cam.pitch = Math.max(-1.2, Math.min(0.7, cam.pitch - curve(y) * 1.9 * slow * dt));
+  cam.lastLook = performance.now(); touch.dragT = performance.now();
+}
 function readInput() {
   const k = (c) => keys.has(c), p = (c) => pressed.has(c);
   const inp = {
@@ -1967,6 +1979,7 @@ function frame(now) {
   game.timeScale += (wantScale - game.timeScale) * Math.min(1, dt * 6);
   dt *= game.timeScale;
   const inp = readInput(); game._inp = inp;
+  lookStick(dt);
   if (game.intro) { // during the intro, controls only skip it
     inp.any = inp.enter || inp.power || inp.weapon || inp.jumpPressed || inp.firePressed || inp.anyKey;
     for (const k of ['enter', 'power', 'weapon', 'camera', 'radio', 'jumpPressed', 'firePressed', 'fire', 'aim', 'powerPressed']) inp[k] = false;
