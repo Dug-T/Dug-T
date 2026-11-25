@@ -55,6 +55,7 @@ On phones and tablets there's an on-screen stick, a drag-to-look area and button
 
 The version number is shown on the title screen (with a "What's new" list) and on the pause screen. It lives in `js/version.js`: bump it by 0.1 for every update (1.1, 1.2, 1.3...) and add a line to `CHANGES`.
 
+- **2.9**: 5 new missions, GPS routes for every mission, full Pamazon van lettering
 - **2.8**: run-over sounds: a thud, a cartoon yelp, a Scottish cry, a bump on landing, and shouting witnesses
 - **2.7**: fixed a graphics memory leak that could crash phones after long sessions; the game now saves and offers a reload if the graphics ever give out
 - **2.6**: the polis climb out and arrest Wally (with a GETTING NICKED bar you can run from, and being dragged out of a stopped car); rebuilt, more realistic cars with wheel arches, pillars, window surrounds, alloys, headlights, grilles and mirrors

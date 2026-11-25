@@ -1400,7 +1400,7 @@ function drawRadar() {
   };
   // specials
   // GPS route along the roads to the current target
-  const tgt = game.gps || (game.inside ? null : userGpsTarget());
+  const tgt = game.gps || (game.mission && !game.inside && game.autoRoute) || (game.inside ? null : userGpsTarget());
   if (tgt) {
     const pts = gpsRoute(px, pz, tgt.x, tgt.z).map(([x, z]) => toR(x, z));
     rctx.save(); rctx.beginPath(); rctx.arc(c, c, c - 2, 0, 7); rctx.clip();
@@ -1411,7 +1411,7 @@ function drawRadar() {
     }
     rctx.restore();
     const dist = Math.round(Math.hypot(tgt.x - px, tgt.z - pz));
-    const label = game.gps ? 'GPS' : (tgt.name.length > 12 ? tgt.name.split(' ').pop() : tgt.name);
+    const label = (game.gps || (game.mission && game.autoRoute)) ? 'GPS' : (tgt.name.length > 12 ? tgt.name.split(' ').pop() : tgt.name);
     rctx.font = 'bold 26px Oswald, sans-serif'; rctx.textAlign = 'center'; rctx.textBaseline = 'middle';
     rctx.strokeStyle = '#000'; rctx.lineWidth = 6; rctx.fillStyle = '#e7c6ff';
     rctx.strokeText(`${label} ${dist}m`, c, W - 44); rctx.fillText(`${label} ${dist}m`, c, W - 44);
@@ -1496,13 +1496,29 @@ function startMission() {
 function failMission() {
   if (!game.mission) return;
   game.mission.end(game);
-  game.mission = null; game.objective(''); game.setGps(null);
+  game.mission = null; game.autoRoute = null; game.objective(''); game.setGps(null);
   setTimeout(() => { if (!player.dead) game.bigText('MISSION FAILED!', 'Hopeless.', 2.5, true); }, 4400);
   placeMissionMarker();
 }
+// missions that don't steer the GPS themselves get a route to their nearest marker or target
+function autoGps() {
+  const px = player.car ? player.car.x : player.x, pz = player.car ? player.car.z : player.z;
+  let best = null, bd = 1e9;
+  for (const m of game.markers) {
+    if (m.type === 'mission' || m.type === 'ghost' || m.type === 'pickup' || m.persistent || !m.obj.visible) continue;
+    const d = Math.hypot(m.x - px, m.z - pz); if (d < bd) { bd = d; best = m; }
+  }
+  if (!best) for (const b of game.blips) {
+    const o = b.obj; if (o.dead || o.state === 'dead' || o.health <= 0) continue;
+    const d = Math.hypot(o.x - px, o.z - pz); if (d < bd) { bd = d; best = o; }
+  }
+  return best ? { x: best.x, z: best.z } : null;
+}
 function updateMission(dt) {
   if (game.mission) {
+    game.autoRoute = null;
     const r = game.mission.update(dt, game);
+    if (game.mission && !game.gps) game.autoRoute = autoGps();
     if (r === 'pass') {
       const m = game.mission; m.end(game); game.mission = null; game.objective(''); game.setGps(null);
       player.money += m.reward; game.missionIdx++; audio.pass(); game.quip('pass', 1, true);

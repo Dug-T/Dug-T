@@ -679,25 +679,44 @@ export function randomType(r = Math.random) {
 }
 
 // Side and rear branding for a box van, e.g. the Pamazon delivery van
+// write `text` at `size`px, shrinking until it fits in `maxW` pixels
+function fitText(x, text, size, maxW, family = 'Impact, "Arial Black", sans-serif', weight = 'bold') {
+  let s = size;
+  do { x.font = `${weight} ${s}px ${family}`; s -= 2; } while (x.measureText(text).width > maxW && s > 10);
+}
+function liveryCanvas(w, h, name, tagline, colour, icon) {
+  const c = document.createElement('canvas'); c.width = w; c.height = h; const x = c.getContext('2d');
+  const pad = h * 0.08;
+  let tx = pad;
+  if (icon) {
+    // a parcel
+    const s = h * 0.5, py = h * 0.14;
+    x.fillStyle = '#c8924a'; x.fillRect(pad, py, s, s); x.fillStyle = '#a5743a'; x.fillRect(pad, py, s, s * 0.22);
+    x.fillStyle = '#e8d3a8'; x.fillRect(pad + s * 0.42, py, s * 0.16, s);
+    tx = pad * 2 + s;
+  }
+  const maxW = w - tx - pad;
+  x.textBaseline = 'middle'; x.textAlign = 'left';
+  x.fillStyle = colour; fitText(x, name, Math.round(h * 0.4), maxW); x.fillText(name, tx, h * 0.36);
+  x.fillStyle = '#e8641c'; fitText(x, tagline, Math.round(h * 0.15), maxW, 'Arial, sans-serif'); x.fillText(tagline, tx + 4, h * 0.72);
+  x.fillStyle = colour; x.fillRect(0, h * 0.9, w, h * 0.1);
+  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8;
+  return new THREE.MeshStandardMaterial({ map: tex, transparent: true, roughness: 0.4, polygonOffset: true, polygonOffsetFactor: -2 });
+}
 export function addLivery(car, name, tagline, colour = '#1b3a8a') {
   const T = car.T;
-  const c = document.createElement('canvas'); c.width = 512; c.height = 256; const x = c.getContext('2d');
-  // parcel icon
-  x.fillStyle = '#c8924a'; x.fillRect(24, 70, 120, 110); x.fillStyle = '#a5743a'; x.fillRect(24, 70, 120, 26);
-  x.fillStyle = '#e8d3a8'; x.fillRect(76, 70, 16, 110);
-  x.fillStyle = colour; x.font = 'bold 96px Impact, "Arial Black", sans-serif'; x.textBaseline = 'middle';
-  x.fillText(name, 160, 112);
-  x.fillStyle = '#e8641c'; x.font = 'bold 34px Arial, sans-serif'; x.fillText(tagline, 164, 186);
-  x.fillStyle = colour; x.fillRect(0, 232, 512, 24);
-  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8;
-  const m = new THREE.MeshStandardMaterial({ map: tex, transparent: true, roughness: 0.4, polygonOffset: true, polygonOffsetFactor: -2 });
   const h = T.hgt - 1.1, len = T.len - 1.75, yc = (T.hgt + 1.12) / 2, zc = -T.len / 2 + len / 2;
+  const pw = len * 0.92, ph = h * 0.9;
+  // the canvas has the same shape as the panel, so nothing is squashed or cut off
+  const side = liveryCanvas(1024, Math.round(1024 * ph / pw), name, tagline, colour, true);
   for (const sx of [-1, 1]) {
-    const p = new THREE.Mesh(new THREE.PlaneGeometry(len * 0.92, h * 0.9), m);
+    const p = new THREE.Mesh(new THREE.PlaneGeometry(pw, ph), side);
     p.position.set(sx * (T.wid / 2 + 0.012), yc, zc); p.rotation.y = sx * Math.PI / 2;
     car.body.add(p);
   }
-  const back = new THREE.Mesh(new THREE.PlaneGeometry(T.wid * 0.85, h * 0.45), m);
+  const bw = T.wid * 0.85, bh = h * 0.5;
+  const backM = liveryCanvas(768, Math.round(768 * bh / bw), name, tagline, colour, false);
+  const back = new THREE.Mesh(new THREE.PlaneGeometry(bw, bh), backM);
   back.position.set(0, yc + 0.1, -T.len / 2 - 0.02); back.rotation.y = Math.PI; car.body.add(back);
 }
 

@@ -1,7 +1,12 @@
 // Bump VERSION for every update (1.1, 1.2, 1.3 ...) and add a line to CHANGES.
-export const VERSION = '2.8';
+export const VERSION = '2.9';
 
 export const CHANGES = [
+  ['2.9', [
+    "5 new missions: Granda's Appointment, Ice Cream Wars, Big Air, Bingo Bus and The Great Neep Robbery",
+    'Every mission now shows a GPS route on the radar, including the chippy run, the race and the docks',
+    'The Pamazon van shows its full name and slogan, and shop signs no longer get cut off',
+  ]],
   ['2.8', [
     'Running people over now sounds like it: a thud, a cartoon yelp, a cry ("Ma bunions!"), a bump when they land, and witnesses who shout about it',
   ]],

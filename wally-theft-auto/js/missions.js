@@ -292,6 +292,144 @@ export const MISSIONS = [
     },
     end(g) { g.clearBlips(); g.setGps(null); for (const p of this.thugs || []) p.mission = false; },
   },
+  {
+    id: 'granda', title: "Granda's Appointment", reward: 1500,
+    intro: ["GRANDA: Wallace! Ma hip appointment's at the Infirmary and the bus is aff.", "GRANDA: Get a motor and come round the flat. And drive gentle, son.", "GRANDA: If ye bump me, ma teeth come oot. And they're no' cheap."],
+    start(g) {
+      const h = g.world.specials.home; this.stage = 0; this.teeth = 100;
+      this.m = g.marker(h.x + 2, h.z - 4, 'dest', 4);
+      this.granda = g.spawnPed(h.x + 1, h.z - 0.5, { state: 'idle' }); this.granda.mission = true;
+    },
+    update(dt, g) {
+      const pl = g.player, c = pl.car;
+      if (this.stage === 0) {
+        if (this.granda.state === 'dead' || this.granda.health <= 0) return 'fail';
+        g.objective(c ? 'Pick up ~y~Granda~w~ outside the flat.' : 'Get a ~b~motor~w~ and pick up ~y~Granda~w~ at the flat.');
+        if (c && g.inMarker(this.m, c.x, c.z) && c.speed < 3) {
+          this.car = c; this.hp = c.health; this.stage = 1;
+          this.granda.mission = false; this.granda.x = 1e5; this.granda.z = 1e5; this.granda.h.root.visible = false;
+          g.clearMarkers(); g.audio.door(); g.sayCar(c, "GRANDA: Mind ma hip. Mind ma HIP!");
+          const s = g.world.specials.hospital; this.m = g.marker(s.x, s.z - 5, 'dest', 4.5); g.setGps(s.x, s.z - 5);
+          g.toast('Granda is in. Every bump knocks his teeth loose!');
+        }
+        return null;
+      }
+      const car = this.car;
+      if (car.dead) return 'fail';
+      if (pl.car !== car) { g.objective("Get back in the motor! Granda's on his own in there!"); g.setGps(car.x, car.z); return null; }
+      const s = g.world.specials.hospital; g.setGps(s.x, s.z - 5);
+      if (car.health < this.hp) { this.teeth -= (this.hp - car.health) * 0.12; this.hp = car.health; g.sayCar(car, ['GRANDA: MA TEETH!', 'GRANDA: Ya hooligan!', 'GRANDA: I fought in the war for this?', "GRANDA: Ah've swallied a molar!"][(Math.random() * 4) | 0]); g.audio.oof && g.audio.oof(); }
+      if (car.air) this.teeth -= dt * 20;
+      if (this.teeth <= 0) { g.toast("Granda's teeth are somewhere on the dual carriageway."); return 'fail'; }
+      g.objective(`Drive Granda to the ~y~Infirmary~w~. Teeth: ~y~${Math.ceil(this.teeth)}%~w~`);
+      if (g.inMarker(this.m, car.x, car.z) && car.speed < 3) { const p = g.spawnPed(car.x + 2, car.z + 2, {}); g.say(p, 'GRANDA: Cheers, son. Same time next week.'); return 'pass'; }
+      return null;
+    },
+    end(g) { g.clearMarkers(); g.setGps(null); if (this.granda) this.granda.mission = false; },
+  },
+  {
+    id: 'icewars', title: 'Ice Cream Wars', reward: 2500,
+    intro: ["MR FUDGE: Wally, there's three dodgy vans sellin' watery slush on MA patch.", "MR FUDGE: Frosty Fergus and his boys. Their ninety-nines havenae even got a flake.", "MR FUDGE: Wreck all three vans. Do it for the flakes, Wally."],
+    start(g) {
+      this.vans = [];
+      const spots = [[2, 2, [1, 0]], [6, 6, [-1, 0]], [2, 6, [0, -1]]];
+      const paints = ['#8fd3ff', '#b6f2a2', '#ffd1e0'];
+      spots.forEach(([i, j, d], k) => {
+        const van = g.spawnCar('icecream', 0, 0, 0, { paint: paints[k] });
+        van.ai = new TrafficAI(van, i, j, d); van.driver = 'ai'; van.mission = true; van.name = 'Frosty Fergus';
+        const [sx, sz] = van.ai.path[0]; van.x = sx; van.z = sz; van.heading = Math.atan2(d[0], d[1]); van.health = 700;
+        this.vans.push(van); g.blip(van, 'enemy');
+      });
+    },
+    update(dt, g) {
+      const left = this.vans.filter((v) => !v.dead && v.health > 0).length;
+      g.objective(`Wreck Frosty Fergus's ~r~ice cream vans~w~: ${3 - left} / 3 done.`);
+      return left === 0 ? 'pass' : null;
+    },
+    end(g) { g.clearBlips(); for (const v of this.vans || []) v.mission = false; },
+  },
+  {
+    id: 'bigair', title: 'Big Air', reward: 2000,
+    intro: ["BIG DAVIE: Ma wee nephew's filmin' a stunt video. He needs a daftie.", "BIG DAVIE: Hit three of the yellow ramps in three minutes. Get some air!", "BIG DAVIE: Insurance? Naw. Why would ye need that?"],
+    start(g) { this.t = 180; this.jumps = 0; this.wasAir = false; },
+    update(dt, g) {
+      const pl = g.player, c = pl.car;
+      this.t -= dt; g.timer(this.t);
+      if (this.t <= 0) return 'fail';
+      if (c && c.air && !this.wasAir) { this.jumps++; g.bigText(`JUMP ${this.jumps} / 3`, 'Pure magic!', 1.5); g.audio.checkpoint(); }
+      this.wasAir = !!(c && c.air);
+      if (this.jumps >= 3 && !(c && c.air)) return 'pass';
+      // GPS to the run-up of the nearest ramp
+      const px = c ? c.x : pl.x, pz = c ? c.z : pl.z;
+      let best = null, bd = 1e9;
+      for (const r of g.ramps || []) { const ax = r.x - r.dx * 18, az = r.z - r.dz * 18, d = Math.hypot(ax - px, az - pz); if (d < bd) { bd = d; best = [ax, az]; } }
+      if (best) g.setGps(best[0], best[1]);
+      g.objective(c ? `Hit the ~y~stunt ramps~w~ (orange on the radar): ~y~${this.jumps} / 3~w~` : 'Get a fast ~b~motor~w~, then hit the ~y~stunt ramps~w~.');
+      return null;
+    },
+    end(g) { g.timer(null); g.setGps(null); },
+  },
+  {
+    id: 'bingo', title: 'Bingo Bus', reward: 1800,
+    intro: ["MRS McGLASHAN: Wally! The bingo bus has broke doon and it's the big jackpot the night!", "MRS McGLASHAN: Pick up me, Senga and Isa and get us to the bingo hall in the square.", "MRS McGLASHAN: Eyes down at eight o'clock sharp. Don't you dare make us late."],
+    start(g) {
+      this.t = 240; this.got = 0; this.stage = 0;
+      const B = (bx, bz) => g.world.blocks[bx * N + bz];
+      this.stops = [['Mrs McGlashan', B(2, 3)], ['Senga', B(5, 3)], ['Isa', B(3, 6)]].map(([name, b]) => {
+        const x = (b.x0 + b.x1) / 2, z = b.z0 - 3.5;
+        const p = g.spawnPed(x, b.z0 + 1.2, { state: 'idle' }); p.mission = true;
+        return { name, x, z, p, m: g.marker(x, z, 'dest', 4) };
+      });
+    },
+    update(dt, g) {
+      const pl = g.player, c = pl.car;
+      this.t -= dt; g.timer(this.t);
+      if (this.t <= 0) { g.toast('"Eyes down" has been and gone. The grannies will never forgive ye.'); return 'fail'; }
+      if (!c) { g.objective('Get a ~b~motor~w~ for the grannies!'); return null; }
+      if (this.stage === 0) {
+        for (const s of this.stops) {
+          if (s.done || !g.inMarker(s.m, c.x, c.z) || c.speed > 3) continue;
+          s.done = true; this.got++; g.removeMarker(s.m); g.audio.door();
+          s.p.mission = false; s.p.x = 1e5; s.p.z = 1e5; s.p.h.root.visible = false;
+          g.sayCar(c, `${s.name.toUpperCase()}: ${['Mind ma perm!', "Is there nae heatin' in this?", "Ooh, a superhero! Ye're awfy wee."][this.got - 1]}`);
+        }
+        g.objective(`Pick up the grannies: ~y~${this.got} / 3~w~`);
+        if (this.got === 3) { const s = g.world.specials.plaza; this.stage = 1; this.hall = g.marker(s.x, s.z - 16, 'dest', 5); }
+      } else {
+        g.objective('Get the grannies to the ~y~bingo~w~ in Hero Square!');
+        if (g.inMarker(this.hall, c.x, c.z) && c.speed < 3) {
+          for (let k = 0; k < 3; k++) { const p = g.spawnPed(c.x + 2 + k, c.z + 2, {}); if (k === 0) g.say(p, "MRS McGLASHAN: Two fat ladies, eighty-eight! Cheers, son!"); }
+          return 'pass';
+        }
+      }
+      return null;
+    },
+    end(g) { g.clearMarkers(); g.timer(null); for (const s of this.stops || []) s.p.mission = false; },
+  },
+  {
+    id: 'getaway', title: 'The Great Neep Robbery', reward: 4000,
+    intro: ["BIG DAVIE: Right, Wally. The Neep Market's got a lorry-load of prize turnips.", "BIG DAVIE: Get over there, grab the Golden Neep, then lose the polis. They'll be swarming.", "BIG DAVIE: Tip: the Wally Wash sprays yer motor and the polis forget all about ye."],
+    start(g) {
+      const B = g.world.blocks[5 * N + 6]; this.x = (B.x0 + B.x1) / 2; this.z = B.z0 - 3;
+      this.m = g.marker(this.x, this.z, 'dest', 3.5); this.stage = 0;
+    },
+    update(dt, g) {
+      const pl = g.player, px = pl.car ? pl.car.x : pl.x, pz = pl.car ? pl.car.z : pl.z;
+      if (this.stage === 0) {
+        g.objective('Go to the ~y~Neep Market~w~ and grab the Golden Neep.');
+        if (g.inMarker(this.m, px, pz)) {
+          g.clearMarkers(); this.stage = 1; g.audio.pickup(); g.wanted.add(10);
+          g.bigText('GOT THE GOLDEN NEEP', 'Now lose the polis!', 2.4);
+          if (g.player.giveWeapon) g.player.giveWeapon('neep', 10);
+        }
+        return null;
+      }
+      const s = g.world.specials.garage; g.setGps(s.x, s.z - 6);
+      g.objective(`Lose the ~b~polis~w~! (Hint: the ~y~Wally Wash~w~ is on yer GPS.)`);
+      return g.wanted.level === 0 ? 'pass' : null;
+    },
+    end(g) { g.clearMarkers(); g.setGps(null); },
+  },
 ];
 
 export function missionStartPoint(world) {
