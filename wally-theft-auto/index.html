@@ -63,6 +63,10 @@
   body.cine #hud::before { top: 0; } body.cine #hud::after { bottom: 0; }
   #skip { display: none; position: fixed; right: 16px; bottom: calc(11vh + 10px); font: 700 14px 'Oswald'; color: #fff9; z-index: 3; }
   body.cine #skip { display: block; }
+  #prompt { position: absolute; left: 50%; bottom: 30%; transform: translateX(-50%); padding: 8px 16px; background: #000b; border: 2px solid var(--gold); border-radius: 8px; font: 700 18px 'Oswald'; color: var(--gold); }
+  #fade { position: fixed; inset: 0; background: #000; opacity: 0; pointer-events: none; transition: opacity .35s; z-index: 30; display: grid; place-items: center; font: 400 48px 'Bangers', Impact; color: #9fb6ff; letter-spacing: 8px; }
+  body.inside #radarWrap { display: none; }
+  #lens { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
   #damage { position: absolute; inset: 0; box-shadow: inset 0 0 120px #f00; opacity: 0; transition: opacity .3s; }
   /* ---------- menus ---------- */
   .screen { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: radial-gradient(ellipse at 30% 30%, #2a3f73, #0a0f1e 70%); z-index: 10; }
@@ -129,7 +133,9 @@
   <div id="toast"></div>
   <div id="cross"></div>
   <div id="bubbles"></div>
+  <canvas id="lens"></canvas>
   <div id="damage"></div>
+  <div id="prompt" class="hidden"></div>
   <div id="skip">Tap or press any key to skip ▶</div>
 </div>
 <div id="touch">
@@ -192,6 +198,7 @@
     <button class="btn alt" id="quit">⌂ TITLE SCREEN</button>
   </div>
 </div>
+<div id="fade"></div>
 <div id="loading">BUILDING WALLYPOOL...</div>
 <script type="module" src="js/main.js"></script>
 </body>

@@ -1,7 +1,14 @@
 // Bump VERSION for every update (1.1, 1.2, 1.3 ...) and add a line to CHANGES.
-export const VERSION = '2.0';
+export const VERSION = '2.1';
 
 export const CHANGES = [
+  ['2.1', [
+    "Walk into Wally's Flat through the front door (pink ring) and look around inside",
+    'Sleep in the bed to save the game; you wake up in the flat when you continue',
+    'Rain is much quieter (and you only hear a patter indoors)',
+    'Lots more pickups: 130 weapons and 45 ammo crates around town',
+    'New effects: speed blur, light pools under street lamps, glowing car lights, skid marks and tyre smoke, muzzle flashes, raindrops on the lens, film grain',
+  ]],
   ['2.0', [
     'Weapons and ammo crates are now hidden up the alleyways between buildings (look for gold squares on the radar)',
     'Alleyways are wider so Wally can get up them easily',

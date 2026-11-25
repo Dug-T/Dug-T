@@ -25,7 +25,7 @@ Open `wally-theft-auto/index.html` from any web server (GitHub Pages works). Not
 - **Day–night cycle**: a full day lasts 24 minutes. At night the windows, street lamps and shop signs light up, with bloom.
 - **Three radio stations** (R in a car): Wally FM, Clyde Beats, and Pipes & Riffs.
 - If you die it's **HOPELESS!** and you wake up at the Infirmary. If you're arrested you're **NICKED!** and released from the Polis station.
-- Progress saves automatically in the browser.
+- **Wally's Flat**: walk through the front door (the pink ring) to go inside. Sleep in the bed (green ring, then F) to save the game, and you'll wake up there next time. Progress also saves automatically after missions.
 
 ## Controls
 
@@ -50,6 +50,7 @@ On phones and tablets there's an on-screen stick, a drag-to-look area and button
 
 The version number is shown on the title screen (with a "What's new" list) and on the pause screen. It lives in `js/version.js`: bump it by 0.1 for every update (1.1, 1.2, 1.3...) and add a line to `CHANGES`.
 
+- **2.1**: go inside Wally's Flat; sleep in the bed to save; quieter rain; 130 weapon pickups and 45 ammo crates; speed blur, lamp light pools, car light glows, skid marks, tyre smoke, muzzle flashes, raindrops on the lens
 - **2.0**: weapons and ammo crates hidden up the (now wider) alleyways and shown as gold squares on the radar; all car windows are clear see-through glass
 - **1.9**: Wally rebuilt as one skinned mesh with weight maps; eyes, eyebrows, nose and mouth; detailed cars with interiors and drivers; honking, shouting and arguing drivers; lamp posts that get knocked over; 10 new weapons and ammo crates
 - **1.8**: a UFO intro: a flying saucer beams Wally down outside his flat at the start of the game (skippable)
@@ -71,6 +72,7 @@ The version number is shown on the title screen (with a "What's new" list) and o
 - `js/peds.js`: pedestrians and foot cops
 - `js/player.js`: Wally's controls, combat and powers
 - `js/weapons.js`: weapon stats and models
+- `js/flat.js`: the inside of Wally's Flat and its bed save point
 - `js/ufo.js`: the flying saucer from the intro
 - `js/weather.js`: weather states, rain and snow particles, lightning
 - `js/missions.js`: the story missions
