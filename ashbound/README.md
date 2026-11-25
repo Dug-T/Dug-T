@@ -44,6 +44,7 @@ Version 1.0 is single player with NPC survivors. The world is seeded and determi
 
 ## Versions
 
+- **1.5**: fixed the jeep's suspension leaning the wrong way on side slopes; each wheel now follows the ground under it.
 - **1.4**: the survey jeep (drive, passengers, headlights, damage, drowning); luminous pulsing lava with ground glow and lights on the fronts and bombs; heat haze, sun shafts, volcanic lightning with thunder, stars at dusk.
 - **1.3**: start at the foot of the volcano; 12 slow, staggered lava flows all round the cone; many more hot rocks and debris that kill survivors too; a billowing eruption plume with bursts; stride-driven walking and slope tilt so nobody floats; terrain bump detail, cloud shadows, seabed caustics, grass tufts, sun glare, seagulls, dust and spray, and a film-grade post pass on High.
 - **1.2**: every character is one skinned mesh with blended joints and far more detail (fingers, kneecaps, collars, soles, eyes with lids); reworked walk, run, idle, sit, talk, chop and a proper front-crawl swim; Standard pace temporarily 5 minutes for testing.

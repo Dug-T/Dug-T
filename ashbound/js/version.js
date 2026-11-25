@@ -1,7 +1,10 @@
 // Bump VERSION for every update (1.1, 1.2, 1.3 ...) and add a line to CHANGES.
-export const VERSION = '1.4';
+export const VERSION = '1.5';
 
 export const CHANGES = [
+  ['1.5', [
+    'Fixed: the jeep leaned the wrong way on side slopes, leaving its uphill wheels in the air. The body now fits the ground under all four wheels, and each wheel rides its own spring to sit on the ground beneath it',
+  ]],
   ['1.4', [
     'The survey jeep: parked by the camp, keys in it. Drive it (W/S, A/D, Space to brake; stick and JUMP on a phone), take up to three followers in the back, headlights come on in the dark. It won\'t swim, won\'t climb cliffs, trees stop it, and lava and falling rocks wreck it',
     'Lava is far more luminous: brighter, pulsing flows that bloom, the ground lit orange around every lava front and the crater, lights riding the nearest fronts and the nearest bomb in flight',

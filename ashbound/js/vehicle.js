@@ -6,6 +6,7 @@ import { resolveObstacles } from './npcs.js';
 import { mat } from './survivor.js';
 import { signTexture, metalTexture } from './textures.js';
 
+const _wp = new THREE.Vector3();
 const box = (w, h, d, m) => new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m);
 const cyl = (r1, r2, h, m, seg = 16) => new THREE.Mesh(new THREE.CylinderGeometry(r1, r2, h, seg), m);
 
@@ -122,17 +123,25 @@ export class Jeep {
     if (Math.hypot(r.x - nx, r.z - nz) > 0.01) { if (Math.abs(this.speed) > 6 && ctx.onHit) ctx.onHit(Math.abs(this.speed)); this.hp -= Math.abs(this.speed) > 6 ? Math.abs(this.speed) * 1.5 : 0; this.speed *= -0.25; nx = r.x; nz = r.z; }
     const dc = Math.hypot(nx, nz); if (dc > 430) { nx *= 430 / dc; nz *= 430 / dc; this.speed *= -0.3; }
     this.x = nx; this.z = nz;
-    // suspension: sample the ground under the four wheels
-    const rx = -fz, rz = fx;
-    const hF = heightAt(this.x + fx * 1.25, this.z + fz * 1.25), hB = heightAt(this.x - fx * 1.25, this.z - fz * 1.25);
-    const hL = heightAt(this.x + rx * 0.9, this.z + rz * 0.9), hR = heightAt(this.x - rx * 0.9, this.z - rz * 0.9);
-    const ground = Math.max((hF + hB + hL + hR) / 4, SEA - 0.8);
-    const pitchT = Math.atan2(hB - hF, 2.5) + this.speed * (throttle > 0 ? -0.004 : 0.006), rollT = Math.atan2(hL - hR, 1.8) * 0.9 - this.steer * this.speed * 0.012;
-    this.pitch += (pitchT - this.pitch) * Math.min(1, dt * 7); this.roll += (rollT - this.roll) * Math.min(1, dt * 7);
-    this.y += (ground - this.y) * Math.min(1, dt * 12);
+    // suspension: fit the body to the ground under the four wheels. The car's local +x is its LEFT side
+    // (a yaw of 0 faces +z), so sample left at +x and right at -x.
+    const lx = fz, lz = -fx;
+    const corners = [[-0.92, 1.25], [0.92, 1.25], [-0.92, -1.25], [0.92, -1.25]]; // local (x, z) of each wheel, same order as this.wheels
+    const hW = corners.map(([cx, cz]) => heightAt(this.x + lx * cx + fx * cz, this.z + lz * cx + fz * cz));
+    const hF = (hW[0] + hW[1]) / 2, hB = (hW[2] + hW[3]) / 2, hL = (hW[1] + hW[3]) / 2, hR = (hW[0] + hW[2]) / 2;
+    const ground = Math.max((hF + hB) / 2, SEA - 0.8);
+    const pitchT = Math.atan2(hB - hF, 2.5) + this.speed * (throttle > 0 ? -0.004 : 0.006), rollT = Math.atan2(hL - hR, 1.84) - this.steer * this.speed * 0.012;
+    this.pitch += (pitchT - this.pitch) * Math.min(1, dt * 9); this.roll += (rollT - this.roll) * Math.min(1, dt * 9);
+    this.y += (ground - this.y) * Math.min(1, dt * 14);
     this.group.position.set(this.x, this.y, this.z); this.group.rotation.set(0, this.yaw, 0); this.body.rotation.set(this.pitch, 0, this.roll, 'YXZ');
-    const wheelSpin = this.speed / 0.42 * dt;
-    for (const w of this.wheels) w.rotation.x += wheelSpin;
+    // each wheel then drops or lifts on its own spring to meet the ground exactly beneath it
+    this.group.updateMatrixWorld(true);
+    this.wheels.forEach((w, i) => {
+      const pivot = w.parent; pivot.getWorldPosition(_wp);
+      const gy = hW[i] + 0.42, travel = Math.max(-0.3, Math.min(0.3, gy - _wp.y));
+      pivot.position.y += (0.42 + travel - pivot.position.y) * Math.min(1, dt * 16);
+      w.rotation.x += this.speed / 0.42 * dt;
+    });
     for (const p of this.pivots) p.rotation.y = this.steer;
     // headlights in the dark
     const want = ctx.dark && driving;
@@ -159,8 +168,8 @@ export class Jeep {
   unseat(rig, scene) { this.body.remove(rig.root); scene.add(rig.root); }
   // where to stand when you climb out: the driver's side, or the other side if that is blocked
   exitSpot() {
-    const rx = -Math.cos(this.yaw), rz = Math.sin(this.yaw);
-    for (const s of [-1, 1]) { const x = this.x + rx * s * 1.9, z = this.z + rz * s * 1.9; if (heightAt(x, z) > SEA - 1.0) return { x, z }; }
+    const lx = Math.cos(this.yaw), lz = -Math.sin(this.yaw);
+    for (const s of [1, -1]) { const x = this.x + lx * s * 2.0, z = this.z + lz * s * 2.0; if (heightAt(x, z) > SEA - 1.0) return { x, z }; }
     return { x: this.x - Math.sin(this.yaw) * 3, z: this.z - Math.cos(this.yaw) * 3 };
   }
 }
