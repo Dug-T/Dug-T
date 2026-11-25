@@ -180,7 +180,7 @@ export class Audio {
     if (!this.ctx) return;
     const t = this.ctx.currentTime;
     const rpm = st.inCar ? (0.25 + Math.min(1, Math.abs(st.speed) / 40) * 0.75 + (st.throttle > 0 ? 0.1 : 0)) : 0;
-    const base = st.carType === 'sports' ? 60 : (st.carType === 'van' || st.carType === 'icecream' ? 32 : 45);
+    const base = st.carType === 'sports' ? 60 : (st.carType === 'van' || st.carType === 'icecream' ? 32 : (st.carType === 'wedge' ? 95 : (st.carType === 'trike' ? 70 : 45)));
     this.o1.frequency.setTargetAtTime(base + rpm * base * 3.2, t, 0.05);
     this.o2.frequency.setTargetAtTime((base + rpm * base * 3.2) * 0.502, t, 0.05);
     this.engF.frequency.setTargetAtTime(300 + rpm * 1600, t, 0.05);

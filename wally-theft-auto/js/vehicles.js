@@ -11,6 +11,10 @@ const TYPES = {
   police: { len: 4.6, wid: 1.9, hgt: 1.5, max: 52, acc: 15, grip: 10, mass: 1.15, wheel: 0.35, names: ['Panda'] },
   van: { len: 5.2, wid: 2.0, hgt: 2.3, max: 32, acc: 7, grip: 7.5, mass: 1.6, wheel: 0.38, names: ['Flitter', 'Hauler'] },
   icecream: { len: 5.0, wid: 2.0, hgt: 2.5, max: 28, acc: 6, grip: 7, mass: 1.5, wheel: 0.37, names: ['Mr Fudge'] },
+  // a stainless-steel electric wedge of a pickup: fast, heavy, built like a fridge
+  wedge: { len: 5.7, wid: 2.1, hgt: 1.9, max: 50, acc: 17, grip: 9.5, mass: 1.9, wheel: 0.42, names: ['Steel Wedge', 'Tinfoil Hat'] },
+  // a wee three-wheeled van: one wheel at the front, slow, light, and it tips over in corners
+  trike: { len: 3.35, wid: 1.45, hgt: 1.42, max: 30, acc: 7, grip: 7, mass: 0.55, wheel: 0.27, names: ['Wee Trike', 'Plastic Rocket'] },
 };
 const PAINTS = ['#b3122e', '#1d4f91', '#e8e8e8', '#202326', '#2f6b3a', '#c49a1a', '#6d2a8c', '#a7b0b8', '#d35400', '#0f7c8c', '#5b3a29', '#f2c9d8'];
 
@@ -118,8 +122,176 @@ function placeStrut(mesh, x, z1, y1, z2, y2) {
   mesh.rotation.x = -Math.atan2(y2 - y1, z2 - z1);
 }
 
+// a driver figure that the Car class recolours for Wally, a cop or the owner
+function makeDriverFig(x, y, z) {
+  const driver = new THREE.Group();
+  const shirt = new THREE.MeshStandardMaterial({ color: ['#c0392b', '#2471a3', '#27ae60', '#e67e22', '#8e44ad', '#ecf0f1'][(Math.random() * 6) | 0], roughness: 0.8 });
+  const skinD = new THREE.MeshStandardMaterial({ color: ['#f1c7a5', '#e0ac85', '#c68863', '#8d5a3b'][(Math.random() * 4) | 0], roughness: 0.6 });
+  const hairD = new THREE.MeshStandardMaterial({ color: ['#2b1a10', '#5a3a1c', '#d9b56a', '#1a1a1a'][(Math.random() * 4) | 0], roughness: 0.9 });
+  const torsoD = new THREE.Mesh(new THREE.CapsuleGeometry(0.17, 0.25, 4, 12), shirt); torsoD.scale.z = 0.75; torsoD.position.y = 0.3; driver.add(torsoD);
+  const headD = new THREE.Mesh(new THREE.SphereGeometry(0.11, 16, 12), skinD); headD.position.y = 0.72; headD.scale.y = 1.1; driver.add(headD);
+  const hairCap = new THREE.Mesh(new THREE.SphereGeometry(0.115, 16, 8, 0, Math.PI * 2, 0, Math.PI * 0.5), hairD); hairCap.position.y = 0.74; hairCap.rotation.x = -0.3; driver.add(hairCap);
+  for (const sx of [-1, 1]) { const arm = new THREE.Mesh(new THREE.CapsuleGeometry(0.05, 0.3, 3, 8), shirt); arm.position.set(sx * 0.15, 0.42, 0.2); arm.rotation.x = -1.1; driver.add(arm); }
+  driver.position.set(x, y, z);
+  driver.userData = { shirt, skinD, hairD, own: [shirt.color.clone(), skinD.color.clone(), hairD.color.clone()] };
+  driver.visible = false;
+  return driver;
+}
+// simple wheels: tyre, a flat hub cover and a hub, on a steering pivot
+function simpleWheel(g, x, y, z, r, front, coverM, width = 0.24) {
+  const tyreM = M('tyre', () => new THREE.MeshStandardMaterial({ color: '#18181a', roughness: 0.92 }));
+  const pivot = new THREE.Group(); pivot.position.set(x, y, z); g.add(pivot);
+  const spin = new THREE.Group(); pivot.add(spin);
+  const tyre = new THREE.Mesh(M('tyreS' + r + width, () => { const t = new THREE.CylinderGeometry(r, r, width, 28); t.rotateZ(Math.PI / 2); return t; }), tyreM); spin.add(tyre);
+  for (const sx of [-1, 1]) {
+    const cover = new THREE.Mesh(M('coverS' + r, () => { const t = new THREE.CylinderGeometry(r * 0.72, r * 0.72, 0.02, 24); t.rotateZ(Math.PI / 2); return t; }), coverM);
+    cover.position.x = sx * (width / 2 + 0.005); spin.add(cover);
+    // spokes so you can see it turn
+    for (let k = 0; k < 3; k++) { const s = new THREE.Mesh(M('spokeS' + r, () => new THREE.BoxGeometry(0.02, r * 1.2, 0.05)), M('blackS', () => new THREE.MeshStandardMaterial({ color: '#202124', roughness: 0.6 }))); s.position.x = sx * (width / 2 + 0.012); s.rotation.x = k * Math.PI / 3; spin.add(s); }
+  }
+  return { pivot, spin, front };
+}
+function lightGlows(body, head, tail, glows, tailGlows) {
+  for (const p of head) { const s = new THREE.Sprite(glowMat('head')); s.scale.setScalar(1.2); s.position.copy(p); s.visible = false; body.add(s); glows.push(s); }
+  for (const p of tail) { const s = new THREE.Sprite(glowMat('tail')); s.scale.setScalar(0.8); s.position.copy(p); s.visible = false; body.add(s); glows.push(s); tailGlows.push(s); }
+}
+
+// The Steel Wedge: flat stainless panels, a peaked roof, angular arches and light bars front and back
+function buildWedge(T, paint) {
+  const g = new THREE.Group(), body = new THREE.Group(); g.add(body);
+  const h = T.len / 2, wr = T.wheel, zF = h - 1.05, zR = -(h - 1.15), y0 = 0.42, ar = wr + 0.12;
+  const steel = new THREE.MeshStandardMaterial({ color: paint, metalness: 0.85, roughness: 0.38 });
+  const glassM = M('wedgeGlass', () => new THREE.MeshPhysicalMaterial({ color: '#1c2530', roughness: 0.03, metalness: 0.3, clearcoat: 1, transparent: true, opacity: 0.6, depthWrite: false }));
+  const blackM = M('black', () => new THREE.MeshStandardMaterial({ color: '#141516', roughness: 0.55 }));
+  const headM = M('wedgeHead', () => new THREE.MeshStandardMaterial({ color: '#ffffff', emissive: '#ffffff', emissiveIntensity: 1.6 }));
+  const tailM = new THREE.MeshStandardMaterial({ color: '#7a0000', emissive: '#ff1010', emissiveIntensity: 0.8 });
+  const noseY = 1.02, tailY = 1.22, apexZ = -0.25, apexY = T.hgt;
+  // lower body: straight lines and trapezoid arches
+  const s = new THREE.Shape();
+  s.moveTo(-h, y0 + 0.15); s.lineTo(-h, tailY); s.lineTo(h, noseY); s.lineTo(h, y0 + 0.2); s.lineTo(h - 0.25, y0);
+  s.lineTo(zF + ar + 0.1, y0); s.lineTo(zF + ar * 0.55, wr + ar * 0.75); s.lineTo(zF - ar * 0.55, wr + ar * 0.75); s.lineTo(zF - ar - 0.1, y0);
+  s.lineTo(zR + ar + 0.1, y0); s.lineTo(zR + ar * 0.55, wr + ar * 0.75); s.lineTo(zR - ar * 0.55, wr + ar * 0.75); s.lineTo(zR - ar - 0.1, y0);
+  s.lineTo(-h + 0.2, y0); s.lineTo(-h, y0 + 0.15);
+  body.add(new THREE.Mesh(extrude(s, T.wid, 0.03, 4), steel));
+  // the triangle on top, with the windows cut out of it
+  const beltAt = (z) => noseY + (tailY - noseY) * (h - z) / (2 * h);
+  const tri = new THREE.Shape(); tri.moveTo(h, noseY); tri.lineTo(apexZ, apexY); tri.lineTo(-h, tailY); tri.lineTo(h, noseY);
+  const wF = h - 1.35, wB = -1.35;
+  const win = [[wF, beltAt(wF) + 0.05], [apexZ + 0.1, apexY - 0.1], [wB, beltAt(wB) + (apexY - tailY) * 0.62], [wB, beltAt(wB) + 0.05]];
+  tri.holes.push(new THREE.Path(win.slice().reverse().map(([a, b]) => new THREE.Vector2(a, b))));
+  body.add(new THREE.Mesh(extrude(tri, T.wid - 0.04, 0.02, 2), steel));
+  const ws = new THREE.Shape(win.map(([a, b]) => new THREE.Vector2(a, b)));
+  const glass = new THREE.Mesh(extrude(ws, T.wid - 0.1, 0.02, 2), glassM); body.add(glass);
+  // light bars and trim
+  const bar = new THREE.Mesh(new THREE.BoxGeometry(T.wid - 0.1, 0.04, 0.03), headM); bar.position.set(0, noseY - 0.05, h + 0.01); body.add(bar);
+  const tbar = new THREE.Mesh(new THREE.BoxGeometry(T.wid - 0.1, 0.05, 0.03), tailM); tbar.position.set(0, tailY - 0.1, -h - 0.01); body.add(tbar);
+  for (const sx of [-1, 1]) { const arch = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, 2 * h - 0.6), blackM); arch.position.set(sx * (T.wid / 2 + 0.005), y0 + 0.04, 0); body.add(arch); }
+  const pm = new THREE.MeshStandardMaterial({ map: plateTexture('W' + String(100 + (plateN++ * 37) % 900) + ' LY'), roughness: 0.5 });
+  for (const sz of [1, -1]) { const p = new THREE.Mesh(new THREE.PlaneGeometry(0.52, 0.12), pm); p.position.set(0, y0 + 0.3, sz * (h + 0.035)); if (sz < 0) p.rotation.y = Math.PI; body.add(p); }
+  // seats, dash and the driver inside
+  const seatM = M('seat', () => new THREE.MeshStandardMaterial({ color: '#2a2622', roughness: 0.9 }));
+  const seatZ = -0.45, seatY = 0.95;
+  for (const sx of [-1, 1]) { const back = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.65, 0.1), seatM); back.position.set(sx * 0.48, seatY + 0.32, seatZ - 0.3); body.add(back); }
+  const driverFig = makeDriverFig(-0.48, seatY, seatZ - 0.05); body.add(driverFig);
+  // driver's door
+  const door = new THREE.Group(); door.position.set(-T.wid / 2 - 0.006, 0, 0.75); body.add(door);
+  const panel = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.62, 1.2), steel); panel.position.set(-0.01, 0.82, -0.6); door.add(panel);
+  const glows = [], tailGlows = [];
+  lightGlows(body, [new THREE.Vector3(-0.6, noseY - 0.05, h + 0.12), new THREE.Vector3(0.6, noseY - 0.05, h + 0.12)], [new THREE.Vector3(-0.7, tailY - 0.1, -h - 0.1), new THREE.Vector3(0.7, tailY - 0.1, -h - 0.1)], glows, tailGlows);
+  const coverM = M('wedgeCover', () => new THREE.MeshStandardMaterial({ color: '#2b2d31', roughness: 0.4, metalness: 0.6 }));
+  const wx = T.wid / 2 - 0.2, wheels = [];
+  for (const [sx, z, f] of [[-1, zF, true], [1, zF, true], [-1, zR, false], [1, zR, false]]) wheels.push(simpleWheel(g, sx * wx, wr, z, wr, f, coverM, 0.3));
+  body.position.y = 0.05;
+  g.traverse((m) => { if (m.isMesh) m.castShadow = true; }); glass.castShadow = false;
+  const amberM = M('amber', () => new THREE.MeshStandardMaterial({ color: '#ff9a1c', emissive: '#ff7a00', emissiveIntensity: 0.35, roughness: 0.3 }));
+  return { group: g, body, wheels, lightbar: null, paintM: steel, tailM, headM, door, driverFig, amberM, glows, tailGlows, rearAxle: { x: wx, z: zR } };
+}
+
+// The Wee Trike: a rounded fibreglass three-wheeler van, one wheel up front
+function buildTrike(T, paint) {
+  const g = new THREE.Group(), body = new THREE.Group(); g.add(body);
+  const h = T.len / 2, wr = T.wheel, zF = h - 0.5, zR = -(h - 0.75), y0 = 0.36, ar = wr + 0.06;
+  const paintM = new THREE.MeshPhysicalMaterial({ color: paint, roughness: 0.35, metalness: 0.1, clearcoat: 0.6 });
+  const glassM = M('trikeGlass', () => new THREE.MeshPhysicalMaterial({ color: '#2b3a46', roughness: 0.05, metalness: 0.2, clearcoat: 1, transparent: true, opacity: 0.75 }));
+  const blackM = M('black', () => new THREE.MeshStandardMaterial({ color: '#141516', roughness: 0.55 }));
+  const chromeM = M('chrome', () => new THREE.MeshStandardMaterial({ color: '#e4e8ee', roughness: 0.12, metalness: 1 }));
+  const headM = M('head', () => new THREE.MeshStandardMaterial({ color: '#fffbe8', emissive: '#fff1c4', emissiveIntensity: 0.3, roughness: 0.1 }));
+  const tailM = new THREE.MeshStandardMaterial({ color: '#7a0000', emissive: '#ff1010', emissiveIntensity: 0.4, roughness: 0.3 });
+  const roofY = T.hgt, beltY = 0.9, wsBase = h - 0.62, wsTop = h - 0.95;
+  // side profile: round nose, short bonnet, upright windscreen, a tall box at the back; arches for the back wheels only
+  const s = new THREE.Shape();
+  s.moveTo(-h + 0.08, y0);
+  s.lineTo(zR - ar - 0.02, y0); s.lineTo(zR - ar, wr); s.absarc(zR, wr, ar, Math.PI, 0, true); s.lineTo(zR + ar + 0.02, y0);
+  s.lineTo(h - 0.3, y0);
+  s.quadraticCurveTo(h + 0.02, y0 + 0.02, h + 0.02, 0.6);
+  s.quadraticCurveTo(h, 0.86, h - 0.25, 0.9);
+  s.lineTo(wsBase, beltY + 0.02);
+  s.lineTo(wsTop, roofY - 0.06);
+  s.quadraticCurveTo(wsTop - 0.1, roofY, wsTop - 0.25, roofY);
+  s.lineTo(-h + 0.12, roofY);
+  s.quadraticCurveTo(-h, roofY, -h, roofY - 0.12);
+  s.lineTo(-h, y0 + 0.08);
+  s.quadraticCurveTo(-h, y0, -h + 0.08, y0);
+  const shell = new THREE.Mesh(extrude(s, T.wid, 0.05, 20), paintM); body.add(shell);
+  // windscreen and side windows (the back is a solid van box)
+  const wsLen = Math.hypot(wsBase - wsTop, roofY - 0.06 - beltY);
+  const ws = new THREE.Mesh(new THREE.PlaneGeometry(T.wid - 0.3, wsLen - 0.08), glassM);
+  { const dy = roofY - 0.06 - beltY, dz = wsBase - wsTop, l = Math.hypot(dy, dz); // sit it just proud of the bodywork
+    ws.position.set(0, (beltY + roofY - 0.06) / 2 + dz / l * 0.07, (wsBase + wsTop) / 2 + dy / l * 0.07); ws.rotation.x = -Math.atan2(dz, dy); }
+  body.add(ws);
+  for (const sx of [-1, 1]) {
+    const sw = new THREE.Mesh(new THREE.PlaneGeometry(0.62, roofY - beltY - 0.16), glassM);
+    sw.position.set(sx * (T.wid / 2 + 0.004), (beltY + roofY) / 2, wsTop - 0.42); sw.rotation.y = sx * Math.PI / 2; body.add(sw);
+  }
+  // livery on the van box: Uncle Tam's bargain empire
+  const c = document.createElement('canvas'); c.width = 512; c.height = 192; const x = c.getContext('2d');
+  x.textAlign = 'center'; x.textBaseline = 'middle';
+  const fit = (t, size, maxW, font) => { let sz = size; do { x.font = `${font} ${sz}px Georgia, serif`; sz -= 2; } while (x.measureText(t).width > maxW && sz > 10); };
+  x.fillStyle = '#7a1a10'; fit("UNCLE TAM'S BARGAINS", 64, 490, 'bold italic'); x.fillText("UNCLE TAM'S BARGAINS", 256, 70);
+  x.fillStyle = '#1c2a52'; fit('Nae refunds · Nae questions · Nae VAT', 34, 490, 'italic'); x.fillText('Nae refunds · Nae questions · Nae VAT', 256, 140);
+  const lt = new THREE.CanvasTexture(c); lt.colorSpace = THREE.SRGBColorSpace; lt.anisotropy = 4;
+  const lm = new THREE.MeshStandardMaterial({ map: lt, transparent: true, roughness: 0.4, polygonOffset: true, polygonOffsetFactor: -2 });
+  const panelLen = wsTop - 0.75 - (-h + 0.15);
+  for (const sx of [-1, 1]) {
+    const p = new THREE.Mesh(new THREE.PlaneGeometry(panelLen, panelLen * 192 / 512), lm);
+    p.position.set(sx * (T.wid / 2 + 0.006), (beltY + roofY) / 2 + 0.02, (wsTop - 0.75 + (-h + 0.15)) / 2); p.rotation.y = sx * Math.PI / 2; body.add(p);
+  }
+  // round headlights, a wee grille, bumpers, tail lights, roof rack
+  const glows = [], tailGlows = [];
+  for (const sx of [-1, 1]) {
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.085, 0.02, 8, 20), chromeM); ring.position.set(sx * 0.42, 0.66, h + 0.075); ring.rotation.x = -0.35; body.add(ring);
+    const lamp = new THREE.Mesh(new THREE.CircleGeometry(0.08, 20), headM); lamp.position.set(sx * 0.42, 0.66, h + 0.08); lamp.rotation.x = -0.35; body.add(lamp);
+    const tl = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.22, 0.04), tailM); tl.position.set(sx * (T.wid / 2 - 0.14), 0.75, -h - 0.01); body.add(tl);
+  }
+  for (const sz of [1, -1]) { const b = new THREE.Mesh(new THREE.BoxGeometry(T.wid - 0.1, 0.07, 0.08), chromeM); b.position.set(0, y0 + 0.08, sz * (h + 0.02)); body.add(b); }
+  for (const sx of [-1, 1]) { const rr = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.05, 1.3), blackM); rr.position.set(sx * (T.wid / 2 - 0.15), roofY + 0.06, -0.4); body.add(rr); }
+  const ladder = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.04, 1.2), M('ladder', () => new THREE.MeshStandardMaterial({ color: '#b8bcc2', metalness: 0.8, roughness: 0.4 }))); ladder.position.set(0, roofY + 0.11, -0.4); body.add(ladder);
+  lightGlows(body, [new THREE.Vector3(-0.42, 0.66, h + 0.2), new THREE.Vector3(0.42, 0.66, h + 0.2)], [new THREE.Vector3(-(T.wid / 2 - 0.14), 0.75, -h - 0.08), new THREE.Vector3(T.wid / 2 - 0.14, 0.75, -h - 0.08)], glows, tailGlows);
+  const pm = new THREE.MeshStandardMaterial({ map: plateTexture('W' + String(100 + (plateN++ * 37) % 900) + ' LY'), roughness: 0.5 });
+  for (const sz of [1, -1]) { const p = new THREE.Mesh(new THREE.PlaneGeometry(0.46, 0.11), pm); p.position.set(0, y0 + 0.22, sz * (h + 0.07)); if (sz < 0) p.rotation.y = Math.PI; body.add(p); }
+  // inside: one seat each side and the driver
+  const seatM = M('seat', () => new THREE.MeshStandardMaterial({ color: '#2a2622', roughness: 0.9 }));
+  const seatZ = wsTop - 0.55, seatY = 0.62;
+  for (const sx of [-1, 1]) { const back = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.55, 0.08), seatM); back.position.set(sx * 0.32, seatY + 0.3, seatZ - 0.25); body.add(back); }
+  const driverFig = makeDriverFig(-0.32, seatY, seatZ - 0.05); driverFig.scale.setScalar(0.9); body.add(driverFig);
+  const door = new THREE.Group(); door.position.set(-T.wid / 2 - 0.006, 0, wsTop - 0.12); body.add(door);
+  const dpanel = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.5, 0.75), paintM); dpanel.position.set(-0.01, 0.62, -0.37); door.add(dpanel);
+  const guard = new THREE.Mesh(new THREE.CylinderGeometry(wr + 0.05, wr + 0.05, 0.22, 20, 1, true, -Math.PI / 2, Math.PI), blackM.clone()); guard.material.side = THREE.DoubleSide;
+  guard.rotation.z = Math.PI / 2; guard.position.set(0, wr, zF); body.add(guard);
+  // the famous wheel layout: one up front, two at the back
+  const coverM = M('trikeCover', () => new THREE.MeshStandardMaterial({ color: '#d6d9de', roughness: 0.3, metalness: 0.8 }));
+  const wx = T.wid / 2 - 0.12, wheels = [simpleWheel(g, 0, wr, zF, wr, true, coverM, 0.16)];
+  for (const sx of [-1, 1]) wheels.push(simpleWheel(g, sx * wx, wr, zR, wr, false, coverM, 0.16));
+  body.position.y = 0.03;
+  g.traverse((m) => { if (m.isMesh) m.castShadow = true; });
+  const amberM = M('amber', () => new THREE.MeshStandardMaterial({ color: '#ff9a1c', emissive: '#ff7a00', emissiveIntensity: 0.35, roughness: 0.3 }));
+  return { group: g, body, wheels, lightbar: null, paintM, tailM, headM, door, driverFig, amberM, glows, tailGlows, rearAxle: { x: wx, z: zR } };
+}
+
 export function buildCarModel(type, paint) {
   const T = TYPES[type];
+  if (type === 'wedge') return buildWedge(T, paint);
+  if (type === 'trike') return buildTrike(T, paint);
   const S = carSpec(type, T);
   const g = new THREE.Group();
   const body = new THREE.Group(); g.add(body);
@@ -356,6 +528,8 @@ export class Car {
     if (type === 'taxi') this.paint = '#111214';
     if (type === 'police') this.paint = '#f4f4f4';
     if (type === 'icecream') this.paint = '#fbe7f0';
+    if (type === 'wedge') this.paint = '#b9bfc6';
+    if (type === 'trike') this.paint = paint || '#f0c419';
     const m = buildCarModel(type, this.paint);
     Object.assign(this, m);
     this.name = this.T.names[(Math.random() * this.T.names.length) | 0];
@@ -379,7 +553,9 @@ export class Car {
   }
   update(dt, world, game) {
     if (this.dead) { this.deadT += dt; this.vx *= 0.95; this.vz *= 0.95; this.x += this.vx * dt; this.z += this.vz * dt; this.sync(); return; }
-    const T = this.T, inp = this.input;
+    const T = this.T;
+    let inp = this.input;
+    if (this.tip) inp = { throttle: 0, steer: 0, hand: false, brake: false }; // on its side: nae driving
     const [fx, fz] = this.forward();
     const rx = fz, rz = -fx; // car's left-hand side vector (see city.js note), used as lateral axis
     let vf = this.vx * fx + this.vz * fz;
@@ -471,6 +647,20 @@ export class Car {
     const accel = (vf - (this._lastVf || 0)) / Math.max(dt, 1e-3); this._lastVf = vf;
     if (!this.air && rampH < 0) this.pitch += (Math.max(-0.06, Math.min(0.06, -accel * 0.004)) - this.pitch) * Math.min(1, dt * 6);
     this.roll += (Math.max(-0.08, Math.min(0.08, yaw * vf * 0.0035 + vr * 0.01)) - this.roll) * Math.min(1, dt * 6);
+    if (this.type === 'trike') {
+      // one wheel at the front: corner too hard and over she goes, then rocks back onto her wheels
+      if (!this.tip && !this.air && Math.abs(yaw * vf) > 7.5 && Math.abs(vf) > 9) {
+        this.tip = { t: 0, side: Math.sign(yaw * vf) }; this.vx *= 0.55; this.vz *= 0.55;
+        if (game && game.onTip) game.onTip(this);
+      }
+      if (this.tip) {
+        const tp = this.tip; tp.t += dt;
+        this.vx *= Math.exp(-2.5 * dt); this.vz *= Math.exp(-2.5 * dt);
+        const k = tp.t < 0.35 ? tp.t / 0.35 : (tp.t < 2.4 ? 1 : Math.max(0, 1 - (tp.t - 2.4) / 0.5));
+        this.tipRoll = tp.side * 1.45 * (k * k * (3 - 2 * k));
+        if (tp.t > 2.9) { this.tip = null; this.tipRoll = 0; }
+      }
+    }
     // wheel spin + steer
     for (const w of this.wheels) {
       w.spin.rotation.x += vf * dt / T.wheel;
@@ -527,6 +717,9 @@ export class Car {
   sync() {
     this.group.position.set(this.x, this.y, this.z);
     this.group.rotation.y = this.heading;
+    // a tipped trike lies on its side, lifted so it rests on the edge rather than sinking into the road
+    this.group.rotation.z = this.tipRoll || 0;
+    if (this.tipRoll) this.group.position.y += Math.abs(Math.sin(this.tipRoll)) * this.T.wid * 0.45;
     this.body.rotation.x = this.pitch; this.body.rotation.z = this.roll + (this.dead ? 0.1 : 0);
   }
   remove() { this.scene.remove(this.group); disposeObject(this.group); }
@@ -674,7 +867,9 @@ export function randomType(r = Math.random) {
   if (x < 0.58) return 'hatch';
   if (x < 0.7) return 'taxi';
   if (x < 0.8) return 'van';
-  if (x < 0.93) return 'sports';
+  if (x < 0.88) return 'sports';
+  if (x < 0.92) return 'wedge';
+  if (x < 0.96) return 'trike';
   return 'icecream';
 }
 

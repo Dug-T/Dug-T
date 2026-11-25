@@ -1,7 +1,12 @@
 // Bump VERSION for every update (1.1, 1.2, 1.3 ...) and add a line to CHANGES.
-export const VERSION = '3.5';
+export const VERSION = '3.6';
 
 export const CHANGES = [
+  ['3.6', [
+    'New motor: the Steel Wedge, an angular stainless-steel electric pickup with a peaked roof and light bars. Fast, heavy, and it whines instead of roars',
+    "New motor: the Wee Trike, a yellow three-wheeled van wi' one wheel at the front. Slow, light, and if you corner too fast it tips over on its side",
+    "One of each is parked near Wally's flat, and they turn up in traffic too",
+  ]],
   ['3.5', [
     'Nessie follows Wally everywhere: she wriggles after him on foot, chases his motor, and pops up behind him if he gets too far ahead',
     'Wally now starts every game holding the Highland Rifle, with 90 rounds',
