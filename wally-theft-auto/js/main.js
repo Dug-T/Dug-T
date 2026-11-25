@@ -20,6 +20,7 @@ const dropObject = (o) => { scene.remove(o); disposeObject(o, KEEP); };
 import { Weather, WEATHERS } from './weather.js';
 import { buildUFO } from './ufo.js';
 import { buildNessie } from './nessie.js';
+import { Pad, runSetup } from './gamepad.js';
 import { buildFlat, FLAT } from './flat.js';
 import { initContent } from './content.js';
 import { Voice, QUIPS, DJ, WEAPON_QUIPS, CHATS, CALLS } from './voice.js';
@@ -590,6 +591,7 @@ function raySphere(o, d, c, r) {
 game.playerShoot = (W = WEAPONS.blaster) => {
   audio.fire(W.id);
   if (W.pellets > 1 || W.kick) cam.shake = Math.max(cam.shake, W.kick || 0.12);
+  pad.rumble(W.pellets > 1 ? 0.7 : (W.kick ? 0.45 : 0.15), 0.3, W.pellets > 1 ? 140 : 60);
   const origin = camera.position.clone();
   const aim = new THREE.Vector3(); camera.getWorldDirection(aim);
   const minT = origin.distanceTo(tmpV.set(player.x, player.y + 1.4, player.z)) + 0.5;
@@ -827,7 +829,7 @@ game.onPedKilled = (p, kind) => {
 game.onCarImpact = (car, v) => {
   const d = Math.hypot(car.x - player.x, car.z - player.z);
   if (d < 40) audio.crash(v * (1 - d / 40));
-  if (car === player.car) { cam.shake = Math.min(0.5, v * 0.03); if (v > 14) game.quip('crash', 0.35); }
+  if (car === player.car) { cam.shake = Math.min(0.5, v * 0.03); pad.rumble(Math.min(1, v * 0.05), Math.min(1, v * 0.04), 180); if (v > 14) game.quip('crash', 0.35); }
 };
 game.onExplosion = (x, y, z, src) => {
   const d = Math.hypot(x - player.x, z - player.z);
@@ -835,7 +837,7 @@ game.onExplosion = (x, y, z, src) => {
   flashLight.position.set(x, y + 1, z); flashLight.color.set('#ffaa55'); flashLight.intensity = 400;
   for (let i = 0; i < 26; i++) puff(x, y, z, { color: i < 12 ? '#ffb030' : '#ff6010', add: true, life: 0.6 + Math.random() * 0.5, size: 2 + Math.random() * 2, vx: (Math.random() - 0.5) * 10, vy: Math.random() * 8, vz: (Math.random() - 0.5) * 10, opacity: 1, grow: 1.5 });
   for (let i = 0; i < 16; i++) puff(x, y + 1, z, { color: '#2a2a2a', life: 2.5 + Math.random() * 2, size: 2.5, vx: (Math.random() - 0.5) * 4, vy: 2 + Math.random() * 3, vz: (Math.random() - 0.5) * 4, opacity: 0.8, grow: 3 });
-  if (d < 60) cam.shake = Math.max(cam.shake, 0.8 * (1 - d / 60));
+  if (d < 60) { cam.shake = Math.max(cam.shake, 0.8 * (1 - d / 60)); pad.rumble(1 - d / 60, 0.8 * (1 - d / 60), 450); }
   if (src === player.car) { game.hurtPlayer(999, 'boom'); }
   else if (!player.car && d < 8) game.hurtPlayer((8 - d) * 12, 'boom');
   for (const p of peds.list) { const pd = Math.hypot(p.x - x, p.z - z); if (pd < 8 && p.state !== 'dead') { p.vx = (p.x - x) / pd * 10; p.vz = (p.z - z) / pd * 10; p.vy = 7; p.state = 'tumble'; p.hurt(200, game, x, z, 'car'); } }
@@ -846,6 +848,7 @@ game.hurtPlayer = (amt, cause, silent) => {
   if (player.dead) return;
   if (player.armour > 0 && cause !== 'drown' && cause !== 'boom') { const a = Math.min(player.armour, amt); player.armour -= a; amt -= a; }
   player.health -= amt;
+  if (amt > 4) pad.rumble(Math.min(1, amt / 40), 0.4, 150);
   if (!silent) { $('damage').style.opacity = 0.7; setTimeout(() => ($('damage').style.opacity = 0), 160); }
   if (player.health <= 0) die(cause);
   else if (cause === 'fall') game.quip('fall', 0.7);
@@ -1118,6 +1121,69 @@ document.addEventListener('pointerlockchange', () => {
   if (document.pointerLockElement !== canvas && game.playing && !game.paused && !game.shopOpen && !isTouch) togglePause(true);
 });
 
+// ---------------- game controller ----------------
+const pad = new Pad(store);
+game.pad = pad;
+// while you're on a controller the on-screen buttons get out the way; touch the screen and they come back
+function usingPad(on) {
+  if (on === document.body.classList.contains('pad')) return;
+  document.body.classList.toggle('pad', on);
+}
+document.addEventListener('touchstart', () => usingPad(false), { passive: true, capture: true });
+pad.onConnect = (gp) => { game.toast(`🎮 Controller connected: ${gp.id.replace(/\s*\(.*\)\s*/g, ' ').trim() || 'gamepad'}`); usingPad(true); padScreenInfo(); };
+pad.onDisconnect = () => { game.toast('🎮 Controller disconnected'); usingPad(false); padScreenInfo(); };
+// Android's back gesture (and some controllers' B button) would leave the page: keep it in the game instead
+// (only while playing: from the title screen, back still leaves as normal)
+const guardBack = () => { if (!history.state || history.state.wta !== 1) history.pushState({ wta: 1 }, ''); };
+window.addEventListener('popstate', () => { if (!game.playing) return; guardBack(); if (!game.paused && !game.shopOpen && !document.body.classList.contains('pad')) togglePause(true); });
+// menus: D-pad or left stick to move, A to choose, B to go back
+let menuFocus = null, menuRepeat = 0;
+function activeScreen() {
+  for (const id of ['padscreen', 'help', 'shop', 'crash', 'pause']) { const e = $(id); if (e && !e.classList.contains('hidden')) return e; }
+  if (!game.playing) return $('title');
+  return null;
+}
+function padMenus(dt) {
+  const g = pad.state; if (!g) return;
+  if (pad.setupRunning) return; // the button wizard is listening: don't let presses click menu buttons
+  const scr = activeScreen(); if (!scr) { if (menuFocus) menuFocus.classList.remove('padfocus'); menuFocus = null; return; }
+  if (g.any) usingPad(true);
+  const items = [...scr.querySelectorAll('button')].filter((b) => b.offsetParent !== null && !b.disabled);
+  if (!items.length) return;
+  if (!menuFocus || !items.includes(menuFocus)) { if (menuFocus) menuFocus.classList.remove('padfocus'); menuFocus = items[0]; menuFocus.classList.add('padfocus'); }
+  menuRepeat -= dt;
+  const v = g.my > 0.6 || g.up > 0.5 ? -1 : (g.my < -0.6 || g.down > 0.5 ? 1 : 0);
+  if (v && menuRepeat <= 0) {
+    menuRepeat = 0.22;
+    const i = (items.indexOf(menuFocus) + v + items.length) % items.length;
+    menuFocus.classList.remove('padfocus'); menuFocus = items[i]; menuFocus.classList.add('padfocus');
+    menuFocus.scrollIntoView({ block: 'nearest' }); audio.tone(900, 0.04, 'square', 0.05);
+  } else if (!v) menuRepeat = 0;
+  if (g.pressed.jump) { audio.tone(1300, 0.05, 'square', 0.06); const f = menuFocus; g.pressed = {}; g.any = false; f.click(); }
+  else if (g.pressed.sprint || g.pressed.pause) {
+    if (scr.id === 'padscreen') $('padBack').click();
+    else if (scr.id === 'help') $('helpBack').click();
+    else if (scr.id === 'shop') game.closeShop();
+    else if (scr.id === 'pause') togglePause(false);
+  }
+}
+// the CONTROLLER screen: shows what's connected, the button layout, and lets you teach it your buttons
+let stopSetup = null;
+function padScreenInfo() {
+  const e = $('padName'); if (!e) return;
+  const gp = pad.get();
+  e.textContent = gp ? `Connected: ${gp.id}` : 'No controller found yet. Switch it on and press any button on it.';
+  $('padMode').textContent = gp ? (pad.custom ? 'Using your own button setup.' : (gp.mapping === 'standard' ? 'Standard layout recognised: should work straight away.' : "This controller doesn't say what its buttons are. If they're muddled, use SET UP BUTTONS.")) : '';
+}
+function openPadScreen() { $('padscreen').classList.remove('hidden'); $('padStep').textContent = ''; padScreenInfo(); }
+$('padBack').onclick = () => { if (stopSetup) { stopSetup(); stopSetup = null; } $('padscreen').classList.add('hidden'); };
+$('padSetup').onclick = () => {
+  if (stopSetup) stopSetup();
+  stopSetup = runSetup(pad, $('padscreen'), () => { stopSetup = null; game.toast('🎮 Buttons saved!'); padScreenInfo(); });
+};
+$('padReset').onclick = () => { pad.reset(); $('padStep').textContent = 'Back to the standard layout.'; padScreenInfo(); };
+for (const id of ['padOpen', 'padOpen2']) if ($(id)) $(id).onclick = openPadScreen;
+
 // touch controls
 const touch = { mx: 0, my: 0, btn: new Set(), pressed: new Set(), stickId: null, lookId: null, lx: 0, ly: 0, lookX: 0, lookY: 0 };
 if (isTouch) {
@@ -1167,8 +1233,9 @@ if (isTouch) {
 }
 
 // turn the camera from the touch camera joystick: a gentle curve so small pushes give fine control
+const padLook = { x: 0, y: 0 };
 function lookStick(dt) {
-  const x = touch.lookX, y = touch.lookY;
+  const x = touch.lookX || padLook.x, y = touch.lookY || padLook.y;
   if (!x && !y) return;
   const curve = (v) => Math.sign(v) * Math.max(0, Math.abs(v) - 0.08) ** 1.6;
   const slow = player.aiming ? (WEAPONS[player.weapon].zoom ? 0.3 : 0.55) : 1;
@@ -1199,28 +1266,33 @@ function readInput() {
     inp.hand = b('hand');
     if (player.car) { if (b('sprint')) inp.my = Math.max(inp.my, 1); if (b('jump')) inp.my = Math.min(inp.my, -1); }
   }
-  // gamepad
-  const gp = navigator.getGamepads ? [...navigator.getGamepads()].find((g) => g && g.connected) : null;
-  if (gp) {
-    const dz = (v) => (Math.abs(v) < 0.15 ? 0 : v);
-    const prev = game._gpPrev || [];
-    const bp = (i) => gp.buttons[i]?.pressed && !prev[i];
-    inp.mx += dz(gp.axes[0]); inp.my -= dz(gp.axes[1]);
-    const lx = dz(gp.axes[2] || 0), ly = dz(gp.axes[3] || 0);
-    if (lx || ly) { cam.yaw -= lx * 0.05; cam.pitch = Math.max(-1.2, Math.min(0.7, cam.pitch - ly * 0.04)); cam.lastLook = performance.now(); }
-    const rt = gp.buttons[7]?.value || 0, lt = gp.buttons[6]?.value || 0;
-    if (player.car) { if (rt > 0.1) inp.my = Math.max(inp.my, rt); if (lt > 0.1) inp.my = Math.min(inp.my, -lt); }
-    else { inp.fire ||= rt > 0.3; inp.firePressed ||= rt > 0.3 && !game._gpRt; inp.aim ||= lt > 0.3; }
-    game._gpRt = rt > 0.3;
-    inp.jump ||= gp.buttons[0]?.pressed; inp.jumpPressed ||= bp(0);
-    inp.enter ||= bp(3); inp.power ||= bp(2); inp.weapon ||= bp(1) || bp(5); inp.sprint ||= gp.buttons[10]?.pressed || gp.buttons[4]?.pressed;
-    inp.camera ||= bp(8); inp.radio ||= bp(12); inp.horn ||= gp.buttons[11]?.pressed;
-    if (bp(9)) togglePause();
-    game._gpPrev = gp.buttons.map((b) => b.pressed);
-  }
+  // game controller
+  const g = pad.state;
+  if (g && game.playing && !game.paused && !game.shopOpen) {
+    const P = g.pressed;
+    inp.mx += g.mx; inp.my += g.my;
+    padLook.x = g.lx; padLook.y = g.ly;
+    if (player.car) {
+      // triggers are the pedals; A is the handbrake, B the horn
+      if (g.fire > 0.08) inp.my = Math.max(inp.my, g.fire);
+      if (g.aim > 0.08) inp.my = Math.min(inp.my, -g.aim);
+      inp.hand ||= g.jump > 0.5; inp.horn ||= g.sprint > 0.5;
+    } else {
+      inp.fire ||= g.fire > 0.3; inp.firePressed ||= g.fire > 0.3 && !game._gpRt; inp.aim ||= g.aim > 0.3; inp.aimPressed ||= g.aim > 0.3 && !game._gpLt;
+      inp.jump ||= g.jump > 0.5; inp.jumpPressed ||= P.jump;
+      inp.sprint ||= g.sprint > 0.5 || g.l3 > 0.5;
+      inp.crouch ||= g.down > 0.5 && player.flyT > 0;
+    }
+    game._gpRt = g.fire > 0.3; game._gpLt = g.aim > 0.3;
+    inp.enter ||= P.enter; inp.power ||= P.power; inp.weapon ||= P.weapon || P.right;
+    inp.gps ||= P.gps || P.left; inp.camera ||= P.camera; inp.radio ||= P.radio;
+    if (P.down && player.car) inp.horn = true;
+    if (P.pause || P.back) togglePause();
+    if (g.any) usingPad(true);
+  } else { padLook.x = padLook.y = 0; }
   inp.mx = Math.max(-1, Math.min(1, inp.mx)); inp.my = Math.max(-1, Math.min(1, inp.my));
   inp.powerPressed = inp.power;
-  inp.anyKey = pressed.size > 0 || mouse.lp || touch.pressed.size > 0 || !!game._tapSkip; game._tapSkip = false;
+  inp.anyKey = pressed.size > 0 || mouse.lp || touch.pressed.size > 0 || !!game._tapSkip || !!(pad.state && pad.state.any); game._tapSkip = false;
   pressed.clear(); mouse.lp = false; touch.pressed.clear();
   return inp;
 }
@@ -2017,7 +2089,8 @@ function frame(now) {
   if (game.contextLost) return; // graphics are gone: stop drawing until the player reloads
   requestAnimationFrame(frame);
   let dt = Math.max(0, Math.min(0.05, (now - last) / 1000)); last = now;
-  if (!game.playing || game.paused || game.shopOpen) { if (!game.playing) titleCam(dt); if (game.shopOpen && pressed.has('Escape')) { pressed.clear(); game.closeShop(); } render(); return; }
+  pad.poll(); padMenus(dt);
+  if (!game.playing || game.paused || game.shopOpen || !$('padscreen').classList.contains('hidden')) { if (!game.playing) titleCam(dt); if (game.shopOpen && pressed.has('Escape')) { pressed.clear(); game.closeShop(); } render(); return; }
   // slow motion while Wally's car is flying off a stunt ramp
   const wantScale = player.car && player.car.air ? 0.4 : 1;
   game.timeScale += (wantScale - game.timeScale) * Math.min(1, dt * 6);
@@ -2183,7 +2256,7 @@ function startGame(fresh) {
       game.subs(["WALLY MAN: *yawn* Right. Another day of heroics.", "WALLY MAN: (The pink ring by the door takes me outside.)"]);
     } else { game.inside = false; document.body.classList.remove('inside'); startIntro(); }
   }
-  game.playing = true; game.paused = false;
+  game.playing = true; game.paused = false; guardBack();
   $('title').classList.add('hidden'); $('hud').classList.remove('hidden'); $('pause').classList.add('hidden');
   if (!isTouch) canvas.requestPointerLock?.();
   last = performance.now();
