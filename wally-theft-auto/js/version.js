@@ -1,7 +1,11 @@
 // Bump VERSION for every update (1.1, 1.2, 1.3 ...) and add a line to CHANGES.
-export const VERSION = '2.4';
+export const VERSION = '2.5';
 
 export const CHANGES = [
+  ['2.5', [
+    'The radar shows labelled icons: H home, A Granda\'s Armoury, M next mission, W Wally Wash, + Infirmary, P Polis',
+    'Set the GPS to any of them with G, the GPS button, or by tapping the map; the purple route leads the way',
+  ]],
   ['2.4', [
     'Spoken dialogue: mission briefings, pedestrians, angry drivers, the polis, the radio DJ and Wally himself (VOICES on/off on the title and pause screens)',
     'Loads more Scottish patter from Wally and the people of Wallypool',
