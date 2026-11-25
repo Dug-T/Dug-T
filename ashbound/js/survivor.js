@@ -314,6 +314,8 @@ export function animateSurvivor(h, dt, st) {
     h.spine.rotation.x += k < 0.4 ? -0.22 * (k / 0.4) : -0.22 + 0.55 * ((k - 0.4) / 0.6);
     h.spine.rotation.y += k < 0.4 ? 0.2 * (k / 0.4) : 0.2 - 0.35 * ((k - 0.4) / 0.6);
   }
+  // carrying a torch: forearm raised in front, the flame held up and out
+  if (st.torch && (st.mode === 'move' || !st.mode)) { la.sh.rotation.x = -0.45 + (speed > 0.15 ? S(h.phase) * 0.12 : S(t * 1.3) * 0.03); la.sh.rotation.z = la.side * 0.18; la.el.rotation.x = -1.25; la.el.rotation.z = 0; }
   if (h.waveT > 0) { h.waveT -= dt; ra.sh.rotation.x = -2.9; ra.sh.rotation.z = -0.4 + S(t * 9) * 0.35; ra.el.rotation.x = -0.4; }
   h.spine.rotation.x += lean;
   h.hips.position.y = hipY;

@@ -173,6 +173,7 @@ export class Volcano {
     const stageIdx = ['calm', 'unrest', 'ashfall', 'eruption', 'surge'].indexOf(stage.id);
     const sc = Math.min(1.6, Math.max(0.4, camera.aspect ? innerHeight / 700 : 1)); // point size scale per screen
     for (const s of [this.plume, this.ashFall, this.burst, this.embers, this.surge]) { s.u.uScale.value = innerHeight * 1.1; s.u.uLight.value = 0.35 + 0.65 * ctx.sunHeight; }
+    this.embers.u.uLight.value = 1; // embers make their own light
     // ---- plume ----
     const rate = [5, 16, 40, 110, 130][stageIdx] * (this.hi ? 1 : 0.55);
     const dark = [0.05, 0.35, 0.7, 0.92, 1][stageIdx];
