@@ -20,6 +20,8 @@ Open `ashbound/index.html` from any web server (GitHub Pages works). Nothing nee
   - 📡 **The radio**: find the battery (in the nose of the plane), the antenna (the snapped mast at the ranger tower) and the handset (the village radio hut). Repair the ranger radio and a helicopter comes to the helipad. Be on the pad when it lands.
   - 🚪 **The bunker**: stock the old shelter with four waters, four meals and an ash mask, then seal the steel door and wait out the surge.
 - **Voices and subtitles**: the survivors speak their lines, the narrator reads the stage warnings and endings, and everything spoken is also shown as text, so the game plays fully with the sound off and for players who are deaf or hard of hearing. Voices use the speech built into your phone or computer and can be switched off.
+- **What the survivors want**: Dr Osei won't leave without her seismometer data (Ranger Station porch), Kai without his grandmother's pendant (Raft Beach), Lena without the station logbook (by the old bunker door). Old Pete won't go anywhere without Biscuit, his dog, who bolted towards the jungle spring. Once they tell you, it's marked on your compass and map.
+- **Sleep**: tap USE at a lit fire at night, or sleep under a roof, to wake fully rested at dawn. The mountain carries on while you sleep.
 - **The other survivors**: Dr Amara Osei (volcanologist, at the camp), Kai Tane (fisherman, in the village), Tomas Reyes (the injured pilot at the wreck, who needs a bandage before he can walk), Lena Hart (the ranger) and Old Pete (the hermit at the bunker). Each has their own advice as the stages change. Talk to them, then press again and they follow you. Anyone with you when you launch, lift off or seal the door is saved; the end screen counts them.
 - **Pace**: Relaxed (40 minutes to the surge), Standard (24, temporarily 5 while testing) or Hardcore (14, and everything hurts more).
 - **Graphics**: High (soft shadows, bloom, more jungle) or Low for older phones. The island, sea and sky are shader-driven: wet sand, breakers along the shore, a drifting eruption column and ash that greys the whole world out.
@@ -47,6 +49,7 @@ Version 1.0 is single player with NPC survivors. The world is seeded and determi
 
 ## Versions
 
+- **2.0**: survivor objectives (the data logger, the pendant, the logbook) and Biscuit, Old Pete's lost dog; surface footsteps for sand, grass, rock, ash and water; sleep till dawn at a fire or under a roof, at the cost of time.
 - **1.9**: day and night on an island clock (08:00 day 3 to sunset day 4); dark nights with moon, stars and crickets; build campfires to rest, recover and light the night; craft a torch that lights itself in the dark.
 - **1.8**: Kai's skiff: repair it with the battery, two logs and a rope and motor past the reef, a fourth ending; the battery is now a choice between the skiff and the radio.
 - **1.7**: spoken voices for the survivors, the narrator and the player, using the device's built-in speech, with every line still shown as text; VOICES switch on the title and pause screens.

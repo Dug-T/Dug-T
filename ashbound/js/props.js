@@ -239,6 +239,9 @@ export function pickupMesh(id) {
       case 'battery': m = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.3, 0.3), mat('#1a1a1a', 0.5, { metalness: 0.4 })); m.position.y = 0.16; break;
       case 'antenna': m = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.05, 2.2, 8), mat('#8a9098', 0.4, { metalness: 0.7 })); m.rotation.z = Math.PI / 2 - 0.3; m.position.y = 0.3; break;
       case 'handset': m = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.4, 0.12), mat('#2a2a2a', 0.4)); m.position.y = 0.2; m.rotation.x = 0.5; break;
+      case 'logger': { const g = new THREE.Group(); const b = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.16, 0.24), mat('#3a3f45', 0.5)); b.position.y = 0.08; g.add(b); const led = new THREE.Mesh(new THREE.SphereGeometry(0.02, 6, 4), new THREE.MeshStandardMaterial({ color: '#0f0', emissive: '#3f3', emissiveIntensity: 2 })); led.position.set(0.1, 0.17, 0.08); g.add(led); const ant = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.25, 4), mat('#111', 0.5)); ant.position.set(-0.12, 0.28, -0.08); g.add(ant); m = g; break; }
+      case 'pendant': { const g = new THREE.Group(); const cord = new THREE.Mesh(new THREE.TorusGeometry(0.1, 0.006, 4, 20), mat('#3a2a1a', 0.9)); cord.rotation.x = Math.PI / 2; cord.position.y = 0.01; g.add(cord); const bone = new THREE.Mesh(new THREE.TorusGeometry(0.035, 0.012, 6, 12, Math.PI * 1.6), mat('#efe6d0', 0.6)); bone.rotation.x = Math.PI / 2; bone.position.set(0.1, 0.02, 0); g.add(bone); m = g; break; }
+      case 'logbook': m = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.05, 0.34), mat('#2f5a2a', 0.8)); m.position.y = 0.03; m.rotation.y = 0.4; break;
       case 'bandage': m = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.12, 0.2), mat('#f2f2f2', 0.9)); m.position.y = 0.07; break;
       default: m = new THREE.Mesh(new THREE.SphereGeometry(0.2), mat('#ff00ff'));
     }

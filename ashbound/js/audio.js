@@ -110,5 +110,21 @@ export class Audio {
   }
   flood() { this.noise(0.6, 500, 0.5, 'lowpass', 1, 0, 120); this.tone(90, 0.8, 'sawtooth', 0.12, -70); }
   crash(v = 1) { this.noise(0.25, 900, 0.7 * v, 'lowpass'); this.tone(120, 0.3, 'triangle', 0.3 * v, -80); }
+  // a footstep on the given surface; vol 0..1
+  step(surface, vol = 1) {
+    if (!this.ctx) return;
+    const v = vol * (0.85 + Math.random() * 0.3), f = 0.9 + Math.random() * 0.2;
+    switch (surface) {
+      case 'sand': this.noise(0.11, 1100 * f, 0.16 * v, 'lowpass', 0.7); this.noise(0.06, 4200 * f, 0.03 * v, 'highpass'); break;
+      case 'grass': this.noise(0.08, 2600 * f, 0.09 * v, 'bandpass', 0.9); this.tone(110 * f, 0.05, 'sine', 0.06 * v, -40); break;
+      case 'rock': this.noise(0.035, 3200 * f, 0.1 * v, 'highpass'); this.tone(240 * f, 0.05, 'triangle', 0.06 * v, -90); break;
+      case 'ash': this.noise(0.14, 800 * f, 0.15 * v, 'bandpass', 0.8); this.noise(0.05, 2400 * f, 0.04 * v, 'highpass'); break;
+      case 'water': this.noise(0.22, 1300 * f, 0.16 * v, 'lowpass', 1, 0, 300); break;
+      default: this.noise(0.07, 1500 * f, 0.1 * v, 'bandpass', 1);
+    }
+  }
+  land(surface, vol = 1) { this.step(surface, vol * 1.4); this.tone(70, 0.12, 'sine', 0.18 * vol, -30); }
+  stroke(vol = 1) { this.noise(0.3, 900, 0.14 * vol, 'lowpass', 1, 0, 250); this.noise(0.12, 3000, 0.03 * vol, 'highpass', 1, 0.05); }
+  bark(dist) { const v = Math.max(0.05, 0.5 * (1 - dist / 45)); for (let i = 0; i < 2; i++) { this.tone(520 + Math.random() * 60, 0.09, 'sawtooth', 0.12 * v, -220, i * 0.22); this.noise(0.08, 900, 0.18 * v, 'bandpass', 2, i * 0.22); } }
   talk() { for (let i = 0; i < 4; i++) this.tone(220 + Math.random() * 120, 0.06, 'triangle', 0.04, 0, i * 0.08); }
 }
