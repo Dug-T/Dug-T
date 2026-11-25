@@ -65,6 +65,102 @@ export class Audio {
     g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
     o.connect(g); g.connect(dest || this.sfx); o.start(t); o.stop(t + dur + 0.05);
   }
+  // ---------------- weapons ----------------
+  // every gun is built from layers: a sharp crack, the body of the bang, a low thump in the chest,
+  // and an echo off the buildings (a short convolution reverb). A compressor stops it all clipping.
+  _bus() {
+    if (this.wbus) return this.wbus;
+    const c = this.ctx, comp = c.createDynamicsCompressor();
+    comp.threshold.value = -14; comp.knee.value = 8; comp.ratio.value = 5; comp.attack.value = 0.002; comp.release.value = 0.15;
+    comp.connect(this.sfx); this.wbus = comp;
+    const len = (c.sampleRate * 1.5) | 0, ir = c.createBuffer(2, len, c.sampleRate);
+    for (let ch = 0; ch < 2; ch++) {
+      const d = ir.getChannelData(ch);
+      for (let i = 0; i < len; i++) { const k = 1 - i / len; d[i] = (Math.random() * 2 - 1) * k * k * k; }
+      // a couple of distinct slap-back echoes off the tenements
+      for (const [t, v] of [[0.09, 0.5], [0.21, 0.3], [0.37, 0.18]]) { const j = ((t + ch * 0.013) * c.sampleRate) | 0; for (let n = 0; n < 300; n++) d[j + n] += (Math.random() * 2 - 1) * v * (1 - n / 300); }
+    }
+    this.verb = c.createConvolver(); this.verb.buffer = ir;
+    const vg = c.createGain(); vg.gain.value = 0.35; this.verb.connect(vg); vg.connect(comp);
+    return comp;
+  }
+  _n(dur, f, vol, o = {}) {
+    if (!this.ctx || vol <= 0) return;
+    const c = this.ctx, bus = this._bus(), t = c.currentTime + (o.when || 0), s = c.createBufferSource(); s.buffer = this.noiseBuf;
+    const fl = c.createBiquadFilter(); fl.type = o.type || 'lowpass'; fl.frequency.setValueAtTime(f, t); fl.Q.value = o.q || 0.8;
+    if (o.f2) fl.frequency.exponentialRampToValueAtTime(o.f2, t + dur);
+    const g = c.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(vol, t + (o.attack || 0.002)); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    s.connect(fl); fl.connect(g); g.connect(bus);
+    if (o.verb) { const vg = c.createGain(); vg.gain.value = o.verb; g.connect(vg); vg.connect(this.verb); }
+    s.start(t, Math.random() * 1.5); s.stop(t + dur + 0.05);
+  }
+  _o(f, dur, vol, o = {}) {
+    if (!this.ctx || vol <= 0) return;
+    const c = this.ctx, bus = this._bus(), t = c.currentTime + (o.when || 0), osc = c.createOscillator(), g = c.createGain();
+    osc.type = o.type || 'sine'; osc.frequency.setValueAtTime(f, t);
+    if (o.f2) osc.frequency.exponentialRampToValueAtTime(Math.max(20, o.f2), t + dur);
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(vol, t + (o.attack || 0.002)); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    osc.connect(g); g.connect(bus);
+    if (o.verb) { const vg = c.createGain(); vg.gain.value = o.verb; g.connect(vg); vg.connect(this.verb); }
+    osc.start(t); osc.stop(t + dur + 0.05);
+  }
+  click(when = 0, f = 2500, vol = 0.25) { this._n(0.018, f, vol, { type: 'highpass', when }); this._o(f * 0.5, 0.025, vol * 0.35, { type: 'square', when }); }
+  // spent brass tinkling on the pavement
+  casing(when = 0.25, vol = 0.08) { [0, 0.07, 0.16].forEach((k, i) => this._o(3200 + Math.random() * 1600, 0.05, vol / (i + 1), { type: 'triangle', when: when + k })); }
+  gunshot(p, vol = 1) {
+    const v = vol * (0.9 + Math.random() * 0.2), r = 0.92 + Math.random() * 0.16;
+    this._n(0.03, 2600 * r, p.crack * v, { type: 'highpass', verb: p.verb });
+    this._n(p.len, p.f * r, p.body * v, { f2: p.f * 0.22, verb: p.verb });
+    this._o(p.low * r, p.len * 1.3, p.thump * v, { f2: p.low * 0.35 });
+  }
+  fire(id, vol = 1) {
+    if (!this.ctx) return;
+    switch (id) {
+      case 'blaster': this.gunshot({ crack: 0.5, body: 0.8, f: 1800, len: 0.14, low: 140, thump: 0.35, verb: 0.5 }, vol); this._o(1700, 0.12, 0.05 * vol, { type: 'sawtooth', f2: 400 }); break;
+      case 'revolver': this.click(0, 1800, 0.18 * vol); this.gunshot({ crack: 0.8, body: 1.1, f: 1400, len: 0.26, low: 110, thump: 0.55, verb: 0.8 }, vol); break;
+      case 'smg': this.gunshot({ crack: 0.35, body: 0.55, f: 2300, len: 0.08, low: 170, thump: 0.25, verb: 0.25 }, vol); if (Math.random() < 0.35) this.casing(0.2, 0.05 * vol); break;
+      case 'rifle': this.gunshot({ crack: 0.75, body: 0.75, f: 2700, len: 0.13, low: 150, thump: 0.35, verb: 0.45 }, vol); if (Math.random() < 0.5) this.casing(0.3, 0.06 * vol); break;
+      case 'gatling': this.gunshot({ crack: 0.3, body: 0.5, f: 2100, len: 0.07, low: 180, thump: 0.25, verb: 0.2 }, vol); if (Math.random() < 0.25) this.casing(0.15, 0.04 * vol); break;
+      case 'scatter': this.gunshot({ crack: 0.7, body: 1.3, f: 1100, len: 0.32, low: 85, thump: 0.8, verb: 0.9 }, vol); this.click(0.33, 1500, 0.25 * vol); this.click(0.48, 1000, 0.3 * vol); break;
+      case 'double': this.gunshot({ crack: 0.85, body: 1.4, f: 1000, len: 0.4, low: 75, thump: 0.9, verb: 1 }, vol); this._n(0.25, 900, 0.5 * vol, { when: 0.025, f2: 200 }); break;
+      case 'sniper': this.gunshot({ crack: 1, body: 1.2, f: 2100, len: 0.42, low: 70, thump: 0.8, verb: 1.4 }, vol); this.click(0.55, 1200, 0.3 * vol); this.click(0.72, 2200, 0.25 * vol); this.casing(0.66, 0.07 * vol); break;
+      case 'nailgun': this._n(0.05, 3500, 0.4 * vol, { type: 'bandpass', q: 2 }); this._o(2600, 0.04, 0.12 * vol, { type: 'square', f2: 1800 }); this._n(0.09, 600, 0.35 * vol, { f2: 200 }); break;
+      case 'taser': for (let k = 0; k < 7; k++) this._o(70 + Math.random() * 70, 0.06, 0.12 * vol, { type: 'square', when: k * 0.05 }); this._n(0.4, 5000, 0.22 * vol, { type: 'highpass' }); this._n(0.04, 2000, 0.4 * vol, { type: 'highpass' }); break;
+      case 'laser': this._o(1900, 0.2, 0.12 * vol, { type: 'sawtooth', f2: 300 }); this._o(950, 0.2, 0.1 * vol, { f2: 150 }); this._n(0.1, 4000, 0.15 * vol, { type: 'highpass' }); break;
+      case 'soaker': this._n(0.12, 1400, 0.25 * vol, { type: 'bandpass', q: 1.5, f2: 900 }); if (Math.random() < 0.3) this._o(300 + Math.random() * 200, 0.06, 0.05 * vol, { f2: 600 }); break;
+      case 'tattie': this._o(160, 0.18, 0.5 * vol, { f2: 60 }); this._n(0.25, 1200, 0.4 * vol, { f2: 300 }); this._n(0.15, 3000, 0.15 * vol, { type: 'highpass', when: 0.02 }); break;
+      case 'crossbow': this._o(190, 0.25, 0.35 * vol, { type: 'triangle', f2: 170 }); this._o(380, 0.15, 0.1 * vol, { type: 'triangle' }); this._n(0.08, 2500, 0.4 * vol, { type: 'bandpass', q: 2 }); break;
+      case 'haggis': case 'caber': this._n(0.08, 800, 0.9 * vol, { verb: 0.5 }); this._n(0.9, 600, 0.6 * vol, { f2: 2500, type: 'bandpass', q: 0.8, attack: 0.05 }); this._o(id === 'caber' ? 70 : 110, 0.4, 0.5 * vol, { f2: 40 }); break;
+      case 'throw': this._n(0.22, 400, 0.3 * vol, { type: 'bandpass', q: 1.2, f2: 1400, attack: 0.05 }); break;
+      default: this.gunshot({ crack: 0.5, body: 0.8, f: 1600, len: 0.16, low: 130, thump: 0.3, verb: 0.7 }, vol); // anyone else's gun
+    }
+  }
+  swing(vol = 1) { this._n(0.18, 500, 0.25 * vol, { type: 'bandpass', q: 1.2, f2: 1600, attack: 0.06 }); }
+  hit(id) {
+    switch (id) {
+      case 'club': this._o(2400, 0.25, 0.15, { type: 'triangle' }); this._n(0.08, 1500, 0.6); break;
+      case 'claymore': this._n(0.3, 6000, 0.25, { type: 'highpass' }); this._o(3200, 0.35, 0.07); this._n(0.1, 800, 0.6); break;
+      case 'shinty': this._o(420, 0.09, 0.35, { type: 'triangle', f2: 300 }); this._n(0.07, 1800, 0.6, { type: 'bandpass', q: 2 }); break;
+      default: this.punch();
+    }
+  }
+  // a flamethrower roars for as long as you hold the trigger
+  flame(vol = 1, big) {
+    if (!this.ctx) return;
+    const c = this.ctx, t = c.currentTime;
+    if (!this.flameG) {
+      this.flameG = c.createGain(); this.flameG.gain.value = 0;
+      const bp = c.createBiquadFilter(); bp.type = 'lowpass'; bp.frequency.value = 900; this.flameF = bp;
+      const s = c.createBufferSource(); s.buffer = this.noiseBuf; s.loop = true; s.connect(bp); bp.connect(this.flameG); this.flameG.connect(this._bus()); s.start();
+    }
+    if (t - (this.flameLast || 0) > 0.25) { this._n(0.3, 300, 0.6 * vol, { f2: 2000, attack: 0.03 }); this._o(90, 0.25, 0.3 * vol, { f2: 50 }); } // whoomph as it lights
+    this.flameLast = t;
+    this.flameF.frequency.setTargetAtTime(big ? 1300 : 900, t, 0.05);
+    this.flameG.gain.cancelScheduledValues(t);
+    this.flameG.gain.setTargetAtTime((big ? 0.75 : 0.5) * vol, t, 0.03);
+    this.flameG.gain.setTargetAtTime(0, t + 0.12, 0.08);
+    if (Math.random() < 0.35) this._n(0.02, 4500, 0.15 * vol, { type: 'highpass' }); // crackle
+  }
   punch() { this.noise(0.15, 300, 0.9); this.tone(90, 0.12, 'sine', 0.5, -40); }
   zap() { this.tone(1400, 0.18, 'sawtooth', 0.15, -1100); this.noise(0.08, 3000, 0.2, 'highpass'); }
   bang() { this.noise(0.25, 1200, 0.5); this.tone(160, 0.1, 'square', 0.15, -100); }

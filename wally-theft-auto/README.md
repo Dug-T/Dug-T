@@ -17,11 +17,15 @@ Open `wally-theft-auto/index.html` from any web server (GitHub Pages works). Not
 - **Granda's Armoury** (red square on the radar): spend your cash on any weapon, ammo, body armour or health.
 - **Stunt ramps** (orange triangles on the radar): hit them fast for slow-motion jumps and cash, with a big bonus for doing all six.
 - **Wardrobe** in Wally's Flat: six outfits, from Classic to Golden Wally.
-- **14 weapons** lying about town, in different spots every game, plus ammo crates:
-  - Melee: Granda's Golf Club, Frying Pan, Claymore, and the Battle Bagpipes (knock over everyone around you)
-  - Guns: Wally Blaster, Scatter Blaster, Wally Laser, Gatling Blaster, Long Scope (a sniper rifle that zooms in when aiming) and the Super Soaker (knocks people over and puts out car fires)
-  - Launchers: Tattie Gun (potatoes) and Haggis Launcher (explosive)
-  - Dragon's Breath (a flamethrower) and Neep Grenades (thrown turnips)
+- **24 weapons** lying about town, in different spots every game, plus ammo crates:
+  - Melee: Granda's Golf Club, Frying Pan, Shinty Stick, Claymore, and the Battle Bagpipes (knock over everyone around you)
+  - Pistols: Wally Blaster, Auld Revolver, and the Polis Taser (drops people on the spot)
+  - Shotguns: Scatter Blaster and the Gamekeeper's Double
+  - Automatics: Wee Rattler (SMG), Nail Gun, Highland Rifle and Gatling Blaster
+  - Wally Laser, Long Scope (a sniper rifle that zooms in when aiming) and the Super Soaker (knocks people over and puts out car fires)
+  - Launchers: Tattie Gun (potatoes), Thistle Crossbow, Haggis Launcher and Caber Launcher (both explosive)
+  - Dragon's Breath (a short-range flamer), the Flamethrower (long range, big flames) and Neep Grenades (thrown turnips)
+  - Every weapon has its own realistic firing sound, with echoes off the buildings.
   - Tab or the mouse wheel cycles through what you've found.
 - **20 hidden Golden Specs** (some on rooftops), plus health, armour, cash and Blaster-cell pickups.
 - **Carjacking**: press F by an occupied car and Wally yanks the door open, drags the driver out by the collar, punches them and drives off. Grab a polis car and the driver fights back.
@@ -55,6 +59,7 @@ On phones and tablets there's an on-screen stick, a drag-to-look area and button
 
 The version number is shown on the title screen (with a "What's new" list) and on the pause screen. It lives in `js/version.js`: bump it by 0.1 for every update (1.1, 1.2, 1.3...) and add a line to `CHANGES`.
 
+- **3.0**: 10 new weapons (including a Flamethrower), realistic firing sounds for every weapon, twice as many pickups
 - **2.9**: 5 new missions, GPS routes for every mission, full Pamazon van lettering, landscape only on phones
 - **2.8**: run-over sounds: a thud, a cartoon yelp, a Scottish cry, a bump on landing, and shouting witnesses
 - **2.7**: fixed a graphics memory leak that could crash phones after long sessions; the game now saves and offers a reload if the graphics ever give out

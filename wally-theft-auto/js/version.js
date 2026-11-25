@@ -1,7 +1,13 @@
 // Bump VERSION for every update (1.1, 1.2, 1.3 ...) and add a line to CHANGES.
-export const VERSION = '2.9';
+export const VERSION = '3.0';
 
 export const CHANGES = [
+  ['3.0', [
+    "10 new weapons: Flamethrower, Auld Revolver, Wee Rattler SMG, Highland Rifle, Gamekeeper's Double, Thistle Crossbow, Caber Launcher, Nail Gun, Polis Taser and Shinty Stick",
+    'Realistic firing sounds for every weapon: a crack, a bang, a thump and an echo off the buildings, plus shotgun pumps, sniper bolts, shell casings and a roaring flamethrower',
+    'Melee weapons whoosh when you swing them and each one hits with its own sound',
+    "About twice as many weapon pickups and ammo crates around town, and Granda's Armoury sells the new weapons",
+  ]],
   ['2.9', [
     "5 new missions: Granda's Appointment, Ice Cream Wars, Big Air, Bingo Bus and The Great Neep Robbery",
     'Every mission now shows a GPS route on the radar, including the chippy run, the race and the docks',

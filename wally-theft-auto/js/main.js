@@ -15,7 +15,7 @@ import { smokeTexture, rng, signTexture } from './textures.js';
 import { VERSION, CHANGES } from './version.js';
 import { WEAPONS, WEAPON_ORDER, usesAmmo, buildNeep, buildWeaponModel, buildProjectile, SHARED_WEAPON } from './weapons.js';
 import { SHARED_HUMAN } from './humans.js';
-const KEEP = { has: (x) => SHARED.has(x) || SHARED_WEAPON.has(x) || SHARED_HUMAN.has(x) || x === ringMat };
+const KEEP = { has: (x) => SHARED.has(x) || SHARED_WEAPON.has(x) || SHARED_HUMAN.has(x) || x === ringMat || PICKUP_SHARED.has(x) };
 const dropObject = (o) => { scene.remove(o); disposeObject(o, KEEP); };
 import { Weather, WEATHERS } from './weather.js';
 import { buildUFO } from './ufo.js';
@@ -430,10 +430,16 @@ const PICK = {
   crate: { col: '#c9a23a', icon: '📦' }, health: { col: '#ff4040', icon: '❤' }, armour: { col: '#4aa3ff', icon: '🛡' }, cash: { col: '#5fe36a', icon: '$' }, ammo: { col: '#58e0ff', icon: '⚡' },
 };
 const ringMat = new THREE.MeshStandardMaterial({ color: '#ffd23f', emissive: '#ffb300', emissiveIntensity: 1.4, roughness: 0.3 });
+const pickupModels = {}, PICKUP_SHARED = new Set();
 function makePickupMesh(kind, weapon) {
   const g = new THREE.Group();
   if (kind === 'weapon') {
-    const w = buildWeaponModel(weapon);
+    if (!pickupModels[weapon]) {
+      const t = buildWeaponModel(weapon);
+      t.traverse((o) => { if (o.isMesh) { o.castShadow = false; PICKUP_SHARED.add(o.geometry); const ms = Array.isArray(o.material) ? o.material : [o.material]; for (const mm of ms) { PICKUP_SHARED.add(mm); if (mm.map) PICKUP_SHARED.add(mm.map); } } });
+      pickupModels[weapon] = t;
+    }
+    const w = pickupModels[weapon].clone();
     if (weapon === 'club') { w.scale.setScalar(1.1); w.rotation.z = 1.1; w.position.set(-0.35, -0.35, 0); }
     else if (weapon === 'neep') w.scale.setScalar(3.2);
     else { w.scale.multiplyScalar(3.2); w.position.z = -0.3; }
@@ -485,8 +491,8 @@ function setupCollectibles(save) {
   addPickup('health', hos.x - 6, hos.z, { respawn: 30 });
   addPickup('ammo', h.x - 8, h.z, { respawn: 45 });
   alleyPool = [];
-  scatterWeapons(130);
-  scatterCrates(45);
+  scatterWeapons(260);
+  scatterCrates(90);
 }
 // ammo crates: top up every gun you own
 function scatterCrates(n) {
@@ -494,7 +500,7 @@ function scatterCrates(n) {
 }
 // weapons dropped at random spots on the pavements, different every time you play
 function scatterWeapons(n) {
-  const kinds = ['club', 'pan', 'claymore', 'bagpipes', 'blaster', 'blaster', 'scatter', 'laser', 'gatling', 'sniper', 'soaker', 'tattie', 'haggis', 'flame', 'neep'];
+  const kinds = WEAPON_ORDER.filter((w) => w !== 'fists').concat(['blaster', 'revolver', 'smg', 'scatter']);
   for (let k = 0; k < n; k++) {
     const s = takeAlleySpot() || paveSpot(); if (!s) break;
     addPickup('weapon', s[0], s[1], { weapon: kinds[(Math.random() * kinds.length) | 0], respawn: 90 });
@@ -505,7 +511,7 @@ function paveSpot() {
   for (let tries = 0; tries < 30; tries++) {
     const b = world.blocks[(Math.random() * world.blocks.length) | 0], L = world.paveLoop(b), t = 0.15 + Math.random() * 0.7, side = (Math.random() * 4) | 0;
     const x = side < 2 ? L.x0 + (L.x1 - L.x0) * t : (side === 2 ? L.x0 : L.x1), z = side >= 2 ? L.z0 + (L.z1 - L.z0) * t : (side === 0 ? L.z0 : L.z1);
-    if (!game.pickups.some((p) => Math.hypot(p.x - x, p.z - z) < 10)) return [x, z];
+    if (!game.pickups.some((p) => Math.hypot(p.x - x, p.z - z) < 7)) return [x, z];
   }
   return null;
 }
@@ -537,12 +543,13 @@ function raySphere(o, d, c, r) {
 }
 // fire a ranged weapon (W from weapons.js): one ray per pellet with a little spread
 game.playerShoot = (W = WEAPONS.blaster) => {
-  if (W.pellets > 1) { audio.bang(); audio.noise(0.3, 600, 0.7); cam.shake = Math.max(cam.shake, 0.12); } else audio.zap();
+  audio.fire(W.id);
+  if (W.pellets > 1 || W.kick) cam.shake = Math.max(cam.shake, W.kick || 0.12);
   const origin = camera.position.clone();
   const aim = new THREE.Vector3(); camera.getWorldDirection(aim);
   const minT = origin.distanceTo(tmpV.set(player.x, player.y + 1.4, player.z)) + 0.5;
   const model = player.models[player.weapon] || player.blaster;
-  const muzzle = model.localToWorld(player.blaster.userData.muzzle.clone());
+  const muzzle = model.localToWorld((model.userData.muzzle || player.blaster.userData.muzzle).clone());
   puff(muzzle.x, muzzle.y, muzzle.z, { color: W.pellets > 1 ? '#ffd27a' : '#9ff', add: true, life: 0.12, size: W.pellets > 1 ? 0.7 : 0.4, grow: 1, vy: 0, opacity: 1 });
   flashLight.position.copy(muzzle); flashLight.color.set(W.tracer || '#ffcc88'); flashLight.intensity = Math.max(flashLight.intensity, W.pellets > 1 ? 60 : 30);
   game.raiseAlarm(player.x, player.z, 1.5);
@@ -581,6 +588,14 @@ game.playerShoot = (W = WEAPONS.blaster) => {
         if (Math.random() < 0.05) game.say(p, ['Ma good jacket!', 'I\'m drookit!', 'Ya wee scunner!'][(Math.random() * 3) | 0]);
         continue;
       }
+      if (W.stun) { // zapped: drops to the ground twitching
+        if (p.state !== 'tumble') { p.vx = dir.x * 2; p.vz = dir.z * 2; p.vy = 1.5; p.state = 'tumble'; }
+        p.hurt(W.dmg, game, player.x, player.z, 'punch');
+        for (let k = 0; k < 6; k++) puff(p.x, p.y + 0.6 + Math.random(), p.z, { color: '#9fe0ff', add: true, life: 0.25, size: 0.15, vx: (Math.random() - 0.5) * 4, vy: Math.random() * 2, vz: (Math.random() - 0.5) * 4, opacity: 1 });
+        if (Math.random() < 0.6) game.say(p, ['Aaaabbbbbbbb!', 'Ma fillings!', 'Ah can taste purple!', 'Bzzzt!'][(Math.random() * 4) | 0]);
+        if (p.cop) game.wanted.add(1); else if (!p.thug) game.wanted.add(0.2);
+        continue;
+      }
       p.hurt(W.dmg, game, player.x, player.z, 'shot');
       puff(end.x, end.y, end.z, { color: '#ff3030', life: 0.4, size: 0.4, opacity: 0.9 });
       if (p.cop) game.wanted.add(1.5 / W.pellets * 1.5); else if (!p.thug) game.wanted.add(0.4 / Math.sqrt(W.pellets));
@@ -600,15 +615,16 @@ game.fireProjectile = (W) => {
   const model = player.models[player.weapon];
   const from = model.localToWorld(model.userData.muzzle ? model.userData.muzzle.clone() : new THREE.Vector3());
   const m = buildProjectile(W.proj); m.position.copy(from); scene.add(m);
-  const sp = W.proj === 'haggis' ? 38 : 32;
+  const sp = { haggis: 38, bolt: 70, caber: 30 }[W.proj] || 32;
   shots.push({ kind: W.proj, W, m, x: from.x, y: from.y, z: from.z, vx: dir.x * sp, vy: dir.y * sp + (W.proj === 'tattie' ? 2 : 0), vz: dir.z * sp, t: 0 });
-  if (W.proj === 'haggis') { audio.noise(0.5, 900, 0.6); audio.tone(200, 0.4, 'sawtooth', 0.1, 400); } else { audio.tone(120, 0.12, 'square', 0.2, -60); audio.noise(0.12, 500, 0.5); }
+  audio.fire(W.id);
+  if (W.proj === 'caber') cam.shake = Math.max(cam.shake, 0.2);
   game.raiseAlarm(player.x, player.z, 2);
 };
 function updateShots(dt) {
   for (let i = shots.length - 1; i >= 0; i--) {
     const s = shots[i];
-    s.t += dt; s.vy -= (s.kind === 'tattie' ? 14 : 3) * dt;
+    s.t += dt; s.vy -= ({ tattie: 14, bolt: 1.5, caber: 9 }[s.kind] ?? 3) * dt;
     const nx = s.x + s.vx * dt, ny = s.y + s.vy * dt, nz = s.z + s.vz * dt;
     let hit = s.t > 4 || ny < world.groundHeight(nx, nz, ny + 0.5) + 0.05;
     for (const b of world.nearby(nx, nz, 0.3)) if (!b.dead && !b.circle && ny < b.h && nx > b.x0 && nx < b.x1 && nz > b.z0 && nz < b.z1) hit = true;
@@ -618,10 +634,17 @@ function updateShots(dt) {
     if (!victim) for (const c of cars) if (c !== player.car && !c.dead && Math.hypot(c.x - nx, c.z - nz) < c.T.len / 2 && ny < c.y + c.T.hgt) { car = c; hit = true; break; }
     s.x = nx; s.y = ny; s.z = nz; s.m.position.set(nx, ny, nz);
     s.m.lookAt(nx + s.vx, ny + s.vy, nz + s.vz);
-    if (s.kind === 'haggis' && Math.random() < dt * 40) puff(nx, ny, nz, { color: '#aaa', life: 0.8, size: 0.4, vy: 0.3, opacity: 0.6 });
+    if ((s.kind === 'haggis' || s.kind === 'caber') && Math.random() < dt * 40) puff(nx, ny, nz, { color: '#aaa', life: 0.8, size: 0.4, vy: 0.3, opacity: 0.6 });
     if (!hit) continue;
     dropObject(s.m); shots.splice(i, 1);
-    if (s.kind === 'haggis') { game.onExplosion(nx, ny, nz, null); game.wanted.add(1); continue; }
+    if (s.kind === 'haggis' || s.kind === 'caber') { game.onExplosion(nx, ny, nz, null); game.wanted.add(1); continue; }
+    if (s.kind === 'bolt') { // a crossbow bolt: a hard thunk and a big hit
+      audio.hit('shinty');
+      if (victim) { victim.vx = s.vx * 0.12; victim.vz = s.vz * 0.12; victim.vy = 2; victim.state = 'tumble'; victim.hurt(s.W.dmg, game, player.x, player.z, 'shot'); if (victim.cop) game.wanted.add(1.5); else if (!victim.thug) game.wanted.add(0.4); }
+      if (car) { car.damage(s.W.dmg * 2, game, 'shot'); if (car.ai) car.ai.panic = 4; }
+      puff(nx, ny, nz, { color: '#c9b08a', life: 0.4, size: 0.3, opacity: 0.9 });
+      continue;
+    }
     // a potato to the face
     audio.punch();
     puff(nx, ny, nz, { color: '#c9a36a', life: 0.4, size: 0.4, opacity: 0.9 });
@@ -632,13 +655,16 @@ function updateShots(dt) {
 // Dragon's Breath: a short cone of fire
 game.playerFlame = (W) => {
   const dir = new THREE.Vector3(); camera.getWorldDirection(dir);
-  const model = player.models.flame;
+  const model = player.models[player.weapon] || player.models.flame;
   const from = model.localToWorld(model.userData.muzzle.clone());
-  for (let k = 0; k < 3; k++) {
-    const sp = 9 + Math.random() * 4;
-    puff(from.x, from.y, from.z, { color: Math.random() < 0.5 ? '#ff7a1a' : '#ffcf40', add: true, life: 0.55, size: 0.35, grow: 4, vx: dir.x * sp + (Math.random() - 0.5) * 2, vy: dir.y * sp + 0.8, vz: dir.z * sp + (Math.random() - 0.5) * 2, opacity: 0.9 });
+  const big = !!W.big;
+  for (let k = 0; k < (big ? 5 : 3); k++) {
+    const sp = (big ? 14 : 9) + Math.random() * 4;
+    puff(from.x, from.y, from.z, { color: Math.random() < 0.5 ? '#ff7a1a' : '#ffcf40', add: true, life: big ? 0.7 : 0.55, size: big ? 0.5 : 0.35, grow: big ? 5 : 4, vx: dir.x * sp + (Math.random() - 0.5) * 2, vy: dir.y * sp + 0.8, vz: dir.z * sp + (Math.random() - 0.5) * 2, opacity: 0.9 });
   }
-  if (Math.random() < 0.3) audio.noise(0.15, 700, 0.35);
+  if (big && Math.random() < 0.4) puff(from.x + dir.x * 8, from.y + 1.5, from.z + dir.z * 8, { color: '#2a2a2a', life: 1.6, size: 1, grow: 2.5, vy: 1.5, opacity: 0.5 });
+  if (big) { flashLight.position.copy(from); flashLight.color.set('#ff8a30'); flashLight.intensity = Math.max(flashLight.intensity, 40); }
+  audio.flame(1, big);
   game.raiseAlarm(player.x, player.z, 1);
   const fx = dir.x, fz = dir.z, fl = Math.hypot(fx, fz) || 1;
   for (const p of peds.list) {
@@ -665,7 +691,7 @@ game.throwNeep = () => {
   const m = buildNeep(0.11); m.position.copy(hand); scene.add(m);
   const sp = 15;
   neeps.push({ m, x: hand.x, y: hand.y, z: hand.z, vx: dir.x * sp + player.vx, vy: dir.y * sp + 5, vz: dir.z * sp + player.vz, t: 2.2 });
-  audio.tone(500, 0.15, 'triangle', 0.08, -300);
+  audio.fire('throw');
 };
 function updateNeeps(dt) {
   for (let i = neeps.length - 1; i >= 0; i--) {
@@ -705,6 +731,7 @@ game.playerPunch = (weapon = 'fists') => {
     cam.shake = Math.max(cam.shake, 0.25);
     return;
   }
+  audio.swing(club ? 1 : 0.6);
   for (const p of peds.list) {
     if (p.state === 'dead') continue;
     const dx = p.x - player.x, dz = p.z - player.z, d = Math.hypot(dx, dz);
@@ -729,12 +756,11 @@ game.playerPunch = (weapon = 'fists') => {
     }
   }
   if (any && W.clang) { audio.tone(1400, 0.4, 'triangle', 0.25, -200); audio.tone(2100, 0.3, 'sine', 0.1); }
-  else if (any && club) audio.tone(900, 0.12, 'square', 0.12, -500);
-  if (any) { audio.punch(); if (sup) { player.superPunch = 0; audio.boom(); } }
-  else audio.tone(180, 0.08, 'triangle', 0.05, -60);
+  else if (any && club) audio.hit(weapon);
+  if (any) { if (!club) audio.punch(); if (sup) { player.superPunch = 0; audio.boom(); } }
 };
 game.npcShoot = (ped, tx, tz) => {
-  audio.bang();
+  { const dd = Math.hypot(ped.x - player.x, ped.z - player.z); if (dd < 90) audio.fire('npc', 0.9 * (1 - dd / 90) + 0.1); }
   const d = Math.hypot(tx - ped.x, tz - ped.z);
   const moving = player.car ? player.car.speed > 8 : player.speed > 3;
   const chance = 0.62 - d * 0.013 - (moving ? 0.2 : 0);
@@ -1561,8 +1587,9 @@ function updatePickups(dt) {
   for (const p of game.pickups) {
     if (p.gone > 0) { p.gone -= dt; if (p.gone <= 0) p.obj.visible = true; continue; }
     const pd = Math.abs(p.x - px) + Math.abs(p.z - pz);
-    p.obj.visible = pd < 110;
-    if (pd > 110) continue;
+    const far = (p.kind === 'weapon' || p.kind === 'crate') ? 80 : 110;
+    p.obj.visible = pd < far;
+    if (pd > far) continue;
     p.t += dt; p.obj.rotation.y = p.t * 2; p.obj.position.y = p.y + Math.sin(p.t * 3) * 0.15;
     if (p.obj.userData.ring) p.obj.userData.ring.position.y = -0.75 - Math.sin(p.t * 3) * 0.15;
     if (player.car || player.dead) continue;
