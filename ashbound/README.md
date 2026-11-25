@@ -13,8 +13,9 @@ Open `ashbound/index.html` from any web server (GitHub Pages works). Nothing nee
 - **Survival**: health, stamina, hunger, thirst and clean air. Eat coconuts, bananas and mangos, drink at the well, the spring or the rock pool (and fill your canteen), and wear an ash mask or get under a roof when the ash falls. Sprinting, swimming and the heat all take their toll. Lava bombs, lava, falls and drowning hurt.
 - **The jeep**: the survey team's jeep is parked by the camp with the keys in it. It seats you and three followers, has headlights for the ash and the dusk, won't swim or climb cliffs, stops dead against palms, and lava or a falling rock will wreck it.
 - **Crafting**: braid vines into rope, make a stone axe (then chop palms for logs), make an ash mask from cloth, and bandages.
-- **Three ways out**:
+- **Four ways out**:
   - ⛵ **The raft**: 10 logs, 3 ropes and the tarpaulin from the plane wreck. Build it in stages on Raft Beach, launch it, and paddle out past the reef.
+  - 🚤 **The skiff**: Kai's boat lies by the village jetty. Patch it with two logs and a rope, fit the plane's battery, and motor out past the reef, fast but the battery is the same one the radio needs.
   - 📡 **The radio**: find the battery (in the nose of the plane), the antenna (the snapped mast at the ranger tower) and the handset (the village radio hut). Repair the ranger radio and a helicopter comes to the helipad. Be on the pad when it lands.
   - 🚪 **The bunker**: stock the old shelter with four waters, four meals and an ash mask, then seal the steel door and wait out the surge.
 - **Voices and subtitles**: the survivors speak their lines, the narrator reads the stage warnings and endings, and everything spoken is also shown as text, so the game plays fully with the sound off and for players who are deaf or hard of hearing. Voices use the speech built into your phone or computer and can be switched off.
@@ -45,6 +46,7 @@ Version 1.0 is single player with NPC survivors. The world is seeded and determi
 
 ## Versions
 
+- **1.8**: Kai's skiff: repair it with the battery, two logs and a rope and motor past the reef, a fourth ending; the battery is now a choice between the skiff and the radio.
 - **1.7**: spoken voices for the survivors, the narrator and the player, using the device's built-in speech, with every line still shown as text; VOICES switch on the title and pause screens.
 - **1.6**: trunks bend with their crowns in gusting wind; ash greys the jungle and buildings; sea glints, lava glow on the water and steam where flows meet it; crater glow, fireflies at dusk, blowing leaves; chromatic aberration and per-stage colour tints.
 - **1.5**: fixed the jeep's suspension leaning the wrong way on side slopes; each wheel now follows the ground under it.

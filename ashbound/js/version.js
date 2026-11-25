@@ -1,7 +1,12 @@
 // Bump VERSION for every update (1.1, 1.2, 1.3 ...) and add a line to CHANGES.
-export const VERSION = '1.7';
+export const VERSION = '1.8';
 
 export const CHANGES = [
+  ['1.8', [
+    'Kai\'s skiff, the Moana: a fourth way off the island. It lies by the village jetty with a split hull and a dead starter. Patch it with 2 logs and a rope, fit the plane\'s battery, and it will carry you and three followers past the reef in minutes',
+    'The battery is now a real choice: the skiff and the ranger radio both need the only one on the island',
+    'The skiff rides the swell, throws a bow wake, grounds on the reef and the shallows, and lava bombs can sink it. Knots on the HUD, engine note, a new ending',
+  ]],
   ['1.7', [
     'Spoken voices: the survivors speak their lines, the narrator reads the stage warnings, the opening and the endings, and you react to a few things. Every spoken line still appears as text, so nothing is lost with the sound off or for players who are deaf or hard of hearing',
     'Each survivor has their own voice, pitch and pace, using the voices built into your phone or computer. VOICES on/off on the title and pause screens',

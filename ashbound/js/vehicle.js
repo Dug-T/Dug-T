@@ -173,3 +173,121 @@ export class Jeep {
     return { x: this.x - Math.sin(this.yaw) * 3, z: this.z - Math.cos(this.yaw) * 3 };
   }
 }
+
+// ---------------- Kai's skiff ----------------
+// the hull's shape along its length (z from the transom at -2.3 to the bow tip at 2.6)
+const HULL = { stern: -2.3, bow: 2.6 };
+function hullW(z) { return z >= 0 ? 0.95 * Math.pow(Math.max(0, 1 - Math.pow(z / HULL.bow, 2.2)), 0.6) : 0.95 - 0.15 * Math.pow(-z / -HULL.stern, 2); }
+function hullD(z) { return 0.5 * (1 - 0.55 * Math.pow(Math.max(0, z / HULL.bow), 2)); }
+function hullRim(z) { return 0.65 + 0.22 * Math.pow(Math.max(0, z / HULL.bow), 2); }
+// a point on the hull skin: a runs round the U from -PI/2 (left rim) through 0 (keel) to PI/2 (right rim)
+function hullPt(z, a, grow = 1) { const w = hullW(z) * grow, d = hullD(z); return new THREE.Vector3(Math.sin(a) * w, hullRim(z) - d * Math.pow(Math.cos(a), 0.6), z); }
+
+function hullGeometry() {
+  const L = 36, R = 20, pos = [], idx = [];
+  for (let i = 0; i <= L; i++) { const z = HULL.stern + (HULL.bow - HULL.stern) * (i / L); for (let j = 0; j <= R; j++) { const p = hullPt(z, -Math.PI / 2 + Math.PI * (j / R)); pos.push(p.x, p.y, p.z); } }
+  for (let i = 0; i < L; i++) for (let j = 0; j < R; j++) { const a = i * (R + 1) + j, b = a + R + 1; idx.push(a, b, a + 1, a + 1, b, b + 1); }
+  // the flat transom: a fan across the stern section
+  const c = pos.length / 3; pos.push(0, hullRim(HULL.stern) - hullD(HULL.stern) * 0.45, HULL.stern);
+  for (let j = 0; j < R; j++) idx.push(c, j + 1, j);
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals();
+  return g;
+}
+// a tube round the hull at angle a (the rim when a = PI/2), closed across the stern
+function hullRing(a, r, grow = 1.0) {
+  const pts = [];
+  for (let i = 0; i <= 24; i++) pts.push(hullPt(HULL.stern + (HULL.bow - 0.05 - HULL.stern) * (i / 24), a, grow));
+  for (let i = 24; i >= 0; i--) pts.push(hullPt(HULL.stern + (HULL.bow - 0.05 - HULL.stern) * (i / 24), -a, grow));
+  return new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts, true, 'centripetal'), 120, r, 6, true);
+}
+
+export function buildBoat() {
+  const g = new THREE.Group();
+  const hullM = new THREE.MeshStandardMaterial({ color: '#e8e2d0', roughness: 0.55, metalness: 0.05, side: THREE.DoubleSide }), trim = mat('#1f5f8a', 0.5), wood = mat('#8a6a46', 0.9), dark = mat('#1d1d1d', 0.6), steel = mat('#8a9098', 0.4, { metalness: 0.7 });
+  const body = new THREE.Group(); g.add(body);
+  body.add(new THREE.Mesh(hullGeometry(), hullM));
+  body.add(new THREE.Mesh(hullRing(Math.PI / 2, 0.055, 1.02), trim));      // gunwale rail
+  body.add(new THREE.Mesh(hullRing(1.15, 0.025, 1.015), trim));            // painted stripe
+  const floor = box(1.1, 0.04, 3.4, wood); floor.position.set(0, 0.2, 0.05); body.add(floor);
+  // thwarts sized to the beam where they sit
+  for (const z of [1.0, -0.2, -1.4]) { const w = hullW(z) * 2 - 0.08; const b = box(w, 0.07, 0.32, wood); b.position.set(0, 0.47, z); body.add(b); }
+  const transom = box(hullW(HULL.stern) * 2, 0.5, 0.06, wood); transom.position.set(0, hullRim(HULL.stern) - 0.2, HULL.stern - 0.02); body.add(transom);
+  const seats = [new THREE.Vector3(0, 0.5, -1.45), new THREE.Vector3(-0.35, 0.5, 1.0), new THREE.Vector3(0.35, 0.5, 1.0), new THREE.Vector3(-0.35, 0.5, -0.2)];
+  // outboard on the transom, with a tiller reaching forward to the helmsman
+  const motor = new THREE.Group(); motor.position.set(0, hullRim(HULL.stern), HULL.stern - 0.18);
+  const cowl = box(0.42, 0.48, 0.5, dark); cowl.position.y = 0.28; motor.add(cowl);
+  const cap = box(0.38, 0.06, 0.46, mat('#c9473a', 0.5)); cap.position.y = 0.55; motor.add(cap);
+  const leg = box(0.12, 0.9, 0.2, steel); leg.position.y = -0.4; motor.add(leg);
+  const prop = new THREE.Group(); prop.position.set(0, -0.82, -0.12); for (let i = 0; i < 3; i++) { const bl = box(0.04, 0.22, 0.1, steel); bl.rotation.z = i * Math.PI * 2 / 3; bl.position.set(Math.sin(i * 2.09) * 0.1, Math.cos(i * 2.09) * 0.1, 0); prop.add(bl); } motor.add(prop);
+  const tiller = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.75, 8), dark); tiller.rotation.x = Math.PI / 2 - 0.25; tiller.position.set(0, 0.3, 0.55); motor.add(tiller);
+  body.add(motor);
+  // her name on both bows, a coil of rope and a bailer
+  for (const sd of [1, -1]) { const name = new THREE.Mesh(new THREE.PlaneGeometry(0.8, 0.2), new THREE.MeshStandardMaterial({ map: signTexture('MOANA', '#e8e2d0', '#1f5f8a'), roughness: 0.6 })); const p = hullPt(1.35, sd * 1.25, 1.03); name.position.copy(p); name.rotation.y = sd * Math.PI / 2; name.rotation.x = -sd * 0.0; body.add(name); }
+  const rope = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.035, 6, 16), mat('#b89a6a', 0.9)); rope.rotation.x = Math.PI / 2; rope.position.set(0, 0.32, 1.85); body.add(rope);
+  const bailer = cyl(0.12, 0.09, 0.15, mat('#d8a030', 0.6), 10); bailer.position.set(0.3, 0.29, 0.4); body.add(bailer);
+  g.traverse((m) => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } });
+  return { group: g, body, motor, prop, seats, hullM };
+}
+
+export class Boat {
+  constructor(scene, x, z, yaw) {
+    Object.assign(this, buildBoat());
+    this.scene = scene; this.x = x; this.z = z; this.yaw = yaw; this.speed = 0; this.steer = 0; this.y = SEA; this.pitch = 0; this.roll = 0;
+    this.driver = null; this.riders = []; this.hp = 100; this.dead = false; this.repaired = false; this.rpm = 0; this.t = Math.random() * 6; this.aground = false;
+    this.group.position.set(x, this.y, z); this.group.rotation.y = yaw; scene.add(this.group);
+    this.hullM.color.set('#b8b2a0'); // weathered until repaired
+  }
+  get name() { return 'boat'; }
+  repair() { this.repaired = true; this.hullM.color.set('#e8e2d0'); }
+  update(ctx) {
+    const { dt, world } = ctx; this.t += dt;
+    const driving = !!this.driver && !this.dead && this.repaired;
+    const mv = driving ? ctx.move : { x: 0, y: 0 };
+    const fx = Math.sin(this.yaw), fz = Math.cos(this.yaw);
+    const maxF = 11, maxR = 3;
+    if (mv.y > 0) this.speed += (maxF - Math.max(0, this.speed)) * 0.5 * mv.y * dt;
+    else if (mv.y < 0) this.speed += (-maxR - Math.min(0, this.speed)) * 0.8 * -mv.y * dt;
+    this.speed -= this.speed * 0.45 * dt;
+    if (ctx.brake) this.speed -= Math.sign(this.speed) * Math.min(Math.abs(this.speed), 6 * dt);
+    const target = mv.x * 0.7 / (1 + Math.abs(this.speed) / 12);
+    this.steer += (target - this.steer) * Math.min(1, dt * 4);
+    this.yaw -= this.steer * Math.min(1.2, 0.3 + Math.abs(this.speed) / 4) * dt * Math.sign(this.speed || 1);
+    let nx = this.x + fx * this.speed * dt, nz = this.z + fz * this.speed * dt;
+    // the hull grounds in the shallows and the reef
+    const depthAhead = SEA - heightAt(nx + fx * 2.2, nz + fz * 2.2), depthHere = SEA - heightAt(nx, nz);
+    this.aground = false;
+    if (depthAhead < 0.5 || depthHere < 0.4) { if (Math.abs(this.speed) > 3 && ctx.onHit) ctx.onHit(Math.abs(this.speed)); this.hp -= Math.abs(this.speed) > 5 ? Math.abs(this.speed) * 0.8 : 0; this.speed *= -0.3; nx = this.x; nz = this.z; this.aground = true; }
+    const dc = Math.hypot(nx, nz); if (dc > 460) { nx *= 460 / dc; nz *= 460 / dc; this.speed *= -0.3; }
+    this.x = nx; this.z = nz;
+    // ride the waves
+    const wave = Math.sin(this.t * 1.3 + this.x * 0.2) * 0.12 + Math.sin(this.t * 2.1 + this.z * 0.3) * 0.06;
+    this.y = SEA + 0.05 + wave;
+    const pitchT = -this.speed * 0.012 + Math.sin(this.t * 1.6) * 0.03, rollT = Math.sin(this.t * 1.1 + 1) * 0.05 - this.steer * this.speed * 0.02;
+    this.pitch += (pitchT - this.pitch) * Math.min(1, dt * 4); this.roll += (rollT - this.roll) * Math.min(1, dt * 4);
+    this.group.position.set(this.x, this.y, this.z); this.group.rotation.set(0, this.yaw, 0); this.body.rotation.set(this.pitch, 0, this.roll, 'YXZ');
+    this.motor.rotation.y = -this.steer * 0.8; this.prop.rotation.z += this.speed * 6 * dt;
+    this.rpm = driving ? Math.min(1, 0.15 + Math.abs(this.speed) / maxF + Math.max(0, mv.y) * 0.2) : 0;
+    // wake and spray
+    if (ctx.fx && Math.abs(this.speed) > 1.5 && Math.random() < dt * 30) {
+      const side = Math.random() < 0.5 ? 1 : -1, lx = fz * side, lz = -fx * side;
+      ctx.fx.emit(this.x + fx * 1.6 + lx * 0.9, SEA + 0.05, this.z + fz * 1.6 + lz * 0.9, lx * 1.5 + fx * 0.5, 0.8 + Math.random() * 1.2 * this.speed / maxF, lz * 1.5 + fz * 0.5, 0.35, 0.8, 0.1, 0.85, 1.2);
+      ctx.fx.emit(this.x - fx * 2.4, SEA + 0.05, this.z - fz * 2.4, -fx * 2 + (Math.random() - 0.5), 0.6, -fz * 2 + (Math.random() - 0.5), 0.6, 1.4, 0.1, 0.6, 1.5);
+    }
+    if (this.driver) { this.driver.x = this.x; this.driver.z = this.z; this.driver.y = this.y; this.driver.yaw = this.yaw; }
+    for (const n of this.riders) { n.x = this.x; n.z = this.z; n.y = this.y; }
+  }
+  damage(n, ctx) {
+    if (this.dead) return;
+    this.hp -= n;
+    if (this.hp <= 0) { this.hp = 0; this.dead = true; this.hullM.color.set('#3a3530'); if (ctx && ctx.onDestroyed) ctx.onDestroyed(); }
+  }
+  seatFor(index) { return this.seats[Math.min(index, this.seats.length - 1)]; }
+  seat(rig, index) { const s = this.seatFor(index); this.body.add(rig.root); rig.root.position.copy(s); rig.root.position.y -= 0.5; rig.root.rotation.set(0, index === 0 ? 0 : Math.PI, 0); }
+  unseat(rig, scene) { this.body.remove(rig.root); scene.add(rig.root); }
+  // step off onto the nearest bit of ground, or into the water if there is none close
+  exitSpot() {
+    let best = null, bd = 1e9;
+    for (let a = 0; a < Math.PI * 2; a += Math.PI / 8) for (let r = 2.5; r <= 8; r += 1.5) { const x = this.x + Math.cos(a) * r, z = this.z + Math.sin(a) * r; if (heightAt(x, z) > SEA - 0.5 && r < bd) { bd = r; best = { x, z }; } }
+    return best || { x: this.x + Math.cos(this.yaw) * 2.5, z: this.z - Math.sin(this.yaw) * 2.5 };
+  }
+}
