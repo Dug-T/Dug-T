@@ -1,7 +1,10 @@
 // Bump VERSION for every update (1.1, 1.2, 1.3 ...) and add a line to CHANGES.
-export const VERSION = '3.3';
+export const VERSION = '3.4';
 
 export const CHANGES = [
+  ['3.4', [
+    "The Loch Ness Monster is outside Wally's flat! She wriggles up and down the pavement in her tartan bunnet and says \"Och aye the noo!\" when you start the game, and again when you go near her",
+  ]],
   ['3.3', [
     'Touch controls: smaller buttons on the right, and a new camera joystick just left of them (level with the movement stick) to look around, instead of dragging on the screen',
   ]],
