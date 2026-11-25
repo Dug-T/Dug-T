@@ -9,6 +9,7 @@ import { buildProps, pickupMesh, setRaftStage, buildFirePit } from './props.js';
 import { buildSurvivor, animateSurvivor, buildAxe, LOOKS, groundTilt } from './survivor.js';
 import { Volcano, Puffs } from './volcano.js';
 import { Jeep, Boat } from './vehicle.js';
+import { Dog } from './dog.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { NpcManager, resolveObstacles } from './npcs.js';
 import { ITEMS, RECIPES, ESCAPES, STAGES, DIFFICULTY, FOOD, stageAt, newStats, tickStats, Inventory } from './survival.js';
@@ -124,6 +125,7 @@ const volcano = new Volcano(scene, world, quality, {
     if (sea) return;
     npcs.scare(x, z, r);
     if (!player.inBunker) npcs.blast(x, z, cold ? r : r * 1.1);
+    if (dog && !dog.hidden && Math.hypot(x - dog.x, z - dog.z) < (cold ? r : r * 1.1)) killDog('rock');
     { const db = Math.hypot(x - boat.x, z - boat.z); if (db < r * 1.6) boat.damage((cold ? 90 : 70) * (1 - db / (r * 1.6)), { onDestroyed: () => { toast('The skiff is wrecked!', 3); } }); }
     { const dj = Math.hypot(x - jeep.x, z - jeep.z); if (dj < r * 1.6) jeep.damage((cold ? 90 : 70) * (1 - dj / (r * 1.6)), { onDestroyed: () => { toast('The jeep is wrecked!', 3); } }); }
     if (d < r * 1.5 && !player.inBunker) { const dmg = (cold ? 110 : 75) * (1 - d / (r * 1.5)); hurt(dmg, cold ? 'crushed by a falling rock' : 'blown apart by a lava bomb'); cam.kick = Math.min(1, cam.kick + 0.6); }
@@ -252,10 +254,35 @@ function driveTick(dt) {
   if (nearLava > 0.3) hurt(nearLava * 25 * dt, 'taken by the lava');
   if (jeep.dead || jeep.flooded) { exitJeep(); if (jeep.dead) hurt(25, 'burned with the jeep'); }
 }
+let dog = null;
 const npcs = new NpcManager(scene, world, {
   onHeal: (n) => { toast(n.def.name + ' can walk again'); audio.success(); },
+  onWant: (n) => { toast(`${n.def.name} will come with you now`, 3); audio.success(); },
+  onStep: (n) => { const d = Math.hypot(n.x - player.x, n.z - player.z); if (d < 14) audio.step(surfaceAt(n.x, n.z), 0.35 * (1 - d / 14)); },
   onDeath: (n, how) => { toast(n.def.name + (how === 'rock' ? ' was hit by a falling rock' : ' didn\'t make it'), 4); audio.fail(); voice.say(n.def.name + (how === 'rock' ? ' was hit by a falling rock.' : ' didn\'t make it.'), 'Narrator', false); },
 });
+
+// what is underfoot, for footsteps
+function surfaceAt(x, z) { const h = heightAt(x, z); if (h < 0.15) return 'water'; if (volcano.ash > 0.35) return 'ash'; if (h > 92 || 1 - normalAt(x, z).y > 0.32) return 'rock'; if (h < 4.5) return 'sand'; return 'grass'; }
+// sleeping until dawn: a full night's rest, but the mountain keeps going while you sleep
+let restTap = 0, restHeld = 0;
+function trySleep(sheltered) {
+  if (game.sleeping || game.over) return;
+  const hrs = 8 + game.progress * 35;
+  if (dayNight.night < 0.5) { toast('You can only sleep at night'); return; }
+  const target = 30; // 06:00 on day 4
+  if (target - hrs < 1) { toast('Dawn is nearly here. No point sleeping now.'); return; }
+  if (volcano.ash > 0.3 && !sheltered && !player.inv.count('mask')) { toast('Too much ash in the air to sleep out here without a mask', 3); return; }
+  game.sleeping = true; $('fade').style.opacity = '1'; voice.stop();
+  setTimeout(() => {
+    const slept = target - hrs, secs = slept / 35 * game.duration, st = player.stats;
+    game.t = (target - 8) / 35 * game.duration;
+    st.stamina = 100; st.health = Math.min(100, st.health + 8 * slept); st.hunger = Math.max(8, st.hunger - 3.5 * slept); st.thirst = Math.max(8, st.thirst - 5 * slept); if (sheltered) st.air = 100;
+    for (const f of props.fires) if (f.built) f.t = 0;
+    if (game.flags.heliState === 'coming') game.flags.heliT = Math.max(0.5, game.flags.heliT - secs);
+    setTimeout(() => { $('fade').style.opacity = '0'; game.sleeping = false; banner('DAWN', `You slept ${Math.round(slept)} hours. The mountain did not.`, 5); }, 900);
+  }, 900);
+}
 
 // ---------------- the player ----------------
 const player = {
@@ -267,6 +294,9 @@ player.rig.arms[0].grip.add(torchModel);
 const axeModel = buildAxe(); axeModel.visible = false; player.rig.arms[1].grip.add(axeModel);
 const cam = { yaw: Math.PI + 0.4, pitch: 0.28, dist: 4.6, distSel: 0, kick: 0, shake: 0 };
 const DISTS = [4.6, 7.5, 2.8];
+
+dog = new Dog(scene);
+function killDog(how) { if (dog.dead || dog.saved) return; dog.dead = true; toast(how === 'rock' ? 'Biscuit was hit by a falling rock' : 'Biscuit didn\'t make it', 3); audio.fail(); }
 
 // ---------------- pickups ----------------
 const pickups = [];
@@ -297,6 +327,8 @@ function scatterPickups() {
   const t = POIS.tower; spawnPickup('antenna', t.x - 5.5, t.z + 2.5);
   spawnPickup('bandage', POIS.camp.x + 3, POIS.camp.z - 2); spawnPickup('bandage', t.x + 3, t.z + 6);
   spawnPickup('cloth', POIS.village.x - 9, POIS.village.z - 5); spawnPickup('cloth', POIS.camp.x - 3.2, POIS.camp.z - 0.8);
+  // things the survivors won't leave without
+  spawnPickup('logger', 224.8, 38.1); spawnPickup('pendant', POIS.boatyard.x - 10, POIS.boatyard.z + 8); spawnPickup('logbook', -174.2, 150.3);
   for (let i = 0; i < 8; i++) spawnPickup('wood', POIS.boatyard.x + (r() - 0.5) * 30, POIS.boatyard.z + (r() - 0.5) * 22);
   for (let i = 0; i < 4; i++) spawnPickup('coconut', POIS.camp.x + (r() - 0.5) * 14, POIS.camp.z + (r() - 0.5) * 14);
 }
@@ -335,15 +367,21 @@ function nearestInteractable() {
   const px = player.x, pz = player.z;
   const fx = Math.sin(player.yaw), fz = Math.cos(player.yaw);
   const infront = (x, z, slack) => { const dx = x - px, dz = z - pz, d = Math.hypot(dx, dz); return d < 0.8 || (dx * fx + dz * fz) / (d || 1) > -slack; };
-  // pickups first
+  const npcPrompt = (n) => ({ kind: 'npc', n, label: n.hurt ? `Help <b>${n.def.name}</b>` : n.talkT > 0 ? (n.state === 'follow' ? `<b>${n.def.name}</b>: wait here` : `<b>${n.def.name}</b>: come with me`) : `Talk to <b>${n.def.name}</b>` });
+  // the dog, and any survivor you're facing, come before everything else around them
+  if (!dog.follow && !dog.dead && Math.hypot(dog.x - px, dog.z - pz) < 4) return { kind: 'dog', label: 'Call <b>Biscuit</b>' };
+  { const n = npcs.nearest(px, pz, 3.0); if (n) { const dx = n.x - px, dz = n.z - pz, d = Math.hypot(dx, dz) || 1; if ((dx * fx + dz * fz) / d > 0.45) return npcPrompt(n); } }
+  // then pickups
   let best = null, bd = 2.4;
   for (const p of pickups) { if (p.taken || !p.m.visible) continue; const d = Math.hypot(p.x - px, p.z - pz); if (d < bd && infront(p.x, p.z, 0.5)) { bd = d; best = { kind: 'pickup', p, label: `Pick up <b>${ITEMS[p.id].name}</b>` }; } }
   if (best) return best;
   for (const f of props.fires) {
     if (Math.hypot(f.x - px, f.z - pz) > 2.6) continue;
-    if (f.t > 0) return { kind: 'rest', fire: f, label: 'Hold USE: <b>rest by the fire</b>', hold: true };
+    const canSleep = dayNight.night > 0.5 && 8 + game.progress * 35 < 29;
+    if (f.t > 0) return { kind: 'rest', fire: f, canSleep, label: canSleep ? 'Hold USE: <b>rest</b> · Tap: <b>sleep till dawn</b>' : 'Hold USE: <b>rest by the fire</b>', hold: true };
     return { kind: 'relight', fire: f, can: player.inv.count('wood') > 0, label: player.inv.count('wood') ? '<b>Relight the fire</b> (1 log)' : 'The fire is out. A log would relight it' };
   }
+  if (dayNight.night > 0.5) for (const sh of props.shelters) if (!sh.bunker && Math.hypot(sh.x - px, sh.z - pz) < sh.r) return { kind: 'sleep', label: '<b>Sleep until dawn</b> under cover' };
   for (const w of props.water) if (Math.hypot(w.x - px, w.z - pz) < w.r) return { kind: 'water', w, label: `Drink and fill canteen at <b>${w.name}</b>` };
   const by = POIS.boatyard;
   if (Math.hypot(by.x - px, by.z - pz) < 5.5 && !game.flags.launched) {
@@ -403,6 +441,8 @@ function doInteract(it) {
   } else if (it.kind === 'seal') sealBunker();
   else if (it.kind === 'jeep') enterJeep();
   else if (it.kind === 'boat') enterBoat();
+  else if (it.kind === 'sleep') trySleep(true);
+  else if (it.kind === 'dog') { dog.follow = 'player'; audio.bark(0); toast('Biscuit trots after you, tail going', 3); const pete = npcs.byId('pete'); if (pete.wantKnown && !pete.dead) voice.say('Found you. Come on, Pete\'s waiting.', 'You', false); }
   else if (it.kind === 'relight') { if (!it.can) { toast('You need a log to relight it'); return; } player.inv.add('wood', -1); it.fire.t = 180; claimFireLight(it.fire); audio.craft(); toast('The fire catches again'); }
   else if (it.kind === 'repairBoat') {
     if (!it.can) { toast('You still need parts for the skiff'); return; }
@@ -438,6 +478,7 @@ function sealBunker() {
   game.flags.sealed = true; player.inBunker = true;
   for (const n of npcs.followers()) { if (Math.hypot(n.x - player.x, n.z - player.z) < 25) { n.saved = true; n.state = 'saved'; game.saved++; } }
   const pete = npcs.byId('pete'); if (!pete.dead && !pete.saved && Math.hypot(pete.x - player.x, pete.z - player.z) < 25) { pete.saved = true; game.saved++; }
+  if (!dog.dead && (dog.follow === 'player' || (dog.follow === 'pete' && pete.saved)) && Math.hypot(dog.x - player.x, dog.z - player.z) < 30) dog.saved = true;
   player.x = props.bunkerInside.x; player.z = props.bunkerInside.z;
   props.bunkerDoor.rotation.y = 0; props.bunkerLight.intensity = 18;
   audio.doorSlam(); banner('SEALED IN', 'Two metres of rock between you and the mountain. Now you wait.');
@@ -461,6 +502,14 @@ function renderCraft() {
     row.innerHTML = `<div><div class="n">${out.icon} ${rec.name}</div><div class="need">${needsText(rec.needs, (k) => player.inv.count(k))} · ${out.desc}</div></div>`;
     const b = document.createElement('button'); b.className = 'btn'; b.textContent = rec.build ? 'BUILD' : 'CRAFT'; b.disabled = !player.inv.has(rec.needs); b.onclick = () => craft(rec); row.appendChild(b); $('craftList').appendChild(row);
   }
+  $('survList').innerHTML = '';
+  for (const n of npcs.list) {
+    const w = n.def.want;
+    const st = n.dead ? '<span class="no">lost</span>' : n.saved ? '<span class="ok">safe</span>' : n.hurt ? 'hurt: needs a bandage' : n.state === 'follow' ? '<span class="ok">with you</span>'
+      : w && !n.wantMet ? (n.wantKnown ? `won't leave without ${w.item === 'dog' ? 'Biscuit, his dog' : ITEMS[w.item].name.toLowerCase()} (${w.where})${w.item !== 'dog' && player.inv.count(w.item) ? ' <span class="ok">you have it</span>' : ''}` : 'talk to them') : 'ready to come with you';
+    const row = document.createElement('div'); row.className = 'rec'; row.innerHTML = `<div><div class="n">${n.def.name} <span style="font-weight:400;opacity:.7">${n.def.role}</span></div><div class="need">${st}</div></div>`; $('survList').appendChild(row);
+  }
+  { const row = document.createElement('div'); row.className = 'rec'; row.innerHTML = `<div><div class="n">🐕 Biscuit <span style="font-weight:400;opacity:.7">Pete's dog</span></div><div class="need">${dog.dead ? '<span class="no">lost</span>' : dog.saved ? '<span class="ok">safe</span>' : dog.follow === 'pete' ? '<span class="ok">back with Pete</span>' : dog.follow === 'player' ? '<span class="ok">following you</span>' : 'lost somewhere on the island'}</div></div>`; $('survList').appendChild(row); }
   $('escList').innerHTML = '';
   const rows = [
     ['⛵ Raft (Raft Beach)', needsText(ESCAPES.raft.needs, (k) => game.flags.raft[k]) + ' deposited'],
@@ -495,7 +544,8 @@ function die(cause) {
   setTimeout(() => endScreen('YOU DIDN\'T MAKE IT', `You were ${cause}. The mountain keeps its island.`), 2200);
 }
 function win(kind) {
-  if (game.over) return; game.over = true; game.ending = kind; audio.success(); store.del(SAVE_KEY);
+  if (game.over) return;
+  if (!dog.dead && (dog.follow === 'player' || (dog.follow === 'pete' && npcs.byId('pete').saved))) dog.saved = true; game.over = true; game.ending = kind; audio.success(); store.del(SAVE_KEY);
   const texts = {
     raft: ['OPEN WATER', 'The reef falls behind you and the island becomes a smudge under a black sky. By nightfall the mountain is a red glow on the horizon, and you are still alive.'],
     rescue: ['AIRLIFTED', 'The helicopter banks away as the summit lets go. Below you the beaches go dark under the surge. Someone hands you a blanket. It is over.'],
@@ -510,7 +560,7 @@ function endScreen(title, text) {
   const left = Math.max(0, game.duration - game.t), m = Math.floor(left / 60), s = Math.floor(left % 60);
   const alive = npcs.list.filter((n) => !n.dead).length;
   $('endStats').innerHTML = `<span>Outcome</span><b>${game.ending === 'dead' ? 'Lost' : game.ending === 'raft' ? 'Escaped by raft' : game.ending === 'boat' ? 'Escaped in the skiff' : game.ending === 'rescue' ? 'Rescued by helicopter' : 'Survived in the bunker'}</b>
-    <span>Survivors brought with you</span><b>${game.saved} of ${npcs.list.length}</b><span>Survivors still alive</span><b>${alive}</b>
+    <span>Survivors brought with you</span><b>${game.saved} of ${npcs.list.length}</b><span>Survivors still alive</span><b>${alive}</b><span>Biscuit the dog</span><b>${dog.saved ? 'safe' : dog.dead ? 'lost' : 'left behind'}</b>
     <span>Time to spare</span><b>${game.ending === 'dead' || game.ending === 'bunker' ? '—' : `${m}:${String(s).padStart(2, '0')}`}</b><span>Pace</span><b>${DIFFICULTY[difficulty].name}</b>`;
   game.running = false; if (document.pointerLockElement) document.exitPointerLock();
 }
@@ -521,7 +571,8 @@ function save() {
   const data = {
     v: 1, t: game.t, difficulty, player: { x: player.inJeep ? jeep.exitSpot().x : player.inBoat ? boat.exitSpot().x : player.x, y: player.y, z: player.inJeep ? jeep.exitSpot().z : player.inBoat ? boat.exitSpot().z : player.z, yaw: player.yaw, stats: player.stats, inv: player.inv.items, onRaft: player.onRaft, inBunker: player.inBunker },
     flags: game.flags, saved: game.saved, taken: pickups.filter((p) => p.taken).map((p) => p.idx), felled: world.trees.map((t, i) => (t.alive ? -1 : i)).filter((i) => i >= 0),
-    npcs: npcs.list.map((n) => ({ id: n.def.id, x: n.x, z: n.z, state: n.state, hurt: n.hurt, dead: n.dead, saved: n.saved, healedSaid: n.healedSaid, fixedSaid: !!n.fixedSaid })),
+    npcs: npcs.list.map((n) => ({ id: n.def.id, x: n.x, z: n.z, state: n.state, hurt: n.hurt, dead: n.dead, saved: n.saved, healedSaid: n.healedSaid, fixedSaid: !!n.fixedSaid, wantMet: !!n.wantMet, wantKnown: !!n.wantKnown })),
+    dog: { x: dog.x, z: dog.z, follow: dog.follow, dead: dog.dead, saved: dog.saved },
     fires: props.fires.filter((f) => f.built).map((f) => ({ x: f.x, z: f.z, t: Math.max(0, f.t) })),
     raft: props.raft.parent === scene ? { x: props.raft.position.x, z: props.raft.position.z } : null, cam: { yaw: cam.yaw, pitch: cam.pitch },
     jeep: { x: jeep.x, z: jeep.z, yaw: jeep.yaw, hp: jeep.hp, dead: jeep.dead },
@@ -536,7 +587,8 @@ function load(data) {
   game.flags = data.flags; game.saved = data.saved || 0;
   for (const i of data.taken) { const p = pickups[i]; if (p && !p.taken) { p.taken = true; scene.remove(p.m); } }
   for (const i of data.felled) if (world.trees[i] && world.trees[i].alive) world.fellTree(world.trees[i]);
-  for (const s of data.npcs) { const n = npcs.byId(s.id); if (!n) continue; Object.assign(n, { x: s.x, z: s.z, state: s.state, hurt: s.hurt, dead: s.dead, saved: s.saved, healedSaid: s.healedSaid, fixedSaid: s.fixedSaid }); n.tx = n.x; n.tz = n.z; }
+  for (const s of data.npcs) { const n = npcs.byId(s.id); if (!n) continue; Object.assign(n, { x: s.x, z: s.z, state: s.state, hurt: s.hurt, dead: s.dead, saved: s.saved, healedSaid: s.healedSaid, fixedSaid: s.fixedSaid, wantMet: !!s.wantMet, wantKnown: !!s.wantKnown }); n.tx = n.x; n.tz = n.z; }
+  if (data.dog) { Object.assign(dog, { x: data.dog.x, z: data.dog.z, follow: data.dog.follow, dead: data.dog.dead, saved: data.dog.saved }); }
   if (data.raft) { props.raft.parent.remove(props.raft); scene.add(props.raft); props.raft.position.set(data.raft.x, SEA + 0.2, data.raft.z); props.raft.rotation.set(0, 0, 0); props.raft.userData.dir = 0; props.raft.userData.vx = 0; props.raft.userData.vz = 0; props.raftRing.visible = false; }
   updateRaftVisual();
   if (game.flags.radioFixed) props.radioLamp.material.emissiveIntensity = 3;
@@ -653,7 +705,7 @@ function updatePlayer(dt) {
   else {
     if (player.onGround && input.pressed('jump') && s.stamina > 5) { player.vy = 5.2; player.onGround = false; s.stamina -= 5; audio.jump(); }
     player.vy -= 14 * dt; player.y += player.vy * dt;
-    if (player.y <= g2) { if (!player.onGround && player.vy < -11) hurt((-player.vy - 11) * 8, 'killed by a fall'); player.y = g2; player.vy = 0; player.onGround = true; }
+    if (player.y <= g2) { if (!player.onGround && player.vy < -2.5) audio.land(surfaceAt(player.x, player.z), clamp(-player.vy / 9, 0.3, 1)); if (!player.onGround && player.vy < -11) hurt((-player.vy - 11) * 8, 'killed by a fall'); player.y = g2; player.vy = 0; player.onGround = true; }
   }
   if (player.swimming && !player.wasSwimming) audio.splash(); player.wasSwimming = player.swimming;
   // chopping (hold USE at a palm with an axe)
@@ -682,7 +734,12 @@ function updatePlayer(dt) {
   } else { player.warmSaid = false; if (dayNight.night > 0.5 && !player.swimming) s.stamina = Math.max(0, s.stamina - dt * 1.5 * dayNight.night); }
   // the rig
   player.rig.root.position.set(player.x, player.y, player.z); player.rig.root.rotation.y = player.yaw;
+  const ph0 = player.rig.phase;
   animateSurvivor(player.rig, dt, { speed: resting ? 0 : player.speed, mode: player.swimming ? 'swim' : resting ? 'sit' : 'move', torch: torchModel.visible, air: !player.onGround, hurt: s.health < 30, tilt: player.onGround && !player.swimming ? groundTilt(slope, player.yaw) : [0, 0] });
+  if (Math.floor(player.rig.phase / Math.PI) !== Math.floor(ph0 / Math.PI)) {
+    if (player.swimming) audio.stroke(player.speed > 0.3 ? 0.8 : 0.35);
+    else if (player.onGround && player.speed > 0.4) audio.step(surfaceAt(player.x, player.z), player.speed > 4 ? 1 : 0.7);
+  }
   // dust off your heels on sand and ash, spray when you swim
   fx.stepT -= dt * Math.max(0.3, player.speed);
   if (fx.stepT <= 0 && player.onGround && !player.swimming && player.speed > 1.5) {
@@ -814,7 +871,7 @@ function updateHUD(dt) {
   $('clock').classList.toggle('urgent', left < 180);
   setText('stage', game.stage.name);
   const sb = $('stageBar').firstElementChild, sw = (game.progress * 100).toFixed(1) + '%'; if (domCache.get('sb') !== sw) { domCache.set('sb', sw); sb.style.width = sw; }
-  const fol = npcs.followers(); setHTML('companions', fol.length ? `👥 ${fol.map((n) => n.def.name.split(' ').pop()).join(', ')}` : '');
+  const fol = npcs.followers(); const pup = dog.follow && !dog.dead && !dog.saved ? ' 🐕' : ''; setHTML('companions', fol.length || pup ? `👥 ${fol.map((n) => n.def.name.split(' ').pop()).join(', ')}${pup}` : '');
   setText('objective', objectiveText());
   setText('tod', `${dayNight.night > 0.5 ? '🌙' : dayNight.dusk > 0.5 ? '🌅' : '☀️'} Day ${dayNight.day} · ${String(Math.floor(dayNight.hour)).padStart(2, '0')}:${String(Math.floor((dayNight.hour % 1) * 60)).padStart(2, '0')}`);
   setHTML('speed', player.inJeep ? `${Math.round(Math.abs(jeep.speed) * 3.6)}<small>km/h</small>` : player.inBoat ? `${Math.round(Math.abs(boat.speed) * 1.94)}<small>knots</small>` : '');
@@ -824,6 +881,7 @@ function updateHUD(dt) {
   items.push({ x: VOLCANO.x, z: VOLCANO.z, icon: '🌋', name: 'Volcano' });
   if (game.flags.heliState === 'landed' || game.flags.heliState === 'coming') items.push({ x: props.heli.position.x, z: props.heli.position.z, icon: '🚁', name: 'Helicopter' });
   for (const n of npcs.list) if (!n.dead && !n.saved && n.state !== 'follow') items.push({ x: n.x, z: n.z, icon: '🧍', name: n.def.name.split(' ').pop() });
+  for (const w of wantedMarkers()) items.push(w);
   let html = '';
   const width = compassEl.clientWidth || 400, fov = 1.9;
   const cardinal = [['N', 0], ['W', Math.PI / 2], ['S', Math.PI], ['E', -Math.PI / 2]];
@@ -858,6 +916,17 @@ function updateHUD(dt) {
   } else show('prompt', false);
 }
 
+// markers for the things survivors have asked for
+function wantedMarkers() {
+  const out = [];
+  for (const n of npcs.list) {
+    const w = n.def.want; if (!w || n.wantMet || !n.wantKnown || n.dead || n.saved) continue;
+    if (w.item === 'dog') { if (!dog.follow && !dog.dead) out.push({ x: dog.x, z: dog.z, icon: '🐕', name: 'Biscuit' }); continue; }
+    if (player.inv.count(w.item)) continue;
+    const p = pickups.find((q) => q.id === w.item && !q.taken); if (p) out.push({ x: p.x, z: p.z, icon: ITEMS[w.item].icon, name: ITEMS[w.item].name });
+  }
+  return out;
+}
 // ---------------- the map screen ----------------
 function drawMap() {
   const c = $('mapCanvas'), x = c.getContext('2d'), S = c.width, k = S / W;
@@ -870,6 +939,7 @@ function drawMap() {
   x.fillText('🌋', px(VOLCANO.x), px(VOLCANO.z));
   x.font = '18px sans-serif';
   for (const [key, p] of Object.entries(POIS)) { if (key === 'cave') continue; x.fillText(p.icon, px(p.x), px(p.z)); x.font = 'bold 11px Barlow, sans-serif'; x.fillStyle = '#fff'; x.shadowColor = '#000'; x.shadowBlur = 4; x.fillText(p.name, px(p.x), px(p.z) + 16); x.shadowBlur = 0; x.font = '18px sans-serif'; }
+  x.font = '16px sans-serif'; x.textAlign = 'center'; for (const w of wantedMarkers()) x.fillText(w.icon, px(w.x), px(w.z));
   for (const n of npcs.list) { if (n.dead || n.saved) continue; x.fillStyle = n.state === 'follow' ? '#38c9c0' : '#ffd23f'; x.beginPath(); x.arc(px(n.x), px(n.z), 5, 0, 7); x.fill(); }
   if (game.flags.heliState === 'landed' || game.flags.heliState === 'coming') x.fillText('🚁', px(props.heli.position.x), px(props.heli.position.z));
   // you
@@ -952,16 +1022,31 @@ function frame(now) {
   if (game.started && !game.paused) {
     game.t += dt; game.progress = clamp(game.t / game.duration, 0, 1); game.stage = stageAt(game.progress);
     if (game.intro > 0) game.intro -= dt;
-    currentInteract = (player.onRaft || player.inBunker || player.inHeli || player.inJeep || player.inBoat || game.intro > 0) ? null : nearestInteractable();
+    currentInteract = (player.onRaft || player.inBunker || player.inHeli || player.inJeep || player.inBoat || game.intro > 0 || game.sleeping) ? null : nearestInteractable();
+    // at a fire, a quick tap sleeps till dawn and a hold rests
+    // (measured in game time, so a slow frame can't turn a tap into a hold)
+    if (currentInteract && currentInteract.kind === 'rest') {
+      if (input.pressed('interact')) { restTap = 1; restHeld = 0; }
+      if (restTap) { if (input.down('interact')) restHeld += dt; else { if (restHeld < 0.3 && currentInteract.canSleep) trySleep(false); restTap = 0; } }
+    } else restTap = 0;
     if (player.inJeep && input.pressed('interact') && !game.over && Math.abs(jeep.speed) < 4) exitJeep();
     else if (player.inBoat && input.pressed('interact') && !game.over && Math.abs(boat.speed) < 3) exitBoat();
     else if (currentInteract && !currentInteract.hold && currentInteract.kind !== 'none' && input.pressed('interact') && !game.over) doInteract(currentInteract);
-    updatePlayer(dt);
+    if (!game.sleeping) updatePlayer(dt);
     if (!player.inJeep) jeep.update({ dt, move: { x: 0, y: 0 }, brake: false, world, heatAt: (x, z) => volcano.heatAt(x, z), dark: false, fx: fx.dust });
     if (!player.inBoat) boat.update({ dt, move: { x: 0, y: 0 }, brake: false, world, fx: null });
     const vfx = volcano.update({ dt, progress: game.progress, duration: game.duration, playerPos: player, camera, sunHeight: Math.max(0.1, U.uSun.value.y) });
     npcs.update(dt, { player, heatAt: (x, z) => volcano.heatAt(x, z), surgeR: volcano.surgeR, volcano: VOLCANO, hiddenInBunker: player.inBunker, followIndex: (n) => npcs.followers().indexOf(n) });
     updateHeli(dt);
+    // Biscuit: lost, following you, or back with Pete
+    {
+      const pete = npcs.byId('pete');
+      const tgt = dog.follow === 'player' ? { x: player.x, z: player.z, riding: !!(player.inJeep || player.inBoat || player.onRaft || player.inHeli || player.inBunker) } : dog.follow === 'pete' ? { x: pete.x, z: pete.z, riding: !!(pete.riding || pete.saved) } : null;
+      dog.update({ dt, world, heatAt: (x, z) => volcano.heatAt(x, z), onBark: (d) => audio.bark(d) }, tgt, player);
+      if (dog.follow === 'pete' && pete.saved && !dog.dead) dog.saved = true;
+      if (dog.follow === 'player' && !pete.dead && !pete.saved && !pete.wantMet && Math.hypot(dog.x - pete.x, dog.z - pete.z) < 5) { pete.wantMet = true; pete.wantKnown = true; dog.follow = 'pete'; pete.state = 'follow'; say(pete.def.name, pete.def.want.thanks, 7); audio.success(); }
+      if (!dog.dead && !dog.saved && !dog.hidden && (volcano.heatAt(dog.x, dog.z) > 0.6 || (volcano.surgeR > 0 && distToVolcano(dog.x, dog.z) < volcano.surgeR))) killDog();
+    }
     updateAtmosphere(dt, vfx);
     // the end of the world
     if (!game.over) {
@@ -988,7 +1073,7 @@ function frame(now) {
   catch (e) { console.error(e); save(); show('crash'); throw e; }
 }
 renderer.domElement.addEventListener('webglcontextlost', (e) => { e.preventDefault(); save(); show('crash'); });
-window.ASH = { game, player, volcano, npcs, props, world, cam, save, load, die, win, jeep, enterJeep, exitJeep, voice, boat, enterBoat, exitBoat, dayNight, addFire };
+window.ASH = { dog: () => dog, trySleep, surfaceAt, game, player, volcano, npcs, props, world, cam, save, load, die, win, jeep, enterJeep, exitJeep, voice, boat, enterBoat, exitBoat, dayNight, addFire };
 applyQuality();
 $('loading').classList.add('hidden');
 requestAnimationFrame(frame);

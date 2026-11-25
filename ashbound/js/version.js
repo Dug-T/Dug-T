@@ -1,7 +1,14 @@
 // Bump VERSION for every update (1.1, 1.2, 1.3 ...) and add a line to CHANGES.
-export const VERSION = '1.9';
+export const VERSION = '2.0';
 
 export const CHANGES = [
+  ['2.0', [
+    'Survivor objectives: Dr Osei won\'t leave without her seismometer data, Kai without his grandmother\'s pendant, Lena without the station logbook. Ask them to come and they tell you what they want; it is then marked on the compass and the map',
+    'Biscuit, Old Pete\'s dog, bolted when the tremors began. Find her near the jungle spring and she\'ll follow you; bring her to Pete and he\'ll come too. She rides along in the jeep, the skiff and the raft, and the end screen says whether she made it',
+    'Footsteps that sound like the ground: sand, grass, rock, ash and shallow water, with landings, swimming strokes, and quieter steps for the survivors near you',
+    'Sleep till dawn: tap USE at a lit fire at night, or sleep under a roof. You wake fully rested, but the eruption carries on while you sleep',
+    'The crafting screen now lists every survivor and what they need',
+  ]],
   ['1.9', [
     'Day and night: an island clock runs from 08:00 on day 3 to sunset on day 4. Night falls during the ashfall and the final surge comes at sunset. The time shows under the stage bar',
     'Nights are dark: moonlight, stars and a moon with a halo, black clouds, crickets, and the lava, crater and fires blazing in the gloom',

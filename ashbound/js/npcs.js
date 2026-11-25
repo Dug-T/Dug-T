@@ -6,6 +6,7 @@ import { buildSurvivor, animateSurvivor, LOOKS, groundTilt } from './survivor.js
 export const SURVIVORS = [
   {
     id: 'amara', name: 'Dr Amara Osei', role: 'Volcanologist', home: 'camp', offset: [1.8, 1.2], pose: 'sit',
+    want: { item: 'logger', where: 'the Ranger Station porch', ask: 'I\'m not leaving without the data logger from my seismometer. It\'s on the Ranger Station porch. Thirty days of readings. The next island to face this will need them.', thanks: 'My readings! Thank you. Now I\'m with you, wherever you\'re going.' },
     lines: {
       calm: ['The seismometer at the station went off the scale last night. This mountain is waking up.', 'The survey jeep is parked by the camp with the keys in it. It won\'t swim and it won\'t climb cliffs, but it beats walking. There\'s room for three of us in the back.', 'We have hours, not days. Three ways off this rock: the sea, the sky, or underground. Pick one and commit.', 'Kai in the village knows boats. Lena at the ranger station has a radio, if it still works.'],
       unrest: ['Feel that? Harmonic tremor. Magma is on the move.', 'When the ash starts, breathe through wet cloth. Your lungs will thank you.'],
@@ -17,6 +18,7 @@ export const SURVIVORS = [
   },
   {
     id: 'kai', name: 'Kai Tane', role: 'Fisherman', home: 'village', offset: [-4, 4], pose: 'stand',
+    want: { item: 'pendant', where: 'Raft Beach', ask: 'My grandmother\'s carved pendant came off when I was hauling driftwood on Raft Beach. I won\'t leave her behind. Find it and I\'ll come.', thanks: 'You found it! She\'d have liked you. Lead on.' },
     lines: {
       calm: ['My skiff, the Moana, is hauled up by the jetty with a split hull and a dead starter. Two logs and a rope to patch her, and a battery for the motor, and she\'ll run you past the reef in minutes.', 'There\'s only one battery on this island that I know of, in the nose of that plane. The ranger wants it for her radio. Your call.', 'A raft would do it: ten good logs, three ropes, and something for a sail. Build it on Raft Beach, east side, the current carries you off the reef there.', 'There\'s a survival tarp in that plane that came down in the jungle. Makes a fine sail.'],
       unrest: ['The sea is wrong today. Fish are leaving. Fish know.', 'Braid vines for rope. Three strands, tight.'],
@@ -41,6 +43,7 @@ export const SURVIVORS = [
   },
   {
     id: 'lena', name: 'Lena Hart', role: 'Park Ranger', home: 'tower', offset: [3, 6], pose: 'stand',
+    want: { item: 'logbook', where: 'the old bunker door', ask: 'Thirty years of island records are in the station logbook, and I left it by the old bunker door after the shelter inspection. Bring it back and I\'m yours.', thanks: 'The logbook. Thank you. Right, let\'s get everyone off this rock.' },
     lines: {
       calm: ['The mast came down when that plane clipped it. Battery\'s flat. And the villagers borrowed my handset for their radio hut and never brought it back.', 'Get me a battery, the antenna from the mast and the handset, and I can raise the coastguard. A helicopter can be here in minutes.', 'The helipad is just east of here. Keep it clear.'],
       unrest: ['Every bird on the island just left. I\'ve never seen the sky so empty.'],
@@ -53,6 +56,7 @@ export const SURVIVORS = [
   },
   {
     id: 'pete', name: 'Old Pete', role: 'Hermit', home: 'bunker', offset: [4, 5], pose: 'sit',
+    want: { item: 'dog', where: 'near the jungle spring', ask: 'Biscuit bolted when the tremors started. Little brown dog, one floppy ear. She\'ll be hiding up near the jungle spring. I\'m not going anywhere without her.', thanks: 'Biscuit! Come here, you daft thing. Right. Lead on, I\'m with you.' },
     lines: {
       calm: ['Forty years I\'ve been on this island. She grumbles. She\'s never done this.', 'This shelter was dug in \'43. Steel door, two metres of rock, air vent out the back. Stock it with water and food and a mask for the ash, and she\'ll hold.', 'You seal that door, you stay sealed. No peeking.'],
       unrest: ['The goats went up the far ridge this morning. Goats know.'],
@@ -100,6 +104,11 @@ export class NpcManager {
     // first press talks; pressing again within a few seconds toggles following
     if (n.talkT > 0) {
       if (n.state === 'follow') { n.state = 'home'; n.tx = n.x; n.tz = n.z; return { name: n.def.name, text: n.def.lines.wait }; }
+      const w = n.def.want;
+      if (w && !n.wantMet) {
+        if (w.item !== 'dog' && ctx.inventory.count(w.item) > 0) { ctx.inventory.add(w.item, -1); n.wantMet = true; n.state = 'follow'; if (this.hooks.onWant) this.hooks.onWant(n); return { name: n.def.name, text: w.thanks }; }
+        n.wantKnown = true; n.talkT = 0; return { name: n.def.name, text: w.ask };
+      }
       n.state = 'follow'; return { name: n.def.name, text: n.def.lines.follow };
     }
     n.talkT = 4;
@@ -147,7 +156,9 @@ export class NpcManager {
       } else if (n.talkT > 0) { const ty = Math.atan2(player.x - n.x, player.z - n.z); let d = ty - n.yaw; while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2; n.yaw += d * Math.min(1, dt * 5); }
       n.y = heightAt(n.x, n.z);
       n.rig.root.position.set(n.x, Math.max(n.y, SEA - 0.3), n.z); n.rig.root.rotation.y = n.yaw;
+      const ph0 = n.rig.phase;
       animateSurvivor(n.rig, dt, { mode, speed: want > 0 ? n.speed : 0, talk: n.talkT > 0, hurt: n.def.id === 'tomas', tilt: mode === 'move' ? groundTilt(normalAt(n.x, n.z, tmpN), n.yaw) : [0, 0] });
+      if (this.hooks.onStep && want > 0 && mode === 'move' && Math.floor(n.rig.phase / Math.PI) !== Math.floor(ph0 / Math.PI)) this.hooks.onStep(n);
       // hazards
       if (heatAt(n.x, n.z) > 0.6 || (surgeR > 0 && Math.hypot(n.x - volcano.x, n.z - volcano.z) < surgeR && !(hiddenInBunker && n.state === 'follow'))) { n.dead = true; n.state = 'dead'; if (this.hooks.onDeath) this.hooks.onDeath(n); }
     }
