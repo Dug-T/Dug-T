@@ -1,7 +1,12 @@
 // Bump VERSION for every update (1.1, 1.2, 1.3 ...) and add a line to CHANGES.
-export const VERSION = '1.3';
+export const VERSION = '1.4';
 
 export const CHANGES = [
+  ['1.4', [
+    'The survey jeep: parked by the camp, keys in it. Drive it (W/S, A/D, Space to brake; stick and JUMP on a phone), take up to three followers in the back, headlights come on in the dark. It won\'t swim, won\'t climb cliffs, trees stop it, and lava and falling rocks wreck it',
+    'Lava is far more luminous: brighter, pulsing flows that bloom, the ground lit orange around every lava front and the crater, lights riding the nearest fronts and the nearest bomb in flight',
+    'New effects: heat haze when you are near lava, shafts of light from the sun, volcanic lightning in the eruption column with thunder that arrives after the flash, and the first stars at dusk',
+  ]],
   ['1.3', [
     'You now start right at the foot of the volcano: the camp has moved to the base of the cone',
     'Lava comes down all round the mountain: 12 flows instead of 6, creeping at a realistic few metres a second with staggered starts',

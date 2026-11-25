@@ -7,7 +7,7 @@ export const SURVIVORS = [
   {
     id: 'amara', name: 'Dr Amara Osei', role: 'Volcanologist', home: 'camp', offset: [1.8, 1.2], pose: 'sit',
     lines: {
-      calm: ['The seismometer at the station went off the scale last night. This mountain is waking up.', 'We have hours, not days. Three ways off this rock: the sea, the sky, or underground. Pick one and commit.', 'Kai in the village knows boats. Lena at the ranger station has a radio, if it still works.'],
+      calm: ['The seismometer at the station went off the scale last night. This mountain is waking up.', 'The survey jeep is parked by the camp with the keys in it. It won\'t swim and it won\'t climb cliffs, but it beats walking. There\'s room for three of us in the back.', 'We have hours, not days. Three ways off this rock: the sea, the sky, or underground. Pick one and commit.', 'Kai in the village knows boats. Lena at the ranger station has a radio, if it still works.'],
       unrest: ['Feel that? Harmonic tremor. Magma is on the move.', 'When the ash starts, breathe through wet cloth. Your lungs will thank you.'],
       ashfall: ['Keep your mask on. This ash is glass. Fine as flour and twice as nasty.', 'The column is going to collapse eventually. When it does, run.'],
       eruption: ['Lava bombs. Watch the sky and listen for the whistle!', 'The flows take the valleys. Stay on the ridges and get to the coast.'],
@@ -116,6 +116,7 @@ export class NpcManager {
     for (const n of this.list) {
       if (n.saved) { n.rig.root.visible = false; continue; }
       if (n.dead) { animateSurvivor(n.rig, dt, { mode: 'dead' }); continue; }
+      if (n.riding) { n.talkT -= dt; animateSurvivor(n.rig, dt, { mode: 'sit', talk: n.talkT > 0 }); continue; }
       n.talkT -= dt;
       let mx = 0, mz = 0, want = 0, mode = 'move';
       if (n.hurt) { mode = 'lie'; }

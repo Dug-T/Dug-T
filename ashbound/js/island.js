@@ -150,16 +150,17 @@ export function buildIsland(scene, quality) {
   geo.computeVertexNormals();
   const tex = { sand: sandTexture(), grass: grassTexture(), rock: rockTexture(), ash: ashTexture(), noise: noiseTexture() };
   const U = world.uniforms;
-  U.uAsh = { value: 0 }; U.uTime = { value: 0 }; U.uWind = { value: 0.4 }; U.uCloud = { value: 0.35 };
+  U.uAsh = { value: 0 }; U.uTime = { value: 0 }; U.uWind = { value: 0.4 }; U.uCloud = { value: 0.35 }; U.uFlash = { value: 0 };
+  U.uGlow = { value: Array.from({ length: 8 }, () => new THREE.Vector4(0, 0, 1, 0)) }; // lava glow spots: x, z, radius, strength
   const bumpTex = tex.noise.clone(); bumpTex.repeat.set(140, 140); bumpTex.needsUpdate = true;
   const ground = new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.95, metalness: 0, bumpMap: bumpTex, bumpScale: hi ? 0.9 : 0.5 });
   ground.onBeforeCompile = (sh) => {
-    Object.assign(sh.uniforms, { tSand: { value: tex.sand }, tGrass: { value: tex.grass }, tRock: { value: tex.rock }, tAsh: { value: tex.ash }, tNoise: { value: tex.noise }, uAsh: U.uAsh, uTime: U.uTime, uCloud: U.uCloud });
+    Object.assign(sh.uniforms, { tSand: { value: tex.sand }, tGrass: { value: tex.grass }, tRock: { value: tex.rock }, tAsh: { value: tex.ash }, tNoise: { value: tex.noise }, uAsh: U.uAsh, uTime: U.uTime, uCloud: U.uCloud, uGlow: U.uGlow });
     sh.vertexShader = sh.vertexShader
       .replace('#include <common>', '#include <common>\nvarying vec3 vWPos; varying vec3 vWNormal;')
       .replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\nvWPos = (modelMatrix * vec4(transformed, 1.0)).xyz; vWNormal = normalize(mat3(modelMatrix) * objectNormal);');
     sh.fragmentShader = sh.fragmentShader
-      .replace('#include <common>', '#include <common>\nvarying vec3 vWPos; varying vec3 vWNormal; uniform sampler2D tSand, tGrass, tRock, tAsh, tNoise; uniform float uAsh, uTime, uCloud;')
+      .replace('#include <common>', '#include <common>\nvarying vec3 vWPos; varying vec3 vWNormal; uniform sampler2D tSand, tGrass, tRock, tAsh, tNoise; uniform float uAsh, uTime, uCloud; uniform vec4 uGlow[8]; vec3 lavaGlow = vec3(0.0);')
       .replace('#include <map_fragment>', `#include <map_fragment>
         float hgt = vWPos.y; float slope = 1.0 - vWNormal.y;
         float n = texture2D(tNoise, vWPos.xz * 0.011).r;
@@ -180,7 +181,10 @@ export function buildIsland(scene, quality) {
         // cloud shadows drifting over the island
         float cs = texture2D(tNoise, vWPos.xz * 0.0014 + vec2(uTime * 0.0035, uTime * 0.0012)).r;
         col *= mix(1.0, 0.62, smoothstep(0.52, 0.72, cs) * (0.5 + uCloud) * (1.0 - uAsh * 0.7));
-        diffuseColor.rgb *= col;`);
+        // the ground lit orange around the lava
+        for (int gi = 0; gi < 8; gi++) { float gd = distance(vWPos.xz, uGlow[gi].xy); lavaGlow += vec3(1.0, 0.38, 0.08) * uGlow[gi].w * smoothstep(uGlow[gi].z, 0.0, gd) * (0.85 + 0.15 * sin(uTime * 3.0 + gd * 0.5)); }
+        diffuseColor.rgb *= col;`)
+      .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance += lavaGlow * diffuseColor.rgb * 2.5 + lavaGlow * 0.25;');
   };
   const terrain = new THREE.Mesh(geo, ground);
   terrain.receiveShadow = true; terrain.castShadow = false;
@@ -250,10 +254,10 @@ export function buildIsland(scene, quality) {
   // ---- the sky ----
   U.uSkyTop = { value: new THREE.Color('#2a72d6') }; U.uHorizon = { value: new THREE.Color('#cfe4f5') }; U.uPlume = { value: 0 }; U.uDusk = { value: 0 };
   const sky = new THREE.Mesh(new THREE.SphereGeometry(1900, 32, 16), new THREE.ShaderMaterial({
-    uniforms: { top: U.uSkyTop, horizon: U.uHorizon, sunDir: U.uSun, sunCol: U.uSunCol, time: U.uTime, cover: U.uCloud, ash: U.uAsh, dusk: U.uDusk, plume: U.uPlume, volc: { value: new THREE.Vector3(VOLCANO.x, 0, VOLCANO.z) } },
+    uniforms: { top: U.uSkyTop, horizon: U.uHorizon, sunDir: U.uSun, sunCol: U.uSunCol, time: U.uTime, cover: U.uCloud, ash: U.uAsh, dusk: U.uDusk, plume: U.uPlume, flash: U.uFlash, volc: { value: new THREE.Vector3(VOLCANO.x, 0, VOLCANO.z) } },
     side: THREE.BackSide, depthWrite: false, fog: false,
     vertexShader: 'varying vec3 vP; void main(){ vP = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
-    fragmentShader: `uniform vec3 top, horizon, sunDir, sunCol, volc; uniform float time, cover, ash, dusk, plume; varying vec3 vP;
+    fragmentShader: `uniform vec3 top, horizon, sunDir, sunCol, volc; uniform float time, cover, ash, dusk, plume, flash; varying vec3 vP;
       float h21(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
       float vnoise(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f); return mix(mix(h21(i), h21(i + vec2(1, 0)), f.x), mix(h21(i + vec2(0, 1)), h21(i + vec2(1, 1)), f.x), f.y); }
       float fbm(vec2 p){ float a = 0.5, s = 0.0; for (int k = 0; k < 5; k++) { s += a * vnoise(p); p *= 2.03; a *= 0.5; } return s; }
@@ -283,6 +287,10 @@ export function buildIsland(scene, quality) {
         c = mix(c, vec3(0.38, 0.36, 0.35) * (0.8 + 0.2 * h), ash * 0.9);
         vec3 plumeCol = mix(vec3(0.45, 0.42, 0.4), vec3(0.1, 0.085, 0.08), plume) + vec3(0.7, 0.22, 0.0) * pow(max(0.0, 0.25 - h), 1.0) * plume * 2.5;
         c = mix(c, plumeCol, pl);
+        // the first stars as the light goes
+        if (h > 0.02 && dusk > 0.55) { vec2 g = floor(d.xz / (d.y + 0.3) * 240.0); float st = step(0.9955, h21(g)); c += vec3(st) * (dusk - 0.55) / 0.45 * smoothstep(0.02, 0.3, h) * (1.0 - ash) * (1.0 - pl); }
+        // lightning in the column lights the whole cloud
+        c += vec3(0.8, 0.85, 1.0) * flash * (0.25 + 0.75 * pl);
         gl_FragColor = vec4(c, 1.0);
         #include <tonemapping_fragment>
         #include <colorspace_fragment>

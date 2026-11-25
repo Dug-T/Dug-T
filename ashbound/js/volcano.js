@@ -92,9 +92,10 @@ export class Volcano {
           float crack = t.r;
           float front = smoothstep(uFront - 30.0, uFront, vDist);
           float edge = smoothstep(0.0, 0.2, vUv.x) * smoothstep(1.0, 0.8, vUv.x);
-          float heat = clamp(crack * (0.5 + 0.5 * edge) + front * 0.55 + 0.08, 0.0, 1.0);
-          vec3 col = mix(vec3(0.06, 0.035, 0.03), vec3(0.95, 0.25, 0.03), heat) + vec3(1.0, 0.7, 0.25) * pow(heat, 4.0) * 1.1;
-          gl_FragColor = vec4(col * 1.15, 1.0);
+          float pulse = 0.06 * sin(uTime * 2.2 + vDist * 0.12) + 0.04 * sin(uTime * 3.7 - vUv.x * 9.0);
+          float heat = clamp(crack * (0.62 + 0.38 * edge) + front * 0.6 + 0.14 + pulse, 0.0, 1.0);
+          vec3 col = mix(vec3(0.09, 0.04, 0.03), vec3(1.0, 0.32, 0.05) * 1.8, heat) + vec3(1.0, 0.62, 0.22) * pow(heat, 3.0) * 1.7;
+          gl_FragColor = vec4(col * 1.5, 1.0);
           #include <fog_fragment>
           #include <tonemapping_fragment>
           #include <colorspace_fragment>
@@ -109,7 +110,9 @@ export class Volcano {
     this.glow = new THREE.PointLight('#ff5a1a', 0, 260, 1.6); this.glow.position.set(VOLCANO.x, craterY + 20, VOLCANO.z); scene.add(this.glow);
     // the lava flows, hidden until the eruption
     this.flows = world.paths.map((pts, k) => this.buildFlow(pts, k));
-    this.flowLight = new THREE.PointLight('#ff6a20', 0, 90, 1.8); scene.add(this.flowLight);
+    this.flowLights = []; for (let i = 0; i < 3; i++) { const l = new THREE.PointLight('#ff6a20', 0, 110, 1.7); scene.add(l); this.flowLights.push(l); }
+    this.bombLight = new THREE.PointLight('#ff7a30', 0, 140, 1.6); scene.add(this.bombLight);
+    this.glow = Array.from({ length: 8 }, () => new THREE.Vector4(0, 0, 1, 0)); this.flash = 0; this.lightT = 6; this.nearFront = 1e9;
     // bombs
     this.bombs = [];
     const bg = new THREE.IcosahedronGeometry(1, 1);
@@ -231,6 +234,11 @@ export class Volcano {
       }
     }
     this.ashFall.update(dt, 0.05, 0, 0.1);
+    // ---- lightning in the column ----
+    this.flash *= Math.max(0, 1 - dt * 6);
+    if (stageIdx >= 3) { this.lightT -= dt; if (this.lightT <= 0) { this.lightT = 3 + Math.random() * 9; this.flash = 1; if (this.hooks.onLightning) this.hooks.onLightning(distP); } }
+    this.glow[0].set(VOLCANO.x, VOLCANO.z, 70, [0, 0.15, 0.35, 0.9, 1][stageIdx]);
+    if (p < 0.72) for (let i = 1; i < 8; i++) this.glow[i].w = 0;
     // ---- the crater glow ----
     const glowT = [0, 0.6, 1.2, 4.5, 5][stageIdx] * (0.9 + 0.1 * Math.sin(this.t * 7));
     this.glow.intensity += (glowT * 400 - this.glow.intensity) * Math.min(1, dt);
@@ -256,10 +264,13 @@ export class Volcano {
         f.mat.uniforms.uFront.value = f.front; f.mat.uniforms.uTime.value = this.t;
         this.burnAlongFlow(f);
       }
-      // a light rides on the nearest lava front
-      let best = null, bd = 1e9;
-      for (const f of this.flows) { const fp = this.frontPoint(f); if (!fp) continue; const d = Math.hypot(fp.x - playerPos.x, fp.z - playerPos.z); if (d < bd) { bd = d; best = fp; } }
-      if (best) { this.flowLight.position.set(best.x, best.y + 6, best.z); this.flowLight.intensity = 600 * (0.85 + 0.15 * Math.sin(this.t * 9)); }
+      // lights ride the three nearest lava fronts, and the ground glows around every front
+      const fronts = [];
+      for (const f of this.flows) { const fp = this.frontPoint(f); if (!fp) continue; fronts.push({ fp, d: Math.hypot(fp.x - playerPos.x, fp.z - playerPos.z) }); }
+      fronts.sort((a, b) => a.d - b.d);
+      this.nearFront = fronts.length ? fronts[0].d : 1e9;
+      this.flowLights.forEach((l, i) => { const f = fronts[i]; if (f) { l.position.set(f.fp.x, f.fp.y + 6, f.fp.z); l.intensity = 900 * (0.85 + 0.15 * Math.sin(this.t * 9 + i)); } else l.intensity = 0; });
+      for (let i = 1; i < 8; i++) { const f = fronts[i - 1]; if (f) this.glow[i].set(f.fp.x, f.fp.z, 16, 0.9); else this.glow[i].w = 0; }
       // smoke and sparks off the fronts
       for (const f of this.flows) { const fp = this.frontPoint(f); if (fp && Math.random() < 0.6) { this.plume.emit(fp.x, fp.y + 1, fp.z, 0, 3, 0, 5, 8, 0.6, 0.45, 2); if (Math.random() < 0.5) this.embers.emit(fp.x, fp.y + 1, fp.z, (Math.random() - 0.5) * 6, 4 + Math.random() * 5, (Math.random() - 0.5) * 6, 0.8, 1.5, Math.random(), 1); } }
     }
@@ -284,7 +295,7 @@ export class Volcano {
       if (f.t <= 0) { this.scene.remove(f.s); this.fires.splice(i, 1); }
     }
     for (const l of this.flashes) l.intensity *= Math.max(0, 1 - dt * 6);
-    return { stageIdx, ash: this.ash, shake: this.shake, rumble: this.rumbleLevel, plume: [0.08, 0.3, 0.6, 0.9, 1][stageIdx], surgeR: this.surgeR };
+    return { stageIdx, ash: this.ash, shake: this.shake, rumble: this.rumbleLevel, plume: [0.08, 0.3, 0.6, 0.9, 1][stageIdx], surgeR: this.surgeR, flash: this.flash, nearFront: this.nearFront };
   }
   frontPoint(f) {
     if (f.front <= 0) return null;
@@ -332,8 +343,10 @@ export class Volcano {
     if (this.hooks.onLaunch) this.hooks.onLaunch(b);
   }
   updateBombs(dt, playerPos) {
+    let near = null, nd = 220;
     for (const b of this.bombs) {
       if (!b.on) continue;
+      if (b.hot) { const d = Math.hypot(b.x - playerPos.x, b.z - playerPos.z); if (d < nd) { nd = d; near = b; } }
       b.vy -= 9.81 * dt; b.x += b.vx * dt; b.y += b.vy * dt; b.z += b.vz * dt;
       b.m.position.set(b.x, b.y, b.z); b.m.rotation.x += dt * 3; b.m.rotation.z += dt * 2;
       if (Math.random() < 0.7) this.plume.emit(b.x, b.y, b.z, 0, 0.5, 0, 2.5 * b.s, 2.2, b.hot ? 0.55 : 0.8, 0.4, 2.5);
@@ -346,6 +359,7 @@ export class Volcano {
         if (b.hot) this.explode(b.x, g, b.z, 7 + b.s * 3.5); else this.thud(b.x, g, b.z, 3 + b.s * 2.5);
       }
     }
+    if (near) { this.bombLight.position.set(near.x, near.y, near.z); this.bombLight.intensity = 700 * near.s; } else this.bombLight.intensity *= Math.max(0, 1 - dt * 8);
   }
   explode(x, y, z, radius) {
     for (let i = 0; i < 40; i++) {
