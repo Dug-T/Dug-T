@@ -1,7 +1,14 @@
 // Bump VERSION for every update (1.1, 1.2, 1.3 ...) and add a line to CHANGES.
-export const VERSION = '3.1';
+export const VERSION = '3.2';
 
 export const CHANGES = [
+  ['3.2', [
+    "Loads more funny dialogue: over 150 new spoken lines for Wally, folk on the street, drivers, the polis and the Red Shirts",
+    'Phone calls: Mammy, Granda, Big Davie, Uncle Tam and others ring Wally for a blether between jobs',
+    'Folk on the pavement have wee conversations wi\' each other as you walk by',
+    'Wally now talks about carjacking, crashes, speeding, falling, low health, losing the polis, nightfall, cash, Golden Specs and every new weapon he finds',
+    'People shout up at Wally when he flies over and back away when he aims a gun at them',
+  ]],
   ['3.1', [
     'Fixed: the radio could stay silent after getting out of one vehicle and into another',
     'The radio also wakes back up if the phone pauses the sound (a call, another app), and skips ahead on the beat if the phone is too busy to keep up',

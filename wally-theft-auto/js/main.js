@@ -21,7 +21,7 @@ import { Weather, WEATHERS } from './weather.js';
 import { buildUFO } from './ufo.js';
 import { buildFlat, FLAT } from './flat.js';
 import { initContent } from './content.js';
-import { Voice, QUIPS, DJ } from './voice.js';
+import { Voice, QUIPS, DJ, WEAPON_QUIPS, CHATS, CALLS } from './voice.js';
 import { DJ_LINES } from './radio.js';
 import { OUTFITS } from './player.js';
 
@@ -240,7 +240,7 @@ game.wanted = {
     for (const c of cars) if (c.type === 'police' && c.ai && !c.dead && Math.hypot(c.x - px, c.z - pz) < 55 && !world.blocked(c.x, c.z, px, pz, 1.2)) { this.seen = true; break; }
     if (!this.seen) for (const p of peds.list) if (p.cop && p.state !== 'dead' && Math.hypot(p.x - px, p.z - pz) < 40) { this.seen = true; break; }
     if (this.seen) this.unseen = 0; else this.unseen += dt;
-    if (this.unseen > 9) { this.heat = Math.max(0, this.heat - dt * 1.2); this.recalc(); }
+    if (this.unseen > 9) { this.heat = Math.max(0, this.heat - dt * 1.2); this.recalc(); if (this.level === 0 && !player.dead) game.quip('lostCops', 0.9, true); }
   },
 };
 
@@ -281,12 +281,45 @@ world.onLampKnock = (x, z, sp) => {
 world.onLampLand = (x, z) => { const d = Math.hypot(x - player.x, z - player.z); if (d < 70) audio.crash(4 * (1 - d / 70)); cam.shake = Math.max(cam.shake, d < 20 ? 0.15 : 0); };
 // drivers lean on the horn and shout out the window
 const ROAD_RAGE = {
-  blocked: ['Get oot the road, ya numpty!', 'Shift, Wally!', 'Are ye blind? MOVE!', 'Some of us have jobs, cape boy!', 'It\'s a ROAD, no a catwalk!', 'Gonnae no stand there?'],
-  crash: ['Ma motor! Ma no-claims!', 'Whit are ye playin\' at?!', 'Learn tae drive, ya bampot!', 'That\'s comin\' oot yer pocket!', 'Did ye get yer licence aff a cereal box?'],
+  blocked: ['Get oot the road, ya numpty!', 'Shift, Wally!', 'Are ye blind? MOVE!', 'Some of us have jobs, cape boy!', 'It\'s a ROAD, no a catwalk!', 'Gonnae no stand there?', 'Green means GO, Wally!', 'I\'m late for ma work and you\'re standing there in yer jammies!', 'Is that a superhero or a traffic cone?', 'Beep beep, ya walloper!', 'I\'ve got frozen peas in the boot here!'],
+  crash: ['Ma motor! Ma no-claims!', 'Whit are ye playin\' at?!', 'Learn tae drive, ya bampot!', 'That\'s comin\' oot yer pocket!', 'Did ye get yer licence aff a cereal box?', 'I\'ve still got eleven payments left on that!', 'Ma wife\'s gonnae kill me! Then you!', 'That\'s a hire car, ya eejit!', 'Ye drive like ma granny! And she\'s deid!', 'Ma dashcam got all that, pal!'],
 };
 let quipCool = 0, idleQuipT = 40 + Math.random() * 30;
+// ---- extra chatter: speeding, day and night, folk blethering, phone calls ----
+let fastT = 0, chatT = 20 + Math.random() * 20, callT = 150 + Math.random() * 90, lastHour = -1, chatQ = [];
+function updateChatter(dt) {
+  if (game.intro || player.dead || game.inside) return;
+  const c = player.car;
+  // flat out in a motor
+  if (c && Math.abs(c.vf || c.speed) > 30) { fastT += dt; if (fastT > 4) { fastT = -25; game.quip('fast', 0.6); } } else fastT = Math.min(fastT, 0) + dt * 0.2;
+  // the sun comes up, the street lamps come on
+  const hr = Math.floor(game.time / 60);
+  if (lastHour >= 0 && hr !== lastHour) { if (hr === 21) game.quip('night', 0.8); if (hr === 7) game.quip('morning', 0.8); }
+  lastHour = hr;
+  // two folk on the pavement having a blether as Wally walks by
+  if (chatQ.length) { chatQ[0].t -= dt; if (chatQ[0].t <= 0) { const q = chatQ.shift(); if (q.p.state !== 'dead' && q.p.state !== 'flee') game.say(q.p, q.line); } }
+  else if (!c && !game.mission && (chatT -= dt) <= 0) {
+    chatT = 30 + Math.random() * 30;
+    const near = peds.list.filter((p) => !p.cop && !p.thug && p.state === 'walk' && Math.hypot(p.x - player.x, p.z - player.z) < 16);
+    for (const a of near) {
+      const b = near.find((q) => q !== a && Math.hypot(q.x - a.x, q.z - a.z) < 7);
+      if (!b) continue;
+      const lines = CHATS[(Math.random() * CHATS.length) | 0];
+      lines.forEach((line, i) => chatQ.push({ p: i % 2 ? b : a, line, t: i ? 3.2 : 0 }));
+      break;
+    }
+  }
+  // the phone rings: somebody wants a word
+  if (!game.mission && !game.cuffs && !subsQ.length && game.wanted.level === 0 && (callT -= dt) <= 0) {
+    callT = 200 + Math.random() * 160;
+    const call = CALLS[(Math.random() * CALLS.length) | 0];
+    [0, 0.45].forEach((w) => { audio.tone(1300, 0.35, 'square', 0.06, 0, w); audio.tone(1500, 0.35, 'square', 0.05, 0, w); });
+    game.toast('📱 Wally\'s phone is ringing...');
+    setTimeout(() => { if (!game.mission) game.subs(call); }, 1400);
+  }
+}
 game.quip = (cat, chance = 1, prio = false) => {
-  const list = QUIPS[cat]; if (!list || Math.random() > chance) return;
+  const list = Array.isArray(cat) ? cat : QUIPS[cat]; if (!list || Math.random() > chance) return;
   if (!prio && (performance.now() < quipCool || subsQ.length)) return;
   quipCool = performance.now() + 6000;
   const line = list[(Math.random() * list.length) | 0];
@@ -294,8 +327,8 @@ game.quip = (cat, chance = 1, prio = false) => {
   voice.say(line, 'WALLY', prio);
 };
 // someone's been run over: thud, yelp, a cry (if they're not out cold) and a horrified witness
-const RUN_OVER = ['Ma bunions!', 'Aaaargh!', 'Ma good leg!', 'Watch where yer goin\'!', 'Ooyah!', 'Ya bampot!', 'Ma messages!', 'Nae again!', 'I\'ve only just been discharged!', 'Ma hip!'];
-const WITNESS = ['He\'s run that wifie ower!', 'Did ye see that?!', 'Somebody phone an ambulance!', 'Wally! Ya maniac!', 'That\'s no\' very superhero!'];
+const RUN_OVER = ['Ma bunions!', 'Aaaargh!', 'Ma good leg!', 'Watch where yer goin\'!', 'Ooyah!', 'Ya bampot!', 'Ma messages!', 'Nae again!', 'I\'ve only just been discharged!', 'Ma hip!', 'Ma pie! Ye\'ve squashed ma pie!', 'I saw ma life flash before ma eyes! It was boring!', 'That\'s a hundred quid ye owe me!', 'Ah\'m fine! Ah\'m fine! Ah\'m no\' fine!'];
+const WITNESS = ['He\'s run that wifie ower!', 'Did ye see that?!', 'Somebody phone an ambulance!', 'Wally! Ya maniac!', 'That\'s no\' very superhero!', 'I\'m writing tae the council aboot this!', 'Ten points! Naw, wait, that\'s terrible!', 'That\'s the third one the day!'];
 let witnessCool = 0;
 function runOverSounds(p, sp, car) {
   const d = Math.hypot(p.x - player.x, p.z - player.z), near = Math.max(0, 1 - d / 70);
@@ -305,6 +338,7 @@ function runOverSounds(p, sp, car) {
   audio.yelp(pitch, near);
   if (d < 30 && p.health > 0) game.say(p, RUN_OVER[(Math.random() * RUN_OVER.length) | 0]);
   p.thudLand = true; // they'll bump when they hit the ground
+  if (car === player.car) game.quip('runover', 0.2);
   if (car === player.car && performance.now() > witnessCool) {
     const w = peds.list.find((q) => q !== p && q.state !== 'dead' && !q.cop && Math.hypot(q.x - p.x, q.z - p.z) < 18);
     if (w) { witnessCool = performance.now() + 9000; setTimeout(() => game.say(w, WITNESS[(Math.random() * WITNESS.length) | 0]), 700); }
@@ -758,7 +792,7 @@ game.playerPunch = (weapon = 'fists') => {
   }
   if (any && W.clang) { audio.tone(1400, 0.4, 'triangle', 0.25, -200); audio.tone(2100, 0.3, 'sine', 0.1); }
   else if (any && club) audio.hit(weapon);
-  if (any) { if (!club) audio.punch(); if (sup) { player.superPunch = 0; audio.boom(); } }
+  if (any) { if (!club) audio.punch(); if (sup) { player.superPunch = 0; audio.boom(); } game.quip('punch', 0.12); }
 };
 game.npcShoot = (ped, tx, tz) => {
   { const dd = Math.hypot(ped.x - player.x, ped.z - player.z); if (dd < 90) audio.fire('npc', 0.9 * (1 - dd / 90) + 0.1); }
@@ -783,7 +817,7 @@ game.onPedKilled = (p, kind) => {
 game.onCarImpact = (car, v) => {
   const d = Math.hypot(car.x - player.x, car.z - player.z);
   if (d < 40) audio.crash(v * (1 - d / 40));
-  if (car === player.car) cam.shake = Math.min(0.5, v * 0.03);
+  if (car === player.car) { cam.shake = Math.min(0.5, v * 0.03); if (v > 14) game.quip('crash', 0.35); }
 };
 game.onExplosion = (x, y, z, src) => {
   const d = Math.hypot(x - player.x, z - player.z);
@@ -804,6 +838,8 @@ game.hurtPlayer = (amt, cause, silent) => {
   player.health -= amt;
   if (!silent) { $('damage').style.opacity = 0.7; setTimeout(() => ($('damage').style.opacity = 0), 160); }
   if (player.health <= 0) die(cause);
+  else if (cause === 'fall') game.quip('fall', 0.7);
+  else if (player.health < 30 && !game._lowSaid) { game._lowSaid = true; game.quip('lowHealth', 1, true); }
   else if (amt > 12) game.quip('hurt', 0.35);
 };
 const DEATHS = { fall: 'Gravity: 1, Wally: 0', drown: 'Wally Man can\'t swim. Never could.', boom: 'Well done.', shot: 'Turns out the cape isn\'t bulletproof.', car: 'Look both ways, hero.', faceplant: 'Death by pavement.' };
@@ -877,7 +913,8 @@ function respawn(where) {
   game.wanted.clear(); game.cuffs = null; arrest.p = 0; player.jackPose = null;
   for (const p of peds.list.slice()) if (p.cop) { p.remove(); peds.list.splice(peds.list.indexOf(p), 1); }
   for (const c of cars.slice()) if (c.type === 'police' && c.ai) removeCar(c);
-  cam.yaw = Math.PI;
+  cam.yaw = Math.PI; game._lowSaid = false;
+  setTimeout(() => game.quip(where === 'police' ? 'busted' : 'wasted', 1, true), 1500);
   save();
 }
 
@@ -910,7 +947,7 @@ game.carCollide = (x, z, rad, y, ignore) => {
 
 // ---------------- cars: enter / exit ----------------
 // ----- carjacking: walk to the door, open it, haul the driver out, thump them, jump in -----
-const JACK_LINES = ['Ma motor!', 'Wally, ya thief!', 'I only just washed that!', 'Ye cannae just TAKE it!', 'Ma heid! Ma CAR!', 'I\'m telling yer maw!'];
+const JACK_LINES = ['Ma motor!', 'Wally, ya thief!', 'I only just washed that!', 'Ye cannae just TAKE it!', 'Ma heid! Ma CAR!', 'I\'m telling yer maw!', 'Ma shopping\'s in the boot!', 'At least let me get ma sunglasses!', 'I\'m on ma way tae a wedding!', 'Mind the fluffy dice, they\'re vintage!', 'That\'s ma mother-in-law\'s motor! Actually, keep it.', 'Help! I\'m being carjacked by a onesie!'];
 function enterCar() {
   if (player.car || player.dead || game.jack) return;
   let best = null, bd = 3.8;
@@ -979,6 +1016,7 @@ function updateJack(dt) {
       p.state = 'idle'; p.tilt = 0; p.mission = false;
       p.hurt(18, game, player.x, player.z, 'punch');
       audio.punch(); cam.shake = Math.max(cam.shake, 0.15);
+      setTimeout(() => game.quip('jack', 0.6), 500);
       if (j.cop) p.aggro = true; else { p.fleeFrom = [player.x, player.z]; p.fleeT = 9; p.state = p.state === 'tumble' ? 'tumble' : 'flee'; }
     }
     return;
@@ -1602,7 +1640,7 @@ function updatePickups(dt) {
     if (Math.abs(p.x - px) < 1.3 && Math.abs(p.z - pz) < 1.3 && Math.abs(p.y - 0.9 - py) < 1.6) {
       if (p.kind === 'health') { if (player.health >= 100) continue; player.health = 100; game.toast('Fizzy ginger juice. Health restored.'); }
       if (p.kind === 'armour') { if (player.armour >= 100) continue; player.armour = 100; game.toast('Body armour. Fits over the onesie.'); }
-      if (p.kind === 'cash') { const a = p.amount || 250; player.money += a; audio.cash(); }
+      if (p.kind === 'cash') { const a = p.amount || 250; player.money += a; audio.cash(); game.quip('cash', 0.12); }
       if (p.kind === 'ammo') { player.giveWeapon('blaster', 30); game.toast('Blaster cells +30'); }
       if (p.kind === 'crate') {
         const got = WEAPON_ORDER.filter((w) => player.owned[w] && usesAmmo(w));
@@ -1613,7 +1651,7 @@ function updatePickups(dt) {
       if (p.kind === 'weapon') {
         const W = WEAPONS[p.weapon], had = player.owned[p.weapon];
         player.giveWeapon(p.weapon, W.pickup || 0);
-        if (!had) game.quip('pickup', 0.35);
+        if (!had) { if (WEAPON_QUIPS[p.weapon]) game.quip([WEAPON_QUIPS[p.weapon]], 1, true); else game.quip('pickup', 0.35); }
         game.toast(had ? `${W.icon} ${W.name}${W.pickup ? ` +${W.pickup}` : ''}` : `${W.icon} Picked up the ${W.name}!${W.pickup ? ` (${W.pickup})` : ''} Tab to switch weapons.`);
       }
       audio.pickup();
@@ -1627,7 +1665,7 @@ function updatePickups(dt) {
     if (!s.got && Math.hypot(s.x - px, s.z - pz) < 1.4 && Math.abs(s.y - 1.1 - py) < 2 && !player.car) {
       s.got = true; scene.remove(s.obj); game.collected.push(s.id); game.stats.specs = game.collected.length;
       player.money += 100; audio.pass();
-      game.bigText('GOLDEN SPECS!', `${game.collected.length} of 20 found`, 2.2);
+      game.bigText('GOLDEN SPECS!', `${game.collected.length} of 20 found`, 2.2); game.quip('specs', 0.8, true);
       if (game.collected.length === 20) { player.money += 10000; game.toast('All 20 Golden Specs! +$10,000. Wally can finally see properly.'); }
       save();
     }
@@ -1797,6 +1835,7 @@ function fade(cb, hold = 0.35) {
   setTimeout(() => { cb(); setTimeout(() => { f.style.opacity = 0; }, hold * 1000); }, 380);
 }
 function enterFlat() {
+  setTimeout(() => { if (game.inside) game.quip('home', 0.5); }, 1600);
   if (game.wanted.level > 0) { game.toast('Ye cannae go hame wi\'the polis on yer tail!'); coolDoor(3); return; }
   if (game.mission) { game.toast('Nae time for a cuppa - finish the job first!'); coolDoor(3); return; }
   coolDoor(1.5); audio.door();
@@ -1973,7 +2012,8 @@ function frame(now) {
   if (game.intro) updateIntro(dt, inp); else updateCamera(dt, inp);
   updateWeather(dt);
   content.update(dt, game._inp);
-  if (!player.car && !game.mission && !game.intro && !player.dead) { idleQuipT -= dt; if (idleQuipT <= 0) { idleQuipT = 55 + Math.random() * 50; game.quip('idle', 1); } }
+  if (!player.car && !game.mission && !game.intro && !player.dead) { idleQuipT -= dt; if (idleQuipT <= 0) { idleQuipT = 45 + Math.random() * 40; game.quip('idle', 1); } }
+  updateChatter(dt);
   updateSky(dt);
   // audio
   const c = player.car;
