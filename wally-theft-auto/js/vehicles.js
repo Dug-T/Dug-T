@@ -324,12 +324,38 @@ export class Car {
     if (brk.knocked) { this.vx *= 0.78; this.vz *= 0.78; this.damage(25, game); if (this.driver === 'ai' && game) game.onHonk(this, 'crash'); }
     if (impact > 3) this.damage(impact * impact * 1.1, game, 'crash');
     if (impact > 2 && game) game.onCarImpact(this, impact);
-    // ground follow
+    // ground follow, stunt ramps and flight
     const gy = Math.min(0.2, Math.max(0, world.groundHeight(this.x, this.z, 0.5)));
-    this.y += (gy - this.y) * Math.min(1, dt * 12);
+    let rampH = -1, ramp = null;
+    if (game && game.ramps) for (const r of game.ramps) {
+      const rx = this.x - r.x, rz = this.z - r.z, along = rx * r.dx + rz * r.dz, across = rx * r.dz - rz * r.dx;
+      if (Math.abs(across) < r.w / 2 && along > -0.2 && along < r.l + 0.6) { rampH = Math.max(0, Math.min(1, along / r.l)) * r.h; ramp = r; }
+    }
+    const fwd = this.vx * Math.sin(this.heading) + this.vz * Math.cos(this.heading);
+    if (this.air) {
+      this.airT += dt; this.vy -= 16 * dt; this.y += this.vy * dt;
+      this.pitch = Math.max(-0.45, Math.min(0.45, -this.vy * 0.035));
+      if (this.y <= gy && this.vy < 0) {
+        const thump = -this.vy;
+        this.air = false; this.y = gy; this.pitch = 0;
+        if (thump > 9) this.damage((thump - 9) * 30, game, 'crash');
+        if (game && game.onStunt) game.onStunt('land', this, thump);
+      }
+    } else if (ramp && rampH >= 0) {
+      const along = (this.x - ramp.x) * ramp.dx + (this.z - ramp.z) * ramp.dz;
+      const goingUp = (this.vx * ramp.dx + this.vz * ramp.dz) > 0;
+      if (along > ramp.l && goingUp && this.speed > 13) { // off the lip and into the air
+        this.air = true; this.airT = 0; this.vy = this.speed * (ramp.h / ramp.l) * 1.15 + 2.5; this.y = ramp.h;
+        this.launch = [this.x, this.z]; this.lastRamp = ramp;
+        if (game && game.onStunt) game.onStunt('launch', this);
+      } else {
+        this.y = Math.max(gy, along <= ramp.l ? rampH : gy);
+        this.pitch = goingUp && along <= ramp.l ? -Math.atan(ramp.h / ramp.l) : 0;
+      }
+    } else this.y += (gy - this.y) * Math.min(1, dt * 12);
     // visual tilt
     const accel = (vf - (this._lastVf || 0)) / Math.max(dt, 1e-3); this._lastVf = vf;
-    this.pitch += (Math.max(-0.06, Math.min(0.06, -accel * 0.004)) - this.pitch) * Math.min(1, dt * 6);
+    if (!this.air && rampH < 0) this.pitch += (Math.max(-0.06, Math.min(0.06, -accel * 0.004)) - this.pitch) * Math.min(1, dt * 6);
     this.roll += (Math.max(-0.08, Math.min(0.08, yaw * vf * 0.0035 + vr * 0.01)) - this.roll) * Math.min(1, dt * 6);
     // wheel spin + steer
     for (const w of this.wheels) {
@@ -352,7 +378,7 @@ export class Car {
       this.driverFig.visible = !!who && !this.dead;
       if (who !== this._who) {
         this._who = who; const u = this.driverFig.userData;
-        if (who === 'wally') { u.shirt.color.set('#1f5fc4'); u.skinD.color.set('#f0c09a'); u.hairD.color.set('#c8763a'); }
+        if (who === 'wally') { u.shirt.color.set((game && game.wallySuit) || '#1f5fc4'); u.skinD.color.set('#f0c09a'); u.hairD.color.set('#c8763a'); }
         else if (this.driver === 'cop' || this.type === 'police') { u.shirt.color.set('#1c2a4a'); u.skinD.color.copy(u.own[1]); u.hairD.color.set('#151c30'); }
         else { u.shirt.color.copy(u.own[0]); u.skinD.color.copy(u.own[1]); u.hairD.color.copy(u.own[2]); }
       }

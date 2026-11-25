@@ -134,6 +134,12 @@ export class Ped {
       this.shoutT = (this.shoutT || 0) - dt;
       if (this.shoutT <= 0 && d < 25) { this.shoutT = 2.4 + Math.random() * 1.5; game.say(this, pick(LINES.argue)); this.h.punchT = 0.3; this.h.punchSide = Math.random() < 0.5 ? 1 : -1; }
       if (this.argueT <= 0 || d > 40) { this.state = 'walk'; this.setLoop(world); }
+    } else if (this.state === 'icecream') {
+      // queue up at the ice cream van's hatch
+      const [ix, iz] = this.iceAt || [this.x, this.z];
+      tx = ix; tz = iz; spd = 1.9;
+      if (Math.hypot(ix - this.x, iz - this.z) < 1.3) { if (game.onIceCream) game.onIceCream(this); this.state = 'walk'; this.setLoop(world); }
+      this.iceT = (this.iceT || 15) - dt; if (this.iceT <= 0) { this.state = 'walk'; this.setLoop(world); }
     } else if (this.state === 'flee') {
       this.fleeT -= dt;
       const [fx, fz] = this.fleeFrom || [pl.x, pl.z];

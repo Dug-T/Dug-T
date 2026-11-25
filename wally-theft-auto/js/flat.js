@@ -162,6 +162,17 @@ export function buildFlat(scene, world, addCollider) {
     capeG.computeVertexNormals();
     const cp = new THREE.Mesh(capeG, std({ color: '#e14a1e', roughness: 0.8, side: THREE.DoubleSide })); cp.position.set(X + 2.4 + k * 0.4, 1.55, z1 - 0.06); cp.rotation.y = Math.PI; room.add(cp);
   }
+  // wardrobe on the east wall: change Wally's outfit
+  const ward = new THREE.Group(); ward.position.set(x1 - 0.35, 0, Z - 0.1); room.add(ward);
+  const wbody = new THREE.Mesh(new THREE.BoxGeometry(0.65, 2.2, 1.3), woodM); wbody.position.y = 1.1; ward.add(wbody);
+  for (const dz of [-0.32, 0.32]) {
+    const wd = new THREE.Mesh(new THREE.BoxGeometry(0.03, 2.0, 0.6), std({ color: '#7a5230', roughness: 0.5 })); wd.position.set(-0.335, 1.1, dz); ward.add(wd);
+    const wk = new THREE.Mesh(new THREE.SphereGeometry(0.03, 8, 6), std({ color: '#d4af37', metalness: 1, roughness: 0.2 })); wk.position.set(-0.36, 1.1, dz * 0.15); ward.add(wk);
+  }
+  ward.traverse((m) => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } });
+  solid(x1 - 0.7, Z - 0.75, x1, Z + 0.55, 2.2);
+  const wardMk = ringMarker('#4aa3ff'); wardMk.position.set(x1 - 1.35, 0, Z - 0.1); room.add(wardMk);
+
   // ceiling light
   const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.16, 16, 10), std({ color: '#fff6d8', emissive: '#ffd89a', emissiveIntensity: 2.5 })); bulb.position.set(X, H - 0.35, Z); room.add(bulb);
   const flex = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.01, 0.3, 6), std({ color: '#222' })); flex.position.set(X, H - 0.15, Z); room.add(flex);
@@ -190,13 +201,13 @@ export function buildFlat(scene, world, addCollider) {
   const flat = {
     bounds: { x0, z0, x1, z1, h: H },
     spawn: [bedX - 1.6, bedZ + 2.1], exit: [doorX, z1 - 2.1], outside: [outX, outZ - 2.6],
-    door: [outX, outZ - 1.1], exitMarker: [doorX, z1 - 0.9], bedMarker: [bedX - 1.25, bedZ + 0.6],
+    door: [outX, outZ - 1.1], exitMarker: [doorX, z1 - 0.9], bedMarker: [bedX - 1.25, bedZ + 0.6], wardMarker: [x1 - 1.35, Z - 0.1],
     light,
     contains: (x, z) => x > x0 - 0.5 && x < x1 + 0.5 && z > z0 - 0.5 && z < z1 + 0.5,
     update(dt, t, inside, night) {
       light.intensity = inside ? 18 : 0;
       viewM.color.setScalar(1 - night * 0.75);
-      for (const mk of [exitMk, bedMk, inMk]) { mk.userData.arrow.position.y = 1.7 + Math.sin(t * 3) * 0.12; mk.userData.arrow.rotation.y += dt * 2; }
+      for (const mk of [exitMk, bedMk, inMk, wardMk]) { mk.userData.arrow.position.y = 1.7 + Math.sin(t * 3) * 0.12; mk.userData.arrow.rotation.y += dt * 2; }
       if (!inside) return;
       tvT -= dt;
       if (tvT <= 0) {

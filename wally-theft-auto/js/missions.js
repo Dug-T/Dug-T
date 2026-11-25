@@ -1,6 +1,6 @@
 // Story missions. Each one is a small state machine driven by game.update.
 import { roadC, LANE, N, blockMin, blockMax } from './city.js';
-import { addLivery } from './vehicles.js';
+import { addLivery, TrafficAI } from './vehicles.js';
 
 // Pamazon drop-offs: one doorstep on the north side of each of these blocks
 const DROPS = [[4, 4], [3, 4], [4, 3], [4, 5], [5, 5], [6, 4], [6, 5], [3, 5], [7, 4], [5, 2]];
@@ -179,6 +179,118 @@ export const MISSIONS = [
       return null;
     },
     end(g) { g.clearMarkers(); g.player.flyBonus = 0; },
+  },
+  {
+    id: 'birthday', title: "Mammy's Birthday", reward: 1500,
+    intro: ["WALLY MAN: Oh naw. It's Mammy's birthday. I've got NOTHING.", "WALLY MAN: Flowers from Neep Park, a cake from the Pie Palace, a card from the corner shop.", "WALLY MAN: Four minutes before she's back from the bingo. Go go go!"],
+    start(g) {
+      const W = g.world, park = W.blocks.find((b) => b.kind === 'park' && b.bx > 0);
+      const mid = (b) => [(b.x0 + b.x1) / 2, b.z0 + 1.4];
+      const B = (bx, bz) => W.blocks[bx * N + bz];
+      this.items = [
+        { name: 'flowers', pos: [(park.x0 + park.x1) / 2, (park.z0 + park.z1) / 2] },
+        { name: 'cake', pos: mid(B(6, 5)) },
+        { name: 'card', pos: mid(B(1, 3)) },
+      ];
+      for (const it of this.items) it.m = g.marker(it.pos[0], it.pos[1], 'dest', 2.5);
+      this.t = 240; this.got = 0; this.stage = 0;
+    },
+    update(dt, g) {
+      const pl = g.player, px = pl.car ? pl.car.x : pl.x, pz = pl.car ? pl.car.z : pl.z;
+      this.t -= dt; g.timer(this.t);
+      if (this.t <= 0) return 'fail';
+      if (this.stage === 0) {
+        let best = null, bd = 1e9;
+        for (const it of this.items) {
+          if (it.done) continue;
+          const d = Math.hypot(it.pos[0] - px, it.pos[1] - pz);
+          if (d < bd) { bd = d; best = it; }
+          if (g.inMarker(it.m, px, pz)) {
+            it.done = true; this.got++; it.m.obj.visible = false; g.markers = g.markers.filter((q) => q !== it.m);
+            g.audio.pickup(); g.toast({ flowers: 'Got the flowers. Slightly trampled.', cake: 'Got the cake. Only ate a wee bit.', card: 'Got a card. It says "Get Well Soon". Close enough.' }[it.name]);
+          }
+        }
+        if (best) g.setGps(best.pos[0], best.pos[1]);
+        g.objective(`Get Mammy's presents: ~y~${this.got} / 3~w~`);
+        if (this.got === 3) { this.stage = 1; const h = g.world.specials.home; this.home = g.marker(h.x + 2, h.z - 1, 'dest', 3); g.setGps(h.x + 2, h.z - 1); }
+      } else {
+        g.objective('Get back to ~y~the flat~w~ before Mammy does!');
+        if (g.inMarker(this.home, px, pz)) return 'pass';
+      }
+      return null;
+    },
+    end(g) { g.clearMarkers(); g.timer(null); },
+  },
+  {
+    id: 'heist', title: 'The Haggis Heist', reward: 2500,
+    intro: ["BIG DAVIE: The Haggis Express. Armoured van. Full of the finest offal in Scotland.", "BIG DAVIE: It's doing its rounds right now. Get it off them and bring it to the Wally Wash.", "BIG DAVIE: It's got a tracker, so the polis will be on ye. The Wally Wash'll sort that."],
+    start(g) {
+      const i = 6, j = 5, d = [-1, 0];
+      const van = g.spawnCar('van', 0, 0, -Math.PI / 2, { paint: '#2f5d2e' });
+      addLivery(van, 'HAGGIS EXPRESS', 'Finest offal since 1823', '#f2e21a');
+      van.ai = new TrafficAI(van, i, j, d); van.driver = 'ai'; van.mission = true; van.name = 'Haggis Express';
+      const [sx, sz] = van.ai.path[0]; van.x = sx; van.z = sz; van.heading = Math.atan2(d[0], d[1]); van.health = 2500;
+      this.van = van; this.stage = 0;
+      g.blip(van, 'target');
+    },
+    update(dt, g) {
+      const pl = g.player, van = this.van;
+      if (van.dead) return 'fail';
+      if (this.stage === 0) {
+        g.setGps(van.x, van.z);
+        g.objective('Find and nick the ~b~Haggis Express~w~.');
+        if (pl.car === van) {
+          this.stage = 1; g.clearBlips(); g.wanted.add(6); g.bigText('TRACKER ACTIVE', 'The polis are coming!', 2);
+          const s = g.world.specials.garage; this.m = g.marker(s.x, s.z - 6, 'dest', 4.5); g.setGps(s.x, s.z - 6);
+        }
+      } else {
+        if (pl.car !== van) { g.objective('Get back in the ~b~Haggis Express~w~!'); g.blip(van, 'target', true); g.setGps(van.x, van.z); }
+        else {
+          g.clearBlips(); const s = g.world.specials.garage; g.setGps(s.x, s.z - 6);
+          g.objective('Take the van to the ~y~Wally Wash~w~.');
+          if (g.inMarker(this.m, van.x, van.z) && van.speed < 3) return 'pass';
+        }
+      }
+      return null;
+    },
+    end(g) { g.clearMarkers(); g.clearBlips(); if (this.van) this.van.mission = false; },
+  },
+  {
+    id: 'square', title: 'Battle of Hero Square', reward: 5000,
+    intro: ["MRS McGLASHAN: Wally! The Red Shirts are takin' over Hero Square!", "MRS McGLASHAN: They're spray-paintin' moustaches on yer statue. Yer OWN statue!", "MRS McGLASHAN: Here's a Scatter Blaster and some armour. Hold the square, son."],
+    start(g) {
+      g.player.giveWeapon('scatter', 40); g.player.armour = 100;
+      this.wave = 0; this.thugs = []; this.gap = 3;
+      const s = g.world.specials.plaza; this.cx = s.x; this.cz = s.z;
+      g.setGps(s.x, s.z - 12);
+      g.objective('Get to ~y~Hero Square~w~.');
+    },
+    spawnWave(g) {
+      this.wave++;
+      const n = 2 + this.wave * 2;
+      g.bigText(`WAVE ${this.wave} / 3`, `${n} Red Shirts incoming`, 2);
+      for (let k = 0; k < n; k++) {
+        const a = (k / n) * Math.PI * 2 + Math.random() * 0.4, r = 24;
+        const p = g.spawnPed(this.cx + Math.cos(a) * r, this.cz + Math.sin(a) * r, { thug: true });
+        p.mission = true; p.aggro = true; p.health = 110 + this.wave * 20; this.thugs.push(p); g.blip(p, 'enemy');
+      }
+    },
+    update(dt, g) {
+      const pl = g.player, px = pl.car ? pl.car.x : pl.x, pz = pl.car ? pl.car.z : pl.z;
+      if (this.wave === 0) {
+        if (Math.hypot(px - this.cx, pz - this.cz) < 30) { g.setGps(null); this.spawnWave(g); }
+        return null;
+      }
+      const left = this.thugs.filter((p) => p.state !== 'dead' && p.health > 0).length;
+      g.objective(`Hold Hero Square! Wave ${this.wave}/3: ~r~${left} Red Shirts~w~ left.`);
+      if (left === 0) {
+        if (this.wave >= 3) return 'pass';
+        this.gap -= dt;
+        if (this.gap <= 0) { this.gap = 3; g.clearBlips(); this.thugs = []; this.spawnWave(g); }
+      }
+      return null;
+    },
+    end(g) { g.clearBlips(); g.setGps(null); for (const p of this.thugs || []) p.mission = false; },
   },
 ];
 

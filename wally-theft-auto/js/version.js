@@ -1,7 +1,16 @@
 // Bump VERSION for every update (1.1, 1.2, 1.3 ...) and add a line to CHANGES.
-export const VERSION = '2.2';
+export const VERSION = '2.3';
 
 export const CHANGES = [
+  ['2.3', [
+    "3 new story missions: Mammy's Birthday, The Haggis Heist and Battle of Hero Square",
+    "Granda's Armoury: a shop to spend your cash on weapons, ammo, armour and health",
+    'Wally Cabs: drive a black cab to pick up fares for cash',
+    'Ice cream van job: park Mr Fudge and the chimes bring customers',
+    '6 stunt ramps with slow motion and cash bonuses',
+    'A wardrobe in the flat with 6 outfits for Wally',
+    'Seagulls circling the city',
+  ]],
   ['2.2', [
     'Updates now load properly: the game checks the live version and fetches fresh files, so browsers can\'t get stuck on an old copy',
   ]],
