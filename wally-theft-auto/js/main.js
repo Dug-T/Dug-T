@@ -292,6 +292,24 @@ game.quip = (cat, chance = 1, prio = false) => {
   $('subs').textContent = 'WALLY MAN: ' + line; subsT = Math.max(3, line.length * 0.07);
   voice.say(line, 'WALLY', prio);
 };
+// someone's been run over: thud, yelp, a cry (if they're not out cold) and a horrified witness
+const RUN_OVER = ['Ma bunions!', 'Aaaargh!', 'Ma good leg!', 'Watch where yer goin\'!', 'Ooyah!', 'Ya bampot!', 'Ma messages!', 'Nae again!', 'I\'ve only just been discharged!', 'Ma hip!'];
+const WITNESS = ['He\'s run that wifie ower!', 'Did ye see that?!', 'Somebody phone an ambulance!', 'Wally! Ya maniac!', 'That\'s no\' very superhero!'];
+let witnessCool = 0;
+function runOverSounds(p, sp, car) {
+  const d = Math.hypot(p.x - player.x, p.z - player.z), near = Math.max(0, 1 - d / 70);
+  if (near <= 0) return;
+  audio.thud(sp, near);
+  const pitch = p.cop ? 0.75 : (p.female ? 1.35 : 0.95) * (0.9 + Math.random() * 0.2);
+  audio.yelp(pitch, near);
+  if (d < 30 && p.health > 0) game.say(p, RUN_OVER[(Math.random() * RUN_OVER.length) | 0]);
+  p.thudLand = true; // they'll bump when they hit the ground
+  if (car === player.car && performance.now() > witnessCool) {
+    const w = peds.list.find((q) => q !== p && q.state !== 'dead' && !q.cop && Math.hypot(q.x - p.x, q.z - p.z) < 18);
+    if (w) { witnessCool = performance.now() + 9000; setTimeout(() => game.say(w, WITNESS[(Math.random() * WITNESS.length) | 0]), 700); }
+  }
+}
+game.onPedLand = (p, hard) => { const d = Math.hypot(p.x - player.x, p.z - player.z); if (d < 50) audio.bump((hard ? 1 : 0.6) * (1 - d / 50)); };
 game.sayCar = (car, text) => {
   if (bubbles.length > 4 || bubbles.some((b) => b.ped === car)) return;
   const el = document.createElement('div'); el.className = 'bubble'; el.textContent = text; $('bubbles').appendChild(el);
@@ -1649,7 +1667,7 @@ function updateTraffic(dt) {
         p.vx = c.vx * 0.9 + (p.x - cx) * 2; p.vz = c.vz * 0.9 + (p.z - cz) * 2; p.vy = 3 + sp * 0.25;
         const wasDead = p.health <= 0; p.state = 'tumble';
         if (!wasDead) p.hurt(sp * 7, c === player.car ? game : { onPedKilled() {}, say() {} }, c.x, c.z, 'car');
-        audio.punch();
+        runOverSounds(p, sp, c);
         if (c === player.car && p.cop) game.wanted.add(2);
         break;
       }

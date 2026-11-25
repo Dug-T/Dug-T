@@ -92,6 +92,7 @@ export class Ped {
       h.root.rotation.x -= dt * 9 * Math.min(1, Math.hypot(this.vx, this.vz) / 6 + 0.3);
       if (this.y <= g && this.vy < 0) {
         this.y = g;
+        if (this.thudLand && game.onPedLand) { game.onPedLand(this, Math.hypot(this.vx, this.vz) > 4); if (Math.hypot(this.vx, this.vz) <= 4) this.thudLand = false; }
         if (Math.hypot(this.vx, this.vz) > 4) { this.vy = 2.5; this.vx *= 0.5; this.vz *= 0.5; }
         else if (this.health <= 0) { this.state = 'dead'; this.deadT = 0; }
         else { this.state = 'down'; this.downT = 1.6; }

@@ -1,7 +1,10 @@
 // Bump VERSION for every update (1.1, 1.2, 1.3 ...) and add a line to CHANGES.
-export const VERSION = '2.7';
+export const VERSION = '2.8';
 
 export const CHANGES = [
+  ['2.8', [
+    'Running people over now sounds like it: a thud, a cartoon yelp, a cry ("Ma bunions!"), a bump when they land, and witnesses who shout about it',
+  ]],
   ['2.7', [
     'Fixed a crash on phones after long sessions (like the Pamazon deliveries): cars, people, projectiles and pickups now free their graphics memory when they leave',
     'Safety net: if the graphics ever do give out, the game saves and offers a reload instead of freezing',
