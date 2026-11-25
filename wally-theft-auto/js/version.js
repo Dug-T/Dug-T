@@ -1,7 +1,11 @@
 // Bump VERSION for every update (1.1, 1.2, 1.3 ...) and add a line to CHANGES.
-export const VERSION = '3.0';
+export const VERSION = '3.1';
 
 export const CHANGES = [
+  ['3.1', [
+    'Fixed: the radio could stay silent after getting out of one vehicle and into another',
+    'The radio also wakes back up if the phone pauses the sound (a call, another app), and skips ahead on the beat if the phone is too busy to keep up',
+  ]],
   ['3.0', [
     "10 new weapons: Flamethrower, Auld Revolver, Wee Rattler SMG, Highland Rifle, Gamekeeper's Double, Thistle Crossbow, Caber Launcher, Nail Gun, Polis Taser and Shinty Stick",
     'Realistic firing sounds for every weapon: a crack, a bang, a thump and an echo off the buildings, plus shotgun pumps, sniper bolts, shell casings and a roaring flamethrower',
