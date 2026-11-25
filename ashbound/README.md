@@ -17,7 +17,7 @@ Open `ashbound/index.html` from any web server (GitHub Pages works). Nothing nee
   - 📡 **The radio**: find the battery (in the nose of the plane), the antenna (the snapped mast at the ranger tower) and the handset (the village radio hut). Repair the ranger radio and a helicopter comes to the helipad. Be on the pad when it lands.
   - 🚪 **The bunker**: stock the old shelter with four waters, four meals and an ash mask, then seal the steel door and wait out the surge.
 - **The other survivors**: Dr Amara Osei (volcanologist, at the camp), Kai Tane (fisherman, in the village), Tomas Reyes (the injured pilot at the wreck, who needs a bandage before he can walk), Lena Hart (the ranger) and Old Pete (the hermit at the bunker). Each has their own advice as the stages change. Talk to them, then press again and they follow you. Anyone with you when you launch, lift off or seal the door is saved; the end screen counts them.
-- **Pace**: Relaxed (40 minutes to the surge), Standard (24) or Hardcore (14, and everything hurts more).
+- **Pace**: Relaxed (40 minutes to the surge), Standard (24, temporarily 5 while testing) or Hardcore (14, and everything hurts more).
 - **Graphics**: High (soft shadows, bloom, more jungle) or Low for older phones. The island, sea and sky are shader-driven: wet sand, breakers along the shore, a drifting eruption column and ash that greys the whole world out.
 - The game saves itself as you play and from the pause menu; **CONTINUE** on the title screen picks it back up.
 
@@ -42,5 +42,6 @@ Version 1.0 is single player with NPC survivors. The world is seeded and determi
 
 ## Versions
 
+- **1.2**: every character is one skinned mesh with blended joints and far more detail (fingers, kneecaps, collars, soles, eyes with lids); reworked walk, run, idle, sit, talk, chop and a proper front-crawl swim; Standard pace temporarily 5 minutes for testing.
 - **1.1**: fixed left/right movement being mirrored on the joystick, keyboard, controller and raft; fixed the mirrored compass and map (north is up); FPS counter shown under the stat bars, with a switch in the pause menu.
 - **1.0**: first release. A procedurally built tropical island with a live volcano; third-person survival with health, stamina, hunger, thirst and clean air; the five eruption stages (calm, unrest, ashfall, eruption, surge); three escapes (raft, radio and helicopter, bunker); five survivors to find, help and bring along; phone, PC/Mac and controller support.

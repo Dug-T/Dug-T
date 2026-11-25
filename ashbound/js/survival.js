@@ -2,7 +2,7 @@
 
 export const DIFFICULTY = {
   relaxed: { name: 'Relaxed', minutes: 40, desc: '40 minutes to the final surge. Time to explore.' },
-  standard: { name: 'Standard', minutes: 24, desc: '24 minutes. The intended experience.' },
+  standard: { name: 'Standard', minutes: 5, desc: '5 minutes to the final surge (shortened for testing; the full game is 24).' },
   hardcore: { name: 'Hardcore', minutes: 14, desc: '14 minutes, and everything hurts more.' },
 };
 

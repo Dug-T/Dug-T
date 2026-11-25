@@ -219,7 +219,7 @@ function doInteract(it) {
   } else if (it.kind === 'launch') launchRaft();
   else if (it.kind === 'radio') {
     if (!it.can) { toast('You still need parts for the radio'); return; }
-    player.inv.take(ESCAPES.radio.needs); game.flags.radioFixed = true; game.flags.heliT = difficulty === 'hardcore' ? 90 : 120; game.flags.heliState = 'coming';
+    player.inv.take(ESCAPES.radio.needs); game.flags.radioFixed = true; game.flags.heliT = Math.min(difficulty === 'hardcore' ? 90 : 120, game.duration * 0.25); game.flags.heliState = 'coming';
     props.radioLamp.material.emissiveIntensity = 3; audio.radioStatic();
     const lena = npcs.byId('lena'); say(lena.def.name, lena.def.lines.fixed[0], 9); banner('MAYDAY SENT', 'Helicopter inbound. Get everyone to the helipad.');
   } else if (it.kind === 'heli') boardHeli();
@@ -458,7 +458,7 @@ function updatePlayer(dt) {
   player.x = nx; player.z = nz;
   const g2 = heightAt(player.x, player.z);
   // jumping and gravity
-  if (player.swimming) { player.y = SEA - 0.85 + Math.sin(game.t * 2) * 0.08; player.vy = 0; player.onGround = true; }
+  if (player.swimming) { player.y = SEA - 0.5 + Math.sin(game.t * 2) * 0.05; player.vy = 0; player.onGround = true; }
   else {
     if (player.onGround && input.pressed('jump') && s.stamina > 5) { player.vy = 5.2; player.onGround = false; s.stamina -= 5; audio.jump(); }
     player.vy -= 14 * dt; player.y += player.vy * dt;
@@ -497,7 +497,7 @@ function updateCamera(dt) {
   if (input.pressed('camera')) { cam.distSel = (cam.distSel + 1) % DISTS.length; cam.dist = DISTS[cam.distSel]; }
   let dist = cam.dist;
   if (game.intro > 0) { const k = smooth(0, 1, 1 - game.intro / 7); dist = lerp(90, cam.dist, k); cam.pitch = lerp(0.9, 0.28, k); cam.yaw = lerp(Math.PI + 1.8, Math.PI + 0.4, k); }
-  const head = { x: player.x, y: player.y + (player.swimming ? 1.0 : 1.55), z: player.z };
+  const head = { x: player.x, y: player.y + (player.swimming ? 0.9 : 1.55), z: player.z };
   camTarget.set(head.x, head.y, head.z);
   const cx = head.x - Math.sin(cam.yaw) * Math.cos(cam.pitch) * dist, cz = head.z - Math.cos(cam.yaw) * Math.cos(cam.pitch) * dist, cy = head.y + Math.sin(cam.pitch) * dist;
   // keep the camera out of the ground and above the sea
