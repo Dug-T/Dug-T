@@ -108,7 +108,9 @@ function applyQuality() {
   sun.shadow.mapSize.set(hi ? 2048 : 1024, hi ? 2048 : 1024);
   if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; }
   if (hi && !composer) {
-    composer = new EffectComposer(renderer);
+    // render into a multisampled target: the composer otherwise loses the canvas's anti-aliasing
+    const rt = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight, { type: THREE.HalfFloatType, samples: renderer.capabilities.isWebGL2 ? 4 : 0 });
+    composer = new EffectComposer(renderer, rt);
     composer.addPass(new RenderPass(scene, camera));
     bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.35, 0.5, 0.88);
     composer.addPass(bloom);
@@ -116,9 +118,9 @@ function applyQuality() {
     // gentle colour grade: a touch more contrast and colour, darker corners
     // colour grade + speed blur + chromatic fringe + film grain
     gradePass = new ShaderPass({
-      uniforms: { tDiffuse: { value: null }, uBlur: { value: 0 }, uTime: { value: 0 }, uFringe: { value: 0.0015 } },
+      uniforms: { tDiffuse: { value: null }, uBlur: { value: 0 }, uTime: { value: 0 }, uFringe: { value: 0.0015 }, uSun: { value: new THREE.Vector2(0.5, 0.5) }, uSunVis: { value: 0 }, uSunCol: { value: new THREE.Color('#ffe2a8') }, uAspect: { value: 1.7 } },
       vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
-      fragmentShader: `uniform sampler2D tDiffuse; uniform float uBlur, uTime, uFringe; varying vec2 vUv;
+      fragmentShader: `uniform sampler2D tDiffuse; uniform float uBlur, uTime, uFringe, uSunVis, uAspect; uniform vec2 uSun; uniform vec3 uSunCol; varying vec2 vUv;
         float rnd(vec2 p){ return fract(sin(dot(p, vec2(12.9898, 78.233)) + uTime) * 43758.5453); }
         void main(){
           vec2 q = vUv - 0.5; float r2 = dot(q, q);
@@ -131,6 +133,22 @@ function applyQuality() {
             for (int i = 1; i <= 6; i++) { float k = float(i) / 6.0 * uBlur * 0.06 * smoothstep(0.02, 0.25, r2); acc += texture2D(tDiffuse, vUv - q * k).rgb; w += 1.0; }
             c = acc / w;
           }
+          // sun shafts: march toward the sun gathering bright sky, so light streams past the buildings
+          if (uSunVis > 0.01) {
+            vec2 dir = (uSun - vUv) / 14.0; vec2 p = vUv; float illum = 0.0, decay = 1.0;
+            for (int i = 0; i < 14; i++) { p += dir; vec3 sp = texture2D(tDiffuse, clamp(p, 0.001, 0.999)).rgb; illum += max(0.0, dot(sp, vec3(0.3333)) - 0.8) * decay; decay *= 0.92; }
+            c += uSunCol * illum * 0.45 * uSunVis;
+            // lens flare: only when the sun itself is in view (not behind a building)
+            float seen = smoothstep(0.72, 0.93, dot(texture2D(tDiffuse, clamp(uSun, 0.001, 0.999)).rgb, vec3(0.3333)));
+            vec2 a = vec2(uAspect, 1.0), d = (vUv - uSun) * a; float dl = length(d);
+            float fl = exp(-dl * 10.0) * 0.5 + exp(-dl * 3.0) * 0.1;
+            fl += exp(-abs(d.y) * 160.0) * exp(-abs(d.x) * 3.0) * 0.25; // a horizontal streak
+            vec2 axis = vec2(0.5) - uSun;
+            float g1 = smoothstep(0.06, 0.03, length((vUv - (uSun + axis * 0.7)) * a));
+            float g2 = smoothstep(0.035, 0.015, length((vUv - (uSun + axis * 1.25)) * a));
+            float g3 = smoothstep(0.1, 0.07, length((vUv - (uSun + axis * 1.7)) * a)) - smoothstep(0.07, 0.04, length((vUv - (uSun + axis * 1.7)) * a));
+            c += (uSunCol * fl + vec3(0.5, 0.8, 1.0) * g1 * 0.05 + vec3(1.0, 0.6, 0.3) * g2 * 0.07 + vec3(0.6, 1.0, 0.7) * g3 * 0.05) * seen * uSunVis;
+          }
           float l = dot(c, vec3(0.299, 0.587, 0.114));
           c = mix(vec3(l), c, 1.12);
           c = (c - 0.5) * 1.06 + 0.5;
@@ -140,6 +158,7 @@ function applyQuality() {
     });
     composer.addPass(gradePass);
   }
+  game.hiFx = hi;
   for (const id of ['gfx', 'gfx2']) $(id).textContent = 'GRAPHICS: ' + quality.toUpperCase();
   for (const id of ['vox', 'vox2']) if ($(id)) $(id).textContent = 'VOICES: ' + (voice.on ? 'ON' : 'OFF');
   resize();
@@ -169,7 +188,7 @@ const particles = [];
 function puff(x, y, z, o = {}) {
   let p = particles.find((q) => !q.alive);
   if (!p) {
-    if (particles.length > 220) return;
+    if (particles.length > 320) return;
     const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: smokeTex, transparent: true, depthWrite: false, fog: true }));
     p = { s, alive: false }; particles.push(p); scene.add(s);
   }
@@ -199,6 +218,7 @@ skidMesh.count = 0; skidMesh.frustumCulled = false; skidMesh.renderOrder = 1; sc
 let skidI = 0;
 const skidDummy = new THREE.Object3D();
 function skidAt(x, z, heading, car) {
+  if (car.speed > 7 && Math.random() < 0.55) puff(x, 0.25, z, { color: '#d9d9d6', life: 1.1 + Math.random() * 0.6, size: 0.5, grow: 3.2, vx: (Math.random() - 0.5) * 1.2, vy: 0.5, vz: (Math.random() - 0.5) * 1.2, opacity: 0.32 });
   const key = car.id + (x > car.x ? 'a' : 'b'), last = skidLast.get(key);
   if (last && Math.hypot(last[0] - x, last[1] - z) < 0.45) return; // lay a strip every half metre
   skidLast.set(key, [x, z]);
@@ -652,9 +672,34 @@ game.playerShoot = (W = WEAPONS.blaster) => {
       puff(end.x, end.y, end.z, { color: '#ffd080', add: true, life: 0.2, size: 0.5, opacity: 1 });
       if (hit.c.ai instanceof TrafficAI) hit.c.ai.panic = 6;
       if (hit.c.type === 'police') game.wanted.add(1 / W.pellets * 1.5);
-    } else puff(end.x, end.y, end.z, { color: '#ccc', life: 0.5, size: 0.5 });
+    } else impactFx(end, dir, hit.kind);
   }
 };
+// bullet holes: a pool of small dark marks stuck to walls and the road, oldest reused first
+const HOLES = 240, holeMesh = new THREE.InstancedMesh(new THREE.CircleGeometry(0.06, 10), new THREE.MeshBasicMaterial({ color: '#1b1714', transparent: true, opacity: 0.85, polygonOffset: true, polygonOffsetFactor: -4, depthWrite: false }), HOLES);
+holeMesh.count = 0; holeMesh.frustumCulled = false; scene.add(holeMesh);
+let holeI = 0; const holeDummy = new THREE.Object3D();
+function impactFx(p, dir, kind) {
+  let nx = 0, ny = 1, nz = 0;
+  if (kind === 'wall') {
+    // which face of the building did it hit? the nearest one to the point
+    for (const b of world.nearby(p.x, p.z, 0.5)) {
+      if (b.circle || p.x < b.x0 - 0.5 || p.x > b.x1 + 0.5 || p.z < b.z0 - 0.5 || p.z > b.z1 + 0.5) continue;
+      const f = [[p.x - b.x0, -1, 0], [b.x1 - p.x, 1, 0], [p.z - b.z0, 0, -1], [b.z1 - p.z, 0, 1]].sort((a, c) => Math.abs(a[0]) - Math.abs(c[0]))[0];
+      nx = f[1]; nz = f[2]; ny = 0;
+      if (nx) p.x = nx < 0 ? b.x0 - 0.01 : b.x1 + 0.01; else p.z = nz < 0 ? b.z0 - 0.01 : b.z1 + 0.01;
+      break;
+    }
+  } else p.y = world.groundHeight(p.x, p.z, p.y + 0.5) + 0.01;
+  holeDummy.position.set(p.x, p.y, p.z);
+  holeDummy.lookAt(p.x + nx, p.y + ny, p.z + nz);
+  holeDummy.scale.setScalar(0.8 + Math.random() * 0.6); holeDummy.updateMatrix();
+  holeMesh.setMatrixAt(holeI, holeDummy.matrix); holeI = (holeI + 1) % HOLES; holeMesh.count = Math.max(holeMesh.count, holeI === 0 ? HOLES : holeI);
+  holeMesh.instanceMatrix.needsUpdate = true;
+  // a spray of sparks and a puff of dust off the surface
+  for (let k = 0; k < 5; k++) puff(p.x, p.y, p.z, { color: Math.random() < 0.5 ? '#ffd27a' : '#fff1c0', add: true, life: 0.18 + Math.random() * 0.12, size: 0.07, grow: 0.2, vx: nx * 3 + (Math.random() - 0.5) * 5 - dir.x * 1.5, vy: ny * 3 + Math.random() * 3, vz: nz * 3 + (Math.random() - 0.5) * 5 - dir.z * 1.5, opacity: 1 });
+  puff(p.x + nx * 0.1, p.y + ny * 0.1, p.z + nz * 0.1, { color: kind === 'wall' ? '#b9a993' : '#8d8a84', life: 0.7, size: 0.35, grow: 2.2, vx: nx * 0.8, vy: 0.5, vz: nz * 0.8, opacity: 0.55 });
+}
 // Tattie Gun potatoes and Haggis Launcher rockets
 const shots = [];
 game.fireProjectile = (W) => {
@@ -827,6 +872,10 @@ game.onPedKilled = (p, kind) => {
   game.wanted.add(p.cop ? 4 : 1.2);
 };
 game.onCarImpact = (car, v) => {
+  if (v > 7 && Math.hypot(car.x - player.x, car.z - player.z) < 60) {
+    const [fx, fz] = car.forward(), fr = car.T.len / 2;
+    for (let k = 0; k < Math.min(14, v); k++) puff(car.x + fx * fr, car.y + 0.5, car.z + fz * fr, { color: Math.random() < 0.6 ? '#ffb347' : '#fff0b0', add: true, life: 0.25 + Math.random() * 0.25, size: 0.08, grow: 0.1, vx: (Math.random() - 0.5) * 8 - car.vx * 0.2, vy: 1 + Math.random() * 4, vz: (Math.random() - 0.5) * 8 - car.vz * 0.2, opacity: 1 });
+  }
   const d = Math.hypot(car.x - player.x, car.z - player.z);
   if (d < 40) audio.crash(v * (1 - d / 40));
   if (car === player.car) { cam.shake = Math.min(0.5, v * 0.03); pad.rumble(Math.min(1, v * 0.05), Math.min(1, v * 0.04), 180); if (v > 14) game.quip('crash', 0.35); }
@@ -1989,6 +2038,43 @@ function updateFlat(dt, inp) {
 // ---------------- intro: a UFO drops Wally off outside his flat ----------------
 let ufo = null;
 const ease = (k) => { k = Math.max(0, Math.min(1, k)); return k * k * (3 - 2 * k); };
+// exhaust puffs from Wally's motor, and litter blowing about the streets
+const litter = [];
+let litterMat = null, litterGeo = null;
+function updateAmbientFx(dt) {
+  const c = player.car;
+  if (c && !c.dead && c.type !== 'wedge' && c.input.throttle > 0.2 && Math.random() < dt * (6 + c.input.throttle * 10)) {
+    const [fx, fz] = c.forward(), lx = fz, lz = -fx, ex = c.T.wid / 2 - 0.4;
+    puff(c.x - fx * (c.T.len / 2 + 0.1) + lx * ex, c.y + 0.3, c.z - fz * (c.T.len / 2 + 0.1) + lz * ex, { color: game.night > 0.5 ? '#6d6d70' : '#9a9a9c', life: 0.9, size: 0.18, grow: 2.5, vx: -fx * 1.5 + (Math.random() - 0.5), vy: 0.6, vz: -fz * 1.5 + (Math.random() - 0.5), opacity: 0.35 });
+  }
+  // a dozen bits of paper tumbling along in the wind near Wally
+  if (quality !== 'high' || game.inside) { for (const l of litter) l.m.visible = false; return; }
+  if (!litter.length) {
+    litterGeo = new THREE.PlaneGeometry(0.28, 0.2);
+    litterMat = new THREE.MeshStandardMaterial({ color: '#e8e4da', roughness: 0.9, side: THREE.DoubleSide });
+    for (let i = 0; i < 12; i++) { const m = new THREE.Mesh(litterGeo, litterMat); m.castShadow = true; scene.add(m); litter.push({ m, x: 1e9, z: 0, y: 0, vy: 0, spin: Math.random() * 6 }); }
+  }
+  const wind = ((weather.v && weather.v.wind) ?? 0.5) + 0.6, wa = performance.now() / 9000;
+  const wx = Math.cos(wa) * wind * 2.2, wz = Math.sin(wa * 0.7) * wind * 2.2;
+  for (const l of litter) {
+    if (Math.hypot(l.x - player.x, l.z - player.z) > 35) {
+      const a = Math.random() * Math.PI * 2, r = 12 + Math.random() * 20;
+      l.x = player.x + Math.cos(a) * r; l.z = player.z + Math.sin(a) * r; l.y = 0.05;
+      if (world.collide(l.x, l.z, 0.3, 0).hit) { l.x = 1e9; continue; }
+    }
+    const g = world.groundHeight(l.x, l.z, l.y + 0.5) + 0.03;
+    // gusts lift it, gravity brings it down, and it skitters along
+    if (l.y <= g + 0.01 && Math.random() < dt * 0.8) l.vy = 1 + Math.random() * 2.5 * wind;
+    l.vy -= 6 * dt; l.y = Math.max(g, l.y + l.vy * dt); if (l.y === g) l.vy = 0;
+    const airborne = l.y > g + 0.02 ? 1 : 0.25;
+    const nx = l.x + (wx + Math.sin(l.spin * 3) * 0.6) * dt * airborne, nz = l.z + (wz + Math.cos(l.spin * 2) * 0.6) * dt * airborne;
+    if (!world.collide(nx, nz, 0.2, 0).hit) { l.x = nx; l.z = nz; }
+    l.spin += dt * (airborne > 0.5 ? 6 : 1);
+    l.m.position.set(l.x, l.y, l.z);
+    l.m.rotation.set(airborne > 0.5 ? l.spin : -Math.PI / 2, l.spin * 0.5, airborne > 0.5 ? l.spin * 0.7 : 0);
+    l.m.visible = true;
+  }
+}
 function updateNessie(dt) {
   if (!game.inside) nessie.update(dt, player);
   nessie.group.visible = !game.inside;
@@ -2146,6 +2232,7 @@ function frame(now) {
   if (!player.car && !game.mission && !game.intro && !player.dead) { idleQuipT -= dt; if (idleQuipT <= 0) { idleQuipT = 45 + Math.random() * 40; game.quip('idle', 1); } }
   updateChatter(dt);
   if (nessie) updateNessie(dt);
+  updateAmbientFx(dt);
   updateSky(dt);
   // audio
   const c = player.car;
@@ -2170,6 +2257,7 @@ function frame(now) {
   updateHUD(dt);
   render();
 }
+const sunScr = new THREE.Vector3(); game.skyU = skyU;
 function updatePost() {
   if (!gradePass) return;
   const c = player.car;
@@ -2177,6 +2265,16 @@ function updatePost() {
   const target = Math.min(1, Math.max(0, (sp - 16) / 26));
   const u = gradePass.uniforms;
   u.uBlur.value += (target - u.uBlur.value) * 0.08;
+  // where the sun is on screen, and how much it should shine (not at night, in cloud, fog or indoors)
+  const sd = skyU.sunDir.value;
+  sunScr.copy(camera.position).addScaledVector(sd, 2000).project(camera);
+  const inFront = sunScr.z < 1 && sunScr.z > -1, onScreen = Math.max(Math.abs(sunScr.x), Math.abs(sunScr.y));
+  const vis = inFront ? Math.max(0, Math.min(1, (1.35 - onScreen) / 0.35)) : 0;
+  const want = vis * Math.max(0, Math.min(1, sd.y * 4)) * (1 - game.night) * (1 - Math.min(1, skyU.cover.value * 1.4)) * (game.inside ? 0 : 1);
+  u.uSunVis.value += (want - u.uSunVis.value) * 0.1;
+  u.uSun.value.set(sunScr.x * 0.5 + 0.5, sunScr.y * 0.5 + 0.5);
+  u.uAspect.value = camera.aspect;
+  u.uSunCol.value.copy(skyU.sunCol.value).lerp(new THREE.Color('#ffffff'), 0.2);
   u.uTime.value = (performance.now() / 1000) % 100;
 }
 function render() {

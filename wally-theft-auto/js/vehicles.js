@@ -288,6 +288,23 @@ function buildTrike(T, paint) {
   return { group: g, body, wheels, lightbar: null, paintM, tailM, headM, door, driverFig, amberM, glows, tailGlows, rearAxle: { x: wx, z: zR } };
 }
 
+// a soft cone of light in front of the headlights at night: one shared geometry and material for every car
+let beamGeo = null, beamMat = null;
+function headBeam(T) {
+  if (!beamGeo) {
+    beamGeo = new THREE.ConeGeometry(1.6, 9, 24, 1, true); beamGeo.translate(0, -4.5, 0); beamGeo.rotateX(-Math.PI / 2 + 0.08);
+    // brightest at the lamp, fading with distance, and soft at the edges of the cone (where you look across it)
+    beamMat = new THREE.ShaderMaterial({
+      uniforms: { col: { value: new THREE.Color('#fff1d0') }, op: { value: 0.38 } },
+      vertexShader: 'varying float vL; varying vec3 vN; varying vec3 vV; void main(){ vL = uv.y; vec4 mv = modelViewMatrix * vec4(position, 1.0); vN = normalize(normalMatrix * normal); vV = normalize(-mv.xyz); gl_Position = projectionMatrix * mv; }',
+      fragmentShader: 'uniform vec3 col; uniform float op; varying float vL; varying vec3 vN; varying vec3 vV; void main(){ float edge = pow(abs(dot(normalize(vN), normalize(vV))), 2.2); float a = op * pow(vL, 2.0) * edge; gl_FragColor = vec4(col * a, a); }',
+      transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide,
+    });
+    SHARED.add(beamGeo); SHARED.add(beamMat);
+  }
+  const m = new THREE.Mesh(beamGeo, beamMat); m.scale.set(T.wid / 1.9, 0.55, 1); m.castShadow = false; m.visible = false;
+  return m;
+}
 export function buildCarModel(type, paint) {
   const T = TYPES[type];
   if (type === 'wedge') return buildWedge(T, paint);
@@ -532,6 +549,7 @@ export class Car {
     if (type === 'trike') this.paint = paint || '#f0c419';
     const m = buildCarModel(type, this.paint);
     Object.assign(this, m);
+    this.beam = headBeam(this.T); this.beam.position.set(0, 0.7, this.T.len / 2 + 0.1); this.body.add(this.beam);
     this.name = this.T.names[(Math.random() * this.T.names.length) | 0];
     this.x = x; this.z = z; this.y = 0; this.heading = heading;
     this.vx = 0; this.vz = 0; this.steer = 0; this.vf = 0; this.yawRate = 0;
@@ -691,6 +709,7 @@ export class Car {
     this.tailM.emissiveIntensity = braking ? 3.5 : (game && game.night > 0.3 ? 1.4 : 0.4);
     const lit = !!game && (game.night > 0.25 || game.weatherDark) && !this.dead;
     if (this.glows) for (const s of this.glows) s.visible = lit;
+    if (this.beam) this.beam.visible = lit && !!game.hiFx && !this.tip;
     if (lit) for (const s of this.tailGlows) s.scale.setScalar(braking ? 1.4 : 0.8);
     // tyres squeal and leave rubber when the back end steps out or the handbrake's on
     if (game && game.onSkid && this.speed > 5 && (Math.abs(vr) > 3.2 || (inp.hand && Math.abs(vf) > 6))) {

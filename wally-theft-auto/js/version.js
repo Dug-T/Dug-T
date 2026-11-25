@@ -1,7 +1,15 @@
 // Bump VERSION for every update (1.1, 1.2, 1.3 ...) and add a line to CHANGES.
-export const VERSION = '3.8';
+export const VERSION = '3.9';
 
 export const CHANGES = [
+  ['3.9', [
+    'Sun shafts: on sunny days light streams past the buildings, with a lens flare when you look towards the sun',
+    'Smoother edges on High graphics (multisampled anti-aliasing)',
+    'Headlight beams light up the road in front of cars at night',
+    'Bullet holes in walls and roads, with sparks and dust where shots land',
+    'Tyre smoke when you skid, exhaust puffs when you put your foot down, and sparks when cars crash',
+    'Bits of paper blowing about the streets in the wind',
+  ]],
   ['3.8', [
     "Fixed: on some Bluetooth controllers (like the Nacon MG-X Pro) FIRE kept firing on its own and cars wouldn't drive forward. The game now measures where each trigger rests instead of guessing",
     'Any control that reads as held down from the moment a controller connects is ignored until it has been let go, so nothing can get stuck on',

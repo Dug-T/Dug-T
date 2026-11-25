@@ -65,6 +65,7 @@ On phones and tablets there's a movement stick on the left, a camera stick next 
 
 The version number is shown on the title screen (with a "What's new" list) and on the pause screen. It lives in `js/version.js`: bump it by 0.1 for every update (1.1, 1.2, 1.3...) and add a line to `CHANGES`.
 
+- **3.9**: sun shafts and lens flare, smoother edges, headlight beams, bullet holes and sparks, tyre smoke, exhaust, crash sparks and blowing litter
 - **3.8**: fixed controllers (e.g. Nacon MG-X Pro) firing on their own and cars not driving forward; stuck controls are ignored; live controller readings
 - **3.7**: full game controller support (Bluetooth phone controllers too), controller menus, a button setup screen, hidden touch buttons while on a controller, and rumble
 - **3.6**: two new motors: the Steel Wedge (a stainless electric pickup) and the Wee Trike (a three-wheeled van that tips over in tight corners)
