@@ -107,9 +107,7 @@
   body.touch #power { left: calc(max(18px, env(safe-area-inset-left)) + 37px); bottom: calc(max(18px, env(safe-area-inset-bottom)) + 146px); }
   @media (max-width: 700px) { #title img { max-width: 60vw; height: 40vh; } .keys { columns: 1; } }
 </style>
-<script type="importmap">
-{ "imports": { "three": "./lib/three.module.min.js", "three/addons/": "./lib/" } }
-</script>
+<meta http-equiv="Cache-Control" content="no-cache">
 </head>
 <body>
 <canvas id="gl"></canvas>
@@ -200,6 +198,23 @@
 </div>
 <div id="fade"></div>
 <div id="loading">BUILDING WALLYPOOL...</div>
-<script type="module" src="js/main.js"></script>
+<script>
+// Cache-proof loader: ask the server (never the cache) which version is live, then load
+// every game file stamped with that version, so a browser can't mix old and new files.
+// If you add a new file to js/, add its name to this list too.
+(function () {
+  var files = ['main', 'audio', 'city', 'flat', 'humans', 'missions', 'peds', 'player', 'textures', 'ufo', 'vehicles', 'version', 'weapons', 'weather'];
+  function boot(v) {
+    var map = { imports: { 'three': './lib/three.module.min.js', 'three/addons/': './lib/' } };
+    files.forEach(function (f) { map.imports['./js/' + f + '.js'] = './js/' + f + '.js?v=' + v; });
+    var im = document.createElement('script'); im.type = 'importmap'; im.textContent = JSON.stringify(map); document.head.appendChild(im);
+    var s = document.createElement('script'); s.type = 'module'; s.src = 'js/main.js?v=' + v; document.body.appendChild(s);
+  }
+  fetch('js/version.js', { cache: 'no-store' })
+    .then(function (r) { return r.text(); })
+    .then(function (t) { var m = t.match(/VERSION = '([^']+)'/); boot(m ? m[1] : String(Date.now())); })
+    .catch(function () { boot(String(Date.now())); });
+})();
+</script>
 </body>
 </html>
