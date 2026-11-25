@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>ASHBOUND: Survive the Eruption</title>
+<meta name="description" content="The island is paradise. The mountain has other plans. A third-person island survival game: escape before the volcano erupts, or survive it.">
+<meta name="theme-color" content="#1a1210">
+<link rel="icon" href="img/icon.png">
+<link rel="apple-touch-icon" href="img/icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root { --ember: #ff6a1a; --gold: #ffc53f; --ash: #1a1614; --sand: #efe0bd; --lagoon: #38c9c0; --ink: #fff; --shadow: 0 2px 0 #000, 0 0 8px rgba(0,0,0,.85); --red: #e0392b; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #000; color: var(--ink); font-family: 'Barlow', Arial, sans-serif; user-select: none; -webkit-user-select: none; touch-action: none; }
+  canvas#gl { display: block; position: fixed; inset: 0; width: 100%; height: 100%; }
+  .hidden { display: none !important; }
+  h1, h2, .logo, .big { font-family: 'Bebas Neue', Impact, sans-serif; font-weight: 400; letter-spacing: 2px; }
+  /* ---------- HUD ---------- */
+  #hud { position: fixed; inset: 0; pointer-events: none; }
+  #topleft { position: absolute; top: max(10px, env(safe-area-inset-top)); left: max(14px, env(safe-area-inset-left)); display: flex; flex-direction: column; gap: 5px; }
+  .stat { display: flex; align-items: center; gap: 8px; font-size: 15px; text-shadow: var(--shadow); }
+  .stat span.ic { width: 22px; text-align: center; font-size: 16px; }
+  .bar { width: 170px; height: 11px; background: #0009; border: 2px solid #000; border-radius: 3px; overflow: hidden; }
+  .bar > i { display: block; height: 100%; width: 100%; transition: width .25s; }
+  #health > i { background: linear-gradient(#ff7b6b, #c81e1e); } #stamina > i { background: linear-gradient(#ffe88a, #d9a400); }
+  #hunger > i { background: linear-gradient(#ffb36b, #c96a1a); } #thirst > i { background: linear-gradient(#8ad7ff, #1f7fd6); } #air > i { background: linear-gradient(#d8d8d8, #7a7a7a); }
+  .stat.low .bar { animation: lowblink .8s steps(2) infinite; }
+  @keyframes lowblink { 50% { border-color: var(--red); box-shadow: 0 0 8px var(--red); } }
+  #topright { position: absolute; top: max(10px, env(safe-area-inset-top)); right: max(16px, env(safe-area-inset-right)); text-align: right; }
+  #clock { font-family: 'Bebas Neue', Impact; font-size: 34px; letter-spacing: 2px; text-shadow: var(--shadow); line-height: 1; }
+  #clock.urgent { color: var(--ember); animation: lowblink .8s steps(2) infinite; }
+  #stage { font-size: 15px; font-weight: 600; text-transform: uppercase; letter-spacing: 2px; color: var(--gold); text-shadow: var(--shadow); margin-top: 3px; }
+  #stageBar { width: 190px; height: 6px; background: #0009; border: 2px solid #000; border-radius: 3px; margin: 5px 0 0 auto; overflow: hidden; }
+  #stageBar > i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #6fcf6f, #ffd23f 45%, #ff6a1a 75%, #ff2020); }
+  #companions { font-size: 14px; text-shadow: var(--shadow); margin-top: 6px; }
+  #compass { position: absolute; top: max(10px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); width: min(420px, 46vw); height: 30px; overflow: hidden; border-bottom: 2px solid #fff8; mask-image: linear-gradient(90deg, transparent, #000 15%, #000 85%, transparent); -webkit-mask-image: linear-gradient(90deg, transparent, #000 15%, #000 85%, transparent); }
+  #compass .m { position: absolute; top: 2px; transform: translateX(-50%); font-size: 15px; white-space: nowrap; text-shadow: var(--shadow); }
+  #compass .m small { display: block; font-size: 9px; text-align: center; line-height: 1; opacity: .85; }
+  #compass .tick { position: absolute; top: 20px; width: 1px; height: 8px; background: #fffa; }
+  #compass .c { font-size: 13px; font-weight: 700; color: var(--gold); }
+  #objective { position: absolute; left: 50%; top: calc(max(10px, env(safe-area-inset-top)) + 38px); transform: translateX(-50%); font-size: 14px; text-align: center; text-shadow: var(--shadow); line-height: 1.35; max-width: 70vw; white-space: pre-line; }
+  #prompt { position: absolute; left: 50%; bottom: 31%; transform: translateX(-50%); background: #000a; border: 2px solid var(--gold); border-radius: 8px; padding: 6px 14px; font-size: 16px; font-weight: 600; white-space: nowrap; }
+  #prompt b { color: var(--gold); }
+  #prompt .hold { display: block; height: 4px; background: #333; margin-top: 4px; border-radius: 2px; overflow: hidden; } #prompt .hold i { display: block; height: 100%; width: 0; background: var(--gold); }
+  #inv { position: absolute; left: 50%; bottom: max(10px, env(safe-area-inset-bottom)); transform: translateX(-50%); display: flex; gap: 6px; pointer-events: auto; }
+  #inv .slot { width: 52px; height: 52px; background: #000a; border: 2px solid #fff6; border-radius: 8px; display: grid; place-items: center; font-size: 24px; position: relative; cursor: pointer; }
+  #inv .slot.tool { border-color: var(--gold); } #inv .slot.use:hover { border-color: #fff; background: #222c; }
+  #inv .slot b { position: absolute; right: 3px; bottom: 1px; font-size: 12px; font-family: 'Barlow'; text-shadow: var(--shadow); }
+  #inv .slot small { position: absolute; left: 3px; top: 0; font-size: 10px; opacity: .6; font-family: 'Barlow'; }
+  #subs { position: absolute; left: 50%; bottom: calc(max(10px, env(safe-area-inset-bottom)) + 66px); transform: translateX(-50%); max-width: 640px; width: 80vw; background: #000b; border-left: 4px solid var(--lagoon); padding: 8px 14px; font-size: 16px; line-height: 1.3; border-radius: 0 8px 8px 0; opacity: 0; transition: opacity .3s; }
+  #subs b { color: var(--lagoon); } #subs.on { opacity: 1; }
+  #toast { position: absolute; left: 50%; top: 32%; transform: translateX(-50%); font-size: 20px; font-weight: 600; text-shadow: var(--shadow); opacity: 0; transition: opacity .3s; text-align: center; }
+  #toast.on { opacity: 1; }
+  #banner { position: absolute; inset: 38% 0 auto 0; text-align: center; opacity: 0; transition: opacity .6s; pointer-events: none; }
+  #banner h1 { font-size: clamp(38px, 8vw, 86px); margin: 0; color: var(--ember); text-shadow: 0 0 24px #ff6a1a88, 0 3px 0 #000; }
+  #banner p { font-size: clamp(14px, 2.4vw, 22px); margin: 4px 0 0; text-shadow: var(--shadow); }
+  #banner.on { opacity: 1; }
+  #damage { position: absolute; inset: 0; box-shadow: inset 0 0 160px 40px rgba(220,20,20,0); transition: box-shadow .2s; }
+  #ashfx { position: absolute; inset: 0; background: radial-gradient(ellipse at center, transparent 45%, rgba(90,84,78,.75) 100%); opacity: 0; }
+  #heat { position: absolute; inset: 0; background: radial-gradient(ellipse at center, transparent 30%, rgba(255,90,10,.75) 100%); opacity: 0; }
+  #fade { position: fixed; inset: 0; background: #000; opacity: 0; pointer-events: none; transition: opacity .8s; z-index: 50; }
+  #fps { position: fixed; top: 4px; left: 50%; transform: translateX(-50%); font: 600 12px 'Barlow'; color: #9f9; text-shadow: var(--shadow); z-index: 9; display: none; }
+  #cross { position: absolute; left: 50%; top: 50%; width: 4px; height: 4px; margin: -2px; background: #fff9; border-radius: 50%; }
+  /* ---------- touch controls ---------- */
+  #touch { position: fixed; inset: 0; pointer-events: none; display: none; }
+  body.touch #touch { display: block; }
+  body.touch #cross { display: none; }
+  #stick, #lstick { position: absolute; bottom: calc(max(18px, env(safe-area-inset-bottom)) + 18px); width: 130px; height: 130px; border-radius: 50%; background: #0005; border: 3px solid #fff6; pointer-events: auto; }
+  #stick { left: calc(max(18px, env(safe-area-inset-left)) + 14px); }
+  #lstick { left: calc(max(18px, env(safe-area-inset-left)) + 164px); width: 96px; height: 96px; bottom: calc(max(18px, env(safe-area-inset-bottom)) + 24px); }
+  #knob, #lknob { position: absolute; left: 50%; top: 50%; width: 54px; height: 54px; margin: -27px; border-radius: 50%; background: #fffc; box-shadow: 0 2px 6px #000a; display: grid; place-items: center; color: #000; font-weight: 700; }
+  #lknob { width: 40px; height: 40px; margin: -20px; font-size: 18px; }
+  #tbtns { position: absolute; right: calc(max(18px, env(safe-area-inset-right)) + 10px); bottom: calc(max(18px, env(safe-area-inset-bottom)) + 10px); display: grid; grid-template-columns: repeat(3, 70px); gap: 10px; pointer-events: auto; }
+  #tbtns button, #tpause { pointer-events: auto; width: 70px; height: 70px; border-radius: 50%; border: 3px solid #fff8; background: #0007; color: #fff; font: 700 13px 'Barlow'; letter-spacing: .5px; line-height: 1.1; }
+  #tbtns button.big { background: #ff6a1acc; border-color: #fff; font-size: 15px; }
+  #tbtns button.on, #tpause.on { background: #fff; color: #000; }
+  #tpause { position: absolute; top: calc(max(10px, env(safe-area-inset-top)) + 70px); right: max(16px, env(safe-area-inset-right)); width: 54px; height: 54px; font-size: 12px; }
+  body.touch #inv { bottom: auto; top: calc(max(10px, env(safe-area-inset-top)) + 80px); left: max(14px, env(safe-area-inset-left)); transform: none; } body.touch #inv .slot { width: 44px; height: 44px; font-size: 20px; }
+  body.touch #subs { bottom: 36%; width: 60vw; } body.touch #prompt { bottom: 46%; }
+  body.pad #touch { display: none !important; }
+  /* ---------- screens ---------- */
+  .screen { position: fixed; inset: 0; z-index: 20; display: flex; align-items: center; justify-content: center; background: #0a0806dd; overflow: auto; }
+  .card { background: #1a1614f2; border: 2px solid #ff6a1a88; border-radius: 14px; padding: 20px 28px; max-width: 92vw; max-height: 90vh; overflow: auto; box-shadow: 0 0 40px #000; }
+  .card h2 { margin: 0 0 10px; font-size: 34px; color: var(--gold); }
+  .btn { display: block; width: 100%; box-sizing: border-box; margin: 8px 0; padding: 12px 18px; font: 700 18px 'Barlow'; letter-spacing: 1px; text-transform: uppercase; color: #fff; background: var(--ember); border: 0; border-radius: 10px; cursor: pointer; text-align: center; }
+  .btn.alt { background: #2a6b8a; } .btn.dim { background: #3a3430; font-size: 15px; padding: 9px 14px; } .btn:disabled { opacity: .4; cursor: default; }
+  .btn.sel { outline: 3px solid var(--gold); }
+  .tag { opacity: .9; line-height: 1.4; margin: 6px 0; font-size: 15px; }
+  .ver { font: 600 13px 'Barlow'; color: var(--gold); opacity: .8; letter-spacing: 1px; }
+  .keys { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 22px; font-size: 15px; margin: 10px 0; } .keys b { color: var(--gold); display: inline-block; min-width: 90px; }
+  #title { background: #000; }
+  #title .bg { position: absolute; inset: 0; background: url(img/concept.jpg) center/cover no-repeat; filter: saturate(1.1); }
+  #title .bg::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, #0005 0%, #0002 40%, #0a0806f0 100%); }
+  #title .panel { position: relative; text-align: center; max-width: 560px; padding: 20px; margin-top: 12vh; }
+  #title .logo { font-size: clamp(54px, 12vw, 120px); line-height: .9; margin: 0; color: #fff; text-shadow: 0 0 30px #ff6a1a, 0 4px 0 #000, 0 0 60px #ff6a1a66; }
+  #title .logo span { display: block; font-size: .32em; letter-spacing: 7px; color: var(--gold); text-shadow: 0 2px 0 #000; margin-top: 6px; }
+  #title .tagline { font-size: clamp(16px, 2.6vw, 22px); font-style: italic; margin: 14px 0 18px; text-shadow: var(--shadow); color: var(--sand); }
+  #title .btn { max-width: 380px; margin: 8px auto; }
+  #title .row { display: flex; gap: 8px; max-width: 380px; margin: 8px auto; } #title .row .btn { flex: 1; margin: 0; }
+  #news { text-align: left; font-size: 13px; opacity: .8; max-width: 380px; margin: 6px auto; max-height: 90px; overflow: auto; }
+  #news ul { margin: 2px 0 0 16px; padding: 0; }
+  @media (max-width: 760px), (max-height: 520px) { #title .panel { margin-top: 2vh; transform: scale(.82); } .keys { grid-template-columns: 1fr; } .card { padding: 14px 18px; } .card h2 { font-size: 26px; } }
+  /* craft & map */
+  #craftList .rec, #escList .rec { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 7px 0; border-bottom: 1px solid #fff2; }
+  .rec .n { font-weight: 700; font-size: 17px; } .rec .need { font-size: 13px; opacity: .85; } .rec .need .ok { color: #8fe38f; } .rec .need .no { color: #ff8a7a; }
+  .rec .btn { width: auto; margin: 0; padding: 8px 14px; font-size: 14px; }
+  #invList { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 14px; } #invList .it { background: #0006; border: 1px solid #fff3; border-radius: 8px; padding: 4px 8px; font-size: 14px; }
+  #mapWrap { position: relative; width: min(80vh, 80vw); height: min(80vh, 80vw); } #mapCanvas { width: 100%; height: 100%; border-radius: 10px; border: 2px solid #fff6; image-rendering: auto; }
+  #endStats { display: grid; grid-template-columns: auto auto; gap: 4px 20px; font-size: 16px; margin: 10px 0; } #endStats b { color: var(--gold); }
+  .padfocus { outline: 4px solid #fff; outline-offset: 3px; }
+  #loading { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; background: #0a0806; font: 400 34px 'Bebas Neue', Impact; letter-spacing: 4px; color: var(--gold); text-align: center; }
+  #loading small { display: block; font: 400 14px 'Barlow'; letter-spacing: 1px; opacity: .7; margin-top: 8px; }
+  #rotate { display: none; position: fixed; inset: 0; z-index: 99999; background: #0d1b2a; color: #fff; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 24px; }
+  #rotate .phone { width: 70px; height: 120px; border: 6px solid var(--gold); border-radius: 14px; position: relative; animation: turn 2.2s ease-in-out infinite; margin-bottom: 34px; }
+  #rotate h2 { font-size: 30px; margin: 0 0 10px; color: var(--gold); } #rotate p { font-size: 18px; margin: 0; opacity: .85; max-width: 320px; }
+  @keyframes turn { 0%, 20% { transform: rotate(0deg); } 50%, 80% { transform: rotate(-90deg); } 100% { transform: rotate(0deg); } }
+  @media (orientation: portrait) { body.touch #rotate { display: flex; } }
+</style>
+<meta http-equiv="Cache-Control" content="no-cache">
+</head>
+<body>
+<canvas id="gl"></canvas>
+<div id="hud" class="hidden">
+  <div id="topleft">
+    <div class="stat" data-s="health"><span class="ic">❤️</span><div class="bar" id="health"><i></i></div></div>
+    <div class="stat" data-s="stamina"><span class="ic">⚡</span><div class="bar" id="stamina"><i></i></div></div>
+    <div class="stat" data-s="hunger"><span class="ic">🍗</span><div class="bar" id="hunger"><i></i></div></div>
+    <div class="stat" data-s="thirst"><span class="ic">💧</span><div class="bar" id="thirst"><i></i></div></div>
+    <div class="stat" data-s="air"><span class="ic">🫁</span><div class="bar" id="air"><i></i></div></div>
+  </div>
+  <div id="topright">
+    <div id="clock">--:--</div>
+    <div id="stage">Calm</div>
+    <div id="stageBar"><i></i></div>
+    <div id="companions"></div>
+  </div>
+  <div id="compass"></div>
+  <div id="objective"></div>
+  <div id="prompt" class="hidden"></div>
+  <div id="subs"></div>
+  <div id="toast"></div>
+  <div id="banner"><h1></h1><p></p></div>
+  <div id="ashfx"></div>
+  <div id="heat"></div>
+  <div id="damage"></div>
+  <div id="cross"></div>
+  <div id="inv"></div>
+</div>
+<div id="touch">
+  <div id="stick"><div id="knob"></div></div>
+  <div id="lstick"><div id="lknob">👁</div></div>
+  <button id="tpause" data-k="pause">II</button>
+  <div id="tbtns">
+    <button data-k="craft">CRAFT</button><button data-k="map">MAP</button><button data-k="jump">JUMP</button>
+    <button data-k="camera">CAM</button><button data-k="sprint">SPRINT</button><button data-k="interact" class="big">USE</button>
+  </div>
+</div>
+
+<div id="title" class="screen">
+  <div class="bg"></div>
+  <div class="panel">
+    <h1 class="logo">ASHBOUND<span>SURVIVE THE ERUPTION</span></h1>
+    <p class="tagline">“The island is paradise. The mountain has other plans.”</p>
+    <span class="ver" id="verTitle"></span>
+    <div id="news"></div>
+    <button class="btn" id="play">▶ NEW GAME</button>
+    <button class="btn alt hidden" id="continue">↻ CONTINUE</button>
+    <div class="row"><button class="btn dim" id="diff">PACE: STANDARD</button><button class="btn dim" id="gfx">GRAPHICS: HIGH</button></div>
+    <div class="row"><button class="btn dim" id="howto">? HOW TO PLAY</button><button class="btn dim" id="snd">SOUND: ON</button></div>
+  </div>
+</div>
+<div id="help" class="screen hidden">
+  <div class="card">
+    <h2>How to survive</h2>
+    <p class="tag">The volcano will erupt before the clock in the corner runs out. Find a way off the island, or a way to live through it:</p>
+    <p class="tag">⛵ <b>Raft</b>: 10 driftwood or palm logs, 3 ropes (braid vines) and the tarp from the plane wreck. Build it at Raft Beach and paddle past the reef.<br>
+    📡 <b>Radio</b>: find the battery (wreck), antenna (ranger tower) and handset (village radio hut). Repair the ranger radio and board the helicopter at the helipad.<br>
+    🚪 <b>Bunker</b>: stock the old bunker with 4 waters, 4 meals and an ash mask, then seal the door and wait it out.</p>
+    <p class="tag">Keep eating, drinking and resting. When the ash falls, wear a mask or get under a roof. Bring the other survivors with you: talk to them, then press again and they'll follow.</p>
+    <div class="keys">
+      <div><b>W A S D</b> move</div><div><b>Mouse</b> look (click the game first)</div>
+      <div><b>Shift</b> sprint</div><div><b>Space</b> jump</div>
+      <div><b>E / click</b> use, pick up, talk, chop (hold)</div><div><b>C</b> crafting</div>
+      <div><b>M / Tab</b> map</div><div><b>1 – 8</b> eat / drink / use an item</div>
+      <div><b>V</b> camera distance</div><div><b>Esc / P</b> pause</div>
+      <div><b>Controller</b> left stick move, right stick look, A jump, Y / RT use, X craft, LB map, LT sprint, Start pause</div><div><b>Phone</b> left stick move, small stick or drag to look, USE button</div>
+    </div>
+    <button class="btn" id="helpBack">◀ BACK</button>
+  </div>
+</div>
+<div id="pause" class="screen hidden">
+  <div class="card">
+    <h2>Paused <span class="ver" id="verPause"></span></h2>
+    <div id="statsBox" class="tag"></div>
+    <button class="btn" id="resume">▶ RESUME</button>
+    <button class="btn dim" id="pauseHelp">? HOW TO PLAY</button>
+    <button class="btn dim" id="gfx2">GRAPHICS: HIGH</button>
+    <button class="btn dim" id="snd2">SOUND: ON</button>
+    <button class="btn dim" id="fpsBtn">FPS COUNTER: OFF</button>
+    <button class="btn alt" id="quit">⌂ SAVE &amp; QUIT TO TITLE</button>
+  </div>
+</div>
+<div id="craft" class="screen hidden">
+  <div class="card" style="min-width:min(560px,90vw)">
+    <h2>Crafting</h2>
+    <div id="invList"></div>
+    <div id="craftList"></div>
+    <h2 style="font-size:24px;margin-top:14px">Ways off the island</h2>
+    <div id="escList"></div>
+    <button class="btn" id="craftClose">◀ BACK</button>
+  </div>
+</div>
+<div id="map" class="screen hidden">
+  <div style="text-align:center">
+    <div id="mapWrap"><canvas id="mapCanvas" width="768" height="768"></canvas></div>
+    <button class="btn" id="mapClose" style="max-width:300px;margin:12px auto">◀ BACK</button>
+  </div>
+</div>
+<div id="end" class="screen hidden">
+  <div class="card" style="text-align:center;max-width:560px">
+    <h2 id="endTitle">The end</h2>
+    <p class="tag" id="endText"></p>
+    <div id="endStats"></div>
+    <button class="btn" id="endAgain">↺ PLAY AGAIN</button>
+    <button class="btn alt" id="endTitleBtn">⌂ TITLE SCREEN</button>
+  </div>
+</div>
+<div id="crash" class="screen hidden">
+  <div class="card" style="text-align:center">
+    <h2>The graphics gave out</h2>
+    <p class="tag">Your device ran out of graphics memory. Your progress has been saved.</p>
+    <button class="btn" onclick="location.reload()" style="margin:10px auto">↻ RELOAD THE GAME</button>
+  </div>
+</div>
+<div id="rotate"><div class="phone"></div><h2>TURN YOUR PHONE SIDEWAYS</h2><p>Ashbound plays in landscape, so you can see the mountain coming.</p></div>
+<div id="fps"></div>
+<div id="fade"></div>
+<div id="loading">RAISING THE ISLAND...<small>Everything is built in code, so this takes a moment the first time.</small></div>
+<script>
+// Cache-proof loader: ask the server (never the cache) which version is live, then load
+// every game file stamped with that version, so a browser can't mix old and new files.
+// If you add a new file to js/, add its name to this list too.
+(function () {
+  var files = ['main', 'audio', 'input', 'island', 'npcs', 'props', 'survival', 'survivor', 'textures', 'version', 'volcano'];
+  function boot(v) {
+    var map = { imports: { 'three': './lib/three.module.min.js', 'three/addons/': './lib/' } };
+    files.forEach(function (f) { map.imports['./js/' + f + '.js'] = './js/' + f + '.js?v=' + v; });
+    var im = document.createElement('script'); im.type = 'importmap'; im.textContent = JSON.stringify(map); document.head.appendChild(im);
+    var s = document.createElement('script'); s.type = 'module'; s.src = 'js/main.js?v=' + v; document.body.appendChild(s);
+  }
+  fetch('js/version.js', { cache: 'no-store' })
+    .then(function (r) { return r.text(); })
+    .then(function (t) { var m = t.match(/VERSION = '([^']+)'/); boot(m ? m[1] : String(Date.now())); })
+    .catch(function () { boot(String(Date.now())); });
+})();
+</script>
+</body>
+</html>

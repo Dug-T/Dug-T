@@ -1,0 +1,45 @@
+# ASHBOUND: SURVIVE THE ERUPTION
+
+*“The island is paradise. The mountain has other plans.”*
+
+An open-world island survival game for the browser, played in third person. You are stranded on a tropical island with a volcano that is waking up. Before the final pyroclastic surge you have to find a way off the island, or a way to live through it.
+
+Open `ashbound/index.html` from any web server (GitHub Pages works). Nothing needs installing: Three.js is bundled in `lib/`, and the island, its textures, the characters and every sound are generated in code. It plays on phones (touch controls, landscape), on PC and Mac (keyboard and mouse) and with game controllers.
+
+## The game
+
+- **The island**: a procedurally built tropical island, the same one every time, with white beaches, a reef, dense palm jungle, hibiscus, cliffs to the west, a fishing village, a plane wreck, a ranger station with a lookout tower and helipad, a jungle spring, a rock pool and a 1943 bunker dug into a hillside. The volcano fills the north of the island.
+- **The eruption**: the clock in the corner counts down to the surge. The mountain moves through five stages: **Calm** (steam and birdsong), **Unrest** (tremors, a darkening plume, the birds leave), **Ashfall** (the sky goes dark, ash fills the air and your lungs), **Eruption** (lava bombs whistle down, lava flows pour down the valleys, forest fires) and the **Pyroclastic surge** that rolls over the whole island. The sun goes from morning to a red dusk as it happens.
+- **Survival**: health, stamina, hunger, thirst and clean air. Eat coconuts, bananas and mangos, drink at the well, the spring or the rock pool (and fill your canteen), and wear an ash mask or get under a roof when the ash falls. Sprinting, swimming and the heat all take their toll. Lava bombs, lava, falls and drowning hurt.
+- **Crafting**: braid vines into rope, make a stone axe (then chop palms for logs), make an ash mask from cloth, and bandages.
+- **Three ways out**:
+  - ⛵ **The raft**: 10 logs, 3 ropes and the tarpaulin from the plane wreck. Build it in stages on Raft Beach, launch it, and paddle out past the reef.
+  - 📡 **The radio**: find the battery (in the nose of the plane), the antenna (the snapped mast at the ranger tower) and the handset (the village radio hut). Repair the ranger radio and a helicopter comes to the helipad. Be on the pad when it lands.
+  - 🚪 **The bunker**: stock the old shelter with four waters, four meals and an ash mask, then seal the steel door and wait out the surge.
+- **The other survivors**: Dr Amara Osei (volcanologist, at the camp), Kai Tane (fisherman, in the village), Tomas Reyes (the injured pilot at the wreck, who needs a bandage before he can walk), Lena Hart (the ranger) and Old Pete (the hermit at the bunker). Each has their own advice as the stages change. Talk to them, then press again and they follow you. Anyone with you when you launch, lift off or seal the door is saved; the end screen counts them.
+- **Pace**: Relaxed (40 minutes to the surge), Standard (24) or Hardcore (14, and everything hurts more).
+- **Graphics**: High (soft shadows, bloom, more jungle) or Low for older phones. The island, sea and sky are shader-driven: wet sand, breakers along the shore, a drifting eruption column and ash that greys the whole world out.
+- The game saves itself as you play and from the pause menu; **CONTINUE** on the title screen picks it back up.
+
+## Controls
+
+| Action | Keyboard / mouse | Phone | Controller |
+|---|---|---|---|
+| Move | WASD or arrows | Left stick | Left stick |
+| Look | Mouse (click the game first) | Small stick, or drag the right of the screen | Right stick |
+| Sprint | Shift | SPRINT | LT |
+| Jump | Space | JUMP | A |
+| Use / pick up / talk / chop (hold) | E or left click | USE | Y or RT |
+| Crafting | C | CRAFT | X |
+| Map | M or Tab | MAP | LB |
+| Eat / drink / use item | 1 – 8, or click the item | Tap the item | — |
+| Camera distance | V | CAM | R3 |
+| Pause | Esc or P | II | Start |
+
+## Multiplayer
+
+Version 1.0 is single player with NPC survivors. The world is seeded and deterministic (every player gets the same island), the game state is kept in plain objects (`ASH.game`, `ASH.player`, NPC states) and inputs are reduced to a small set of actions, so a later version can sync players over the network without rebuilding the game.
+
+## Versions
+
+- **1.0**: first release. A procedurally built tropical island with a live volcano; third-person survival with health, stamina, hunger, thirst and clean air; the five eruption stages (calm, unrest, ashfall, eruption, surge); three escapes (raft, radio and helicopter, bunker); five survivors to find, help and bring along; phone, PC/Mac and controller support.
