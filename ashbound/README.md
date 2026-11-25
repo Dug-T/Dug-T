@@ -12,6 +12,7 @@ Open `ashbound/index.html` from any web server (GitHub Pages works). Nothing nee
 - **The eruption**: the clock in the corner counts down to the surge. The mountain moves through five stages: **Calm** (steam and birdsong), **Unrest** (tremors, a darkening plume, the birds leave), **Ashfall** (the sky goes dark, ash fills the air and your lungs), **Eruption** (lava bombs whistle down, lava flows pour down the valleys, forest fires) and the **Pyroclastic surge** that rolls over the whole island. The sun goes from morning to a red dusk as it happens.
 - **Survival**: health, stamina, hunger, thirst and clean air. Eat coconuts, bananas and mangos, drink at the well, the spring or the rock pool (and fill your canteen), and wear an ash mask or get under a roof when the ash falls. Sprinting, swimming and the heat all take their toll. Lava bombs, lava, falls and drowning hurt.
 - **The jeep**: the survey team's jeep is parked by the camp with the keys in it. It seats you and three followers, has headlights for the ash and the dusk, won't swim or climb cliffs, stops dead against palms, and lava or a falling rock will wreck it.
+- **Day and night**: the island clock runs from 08:00 on day 3 to sunset on day 4, so night falls during the ashfall and the surge comes at sunset. Nights are dark, lit by the moon, the lava and your fires. Build a campfire from two logs and two stones to rest and recover beside it, and carry a torch (a log and some cloth) that lights itself in the dark.
 - **Crafting**: braid vines into rope, make a stone axe (then chop palms for logs), make an ash mask from cloth, and bandages.
 - **Four ways out**:
   - ⛵ **The raft**: 10 logs, 3 ropes and the tarpaulin from the plane wreck. Build it in stages on Raft Beach, launch it, and paddle out past the reef.
@@ -46,6 +47,7 @@ Version 1.0 is single player with NPC survivors. The world is seeded and determi
 
 ## Versions
 
+- **1.9**: day and night on an island clock (08:00 day 3 to sunset day 4); dark nights with moon, stars and crickets; build campfires to rest, recover and light the night; craft a torch that lights itself in the dark.
 - **1.8**: Kai's skiff: repair it with the battery, two logs and a rope and motor past the reef, a fourth ending; the battery is now a choice between the skiff and the radio.
 - **1.7**: spoken voices for the survivors, the narrator and the player, using the device's built-in speech, with every line still shown as text; VOICES switch on the title and pause screens.
 - **1.6**: trunks bend with their crowns in gusting wind; ash greys the jungle and buildings; sea glints, lava glow on the water and steam where flows meet it; crater glow, fireflies at dusk, blowing leaves; chromatic aberration and per-stage colour tints.

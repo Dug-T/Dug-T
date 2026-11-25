@@ -1,7 +1,14 @@
 // Bump VERSION for every update (1.1, 1.2, 1.3 ...) and add a line to CHANGES.
-export const VERSION = '1.8';
+export const VERSION = '1.9';
 
 export const CHANGES = [
+  ['1.9', [
+    'Day and night: an island clock runs from 08:00 on day 3 to sunset on day 4. Night falls during the ashfall and the final surge comes at sunset. The time shows under the stage bar',
+    'Nights are dark: moonlight, stars and a moon with a halo, black clouds, crickets, and the lava, crater and fires blazing in the gloom',
+    'Campfires: build one anywhere dry and level from 2 logs and 2 stones. It lights the night, warms you, throws sparks and crackles; hold USE beside it to rest and recover. It burns down after a while and a log relights it',
+    'The torch: craft one from a log and some cloth. It lights itself in your hand after dark and in thick ash',
+    'The jeep\'s headlights come on at night, fireflies come out after dark, and the night air saps your stamina a little when you are away from a fire',
+  ]],
   ['1.8', [
     'Kai\'s skiff, the Moana: a fourth way off the island. It lies by the village jetty with a split hull and a dead starter. Patch it with 2 logs and a rope, fit the plane\'s battery, and it will carry you and three followers past the reef in minutes',
     'The battery is now a real choice: the skiff and the ranger radio both need the only one on the island',

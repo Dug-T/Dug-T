@@ -59,6 +59,9 @@ export class Audio {
     // birds: random chirps, fewer as the mountain wakes
     this.birdT -= dt;
     if (this.birdT <= 0 && c.birds > 0.05 && Math.random() < c.birds) { this.chirp(); this.birdT = 0.4 + Math.random() * 3 / Math.max(0.1, c.birds); } else if (this.birdT <= 0) this.birdT = 1;
+    // crickets after dark
+    this.crickT = (this.crickT || 0) - dt;
+    if (c.crickets > 0.05 && this.crickT <= 0) { this.crickT = 0.15 + Math.random() * 0.9 / c.crickets; const f = 3900 + Math.random() * 900; for (let i = 0; i < 3; i++) this.tone(f, 0.035, 'sine', 0.018 * c.crickets, 0, i * 0.055); }
     // heartbeat when badly hurt
     if (c.hurt > 0) { this.heartT -= dt * (1 + c.hurt); if (this.heartT <= 0) { this.heartT = 1.0; this.thump(0.3 + c.hurt * 0.3); setTimeout(() => this.thump(0.2 + c.hurt * 0.2), 160); } }
   }

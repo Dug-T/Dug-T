@@ -37,6 +37,7 @@
   #stageBar { width: 190px; height: 6px; background: #0009; border: 2px solid #000; border-radius: 3px; margin: 5px 0 0 auto; overflow: hidden; }
   #stageBar > i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #6fcf6f, #ffd23f 45%, #ff6a1a 75%, #ff2020); }
   #companions { font-size: 14px; text-shadow: var(--shadow); margin-top: 6px; }
+  #tod { font-size: 14px; font-weight: 600; letter-spacing: 1px; text-shadow: var(--shadow); margin-top: 5px; }
   #speed { font-family: 'Bebas Neue', Impact; font-size: 28px; letter-spacing: 1px; text-shadow: var(--shadow); margin-top: 4px; line-height: 1; }
   #speed small { font-size: 14px; font-family: 'Barlow'; opacity: .8; margin-left: 4px; }
   #compass { position: absolute; top: max(10px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); width: min(420px, 46vw); height: 30px; overflow: hidden; border-bottom: 2px solid #fff8; mask-image: linear-gradient(90deg, transparent, #000 15%, #000 85%, transparent); -webkit-mask-image: linear-gradient(90deg, transparent, #000 15%, #000 85%, transparent); }
@@ -138,6 +139,7 @@
     <div id="clock">--:--</div>
     <div id="stage">Calm</div>
     <div id="stageBar"><i></i></div>
+    <div id="tod"></div>
     <div id="companions"></div>
     <div id="speed"></div>
   </div>
@@ -184,6 +186,7 @@
     🚤 <b>Skiff</b>: Kai's boat lies by the village jetty. Patch it with 2 logs and a rope and fit the plane's battery, then motor out past the reef. The battery is also what the radio needs, so choose.<br>
     📡 <b>Radio</b>: find the battery (wreck), antenna (ranger tower) and handset (village radio hut). Repair the ranger radio and board the helicopter at the helipad.<br>
     🚪 <b>Bunker</b>: stock the old bunker with 4 waters, 4 meals and an ash mask, then seal the door and wait it out.</p>
+    <p class="tag">Night falls once during the game, during the ashfall. Build a campfire (2 logs, 2 stones) and hold USE beside it to rest and recover; craft a torch (a log and some cloth) and it lights itself in the dark and in thick ash.</p>
     <p class="tag">Keep eating, drinking and resting. When the ash falls, wear a mask or get under a roof. Bring the other survivors with you: talk to them, then press again and they'll follow. The survey jeep by the camp seats you and three passengers; it won't swim and it won't climb cliffs, and lava and falling rocks will wreck it.</p>
     <div class="keys">
       <div><b>W A S D</b> move</div><div><b>Mouse</b> look (click the game first)</div>

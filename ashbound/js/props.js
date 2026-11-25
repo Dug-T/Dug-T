@@ -25,7 +25,7 @@ export function buildProps(scene, world, quality) {
     const flame = new THREE.Sprite(new THREE.SpriteMaterial({ map: sparkTexture(), color: '#ff9a30', transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.95 }));
     flame.scale.set(1.2, 1.8, 1); flame.position.y = 0.9; g.add(flame);
     const light = new THREE.PointLight('#ff8a30', 14, 22, 1.8); light.position.y = 1.5; g.add(light);
-    P.fires.push({ flame, light });
+    P.fires.push({ flame, light, x: c.x, z: c.z, t: Infinity, camp: true });
     const log = cyl(0.25, 0.25, 2.4, woodM, 9); log.rotation.z = Math.PI / 2; log.position.set(0, 0.25, 2.2); g.add(log);
     // lean-to
     const roof = new THREE.Mesh(new THREE.PlaneGeometry(4, 3), thatch); roof.rotation.x = -Math.PI / 2 + 0.75; roof.rotation.y = 0; roof.position.set(-3.5, 1.6, 0); roof.material.side = THREE.DoubleSide; g.add(roof);
@@ -169,6 +169,19 @@ export function buildProps(scene, world, quality) {
   // ash settles on the buildings too
   if (world.ashify) for (const m of [thatch, woodM, darkWood, metal, concrete, steel]) world.ashify(m);
   return P;
+}
+
+// a fire pit you build yourself: a ring of stones, crossed logs and a flame
+const firePitTex = sparkTexture();
+export function buildFirePit() {
+  const g = new THREE.Group(), stoneM = mat('#6a6560', 0.9), logM = mat('#4a3520', 0.9), charM = mat('#1a1410', 1);
+  for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2; const st = new THREE.Mesh(new THREE.DodecahedronGeometry(0.2), stoneM); st.position.set(Math.cos(a) * 0.65, 0.1, Math.sin(a) * 0.65); st.rotation.set(a, a * 2, 0); g.add(st); }
+  const ash = new THREE.Mesh(new THREE.CircleGeometry(0.5, 12), charM); ash.rotation.x = -Math.PI / 2; ash.position.y = 0.03; g.add(ash);
+  for (let i = 0; i < 3; i++) { const l = cyl(0.07, 0.09, 0.95, logM, 7); l.rotation.z = Math.PI / 2 + 0.45; l.rotation.y = i * 2.1; l.position.y = 0.18; g.add(l); }
+  const flame = new THREE.Sprite(new THREE.SpriteMaterial({ map: firePitTex, color: '#ff9a30', transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.95 }));
+  flame.scale.set(1.0, 1.5, 1); flame.position.y = 0.75; g.add(flame);
+  g.traverse((m) => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } });
+  return { group: g, flame };
 }
 
 function sign(scene, text, x, z, y, yaw, bg) {

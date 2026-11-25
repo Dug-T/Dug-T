@@ -17,6 +17,7 @@ export const ITEMS = {
   cloth: { name: 'Cloth', icon: '🧵', desc: 'Torn seat covers from the wreck.' },
   rope: { name: 'Rope', icon: '🪢', desc: 'Braided vine rope. Holds a raft together.' },
   axe: { name: 'Stone axe', icon: '🪓', desc: 'Chop palms for logs. Hold USE beside a palm.', tool: true },
+  torch: { name: 'Torch', icon: '🔦', desc: 'A cloth-wrapped stick. Lights itself after dark and in thick ash.', tool: true },
   mask: { name: 'Ash mask', icon: '😷', desc: 'Wet cloth over your mouth. Keeps the ash out of your lungs.', tool: true },
   bandage: { name: 'Bandage', icon: '🩹', desc: 'Patches you up.', use: { health: 35 } },
   tarp: { name: 'Tarpaulin', icon: '⛵', desc: 'A survival tarp from the wreck. A sail, if you had a raft.' },
@@ -31,6 +32,8 @@ export const RECIPES = [
   { id: 'axe', name: 'Stone axe', needs: { wood: 2, stone: 1, vine: 1 }, gives: { axe: 1 }, once: true },
   { id: 'mask', name: 'Ash mask', needs: { cloth: 2, vine: 1 }, gives: { mask: 1 }, once: true },
   { id: 'bandage', name: 'Bandage', needs: { cloth: 1 }, gives: { bandage: 1 } },
+  { id: 'torch', name: 'Torch', needs: { wood: 1, cloth: 1 }, gives: { torch: 1 }, once: true },
+  { id: 'campfire', name: 'Campfire', needs: { wood: 2, stone: 2 }, build: 'campfire', icon: '🔥', desc: 'Built where you stand. Rest beside it to recover, and it lights up the night.' },
 ];
 
 // what each escape needs
