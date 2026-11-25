@@ -244,6 +244,12 @@ export function animateSurvivor(h, dt, st) {
     h.spine.rotation.x = -0.1 + S(p * 2) * 0.04; h.spine.rotation.y = -roll * 0.5;
     // head down, turning to breathe on the roll
     h.neck.rotation.x = -0.75; h.head.rotation.x = -0.25; h.head.rotation.y = Math.max(0, S(p + 0.6)) * 0.9;
+  } else if (st.mode === 'drive') {
+    // behind the wheel: legs out to the pedals, both hands on the wheel, turning it with the steering
+    hipY = 0.5; const steer = st.steer || 0;
+    for (const l of h.legs) { l.hip.rotation.x = -1.25; l.hip.rotation.z = l.side * 0.1; l.knee.rotation.x = 1.0; }
+    for (const a of h.arms) { a.sh.rotation.x = -1.1 - a.side * steer * 0.35; a.sh.rotation.z = a.side * 0.18; a.el.rotation.x = -0.55 + Math.abs(steer) * 0.2; }
+    h.spine.rotation.x = 0.1 + S(t * 1.6) * 0.012; h.spine.rotation.z = -steer * 0.1; h.head.rotation.y = -steer * 0.3 + S(t * 0.5) * 0.08;
   } else if (st.mode === 'sit') {
     hipY = 0.5; for (const l of h.legs) { l.hip.rotation.x = -1.5; l.hip.rotation.z = l.side * 0.12; l.knee.rotation.x = 1.6; }
     for (const a of h.arms) { a.sh.rotation.x = -0.6 + S(t * 1.1 + a.side) * 0.03; a.sh.rotation.z = a.side * 0.2; a.el.rotation.x = -1.05; }

@@ -8,6 +8,7 @@ import { buildIsland, heightAt, normalAt, POIS, VOLCANO, SEA, W, distToVolcano }
 import { buildProps, pickupMesh, setRaftStage } from './props.js';
 import { buildSurvivor, animateSurvivor, buildAxe, LOOKS, groundTilt } from './survivor.js';
 import { Volcano, Puffs } from './volcano.js';
+import { Jeep } from './vehicle.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { NpcManager, resolveObstacles } from './npcs.js';
 import { ITEMS, RECIPES, ESCAPES, STAGES, DIFFICULTY, FOOD, stageAt, newStats, tickStats, Inventory } from './survival.js';
@@ -65,12 +66,17 @@ function applyQuality() {
     composer.addPass(bloom);
     // a film grade: a soft vignette, a warm tint, grain, and the colour draining out as the ash thickens
     gradePass = new ShaderPass({
-      uniforms: { tDiffuse: { value: null }, uTime: { value: 0 }, uAsh: { value: 0 }, uHurt: { value: 0 } },
+      uniforms: { tDiffuse: { value: null }, uTime: { value: 0 }, uAsh: { value: 0 }, uHurt: { value: 0 }, uHeat: { value: 0 }, uSun: { value: new THREE.Vector2(0.5, 0.5) }, uShaft: { value: 0 } },
       vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
-      fragmentShader: `uniform sampler2D tDiffuse; uniform float uTime, uAsh, uHurt; varying vec2 vUv;
+      fragmentShader: `uniform sampler2D tDiffuse; uniform float uTime, uAsh, uHurt, uHeat, uShaft; uniform vec2 uSun; varying vec2 vUv;
         float h21(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
         void main(){
-          vec4 c = texture2D(tDiffuse, vUv);
+          vec2 uv = vUv;
+          // heat shimmer near the lava
+          if (uHeat > 0.002) { float w = sin(uv.y * 70.0 + uTime * 7.0) * cos(uv.x * 50.0 - uTime * 5.0) + 0.5 * sin(uv.y * 160.0 - uTime * 11.0); uv += vec2(w, w * 0.6) * 0.0045 * uHeat * (1.2 - uv.y); }
+          vec4 c = texture2D(tDiffuse, uv);
+          // shafts of light: bright sky sampled along the line to the sun
+          if (uShaft > 0.002) { vec2 dd = (uSun - uv) / 28.0; vec2 pp = uv; vec3 acc = vec3(0.0); float wgt = 1.0; for (int i = 0; i < 28; i++) { pp += dd; vec3 sm = texture2D(tDiffuse, pp).rgb; acc += max(sm - 1.1, 0.0) * wgt; wgt *= 0.95; } c.rgb += acc * 0.045 * uShaft; }
           vec2 d = vUv - 0.5; float vig = 1.0 - smoothstep(0.35, 1.05, dot(d, d) * 2.2);
           c.rgb *= mix(0.55, 1.0, vig);
           c.rgb = mix(c.rgb, c.rgb * vec3(1.05, 1.0, 0.93), 0.5);
@@ -113,9 +119,11 @@ const volcano = new Volcano(scene, world, quality, {
     if (sea) return;
     npcs.scare(x, z, r);
     if (!player.inBunker) npcs.blast(x, z, cold ? r : r * 1.1);
+    { const dj = Math.hypot(x - jeep.x, z - jeep.z); if (dj < r * 1.6) jeep.damage((cold ? 90 : 70) * (1 - dj / (r * 1.6)), { onDestroyed: () => { toast('The jeep is wrecked!', 3); } }); }
     if (d < r * 1.5 && !player.inBunker) { const dmg = (cold ? 110 : 75) * (1 - d / (r * 1.5)); hurt(dmg, cold ? 'crushed by a falling rock' : 'blown apart by a lava bomb'); cam.kick = Math.min(1, cam.kick + 0.6); }
     else if (d < 60) cam.kick = Math.min(1, cam.kick + 0.25);
   },
+  onLightning: (d) => audio.thunder(d),
   onBurst: () => { if (distToVolcano(player.x, player.z) < 500) audio.noise(2.5, 160, 0.5 * (1 - distToVolcano(player.x, player.z) / 500), 'lowpass', 1, 0, 60); },
 });
 // small particle systems of our own: dust kicked up by feet, spray off the swimmer
@@ -145,6 +153,38 @@ function updateGulls(dt, stageIdx) {
     b.g.position.set(x, y, z); b.g.rotation.y = -b.a - (b.dir > 0 ? Math.PI / 2 : -Math.PI / 2) + Math.PI; b.g.rotation.z = b.dir * 0.25;
     const f = Math.sin(b.flap) * 0.55; b.wings[0].rotation.y = f; b.wings[1].rotation.y = -f;
   }
+}
+// the survey team's jeep, parked beside the camp
+const jeep = new Jeep(scene, POIS.camp.x + 13, POIS.camp.z - 7, 0.9);
+const sunNdc = new THREE.Vector3();
+function enterJeep() {
+  if (jeep.dead) { toast('The jeep is a burnt-out wreck'); return; }
+  player.inJeep = true; jeep.driver = player; jeep.seat(player.rig, 0);
+  const near = npcs.followers().filter((n) => !n.riding && Math.hypot(n.x - jeep.x, n.z - jeep.z) < 16).slice(0, 3);
+  near.forEach((n, i) => { n.riding = true; jeep.riders.push(n); jeep.seat(n.rig, i + 1); });
+  if (near.length) toast(`${near.map((n) => n.def.name.split(' ').pop()).join(', ')} climb${near.length > 1 ? '' : 's'} in the back`);
+  cam.distSel = 1; cam.dist = DISTS[1]; audio.ui();
+}
+function exitJeep() {
+  const spot = jeep.exitSpot();
+  jeep.unseat(player.rig, scene); player.inJeep = false; jeep.driver = null;
+  player.x = spot.x; player.z = spot.z; player.y = heightAt(spot.x, spot.z); player.vy = 0; player.speed = 0; player.rig.root.rotation.set(0, player.yaw, 0);
+  jeep.riders.forEach((n, i) => { jeep.unseat(n.rig, scene); n.riding = false; n.x = spot.x + Math.cos(i * 2.1) * 1.6; n.z = spot.z + Math.sin(i * 2.1) * 1.6; n.y = heightAt(n.x, n.z); });
+  jeep.riders = [];
+  cam.distSel = 0; cam.dist = DISTS[0]; audio.ui();
+}
+function driveTick(dt) {
+  const mv = input.move();
+  jeep.update({ dt, move: mv, brake: input.down('jump') || input.down('sprint'), world, heatAt: (x, z) => volcano.heatAt(x, z), dark: game.progress > 0.55 || volcano.ash > 0.3, fx: fx.dust,
+    onHit: (v) => { audio.crash(Math.min(1, v / 15)); cam.kick = Math.min(1, cam.kick + 0.3); if (v > 11) hurt((v - 11) * 3, 'killed in a crash'); },
+    onFlood: () => { audio.flood(); toast('The engine floods. Deep water and jeeps don\'t mix.', 3); },
+    onDestroyed: () => { toast('The jeep is wrecked!', 3); audio.explosion(0); } });
+  animateSurvivor(player.rig, dt, { mode: 'drive', steer: jeep.steer });
+  const s = player.stats, nearLava = volcano.heatAt(player.x, player.z);
+  tickStats(s, dt, { sprinting: false, swimming: false, ash: volcano.ash, sheltered: false, mask: player.inv.count('mask') > 0, hard: difficulty === 'hardcore', moving: false, hot: nearLava > 0 || distToVolcano(player.x, player.z) < 140 });
+  if (s.health <= 0) die(s.air <= 0 ? 'choked by the ash' : s.thirst <= 0 ? 'lost to thirst' : 'lost to hunger');
+  if (nearLava > 0.3) hurt(nearLava * 25 * dt, 'taken by the lava');
+  if (jeep.dead || jeep.flooded) { exitJeep(); if (jeep.dead) hurt(25, 'burned with the jeep'); }
 }
 const npcs = new NpcManager(scene, world, {
   onHeal: (n) => { toast(n.def.name + ' can walk again'); audio.success(); },
@@ -247,6 +287,7 @@ function nearestInteractable() {
     const can = (player.inv.count('water') > 0 && game.flags.bunker.water < 4) || (player.inv.foodCount() > 0 && game.flags.bunker.food < 4) || (player.inv.count('mask') > 0 && game.flags.bunker.mask < 1);
     return { kind: 'bunker', label: can ? 'Stock the <b>bunker</b>' : `Bunker needs: ${needsText(ESCAPES.bunker.needs, (k) => game.flags.bunker[k])}`, can };
   }
+  if (Math.hypot(jeep.x - px, jeep.z - pz) < 3.8) { const f = npcs.followers().filter((q) => !q.riding).length; return jeep.dead ? { kind: 'none', label: 'The jeep is a burnt-out wreck' } : { kind: 'jeep', label: '<b>Get in the jeep</b>' + (f ? ` with ${Math.min(3, f)} survivor${f > 1 ? 's' : ''}` : '') }; }
   const n = npcs.nearest(px, pz, 3.0);
   if (n && infront(n.x, n.z, 0.2)) return { kind: 'npc', n, label: n.hurt ? `Help <b>${n.def.name}</b>` : n.talkT > 0 ? (n.state === 'follow' ? `<b>${n.def.name}</b>: wait here` : `<b>${n.def.name}</b>: come with me`) : `Talk to <b>${n.def.name}</b>` };
   // chop a palm
@@ -281,6 +322,7 @@ function doInteract(it) {
     if (B.mask < 1 && player.inv.count('mask')) { player.inv.add('mask', -1); B.mask = 1; }
     audio.craft(); toast(bunkerDone() ? 'The bunker is stocked. Seal the door when you are ready.' : 'Supplies stacked inside the bunker');
   } else if (it.kind === 'seal') sealBunker();
+  else if (it.kind === 'jeep') enterJeep();
 }
 function updateRaftVisual() {
   const R = game.flags.raft, n = ESCAPES.raft.needs;
@@ -387,10 +429,11 @@ function endScreen(title, text) {
 function save() {
   if (game.over || !game.started) return;
   const data = {
-    v: 1, t: game.t, difficulty, player: { x: player.x, y: player.y, z: player.z, yaw: player.yaw, stats: player.stats, inv: player.inv.items, onRaft: player.onRaft, inBunker: player.inBunker },
+    v: 1, t: game.t, difficulty, player: { x: player.inJeep ? jeep.exitSpot().x : player.x, y: player.y, z: player.inJeep ? jeep.exitSpot().z : player.z, yaw: player.yaw, stats: player.stats, inv: player.inv.items, onRaft: player.onRaft, inBunker: player.inBunker },
     flags: game.flags, saved: game.saved, taken: pickups.filter((p) => p.taken).map((p) => p.idx), felled: world.trees.map((t, i) => (t.alive ? -1 : i)).filter((i) => i >= 0),
     npcs: npcs.list.map((n) => ({ id: n.def.id, x: n.x, z: n.z, state: n.state, hurt: n.hurt, dead: n.dead, saved: n.saved, healedSaid: n.healedSaid, fixedSaid: !!n.fixedSaid })),
     raft: props.raft.parent === scene ? { x: props.raft.position.x, z: props.raft.position.z } : null, cam: { yaw: cam.yaw, pitch: cam.pitch },
+    jeep: { x: jeep.x, z: jeep.z, yaw: jeep.yaw, hp: jeep.hp, dead: jeep.dead },
   };
   store.set(SAVE_KEY, data); game.lastSave = game.t;
 }
@@ -407,6 +450,7 @@ function load(data) {
   if (game.flags.radioFixed) props.radioLamp.material.emissiveIntensity = 3;
   if (game.flags.sealed) { props.bunkerDoor.rotation.y = 0; props.bunkerLight.intensity = 18; }
   if (data.cam) { cam.yaw = data.cam.yaw; cam.pitch = data.cam.pitch; }
+  if (data.jeep) { jeep.x = data.jeep.x; jeep.z = data.jeep.z; jeep.yaw = data.jeep.yaw; jeep.y = heightAt(jeep.x, jeep.z); jeep.hp = data.jeep.hp; if (data.jeep.dead) jeep.damage(1000); jeep.group.position.set(jeep.x, jeep.y, jeep.z); jeep.group.rotation.y = jeep.yaw; }
   if (player.onRaft) { cam.distSel = 1; cam.dist = DISTS[1]; }
 }
 
@@ -474,6 +518,7 @@ const tmpN = new THREE.Vector3();
 function updatePlayer(dt) {
   const s = player.stats, mv = input.move();
   if (player.inHeli) return;
+  if (player.inJeep) { driveTick(dt); return; }
   if (player.onRaft) { updateRaft(dt, mv); return; }
   if (player.inBunker) {
     // inside: nothing to do but wait (and eat)
@@ -552,10 +597,11 @@ function updateCamera(dt) {
   if (player.inHeli) { camera.lookAt(props.heli.position); return; }
   const look = input.lookDelta(dt);
   cam.yaw -= look.x; cam.pitch = clamp(cam.pitch + look.y, -0.45, 1.1);
+  if (player.inJeep && Math.abs(look.x) < 0.0005 && Math.abs(jeep.speed) > 1.5) { let d = jeep.yaw + (jeep.speed < 0 ? Math.PI : 0) - cam.yaw; while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2; cam.yaw += d * Math.min(1, dt * 1.6); }
   if (input.pressed('camera')) { cam.distSel = (cam.distSel + 1) % DISTS.length; cam.dist = DISTS[cam.distSel]; }
-  let dist = cam.dist;
+  let dist = player.inJeep ? Math.max(cam.dist, 8.5) : cam.dist;
   if (game.intro > 0) { const k = smooth(0, 1, 1 - game.intro / 7); dist = lerp(90, cam.dist, k); cam.pitch = lerp(0.9, 0.28, k); cam.yaw = lerp(Math.PI + 1.8, Math.PI + 0.4, k); }
-  const head = { x: player.x, y: player.y + (player.swimming ? 0.9 : 1.55), z: player.z };
+  const head = { x: player.x, y: player.y + (player.inJeep ? 1.9 : player.swimming ? 0.9 : 1.55), z: player.z };
   camTarget.set(head.x, head.y, head.z);
   const cx = head.x - Math.sin(cam.yaw) * Math.cos(cam.pitch) * dist, cz = head.z - Math.cos(cam.yaw) * Math.cos(cam.pitch) * dist, cy = head.y + Math.sin(cam.pitch) * dist;
   // keep the camera out of the ground and above the sea
@@ -595,7 +641,17 @@ function updateAtmosphere(dt, vfx) {
   if (player.inBunker) { scene.fog.near = 2; scene.fog.far = 16; scene.fog.color.set('#2a2320'); }
   // crater glow colours the underside of the ash cloud at dusk
   if (bloom) bloom.strength = 0.3 + 0.25 * dusk + 0.2 * (vfx.stageIdx >= 3 ? 1 : 0);
-  if (gradePass) { gradePass.uniforms.uTime.value = game.t; gradePass.uniforms.uAsh.value = ash; gradePass.uniforms.uHurt.value = player.stats.health < 30 ? (1 - player.stats.health / 30) * 0.6 : 0; }
+  U.uFlash.value = vfx.flash || 0; hemi.intensity += (vfx.flash || 0) * 1.8;
+  for (let i = 0; i < 8; i++) U.uGlow.value[i].copy(volcano.glow[i]);
+  if (gradePass) {
+    gradePass.uniforms.uTime.value = game.t; gradePass.uniforms.uAsh.value = ash; gradePass.uniforms.uHurt.value = player.stats.health < 30 ? (1 - player.stats.health / 30) * 0.6 : 0;
+    const nf = vfx.nearFront == null ? 1e9 : vfx.nearFront;
+    gradePass.uniforms.uHeat.value = player.inBunker ? 0 : clamp(volcano.heatAt(player.x, player.z) * 1.2 + Math.max(0, 1 - nf / 45) + (vfx.stageIdx >= 3 ? Math.max(0, 1 - distToVolcano(player.x, player.z) / 150) * 0.7 : 0), 0, 1);
+    sunNdc.copy(camera.position).addScaledVector(U.uSun.value, 200).project(camera);
+    const onScreen = sunNdc.z < 1 && Math.abs(sunNdc.x) < 1.6 && Math.abs(sunNdc.y) < 1.6;
+    gradePass.uniforms.uSun.value.set(sunNdc.x * 0.5 + 0.5, sunNdc.y * 0.5 + 0.5);
+    gradePass.uniforms.uShaft.value = onScreen && !player.inBunker ? (1 - ash * 0.9) * clamp(1.6 - Math.max(Math.abs(sunNdc.x), Math.abs(sunNdc.y)), 0, 1) : 0;
+  }
   sunSprite.position.copy(camera.position).addScaledVector(U.uSun.value, 1500);
   sunSprite.material.color.copy(U.uSunCol.value); sunSprite.material.opacity = (1 - ash * 0.85) * (player.inBunker ? 0 : 1);
   updateGulls(dt, vfx.stageIdx);
@@ -609,7 +665,7 @@ function updateAtmosphere(dt, vfx) {
     waves: player.inBunker ? 0 : clamp(1 - seaD / 25, 0.08, 1) * (player.swimming || player.onRaft ? 1 : 0.8),
     wind: player.inBunker ? 0.1 : 0.25 + vfx.stageIdx * 0.18 + (player.y > 60 ? 0.3 : 0),
     rumble: player.inBunker ? vfx.rumble * 1.2 : vfx.rumble, heli: audio.vol.heli, fire: clamp(volcano.heatAt(player.x, player.z) * 1.5 + (vfx.stageIdx >= 3 ? 0.15 * (1 - clamp((distToVolcano(player.x, player.z) - 100) / 200, 0, 1)) : 0), 0, 1),
-    birds: player.inBunker ? 0 : [0.9, 0.25, 0.03, 0, 0][vfx.stageIdx] * clamp(1 - seaD / 90, 0.3, 1) * (player.y > 2 ? 1 : 0.5), hurt: player.stats.health < 30 ? 1 - player.stats.health / 30 : 0,
+    birds: player.inBunker ? 0 : [0.9, 0.25, 0.03, 0, 0][vfx.stageIdx] * clamp(1 - seaD / 90, 0.3, 1) * (player.y > 2 ? 1 : 0.5), hurt: player.stats.health < 30 ? 1 - player.stats.health / 30 : 0, engine: player.inJeep ? jeep.rpm : 0,
   });
   audio.vol.heli = 0;
 }
@@ -629,6 +685,7 @@ function updateHUD(dt) {
   const sb = $('stageBar').firstElementChild, sw = (game.progress * 100).toFixed(1) + '%'; if (domCache.get('sb') !== sw) { domCache.set('sb', sw); sb.style.width = sw; }
   const fol = npcs.followers(); setHTML('companions', fol.length ? `👥 ${fol.map((n) => n.def.name.split(' ').pop()).join(', ')}` : '');
   setText('objective', objectiveText());
+  setHTML('speed', player.inJeep ? `${Math.round(Math.abs(jeep.speed) * 3.6)}<small>km/h</small>` : '');
   // compass
   const items = [];
   for (const [k, p] of Object.entries(POIS)) { if (k === 'cave') continue; items.push({ x: p.x, z: p.z, icon: p.icon, name: p.name }); }
@@ -659,7 +716,8 @@ function updateHUD(dt) {
   renderInv();
   // interaction prompt
   const it = currentInteract;
-  if (it && !player.onRaft && !player.inBunker && !player.inHeli) {
+  if (player.inJeep) { show('prompt'); setHTML('prompt', Math.abs(jeep.speed) < 4 ? (input.isTouch ? '' : '<b>E</b> ') + 'Get out of the jeep' : 'Slow down to get out'); }
+  else if (it && !player.onRaft && !player.inBunker && !player.inHeli) {
     show('prompt');
     let html2 = (input.isTouch ? '' : '<b>E</b> ') + it.label;
     if (it.kind === 'chop' && player.chopTree) html2 += `<span class="hold"><i style="width:${((player.chopHits + player.chop / 0.7) / 3 * 100).toFixed(0)}%"></i></span>`;
@@ -757,9 +815,11 @@ function frame(now) {
   if (game.started && !game.paused) {
     game.t += dt; game.progress = clamp(game.t / game.duration, 0, 1); game.stage = stageAt(game.progress);
     if (game.intro > 0) game.intro -= dt;
-    currentInteract = (player.onRaft || player.inBunker || player.inHeli || game.intro > 0) ? null : nearestInteractable();
-    if (currentInteract && !currentInteract.hold && input.pressed('interact') && !game.over) doInteract(currentInteract);
+    currentInteract = (player.onRaft || player.inBunker || player.inHeli || player.inJeep || game.intro > 0) ? null : nearestInteractable();
+    if (player.inJeep && input.pressed('interact') && !game.over && Math.abs(jeep.speed) < 4) exitJeep();
+    else if (currentInteract && !currentInteract.hold && currentInteract.kind !== 'none' && input.pressed('interact') && !game.over) doInteract(currentInteract);
     updatePlayer(dt);
+    if (!player.inJeep) jeep.update({ dt, move: { x: 0, y: 0 }, brake: false, world, heatAt: (x, z) => volcano.heatAt(x, z), dark: false, fx: fx.dust });
     const vfx = volcano.update({ dt, progress: game.progress, duration: game.duration, playerPos: player, camera, sunHeight: Math.max(0.1, U.uSun.value.y) });
     npcs.update(dt, { player, heatAt: (x, z) => volcano.heatAt(x, z), surgeR: volcano.surgeR, volcano: VOLCANO, hiddenInBunker: player.inBunker, followIndex: (n) => npcs.followers().indexOf(n) });
     updateHeli(dt);
@@ -789,7 +849,7 @@ function frame(now) {
   catch (e) { console.error(e); save(); show('crash'); throw e; }
 }
 renderer.domElement.addEventListener('webglcontextlost', (e) => { e.preventDefault(); save(); show('crash'); });
-window.ASH = { game, player, volcano, npcs, props, world, cam, save, load, die, win };
+window.ASH = { game, player, volcano, npcs, props, world, cam, save, load, die, win, jeep, enterJeep, exitJeep };
 applyQuality();
 $('loading').classList.add('hidden');
 requestAnimationFrame(frame);

@@ -31,6 +31,12 @@ export class Audio {
     const hf = ctx.createBiquadFilter(); hf.type = 'lowpass'; hf.frequency.value = 300;
     const chop = ctx.createGain(); chop.gain.value = 0.5; const lfo = ctx.createOscillator(); lfo.type = 'square'; lfo.frequency.value = 11; const lg = ctx.createGain(); lg.gain.value = 0.5; lfo.connect(lg); lg.connect(chop.gain);
     ho.connect(hf); hf.connect(chop); chop.connect(this.heliG); ho.start(); lfo.start();
+    // the jeep: two detuned waves through a lowpass, pitched by rpm
+    this.engG = ctx.createGain(); this.engG.gain.value = 0; this.engG.connect(this.sfx);
+    this.engF = ctx.createBiquadFilter(); this.engF.type = 'lowpass'; this.engF.frequency.value = 400; this.engF.connect(this.engG);
+    this.eng1 = ctx.createOscillator(); this.eng1.type = 'sawtooth'; this.eng1.frequency.value = 60; this.eng1.connect(this.engF);
+    this.eng2 = ctx.createOscillator(); this.eng2.type = 'square'; this.eng2.frequency.value = 31; const e2g = ctx.createGain(); e2g.gain.value = 0.35; this.eng2.connect(e2g); e2g.connect(this.engF);
+    this.eng1.start(); this.eng2.start();
     this.t0 = ctx.currentTime;
   }
   setOn(on) { this.on = on; if (this.master) this.master.gain.setTargetAtTime(on ? 0.8 : 0, this.ctx.currentTime, 0.05); }
@@ -46,6 +52,10 @@ export class Audio {
     this.sub.frequency.setTargetAtTime(34 + 8 * Math.sin(t * 0.9), t, 0.3);
     ease(this.heliG, c.heli * 0.6, 0.2);
     ease(this.fire.g, c.fire * 0.25);
+    const rpm = c.engine || 0;
+    ease(this.engG, rpm > 0 ? 0.16 : 0, 0.15);
+    this.eng1.frequency.setTargetAtTime(52 + rpm * 190, t, 0.08); this.eng2.frequency.setTargetAtTime(26 + rpm * 95, t, 0.08);
+    this.engF.frequency.setTargetAtTime(280 + rpm * 1600, t, 0.1);
     // birds: random chirps, fewer as the mountain wakes
     this.birdT -= dt;
     if (this.birdT <= 0 && c.birds > 0.05 && Math.random() < c.birds) { this.chirp(); this.birdT = 0.4 + Math.random() * 3 / Math.max(0.1, c.birds); } else if (this.birdT <= 0) this.birdT = 1;
@@ -90,5 +100,12 @@ export class Audio {
   success() { [523, 659, 784, 1047].forEach((f, i) => this.tone(f, 0.5, 'triangle', 0.12, 0, i * 0.14)); }
   fail() { [330, 262, 196].forEach((f, i) => this.tone(f, 0.7, 'sawtooth', 0.08, -20, i * 0.3)); }
   stageSting() { this.tone(110, 1.5, 'sawtooth', 0.08, -30); this.tone(165, 1.5, 'sawtooth', 0.06, -45, 0.1); this.noise(2, 200, 0.3, 'lowpass', 1, 0, 60); }
+  // volcanic lightning: a crack, then the roll, arriving after the light
+  thunder(dist) {
+    const delay = Math.min(3, dist / 340), v = Math.max(0.08, 1 - dist / 700);
+    this.noise(0.25, 3000, 0.5 * v, 'highpass', 1, delay); this.noise(2.8, 160, 0.9 * v, 'lowpass', 1, delay + 0.1, 45); this.tone(48, 2.5, 'sine', 0.35 * v, -20, delay + 0.15);
+  }
+  flood() { this.noise(0.6, 500, 0.5, 'lowpass', 1, 0, 120); this.tone(90, 0.8, 'sawtooth', 0.12, -70); }
+  crash(v = 1) { this.noise(0.25, 900, 0.7 * v, 'lowpass'); this.tone(120, 0.3, 'triangle', 0.3 * v, -80); }
   talk() { for (let i = 0; i < 4; i++) this.tone(220 + Math.random() * 120, 0.06, 'triangle', 0.04, 0, i * 0.08); }
 }
