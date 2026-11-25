@@ -1,7 +1,12 @@
 // Bump VERSION for every update (1.1, 1.2, 1.3 ...) and add a line to CHANGES.
-export const VERSION = '2.5';
+export const VERSION = '2.6';
 
 export const CHANGES = [
+  ['2.6', [
+    'The polis pull up, climb out of both doors and come to arrest Wally, even dragging him out of a stopped car',
+    'Arrests take a moment: a GETTING NICKED bar fills up, so run to wriggle free; get caught and Wally is cuffed, hands behind his back',
+    'Rebuilt cars: real wheel arches, painted roof and pillars, black window surrounds, alloy wheels with brake discs, proper headlights, grilles, tail lights and mirrors',
+  ]],
   ['2.5', [
     'The radar shows labelled icons: H home, A Granda\'s Armoury, M next mission, W Wally Wash, + Infirmary, P Polis',
     'Set the GPS to any of them with G, the GPS button, or by tapping the map; the purple route leads the way',
