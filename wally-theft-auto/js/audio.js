@@ -1,6 +1,7 @@
-// All sound is synthesised with WebAudio: engines, sirens, gadgets and three radio stations.
+// All sound is synthesised with WebAudio: engines, sirens, gadgets and the radio (songs live in radio.js).
+import { STATIONS } from './radio.js';
 export class Audio {
-  constructor() { this.ctx = null; this.on = true; this.station = 0; this.stations = ['WALLY FM', 'CLYDE BEATS', 'PIPES & RIFFS', 'RADIO OFF']; }
+  constructor() { this.ctx = null; this.on = true; this.station = 0; this.stations = STATIONS.map((s) => s.name).concat('RADIO OFF'); this.songIdx = STATIONS.map(() => (Math.random() * 3) | 0); this.onTrack = null; }
   init() {
     if (this.ctx) { if (this.ctx.state === 'suspended') this.ctx.resume(); return; }
     const C = window.AudioContext || window.webkitAudioContext; if (!C) return;
@@ -189,7 +190,7 @@ export class Audio {
     // UK two-tone "nee-naw"
     this.sirenO.frequency.setValueAtTime((Math.floor(t * 1.4) % 2) ? 600 : 800, t);
     this.wind.gain.setTargetAtTime(st.flying ? 0.35 : Math.min(0.15, Math.abs(st.speed) / 400), t, 0.2);
-    this.music.gain.setTargetAtTime(st.inCar && this.station < 3 && this.on ? 0.22 : 0, t, 0.3);
+    this.music.gain.setTargetAtTime(st.inCar && this.station < STATIONS.length && this.on ? 0.22 : 0, t, 0.3);
   }
   // others: [{ dist, pan (-1 left .. 1 right), speed, throttle, type }] nearest first
   traffic(others, inCar) {
@@ -267,57 +268,84 @@ export class Audio {
     o.connect(f); f.connect(g); g.connect(this.sfx); o.start(t); vib.start(t); o.stop(t + 0.55); vib.stop(t + 0.55);
   }
   bump(vol = 1) { if (!this.ctx) return; this.tone(70, 0.12, 'sine', 0.3 * vol, -30); this.noise(0.07, 300, 0.25 * vol); }
-  nextStation() { this.station = (this.station + 1) % this.stations.length; return this.stations[this.station]; }
-  // ---------- generative radio ----------
+  nextStation() {
+    this.station = (this.station + 1) % this.stations.length;
+    if (this.station < STATIONS.length) { this.step = 0; if (this.ctx) this.nextT = this.ctx.currentTime + 0.05; }
+    return this.stations[this.station];
+  }
+  song(st = this.station) { const S = STATIONS[st]; return S ? S.songs[this.songIdx[st] % S.songs.length] : null; }
   schedule() {
     const c = this.ctx; if (!c) return;
     const st = this.station;
-    if (st >= 3 || this.music.gain.value < 0.001) { this.nextT = c.currentTime + 0.1; return; }
-    const bpm = [128, 100, 140][st], sp = 60 / bpm / 4;
+    if (st >= STATIONS.length || this.music.gain.value < 0.001) { this.nextT = c.currentTime + 0.1; return; }
+    let song = this.song(st);
     while (this.nextT < c.currentTime + 0.2) {
-      this.playStep(st, this.step, this.nextT - c.currentTime, sp);
+      // when a song has played through, the station moves on to its next one
+      if (this.step >= song.bars * song.steps) {
+        this.songIdx[st] = (this.songIdx[st] + 1) % STATIONS[st].songs.length; this.step = 0; song = this.song(st);
+        if (this.onTrack) this.onTrack(st, song);
+      }
+      const sp = 60 / song.bpm / song.div;
+      this.playStep(song, this.step, this.nextT - c.currentTime, sp);
       this.step++; this.nextT += sp;
     }
   }
-  playStep(st, s, when, sp) {
-    const m = this.music;
-    const bar = Math.floor(s / 16) % 4, k = s % 16;
+  playStep(song, s, when, sp) {
+    const bar = Math.floor(s / song.steps), k = s % song.steps, ch = song.chords[bar % song.chords.length];
+    if (song.swing && k % 2 === 1) when += song.swing * sp;
     const n = (semi) => 220 * Math.pow(2, semi / 12);
-    if (st === 0) { // Wally FM: bouncy chiptune march in C major
-      const prog = [0, 5, 7, 5][bar];
-      if (k % 4 === 0) this.kick(when);
-      if (k % 8 === 4) this.snare(when);
-      if (k % 2 === 0) this.tone(n(prog - 24 + (k % 4 === 2 ? 7 : 0)), sp * 1.8, 'square', 0.12, 0, when, m);
-      const mel = [12, 16, 19, 16, 21, 19, 16, 14, 12, 14, 16, 19, 24, 19, 16, 12];
-      if ((s * 7) % 3 !== 1) this.tone(n(prog + mel[k]), sp * 1.6, 'square', 0.06, 0, when, m);
-    } else if (st === 1) { // Clyde Beats: synthwave in A minor
-      const prog = [0, -4, 3, -2][bar];
-      if (k % 4 === 0) this.kick(when);
-      if (k === 4 || k === 12) this.snare(when);
-      if (k % 2 === 1) this.hat(when);
-      this.tone(n(prog - 24 + (k % 2 ? 12 : 0)), sp * 0.9, 'sawtooth', 0.08, 0, when, m);
-      if (k === 0) for (const iv of [0, 3, 7]) this.tone(n(prog + iv), sp * 15, 'triangle', 0.04, 0, when, m);
-      const arp = [0, 3, 7, 12, 7, 3, 12, 15];
-      if (bar % 2 === 1) this.tone(n(prog + 12 + arp[k % 8]), sp * 0.8, 'triangle', 0.05, 0, when, m);
-    } else { // Pipes & Riffs: drone + mixolydian chanter + rock drums
-      if (k === 0) { this.tone(n(-12), sp * 16.5, 'sawtooth', 0.05, 0, when, m); this.tone(n(-5), sp * 16.5, 'sawtooth', 0.03, 0, when, m); }
-      if (k % 8 === 0) this.kick(when); if (k % 8 === 4) this.snare(when); if (k % 2 === 0) this.hat(when);
-      const tune = [[0, 2, 4, 7, 9, 7, 4, 2], [0, -2, 0, 2, 4, 2, 0, -3], [7, 9, 10, 9, 7, 4, 2, 4], [2, 4, 0, -3, 0, 2, 0, 0]][bar];
-      if (k % 2 === 0) this.tone(n(12 + tune[k / 2]), sp * 2.1, 'square', 0.05, 0, when, m);
-      if (k % 4 === 0) this.tone(n(-12 + [0, 0, 5, 7][bar]), sp * 3.5, 'square', 0.07, 0, when, m);
+    const D = song.drums || {};
+    const hit = (pat, fn) => { if (!pat) return; const c = pat[k % pat.length]; if (c === 'x') fn(1); else if (c === 'o') fn(0.5); };
+    hit(D.k, (v) => this.kick(when, v)); hit(D.s, (v) => this.snare(when, v)); hit(D.h, (v) => this.hat(when, v));
+    hit(D.o, (v) => this.hat(when, v, true)); hit(D.b, (v) => this.bodhran(when, v));
+    if (song.drone && k === 0) { this.tone(n(song.key - 12), sp * song.steps * 1.05, 'sawtooth', 0.045, 0, when, this.music); this.tone(n(song.key - 5), sp * song.steps * 1.05, 'sawtooth', 0.03, 0, when, this.music); }
+    const chordNotes = (p) => { const iv = ch.iv.slice(0, (p.seventh || ch.seventh) ? 4 : 3); return iv.map((i) => song.key + ch.root + (p.oct || 0) + i); };
+    for (const p of song.parts) {
+      const dur = sp * (p.len || 1);
+      if (p.kind === 'pad') { if (k === 0) for (const x of chordNotes(p)) this.inst(p.inst, n(x), sp * (p.len || song.steps), p.vol, when); continue; }
+      if (p.everyOther && bar % 2 === 0) continue;
+      const line = p.bars[bar % p.bars.length], t = line[k % line.length];
+      if (t === '.' || t == null) continue;
+      if (p.kind === 'stab' || t === 'x') { if (t === 'x') for (const x of chordNotes(p)) this.inst(p.inst, n(x), dur, p.vol, when); continue; }
+      const sem = /^[tTsS]/.test(t) ? { t: ch.iv[1], T: ch.iv[1] + 12, s: ch.iv[3], S: ch.iv[3] + 12 }[t[0]] + (+(t.split('+')[1] || 0)) : +t;
+      if (Number.isNaN(sem)) continue;
+      this.inst(p.inst, n(song.key + (p.abs ? 0 : ch.root) + (p.oct || 0) + sem), dur, p.vol, when);
     }
   }
-  kick(when) { this.tone(140, 0.18, 'sine', 0.5, -100, when, this.music); }
-  snare(when) {
+  // the radio's instruments, built from a few oscillators each
+  inst(kind, f, dur, vol, when) {
+    const m = this.music;
+    switch (kind) {
+      case 'acc': this.tone(f, dur, 'square', vol * 0.6, 0, when, m); this.tone(f * 1.006, dur, 'square', vol * 0.5, 0, when, m); this.tone(f * 2, dur, 'triangle', vol * 0.15, 0, when, m); break;
+      case 'pipes': this.tone(f, dur, 'sawtooth', vol, 0, when, m); this.tone(f * 2, dur, 'square', vol * 0.2, 0, when, m); break;
+      case 'guitar': this.tone(f, dur, 'sawtooth', vol, 0, when, m); this.tone(f * 1.498, dur, 'sawtooth', vol * 0.8, 0, when, m); this.tone(f * 0.5, dur, 'square', vol * 0.6, 0, when, m); break;
+      case 'piano': this.tone(f, dur, 'triangle', vol, 0, when, m); this.tone(f * 2, dur * 0.6, 'sine', vol * 0.35, 0, when, m); this.tone(f * 4, 0.04, 'square', vol * 0.05, 0, when, m); break;
+      case 'rhodes': this.tone(f, dur, 'sine', vol, 0, when, m); this.tone(f * 2, dur * 0.4, 'sine', vol * 0.25, 0, when, m); this.tone(f * 3, dur * 0.15, 'triangle', vol * 0.08, 0, when, m); break;
+      case 'upright': this.tone(f, dur, 'sine', vol, 0, when, m); this.tone(f * 2, 0.12, 'triangle', vol * 0.25, 0, when, m); break;
+      case 'hoover': this.tone(f, dur, 'sawtooth', vol, -f * 0.12, when, m); this.tone(f * 1.01, dur, 'sawtooth', vol * 0.8, -f * 0.12, when, m); this.tone(f * 0.5, dur, 'sawtooth', vol * 0.6, -f * 0.06, when, m); break;
+      case 'fiddle': {
+        const c = this.ctx, t = c.currentTime + when, o = c.createOscillator(), g = c.createGain(), lp = c.createBiquadFilter(), lfo = c.createOscillator(), lg = c.createGain();
+        o.type = 'sawtooth'; o.frequency.value = f; lp.type = 'lowpass'; lp.frequency.value = 3200;
+        lfo.frequency.value = 6; lg.gain.value = f * 0.008; lfo.connect(lg); lg.connect(o.frequency);
+        g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(vol, t + 0.03); g.gain.setValueAtTime(vol, t + dur * 0.7); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+        o.connect(lp); lp.connect(g); g.connect(m); o.start(t); lfo.start(t); o.stop(t + dur + 0.05); lfo.stop(t + dur + 0.05);
+        break;
+      }
+      default: this.tone(f, dur, kind, vol, 0, when, m);
+    }
+  }
+  kick(when, v = 1) { this.tone(140, 0.18, 'sine', 0.5 * v, -100, when, this.music); }
+  bodhran(when, v = 1) { this.tone(110, 0.2, 'sine', 0.4 * v, -50, when, this.music); this.tone(220, 0.05, 'triangle', 0.08 * v, -100, when, this.music); }
+  snare(when, v = 1) {
     const c = this.ctx, s = c.createBufferSource(); s.buffer = this.noiseBuf;
     const f = c.createBiquadFilter(); f.type = 'highpass'; f.frequency.value = 1500;
-    const g = c.createGain(), t = c.currentTime + when; g.gain.setValueAtTime(0.25, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
+    const g = c.createGain(), t = c.currentTime + when; g.gain.setValueAtTime(0.25 * v, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
     s.connect(f); f.connect(g); g.connect(this.music); s.start(t, Math.random()); s.stop(t + 0.16);
   }
-  hat(when) {
-    const c = this.ctx, s = c.createBufferSource(); s.buffer = this.noiseBuf;
+  hat(when, v = 1, open) {
+    const c = this.ctx, s = c.createBufferSource(), len = open ? 0.18 : 0.04; s.buffer = this.noiseBuf;
     const f = c.createBiquadFilter(); f.type = 'highpass'; f.frequency.value = 7000;
-    const g = c.createGain(), t = c.currentTime + when; g.gain.setValueAtTime(0.08, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
-    s.connect(f); f.connect(g); g.connect(this.music); s.start(t, Math.random()); s.stop(t + 0.05);
+    const g = c.createGain(), t = c.currentTime + when; g.gain.setValueAtTime(0.08 * v, t); g.gain.exponentialRampToValueAtTime(0.001, t + len);
+    s.connect(f); f.connect(g); g.connect(this.music); s.start(t, Math.random()); s.stop(t + len + 0.01);
   }
 }

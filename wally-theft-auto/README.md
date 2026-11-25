@@ -31,7 +31,9 @@ Open `wally-theft-auto/index.html` from any web server (GitHub Pages works). Not
 - **Carjacking**: press F by an occupied car and Wally yanks the door open, drags the driver out by the collar, punches them and drives off. Grab a polis car and the driver fights back.
 - **Weather** that changes every few minutes: Braw (clear), Dreich (overcast), Pishin' doon (rain), Blawin' a hoolie (storm, with thunder and lightning), the Haar (sea fog) and snow. Rain makes roads shiny and slippy.
 - **Day–night cycle**: a full day lasts 24 minutes. At night the windows, street lamps and shop signs light up, with bloom.
-- **Three radio stations** (R in a car): Wally FM, Clyde Beats, and Pipes & Riffs.
+- **Six radio stations** (R in a car), each with three songs that play in turn, with DJ chat and the song name on screen:
+  - Wally FM (chiptune pop), Clyde Beats (synthwave), Pipes & Riffs (bagpipe rock)
+  - Ceilidh Classics (accordion and fiddle jigs, reels and a waltz), Rave an' Scran (90s happy hardcore), Smooth Haar (late-night jazz)
 - If you die it's **HOPELESS!** and you wake up at the Infirmary. If you're arrested you're **NICKED!** and released from the Polis station.
 - **Wally's Flat**: walk through the front door (the pink ring) to go inside. Sleep in the bed (green ring, then F) to save the game, and you'll wake up there next time. Progress also saves automatically after missions.
 
@@ -59,7 +61,7 @@ On phones and tablets there's an on-screen stick, a drag-to-look area and button
 
 The version number is shown on the title screen (with a "What's new" list) and on the pause screen. It lives in `js/version.js`: bump it by 0.1 for every update (1.1, 1.2, 1.3...) and add a line to `CHANGES`.
 
-- **3.0**: 10 new weapons (including a Flamethrower), realistic firing sounds for every weapon, twice as many pickups
+- **3.0**: 10 new weapons (including a Flamethrower), realistic firing sounds for every weapon, twice as many pickups, 3 new radio stations and 18 songs
 - **2.9**: 5 new missions, GPS routes for every mission, full Pamazon van lettering, landscape only on phones
 - **2.8**: run-over sounds: a thud, a cartoon yelp, a Scottish cry, a bump on landing, and shouting witnesses
 - **2.7**: fixed a graphics memory leak that could crash phones after long sessions; the game now saves and offers a reload if the graphics ever give out

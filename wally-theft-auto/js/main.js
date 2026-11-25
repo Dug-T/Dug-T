@@ -22,6 +22,7 @@ import { buildUFO } from './ufo.js';
 import { buildFlat, FLAT } from './flat.js';
 import { initContent } from './content.js';
 import { Voice, QUIPS, DJ } from './voice.js';
+import { DJ_LINES } from './radio.js';
 import { OUTFITS } from './player.js';
 
 const $ = (id) => document.getElementById(id);
@@ -1023,9 +1024,14 @@ function nearCop(r) {
   for (const p of peds.list) if (p.cop && p.state !== 'dead' && Math.hypot(p.x - player.x, p.z - player.z) < r) return true;
   return false;
 }
+// the DJ chats between songs, and the new song's name pops up
+const pickDJ = (st) => { const L = Math.random() < 0.75 ? DJ_LINES[st] : DJ.slice(3); return L[(Math.random() * L.length) | 0]; };
+audio.onTrack = (st) => { if (!player.car || !game.playing) return; showRadio(); if (Math.random() < 0.5) voice.say(pickDJ(st), 'DJ'); };
 function showRadio() {
   if (!player.car) return;
-  const r = $('radio'); r.textContent = '📻 ' + audio.stations[audio.station]; r.style.opacity = 1; clearTimeout(game._radT); game._radT = setTimeout(() => (r.style.opacity = 0), 2200);
+  const r = $('radio'), song = audio.song();
+  r.textContent = '📻 ' + audio.stations[audio.station] + (song ? ` · ${song.title} – ${song.artist}` : '');
+  r.style.opacity = 1; clearTimeout(game._radT); game._radT = setTimeout(() => (r.style.opacity = 0), 3200);
 }
 
 // ---------------- input ----------------
@@ -1930,7 +1936,7 @@ function frame(now) {
   if (inp.mute) { audio.on = !audio.on; if (audio.master) audio.master.gain.value = audio.on ? 0.7 : 0; game.toast(audio.on ? 'Sound on' : 'Sound off'); }
   if (inp.camera) cam.far = !cam.far;
   if (inp.gps) cycleGps();
-  if (inp.radio && player.car) { audio.nextStation(); showRadio(); if (audio.station < 3) voice.say(DJ[audio.station + (Math.random() < 0.5 ? 0 : 3)], 'DJ', true); }
+  if (inp.radio && player.car) { audio.nextStation(); showRadio(); if (audio.station < DJ_LINES.length && Math.random() < 0.6) voice.say(pickDJ(audio.station), 'DJ', true); }
   if (game.cuffs) { inp.enter = false; inp.mx = inp.my = 0; }
   updateFlat(dt, inp);
   if (inp.enter && !game.jack && !game.inside) { if (player.car) exitCar(); else enterCar(); }
