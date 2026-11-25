@@ -55,6 +55,7 @@ On phones and tablets there's an on-screen stick, a drag-to-look area and button
 
 The version number is shown on the title screen (with a "What's new" list) and on the pause screen. It lives in `js/version.js`: bump it by 0.1 for every update (1.1, 1.2, 1.3...) and add a line to `CHANGES`.
 
+- **2.7**: fixed a graphics memory leak that could crash phones after long sessions; the game now saves and offers a reload if the graphics ever give out
 - **2.6**: the polis climb out and arrest Wally (with a GETTING NICKED bar you can run from, and being dragged out of a stopped car); rebuilt, more realistic cars with wheel arches, pillars, window surrounds, alloys, headlights, grilles and mirrors
 - **2.5**: labelled radar icons for home (H), Granda's Armoury (A), the next mission (M), Wally Wash (W), Infirmary (+) and Polis (P); set the GPS to any of them with G, the GPS button or by tapping the map
 - **2.4**: spoken dialogue for missions, pedestrians, drivers, polis, the radio DJ and Wally (VOICES toggle), lots more Scottish patter, the full WALLY MAN badge on his chest, and clear cab glass on vans

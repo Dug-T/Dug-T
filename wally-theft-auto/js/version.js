@@ -1,7 +1,11 @@
 // Bump VERSION for every update (1.1, 1.2, 1.3 ...) and add a line to CHANGES.
-export const VERSION = '2.6';
+export const VERSION = '2.7';
 
 export const CHANGES = [
+  ['2.7', [
+    'Fixed a crash on phones after long sessions (like the Pamazon deliveries): cars, people, projectiles and pickups now free their graphics memory when they leave',
+    'Safety net: if the graphics ever do give out, the game saves and offers a reload instead of freezing',
+  ]],
   ['2.6', [
     'The polis pull up, climb out of both doors and come to arrest Wally, even dragging him out of a stopped car',
     'Arrests take a moment: a GETTING NICKED bar fills up, so run to wriggle free; get caught and Wally is cuffed, hands behind his back',
