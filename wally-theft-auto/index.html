@@ -164,6 +164,7 @@
     <button class="btn alt" id="newgame">↺ NEW GAME</button>
     <button class="btn dim" id="howto">? CONTROLS</button>
     <button class="btn dim" id="gfx">GRAPHICS: HIGH</button>
+    <button class="btn dim" id="vox">VOICES: ON</button>
   </div>
 </div>
 <div id="help" class="screen hidden">
@@ -198,6 +199,7 @@
     <button class="btn" id="resume">▶ RESUME</button>
     <button class="btn dim" id="pauseHelp">? CONTROLS</button>
     <button class="btn dim" id="gfx2">GRAPHICS: HIGH</button>
+    <button class="btn dim" id="vox2">VOICES: ON</button>
     <button class="btn alt" id="quit">⌂ TITLE SCREEN</button>
   </div>
 </div>
@@ -216,7 +218,7 @@
 // every game file stamped with that version, so a browser can't mix old and new files.
 // If you add a new file to js/, add its name to this list too.
 (function () {
-  var files = ['main', 'audio', 'city', 'content', 'flat', 'humans', 'missions', 'peds', 'player', 'textures', 'ufo', 'vehicles', 'version', 'weapons', 'weather'];
+  var files = ['main', 'audio', 'city', 'content', 'flat', 'humans', 'missions', 'peds', 'player', 'textures', 'ufo', 'vehicles', 'version', 'voice', 'weapons', 'weather'];
   function boot(v) {
     var map = { imports: { 'three': './lib/three.module.min.js', 'three/addons/': './lib/' } };
     files.forEach(function (f) { map.imports['./js/' + f + '.js'] = './js/' + f + '.js?v=' + v; });

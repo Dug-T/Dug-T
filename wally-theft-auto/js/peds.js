@@ -4,11 +4,11 @@ import { buildHuman, animateHuman, randomPedLook, buildBlaster } from './humans.
 import { N, P, HALF, ROAD, KERB, blockMin, blockMax } from './city.js';
 
 const LINES = {
-  idle: ["Haw, Wally! Nice cape!", "Is that a onesie?", "Get a real job, pal!", "Wally! Sign ma chip butty!", "Mind the cape, son.", "Whit's the 'W' for? Wee?", "Ma maw says you're a menace.", "Can ye even fly?", "Nae chance yer a superhero.", "Lovely day for it!"],
-  hit: ["Ya numpty!", "Oi! Watch it!", "Ma heid!", "Awa' an bile yer heid!", "Polis! POLIS!", "That's no very heroic!"],
-  flee: ["Aaargh!", "Run!", "He's lost the plot!", "Somebody phone the polis!", "Help ma boab!"],
+  idle: ["Haw, Wally! Nice cape!", "Is that a onesie?", "Get a real job, pal!", "Wally! Sign ma chip butty!", "Mind the cape, son.", "Whit's the 'W' for? Wee?", "Ma maw says you're a menace.", "Can ye even fly?", "Nae chance yer a superhero.", "Lovely day for it!", "Is that a cape or a tablecloth?", "Wally! Ma cat's up a tree again!", "Yer specs are steamed up, pal.", "Didnae know the circus was in town.", "Ma granny could fly better than you.", "Here, are you that Wally fella aff the telly?", "Gie's a twirl, Wally!", "It's pure Baltic, how are ye no' frozen in that?", "I've seen better costumes at a hen do.", "Moan the hero!"],
+  hit: ["Ya numpty!", "Oi! Watch it!", "Ma heid!", "Awa' an bile yer heid!", "Polis! POLIS!", "That's no very heroic!", "Ya big walloper!", "Ma good jaicket!", "I'm tellin' yer maw!", "Ah'll set ma granny on ye!"],
+  flee: ["Aaargh!", "Run!", "He's lost the plot!", "Somebody phone the polis!", "Help ma boab!", "Run for the hills!", "Every man for himself!", "He's went radge!"],
   argue: ["Oi! You! Aye, YOU in the cape!", "Look whit ye did tae ma motor!", "I want yer insurance details!", "Who d'ye think ye are, Superman?", "Ma maw's gonnae hear aboot this!", "Ye want a square go, pal?", "That's a brand new bumper!"],
-  cop: ["Stop right there, cape boy!", "You're nicked!", "Haud it right there!", "Drop the gadget, Wally!", "We know where yer maw lives!"],
+  cop: ["Stop right there, cape boy!", "You're nicked!", "Haud it right there!", "Drop the gadget, Wally!", "We know where yer maw lives!", "Is that a cape? That's a fire hazard, son.", "Come quietly or come noisily, I'm no' fussy."],
 };
 export const pick = (a) => a[(Math.random() * a.length) | 0];
 
@@ -18,6 +18,7 @@ export class Ped {
     const look = randomPedLook(Math.random);
     if (this.thug) { look.shirt = '#9b111e'; look.pants = '#111'; look.hair = '#111'; }
     this.h = buildHuman({ ...look, cop: this.cop });
+    this.female = !!look.female; this.vpitch = (look.female ? 1.15 : 0.8) + Math.random() * 0.35;
     if (this.cop || this.thug) { this.gun = buildBlaster(); this.h.arms[1].grip.add(this.gun); this.gun.rotation.x = Math.PI / 2; this.gun.visible = this.thug || false; }
     this.scene = scene; scene.add(this.h.root);
     this.x = x; this.z = z; this.y = KERB; this.heading = Math.random() * 6.28;

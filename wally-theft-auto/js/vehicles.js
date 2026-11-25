@@ -98,8 +98,12 @@ export function buildCarModel(type, paint) {
       bp.position.set(sx * (T.wid / 2 - 0.05), (T.hgt + 0.95) / 2, -T.len * 0.04); body.add(bp);
     }
   } else {
-    const box = new THREE.Mesh(new THREE.BoxGeometry(T.wid - 0.04, T.hgt - 1.1, T.len - 1.4), paintM);
-    box.position.set(0, (T.hgt + 1.12) / 2, -0.62); body.add(box);
+    // the load box stops behind the cab, so the cab has proper see-through windows
+    const boxLen = T.len - 1.75;
+    const box = new THREE.Mesh(new THREE.BoxGeometry(T.wid - 0.04, T.hgt - 1.1, boxLen), paintM);
+    box.position.set(0, (T.hgt + 1.12) / 2, -T.len / 2 + boxLen / 2); body.add(box);
+    const cabRoof = new THREE.Mesh(new THREE.BoxGeometry(T.wid - 0.12, 0.07, 0.32), paintM);
+    cabRoof.position.set(0, T.hgt - 0.03, T.len / 2 - 1.6); body.add(cabRoof);
     if (type === 'icecream') {
       const cone = new THREE.Mesh(new THREE.ConeGeometry(0.25, 0.7, 16), M('cone', () => new THREE.MeshStandardMaterial({ color: '#d9a35a' })));
       cone.rotation.x = Math.PI; cone.position.set(0, T.hgt + 0.4, 0.5); body.add(cone);
@@ -577,10 +581,10 @@ export function addLivery(car, name, tagline, colour = '#1b3a8a') {
   x.fillStyle = colour; x.fillRect(0, 232, 512, 24);
   const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8;
   const m = new THREE.MeshStandardMaterial({ map: tex, transparent: true, roughness: 0.4, polygonOffset: true, polygonOffsetFactor: -2 });
-  const h = T.hgt - 1.1, len = T.len - 1.4, yc = (T.hgt + 1.12) / 2;
+  const h = T.hgt - 1.1, len = T.len - 1.75, yc = (T.hgt + 1.12) / 2, zc = -T.len / 2 + len / 2;
   for (const sx of [-1, 1]) {
-    const p = new THREE.Mesh(new THREE.PlaneGeometry(len * 0.95, h * 0.9), m);
-    p.position.set(sx * (T.wid / 2 + 0.012), yc, -0.62); p.rotation.y = sx * Math.PI / 2;
+    const p = new THREE.Mesh(new THREE.PlaneGeometry(len * 0.92, h * 0.9), m);
+    p.position.set(sx * (T.wid / 2 + 0.012), yc, zc); p.rotation.y = sx * Math.PI / 2;
     car.body.add(p);
   }
   const back = new THREE.Mesh(new THREE.PlaneGeometry(T.wid * 0.85, h * 0.45), m);

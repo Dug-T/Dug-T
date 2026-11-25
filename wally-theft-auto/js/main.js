@@ -18,6 +18,7 @@ import { Weather, WEATHERS } from './weather.js';
 import { buildUFO } from './ufo.js';
 import { buildFlat, FLAT } from './flat.js';
 import { initContent } from './content.js';
+import { Voice, QUIPS, DJ } from './voice.js';
 import { OUTFITS } from './player.js';
 
 const $ = (id) => document.getElementById(id);
@@ -134,6 +135,7 @@ function applyQuality() {
     composer.addPass(gradePass);
   }
   for (const id of ['gfx', 'gfx2']) $(id).textContent = 'GRAPHICS: ' + quality.toUpperCase();
+  for (const id of ['vox', 'vox2']) if ($(id)) $(id).textContent = 'VOICES: ' + (voice.on ? 'ON' : 'OFF');
   resize();
 }
 function resize() {
@@ -149,6 +151,8 @@ const world = buildCity(scene, quality);
 const weather = new Weather(scene, quality === 'high');
 const flat = buildFlat(scene, world, world.addCollider);
 const audio = new Audio();
+const voice = new Voice();
+voice.on = store.get('wta-vox', true);
 const player = new Player(scene);
 const peds = new PedManager(scene, world);
 const cars = [];
@@ -221,7 +225,7 @@ game.onSkid = skidAt;
 // ----- wanted level -----
 game.wanted = {
   heat: 0, level: 0, unseen: 0, seen: false,
-  add(h) { this.heat = Math.min(30, this.heat + h); this.recalc(); this.unseen = 0; },
+  add(h) { const was = this.level; this.heat = Math.min(30, this.heat + h); this.recalc(); this.unseen = 0; if (was === 0 && this.level > 0) game.quip('wanted', 0.7); else if (was < 4 && this.level >= 4) game.quip('wantedHigh', 1); },
   recalc() { const t = [1, 3, 6, 10, 15]; let l = 0; for (const x of t) if (this.heat >= x) l++; this.level = l; },
   clear() { this.heat = 0; this.level = 0; },
   update(dt) {
@@ -252,6 +256,7 @@ game.say = (ped, text) => {
   if (bubbles.length > 3) return;
   const el = document.createElement('div'); el.className = 'bubble'; el.textContent = text; $('bubbles').appendChild(el);
   bubbles.push({ el, ped, t: 3.2 });
+  if (ped && Math.hypot(ped.x - player.x, ped.z - player.z) < 22 && !game.inside) voice.say(text, ped.cop ? 'COP' : { female: ped.female, pitch: ped.vpitch || 1, rate: 1.05 + Math.random() * 0.15 });
 };
 game.addSign = (text, bg, fg, x, z, ry = Math.PI) => {
   const tex = signTexture(text, bg, fg);
@@ -275,10 +280,20 @@ const ROAD_RAGE = {
   blocked: ['Get oot the road, ya numpty!', 'Shift, Wally!', 'Are ye blind? MOVE!', 'Some of us have jobs, cape boy!', 'It\'s a ROAD, no a catwalk!', 'Gonnae no stand there?'],
   crash: ['Ma motor! Ma no-claims!', 'Whit are ye playin\' at?!', 'Learn tae drive, ya bampot!', 'That\'s comin\' oot yer pocket!', 'Did ye get yer licence aff a cereal box?'],
 };
+let quipCool = 0, idleQuipT = 40 + Math.random() * 30;
+game.quip = (cat, chance = 1, prio = false) => {
+  const list = QUIPS[cat]; if (!list || Math.random() > chance) return;
+  if (!prio && (performance.now() < quipCool || subsQ.length)) return;
+  quipCool = performance.now() + 6000;
+  const line = list[(Math.random() * list.length) | 0];
+  $('subs').textContent = 'WALLY MAN: ' + line; subsT = Math.max(3, line.length * 0.07);
+  voice.say(line, 'WALLY', prio);
+};
 game.sayCar = (car, text) => {
   if (bubbles.length > 4 || bubbles.some((b) => b.ped === car)) return;
   const el = document.createElement('div'); el.className = 'bubble'; el.textContent = text; $('bubbles').appendChild(el);
   bubbles.push({ el, ped: car, t: 3, off: -0.4 });
+  if (Math.hypot(car.x - player.x, car.z - player.z) < 28) voice.say(text, 'DRIVER');
 };
 game.onHonk = (car, why) => {
   const d = Math.hypot(car.x - player.x, car.z - player.z);
@@ -741,10 +756,12 @@ game.hurtPlayer = (amt, cause, silent) => {
   player.health -= amt;
   if (!silent) { $('damage').style.opacity = 0.7; setTimeout(() => ($('damage').style.opacity = 0), 160); }
   if (player.health <= 0) die(cause);
+  else if (amt > 12) game.quip('hurt', 0.35);
 };
 const DEATHS = { fall: 'Gravity: 1, Wally: 0', drown: 'Wally Man can\'t swim. Never could.', boom: 'Well done.', shot: 'Turns out the cape isn\'t bulletproof.', car: 'Look both ways, hero.', faceplant: 'Death by pavement.' };
 function die(cause) {
   player.dead = true; player.health = 0;
+  voice.say(DEATHS[cause] || 'Wally Man is down.', 'NARRATOR', true);
   if (game.jack) endJack(false);
   if (player.car) exitCar(true);
   game.stats.wasted++;
@@ -760,6 +777,7 @@ game.bust = () => {
   audio.fail();
   if (player.car) exitCar(true);
   game.bigText('NICKED!', 'You have the right to remain hopeless.', 4, true);
+  voice.say("You're nicked, cape boy. You have the right to remain hopeless.", 'COP', true);
   player.loseWeapons();
   failMission();
   player.dead = true;
@@ -897,6 +915,7 @@ function endJack(ok) {
   if (!j.occupied && c.type === 'police') game.wanted.add(nearCop(60) ? 3 : 1);
   c.driver = 'player'; c.ai = null; c.parked = false; c.sirenOn = false;
   player.car = c; game.stats.cars++;
+  game.quip('car', 0.3);
   audio.door();
   const vn = $('vehName'); vn.textContent = c.name; vn.style.opacity = 1; setTimeout(() => (vn.style.opacity = 0), 2500);
   showRadio();
@@ -1221,7 +1240,7 @@ let lastWet = -1;
 function updateWeather(dt) {
   const changed = weather.update(dt, camera.position, () => audio.thunder((game.inside ? 0.25 : 0.5) + Math.random() * 0.2));
   if (game.inside) { weather.rain.visible = false; weather.snow.visible = false; }
-  if (changed && game.playing) game.toast(`${WEATHERS[changed].icon} Weather: ${WEATHERS[changed].name}`);
+  if (changed && game.playing) { game.toast(`${WEATHERS[changed].icon} Weather: ${WEATHERS[changed].name}`); if (!game.inside) game.quip({ rain: 'rain', storm: 'rain', snow: 'snow', clear: 'sun', haar: 'fog' }[changed], 0.7); }
   const wv = weather.v;
   const wet = Math.min(1, wv.wet);
   const key = wet + wv.snow * 10;
@@ -1383,12 +1402,12 @@ function updateMission(dt) {
     const r = game.mission.update(dt, game);
     if (r === 'pass') {
       const m = game.mission; m.end(game); game.mission = null; game.objective(''); game.setGps(null);
-      player.money += m.reward; game.missionIdx++; audio.pass();
+      player.money += m.reward; game.missionIdx++; audio.pass(); game.quip('pass', 1, true);
       game.bigText('MISSION PASSED!', `+$${m.reward}`, 3.5);
       if (game.missionIdx >= MISSIONS.length) setTimeout(() => game.bigText('WALLYPOOL IS SAFE', '(ish). Thanks for playing! Keep exploring.', 5), 4000);
       placeMissionMarker(); save();
     } else if (r === 'fail') {
-      audio.fail(); failMission();
+      audio.fail(); failMission(); game.quip('fail', 1, true);
     }
   } else if (missionMarker && !player.dead) {
     const px = player.car ? player.car.x : player.x, pz = player.car ? player.car.z : player.z;
@@ -1442,6 +1461,7 @@ function updatePickups(dt) {
       if (p.kind === 'weapon') {
         const W = WEAPONS[p.weapon], had = player.owned[p.weapon];
         player.giveWeapon(p.weapon, W.pickup || 0);
+        if (!had) game.quip('pickup', 0.35);
         game.toast(had ? `${W.icon} ${W.name}${W.pickup ? ` +${W.pickup}` : ''}` : `${W.icon} Picked up the ${W.name}!${W.pickup ? ` (${W.pickup})` : ''} Tab to switch weapons.`);
       }
       audio.pickup();
@@ -1584,7 +1604,7 @@ function updateHUD(dt) {
   // subtitles
   if (subsQ.length) {
     subsT -= dt;
-    if (subsT <= 0) { $('subs').textContent = subsQ.shift(); subsT = 3.6; }
+    if (subsT <= 0) { const line = subsQ.shift(); $('subs').textContent = line; subsT = Math.max(3.6, line.length * 0.075); voice.sayLine(line); }
   } else if (subsT > 0) { subsT -= dt; if (subsT <= 0) $('subs').textContent = ''; }
   // zone
   const z = zoneName(player.x, player.z);
@@ -1722,7 +1742,7 @@ function updateIntro(dt, inp) {
     player.y = gy; player.jackPose = { speed: 0 };
     let da = Math.atan2(ux - lx, uz - lz) - player.heading; while (da > Math.PI) da -= Math.PI * 2; while (da < -Math.PI) da += Math.PI * 2;
     player.heading += da * Math.min(1, dt * 4); // watches them go
-    if (!I.said) { I.said = true; $('subs').textContent = 'WALLY MAN: Cheers for the lift, lads!'; }
+    if (!I.said) { I.said = true; $('subs').textContent = 'WALLY MAN: Cheers for the lift, lads!'; voice.say('Cheers for the lift, lads!', 'WALLY', true); }
   }
   // cinematic camera down the street, looking up at the action
   const camPos = new THREE.Vector3(lx + 26, gy + 6.5, lz + 5);
@@ -1757,7 +1777,7 @@ function frame(now) {
   }
   if (inp.mute) { audio.on = !audio.on; if (audio.master) audio.master.gain.value = audio.on ? 0.7 : 0; game.toast(audio.on ? 'Sound on' : 'Sound off'); }
   if (inp.camera) cam.far = !cam.far;
-  if (inp.radio && player.car) { audio.nextStation(); showRadio(); }
+  if (inp.radio && player.car) { audio.nextStation(); showRadio(); if (audio.station < 3) voice.say(DJ[audio.station + (Math.random() < 0.5 ? 0 : 3)], 'DJ', true); }
   updateFlat(dt, inp);
   if (inp.enter && !game.jack && !game.inside) { if (player.car) exitCar(); else enterCar(); }
   if (inp.aimPressed && !player.car && WEAPONS[player.weapon].melee) game.toast(player.hasWeapons ? 'You can only aim with a gun or neeps. Tap WEAPON to switch.' : 'Nothing to aim yet! Find a gun lying about town (gold rings on the radar... well, on the pavement).');
@@ -1792,6 +1812,7 @@ function frame(now) {
   if (game.intro) updateIntro(dt, inp); else updateCamera(dt, inp);
   updateWeather(dt);
   content.update(dt, game._inp);
+  if (!player.car && !game.mission && !game.intro && !player.dead) { idleQuipT -= dt; if (idleQuipT <= 0) { idleQuipT = 55 + Math.random() * 50; game.quip('idle', 1); } }
   updateSky(dt);
   // audio
   const c = player.car;
@@ -1846,6 +1867,7 @@ function togglePause(force) {
   game.paused = force === true ? true : !game.paused;
   $('pause').classList.toggle('hidden', !game.paused);
   if (game.paused) {
+    voice.stop();
     if (document.pointerLockElement) document.exitPointerLock();
     const s = game.stats;
     $('statsBox').innerHTML = `<div class="stat">Missions: ${game.missionIdx} / ${MISSIONS.length}</div><div class="stat">Golden Specs: ${s.specs} / 20</div><div class="stat">Motors borrowed: ${s.cars} · Successful flights: ${s.flights}</div><div class="stat">Times hopeless: ${s.wasted} · Times nicked: ${s.busted}</div><div class="stat">${content.stats()}</div>`;
@@ -1892,6 +1914,8 @@ $('resume').onclick = () => togglePause(false);
 $('quit').onclick = () => { save(); game.playing = false; game.paused = false; $('pause').classList.add('hidden'); $('hud').classList.add('hidden'); $('title').classList.remove('hidden'); if (audio.ctx) audio.ctx.resume(); };
 const toggleGfx = () => { quality = quality === 'high' ? 'low' : 'high'; store.set('wta-gfx', quality); applyQuality(); };
 $('gfx').onclick = toggleGfx; $('gfx2').onclick = toggleGfx;
+const toggleVox = () => { voice.on = !voice.on; store.set('wta-vox', voice.on); if (!voice.on) voice.stop(); else voice.say('Aye, I can talk now.', 'WALLY', true); applyQuality(); };
+$('vox').onclick = toggleVox; $('vox2').onclick = toggleVox;
 setInterval(() => { if (game.playing && !game.paused) save(); }, 30000);
 
 applyQuality();
@@ -1902,4 +1926,4 @@ $('news').innerHTML = `<b>What's new in v${VERSION}:</b><ul>${CHANGES[0][1].map(
 for (let i = 0; i < 6; i++) { player.x = world.specials.plaza.x; player.z = world.specials.plaza.z; spawnParked(); }
 $('loading').classList.add('hidden');
 requestAnimationFrame(frame);
-window.__game = game; game.flat = flat; game.content = content; game.camera = camera; game.scene = scene; game.renderer = renderer; // handy for debugging in the console
+window.__game = game; game.voice = voice; game.flat = flat; game.content = content; game.camera = camera; game.scene = scene; game.renderer = renderer; // handy for debugging in the console

@@ -110,9 +110,11 @@ export function buildHuman(o = {}) {
   }
   if (wally) {
     if (!emblemTex) emblemTex = emblemTexture();
-    const eg = wrapPlane(new THREE.PlaneGeometry(0.5, 0.31, 24, 6), 0.26);
+    // shape the badge to the front of his chest (an ellipse, like the torso) so no letters sink inside him
+    const eg = new THREE.PlaneGeometry(0.46, 0.29, 40, 8);
+    { const p = eg.attributes.position; for (let i = 0; i < p.count; i++) { const x = p.getX(i); p.setZ(i, 0.236 * Math.sqrt(Math.max(0, 1 - (x / 0.33) ** 2)) + 0.014); } eg.computeVertexNormals(); }
     const em = new THREE.Mesh(eg, new THREE.MeshStandardMaterial({ map: emblemTex, transparent: true, roughness: 0.5, polygonOffset: true, polygonOffsetFactor: -2 }));
-    em.position.set(0, 0.36, 0.245); em.rotation.x = -0.05; em.userData.acc = true; spine.add(em);
+    em.position.set(0, 0.36, 0); em.rotation.x = -0.04; em.userData.acc = true; spine.add(em);
     // belt
     const belt = new THREE.Mesh(new THREE.CylinderGeometry(0.312, 0.31, 0.09, 40, 1, true), red);
     belt.scale.set(1.0, 1, 0.86); belt.position.y = -0.04; spine.add(belt);
