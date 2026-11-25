@@ -17,6 +17,7 @@ Open `ashbound/index.html` from any web server (GitHub Pages works). Nothing nee
   - ⛵ **The raft**: 10 logs, 3 ropes and the tarpaulin from the plane wreck. Build it in stages on Raft Beach, launch it, and paddle out past the reef.
   - 📡 **The radio**: find the battery (in the nose of the plane), the antenna (the snapped mast at the ranger tower) and the handset (the village radio hut). Repair the ranger radio and a helicopter comes to the helipad. Be on the pad when it lands.
   - 🚪 **The bunker**: stock the old shelter with four waters, four meals and an ash mask, then seal the steel door and wait out the surge.
+- **Voices and subtitles**: the survivors speak their lines, the narrator reads the stage warnings and endings, and everything spoken is also shown as text, so the game plays fully with the sound off and for players who are deaf or hard of hearing. Voices use the speech built into your phone or computer and can be switched off.
 - **The other survivors**: Dr Amara Osei (volcanologist, at the camp), Kai Tane (fisherman, in the village), Tomas Reyes (the injured pilot at the wreck, who needs a bandage before he can walk), Lena Hart (the ranger) and Old Pete (the hermit at the bunker). Each has their own advice as the stages change. Talk to them, then press again and they follow you. Anyone with you when you launch, lift off or seal the door is saved; the end screen counts them.
 - **Pace**: Relaxed (40 minutes to the surge), Standard (24, temporarily 5 while testing) or Hardcore (14, and everything hurts more).
 - **Graphics**: High (soft shadows, bloom, more jungle) or Low for older phones. The island, sea and sky are shader-driven: wet sand, breakers along the shore, a drifting eruption column and ash that greys the whole world out.
@@ -44,6 +45,7 @@ Version 1.0 is single player with NPC survivors. The world is seeded and determi
 
 ## Versions
 
+- **1.7**: spoken voices for the survivors, the narrator and the player, using the device's built-in speech, with every line still shown as text; VOICES switch on the title and pause screens.
 - **1.6**: trunks bend with their crowns in gusting wind; ash greys the jungle and buildings; sea glints, lava glow on the water and steam where flows meet it; crater glow, fireflies at dusk, blowing leaves; chromatic aberration and per-stage colour tints.
 - **1.5**: fixed the jeep's suspension leaning the wrong way on side slopes; each wheel now follows the ground under it.
 - **1.4**: the survey jeep (drive, passengers, headlights, damage, drowning); luminous pulsing lava with ground glow and lights on the fronts and bombs; heat haze, sun shafts, volcanic lightning with thunder, stars at dusk.

@@ -1,7 +1,11 @@
 // Bump VERSION for every update (1.1, 1.2, 1.3 ...) and add a line to CHANGES.
-export const VERSION = '1.6';
+export const VERSION = '1.7';
 
 export const CHANGES = [
+  ['1.7', [
+    'Spoken voices: the survivors speak their lines, the narrator reads the stage warnings, the opening and the endings, and you react to a few things. Every spoken line still appears as text, so nothing is lost with the sound off or for players who are deaf or hard of hearing',
+    'Each survivor has their own voice, pitch and pace, using the voices built into your phone or computer. VOICES on/off on the title and pause screens',
+  ]],
   ['1.6', [
     'Palm trunks bend in the wind along with their crowns, and the wind now comes in gusts that move every tree, bush, flower and grass tuft',
     'Ash settles on everything: the jungle, the rocks and the buildings grey over as the ashfall thickens',
