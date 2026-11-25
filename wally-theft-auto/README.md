@@ -55,12 +55,13 @@ Open `wally-theft-auto/index.html` from any web server (GitHub Pages works). Not
 | Set GPS destination | G, or tap the radar | |
 | Mute / pause | M / Esc or P | Start |
 
-On phones and tablets there's an on-screen stick, a drag-to-look area and buttons. The **Graphics** toggle switches between High (2048 shadows, bloom, retina resolution, more traffic) and Low.
+On phones and tablets there's a movement stick on the left, a camera stick next to the buttons on the right, and buttons. The **Graphics** toggle switches between High (2048 shadows, bloom, retina resolution, more traffic) and Low.
 
 ## Versions
 
 The version number is shown on the title screen (with a "What's new" list) and on the pause screen. It lives in `js/version.js`: bump it by 0.1 for every update (1.1, 1.2, 1.3...) and add a line to `CHANGES`.
 
+- **3.3**: smaller touch buttons, and a camera joystick beside them instead of dragging on the screen to look
 - **3.2**: loads more funny dialogue, phone calls from the cast, pavement chats, and Wally comments on much more
 - **3.1**: fixed the radio going silent after changing vehicles
 - **3.0**: 10 new weapons (including a Flamethrower), realistic firing sounds for every weapon, twice as many pickups, 3 new radio stations and 18 songs
