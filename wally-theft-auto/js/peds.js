@@ -6,11 +6,19 @@ const KEEP = { has: (x) => SHARED_HUMAN.has(x) || SHARED.has(x) };
 import { N, P, HALF, ROAD, KERB, blockMin, blockMax } from './city.js';
 
 const LINES = {
-  idle: ["Haw, Wally! Nice cape!", "Is that a onesie?", "Get a real job, pal!", "Wally! Sign ma chip butty!", "Mind the cape, son.", "Whit's the 'W' for? Wee?", "Ma maw says you're a menace.", "Can ye even fly?", "Nae chance yer a superhero.", "Lovely day for it!", "Is that a cape or a tablecloth?", "Wally! Ma cat's up a tree again!", "Yer specs are steamed up, pal.", "Didnae know the circus was in town.", "Ma granny could fly better than you.", "Here, are you that Wally fella aff the telly?", "Gie's a twirl, Wally!", "It's pure Baltic, how are ye no' frozen in that?", "I've seen better costumes at a hen do.", "Moan the hero!"],
-  hit: ["Ya numpty!", "Oi! Watch it!", "Ma heid!", "Awa' an bile yer heid!", "Polis! POLIS!", "That's no very heroic!", "Ya big walloper!", "Ma good jaicket!", "I'm tellin' yer maw!", "Ah'll set ma granny on ye!"],
-  flee: ["Aaargh!", "Run!", "He's lost the plot!", "Somebody phone the polis!", "Help ma boab!", "Run for the hills!", "Every man for himself!", "He's went radge!"],
-  argue: ["Oi! You! Aye, YOU in the cape!", "Look whit ye did tae ma motor!", "I want yer insurance details!", "Who d'ye think ye are, Superman?", "Ma maw's gonnae hear aboot this!", "Ye want a square go, pal?", "That's a brand new bumper!"],
-  cop: ["Stop right there, cape boy!", "You're nicked!", "Haud it right there!", "Drop the gadget, Wally!", "We know where yer maw lives!", "Is that a cape? That's a fire hazard, son.", "Come quietly or come noisily, I'm no' fussy."],
+  idle: ["Haw, Wally! Nice cape!", "Is that a onesie?", "Get a real job, pal!", "Wally! Sign ma chip butty!", "Mind the cape, son.", "Whit's the 'W' for? Wee?", "Ma maw says you're a menace.", "Can ye even fly?", "Nae chance yer a superhero.", "Lovely day for it!", "Is that a cape or a tablecloth?", "Wally! Ma cat's up a tree again!", "Yer specs are steamed up, pal.", "Didnae know the circus was in town.", "Ma granny could fly better than you.", "Here, are you that Wally fella aff the telly?", "Gie's a twirl, Wally!", "It's pure Baltic, how are ye no' frozen in that?", "I've seen better costumes at a hen do.", "Moan the hero!",
+    "Wally! Ma bins havenae been collected! Can ye fly them tae the dump?", "Is that a moustache or did a hamster die on yer lip?", "Selfie, Wally! Suck yer belly in!", "Ma wean's got the same costume. He's four.", "Here, Wally, can ye open this jar?", "Is it true ye cannae fly past the second floor?", "Wally! Ye still owe ma brother a fiver!", "Any chance of a lift tae the shops? Naw? Some hero.", "Lovely legs, Wally!", "Watch oot, Wallypool, it's Captain Calamity!", "Ma dug's scared of you. And he's scared of nothing.", "Wally! Yer cape's tucked in yer pants!", "Here, see if ye're a superhero, whit's yer weakness? Pies?", "Is that real Lycra or the Pound Shop stuff?", "Ma husband wants yer autograph. For the dartboard.", "Ye should see a doctor aboot that cape.", "I voted for you! Wait, no, that was the bin man.", "Wally! Ma mammy says hello! And whit time's yer court date?"],
+  hit: ["Ya numpty!", "Oi! Watch it!", "Ma heid!", "Awa' an bile yer heid!", "Polis! POLIS!", "That's no very heroic!", "Ya big walloper!", "Ma good jaicket!", "I'm tellin' yer maw!", "Ah'll set ma granny on ye!",
+    "Ma teeth! I only just paid for them!", "I'll have you in the papers!", "Ya bampot!", "That's assault, that! In a onesie!", "Ma solicitor will hear aboot this!", "I've got a bad back, ye know!", "Ye've broke ma specs! Now we're baith blind!", "Some superhero! Ya big bully!", "Ow! Ma bunions!", "That's going on Facebook!"],
+  flee: ["Aaargh!", "Run!", "He's lost the plot!", "Somebody phone the polis!", "Help ma boab!", "Run for the hills!", "Every man for himself!", "He's went radge!",
+    "Women and weans first! Then me!", "Mammyyyyy!", "No' the face! No' the face!", "He's got a gun AND a cape!", "I've only got ma bus fare!", "I knew I should've stayed in the day!", "Get tae the chippy! It's the only safe place!", "Somebody stop that wee man!"],
+  argue: ["Oi! You! Aye, YOU in the cape!", "Look whit ye did tae ma motor!", "I want yer insurance details!", "Who d'ye think ye are, Superman?", "Ma maw's gonnae hear aboot this!", "Ye want a square go, pal?", "That's a brand new bumper!",
+    "I've only had it a week!", "Whit's yer name? Wally? Aye, ye are!", "I'm phoning yer mammy!", "Ye'll be hearin' fae ma lawyer! He's ma cousin!", "That's a three-point turn I'll never forget!", "Away and boil yer cape!"],
+  cop: ["Stop right there, cape boy!", "You're nicked!", "Haud it right there!", "Drop the gadget, Wally!", "We know where yer maw lives!", "Is that a cape? That's a fire hazard, son.", "Come quietly or come noisily, I'm no' fussy.",
+    "Wally! No' again! It's ma day aff the morra!", "Put yer hands where I can see them! No' there!", "Ye have the right to remain hopeless!", "Every polis in Wallypool is after ye, son!", "I'm too old for this, Wally!", "Stop! Or I'll... shout again!", "Ye're going doon, Wally! Well, along. On foot."],
+  thug: ["You're getting it, cape boy!", "Red Shirts rule Wallypool!", "Get him, lads!", "Nice specs! Can I have them?", "Your mammy dresses you funny!", "We're gonnae tie yer cape in a knot!"],
+  fly: ["It's a bird! It's a plane! It's... a numpty!", "Look, Wally's flying! Somebody get a net!", "He's actually off the ground! Phone the papers!", "Mind the power lines, Wally!", "Wally, ye've got a hole in yer tights!", "Is he flying or falling? Hard to tell."],
+  gun: ["He's got a gun!", "Put that away before ye hurt yersel'!", "Wally! That's no' a toy!", "I didnae see nothin'!", "Don't shoot! I've got a season ticket!"],
 };
 export const pick = (a) => a[(Math.random() * a.length) | 0];
 
@@ -133,7 +141,7 @@ export class Ped {
         if (!pl.car && d < 1.8) { spd = 0; game.arrestTick(this, dt); }
         else if (pl.car && pl.car.speed < 1.5 && d < 3.6) { spd = 0; game.pullOutTick(this, dt); }
       }
-      if (Math.random() < dt * 0.15 && d < 20) game.say(this, pick(LINES.cop));
+      if (Math.random() < dt * 0.15 && d < 20) game.say(this, pick(this.thug ? LINES.thug : LINES.cop));
       anim.aim = shooter && d < 30;
     } else if (this.state === 'argue') {
       // storm up to Wally, wave your arms and shout
@@ -163,6 +171,12 @@ export class Ped {
       const c = cs[this.corner];
       if (Math.hypot(c[0] - this.x, c[1] - this.z) < 0.8) this.corner = (this.corner + this.dir + 4) % 4;
       tx = cs[this.corner][0]; tz = cs[this.corner][1]; spd = this.walkSpeed;
+      // folk shout up at Wally when he flies over, or back away when he's waving a gun about
+      this.reactCool = (this.reactCool || Math.random() * 6) - dt;
+      if (this.reactCool <= 0 && pdist < 22 && !pl.car) {
+        if (pl.flyT > 0 && pl.y > 2) { this.reactCool = 15 + Math.random() * 15; if (Math.random() < 0.35) game.say(this, pick(LINES.fly)); }
+        else if (pl.aiming && pdist < 12) { this.reactCool = 12 + Math.random() * 12; if (Math.random() < 0.4) game.say(this, pick(LINES.gun)); }
+      }
       // gawk at Wally when he's close
       if (pdist < 6 && !pl.car) {
         this.sayCool -= dt;
