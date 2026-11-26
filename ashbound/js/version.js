@@ -1,7 +1,18 @@
 // Bump VERSION for every update (1.1, 1.2, 1.3 ...) and add a line to CHANGES.
-export const VERSION = '2.0';
+export const VERSION = '2.1';
 
 export const CHANGES = [
+  ['2.1', [
+    'The full 24-minute game is back (Standard pace); Relaxed and Hardcore unchanged',
+    'Fishing and cooking: craft a spear and take fish from the shallows, grab crabs on the beaches, and cook them on a fire. Raw food makes you ill',
+    'Wildlife: crabs scuttle on every beach and dive for the sea, goats graze the high ridges and flee the mountain as it wakes, and schools of fish circle in the shallows',
+    'Shelters: build a lean-to from logs, vines and palm fronds. It keeps the ash off and you can sleep under it. Chopping a palm now gives fronds too',
+    'The ranger\'s quad bike at the station: faster and nimbler than the jeep, climbs steeper slopes, squeezes between trees, seats two',
+    'Dr Osei\'s journal: twelve pages scattered across the island, read aloud in her voice as you find them, telling the story of the mountain waking',
+    'Photo mode (pause menu): freeze the world, fly the camera, zoom, and save a picture',
+    'Tropical rain squalls before the ash comes: rain streaks, darker wet ground with a shine, raindrops on the sea, lightning out over the water, and they fill your canteen',
+    'Seventeen achievements, and the endings you have reached, on the title screen',
+  ]],
   ['2.0', [
     'Survivor objectives: Dr Osei won\'t leave without her seismometer data, Kai without his grandmother\'s pendant, Lena without the station logbook. Ask them to come and they tell you what they want; it is then marked on the compass and the map',
     'Biscuit, Old Pete\'s dog, bolted when the tremors began. Find her near the jungle spring and she\'ll follow you; bring her to Pete and he\'ll come too. She rides along in the jeep, the skiff and the raft, and the end screen says whether she made it',

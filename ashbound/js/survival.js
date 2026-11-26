@@ -2,7 +2,7 @@
 
 export const DIFFICULTY = {
   relaxed: { name: 'Relaxed', minutes: 40, desc: '40 minutes to the final surge. Time to explore.' },
-  standard: { name: 'Standard', minutes: 5, desc: '5 minutes to the final surge (shortened for testing; the full game is 24).' },
+  standard: { name: 'Standard', minutes: 24, desc: '24 minutes. The intended experience.' },
   hardcore: { name: 'Hardcore', minutes: 14, desc: '14 minutes, and everything hurts more.' },
 };
 
@@ -22,13 +22,20 @@ export const ITEMS = {
   logger: { name: 'Data logger', icon: '💾', desc: 'Dr Osei\'s seismometer readings. Thirty days of the mountain waking up.' },
   pendant: { name: 'Carved pendant', icon: '📿', desc: 'Kai\'s grandmother\'s bone pendant, on a frayed cord.' },
   logbook: { name: 'Station logbook', icon: '📒', desc: 'Thirty years of island records, in Lena\'s neat hand.' },
+  frond: { name: 'Palm frond', icon: '🍃', desc: 'A long palm leaf. Good for thatching a shelter.' },
+  spear: { name: 'Fishing spear', icon: '🔱', desc: 'Stand in the shallows near a school of fish and press USE.', tool: true },
+  fish_raw: { name: 'Raw fish', icon: '🐟', desc: 'Better cooked. Much better cooked.', use: { hunger: 10, health: -8 } },
+  fish_cooked: { name: 'Grilled fish', icon: '🍢', desc: 'Hot, smoky and filling.', use: { hunger: 45, stamina: 25 } },
+  crab: { name: 'Crab', icon: '🦀', desc: 'Still nippy. Cook it on a fire.', use: { hunger: 8, health: -6 } },
+  crab_cooked: { name: 'Roast crab', icon: '🍲', desc: 'Sweet white meat.', use: { hunger: 35, stamina: 15 } },
   bandage: { name: 'Bandage', icon: '🩹', desc: 'Patches you up.', use: { health: 35 } },
   tarp: { name: 'Tarpaulin', icon: '⛵', desc: 'A survival tarp from the wreck. A sail, if you had a raft.' },
   battery: { name: 'Battery', icon: '🔋', desc: 'The plane\'s battery. Still holds a charge.' },
   antenna: { name: 'Antenna', icon: '📶', desc: 'The mast from the ranger tower.' },
   handset: { name: 'Radio handset', icon: '📻', desc: 'From the village radio hut.' },
 };
-export const FOOD = ['coconut', 'banana', 'mango'];
+export const FOOD = ['coconut', 'banana', 'mango', 'fish_cooked', 'crab_cooked'];
+export const COOKS = { fish_raw: 'fish_cooked', crab: 'crab_cooked' };
 
 export const RECIPES = [
   { id: 'rope', name: 'Rope', needs: { vine: 3 }, gives: { rope: 1 } },
@@ -36,6 +43,8 @@ export const RECIPES = [
   { id: 'mask', name: 'Ash mask', needs: { cloth: 2, vine: 1 }, gives: { mask: 1 }, once: true },
   { id: 'bandage', name: 'Bandage', needs: { cloth: 1 }, gives: { bandage: 1 } },
   { id: 'torch', name: 'Torch', needs: { wood: 1, cloth: 1 }, gives: { torch: 1 }, once: true },
+  { id: 'spear', name: 'Fishing spear', needs: { wood: 1, stone: 1, vine: 1 }, gives: { spear: 1 }, once: true },
+  { id: 'shelter', name: 'Lean-to shelter', needs: { wood: 3, vine: 2, frond: 3 }, build: 'shelter', icon: '⛺', desc: 'Built where you stand. Keeps the ash off, and you can sleep under it.' },
   { id: 'campfire', name: 'Campfire', needs: { wood: 2, stone: 2 }, build: 'campfire', icon: '🔥', desc: 'Built where you stand. Rest beside it to recover, and it lights up the night.' },
 ];
 
@@ -95,3 +104,23 @@ export class Inventory {
   list() { return Object.keys(ITEMS).filter((id) => this.count(id) > 0); }
   total() { return Object.values(this.items).reduce((a, b) => a + b, 0); }
 }
+
+export const ACHIEVEMENTS = [
+  { id: 'end_raft', name: 'Castaway', desc: 'Escape on the raft you built' },
+  { id: 'end_boat', name: 'Open throttle', desc: 'Escape in Kai\'s skiff' },
+  { id: 'end_rescue', name: 'Airlifted', desc: 'Escape by helicopter' },
+  { id: 'end_bunker', name: 'Underground', desc: 'Ride out the eruption in the bunker' },
+  { id: 'end_dead', name: 'The mountain wins', desc: 'Lose your life to the island' },
+  { id: 'everyone', name: 'Nobody left behind', desc: 'Save all five survivors and Biscuit' },
+  { id: 'journal', name: 'Field notes', desc: 'Find all twelve pages of Dr Osei\'s journal' },
+  { id: 'dog', name: 'Good girl', desc: 'Reunite Biscuit with Old Pete' },
+  { id: 'chef', name: 'Island chef', desc: 'Cook three meals on a fire' },
+  { id: 'fisher', name: 'Spear fisher', desc: 'Spear three fish' },
+  { id: 'crab', name: 'Pinched', desc: 'Catch a crab with your bare hands' },
+  { id: 'builder', name: 'Home sweet lean-to', desc: 'Build a shelter' },
+  { id: 'sleep', name: 'Sweet dreams', desc: 'Sleep till dawn' },
+  { id: 'quad', name: 'Off-road', desc: 'Ride the quad bike for a kilometre' },
+  { id: 'photo', name: 'Shutterbug', desc: 'Take a photo in photo mode' },
+  { id: 'early', name: 'Early bird', desc: 'Escape with a quarter of the time still left' },
+  { id: 'healthy', name: 'Not a scratch', desc: 'Escape with 90 health or more' },
+];

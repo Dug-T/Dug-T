@@ -37,6 +37,8 @@ export class Audio {
     this.eng1 = ctx.createOscillator(); this.eng1.type = 'sawtooth'; this.eng1.frequency.value = 60; this.eng1.connect(this.engF);
     this.eng2 = ctx.createOscillator(); this.eng2.type = 'square'; this.eng2.frequency.value = 31; const e2g = ctx.createGain(); e2g.gain.value = 0.35; this.eng2.connect(e2g); e2g.connect(this.engF);
     this.eng1.start(); this.eng2.start();
+    // rain: a hiss of filtered noise
+    this.rainL = loop(nb, 'highpass', 1500); this.rainL.s.playbackRate.value = 0.75;
     this.t0 = ctx.currentTime;
   }
   setOn(on) { this.on = on; if (this.master) this.master.gain.setTargetAtTime(on ? 0.8 : 0, this.ctx.currentTime, 0.05); }
@@ -52,6 +54,7 @@ export class Audio {
     this.sub.frequency.setTargetAtTime(34 + 8 * Math.sin(t * 0.9), t, 0.3);
     ease(this.heliG, c.heli * 0.6, 0.2);
     ease(this.fire.g, c.fire * 0.25);
+    ease(this.rainL.g, (c.rain || 0) * 0.22);
     const rpm = c.engine || 0;
     ease(this.engG, rpm > 0 ? 0.16 : 0, 0.15);
     this.eng1.frequency.setTargetAtTime(52 + rpm * 190, t, 0.08); this.eng2.frequency.setTargetAtTime(26 + rpm * 95, t, 0.08);
@@ -126,5 +129,12 @@ export class Audio {
   land(surface, vol = 1) { this.step(surface, vol * 1.4); this.tone(70, 0.12, 'sine', 0.18 * vol, -30); }
   stroke(vol = 1) { this.noise(0.3, 900, 0.14 * vol, 'lowpass', 1, 0, 250); this.noise(0.12, 3000, 0.03 * vol, 'highpass', 1, 0.05); }
   bark(dist) { const v = Math.max(0.05, 0.5 * (1 - dist / 45)); for (let i = 0; i < 2; i++) { this.tone(520 + Math.random() * 60, 0.09, 'sawtooth', 0.12 * v, -220, i * 0.22); this.noise(0.08, 900, 0.18 * v, 'bandpass', 2, i * 0.22); } }
+  splashSmall() { this.noise(0.3, 1600, 0.25, 'lowpass', 1, 0, 400); }
+  sizzle() { this.noise(1.2, 5200, 0.12, 'highpass', 1); for (let i = 0; i < 6; i++) this.noise(0.04, 3000, 0.08, 'bandpass', 2, 0.1 + i * 0.15); }
+  bleat(dist) { const v = Math.max(0.03, 0.3 * (1 - dist / 60)); const o = this.ctx; if (!o) return; this.tone(420, 0.5, 'sawtooth', 0.06 * v * 3, -80); this.tone(430, 0.5, 'square', 0.03 * v * 3, -90, 0.02); }
+  pinch() { this.tone(2400, 0.04, 'square', 0.05); this.tone(2100, 0.04, 'square', 0.05, 0, 0.07); }
+  achievement() { [784, 988, 1175].forEach((f, i) => this.tone(f, 0.35, 'triangle', 0.1, 0, i * 0.09)); }
+  shutter() { this.noise(0.05, 4000, 0.3, 'highpass'); this.noise(0.08, 1800, 0.2, 'bandpass', 2, 0.07); }
+  page() { this.noise(0.25, 3500, 0.12, 'bandpass', 0.7); this.tone(660, 0.4, 'sine', 0.05, 0, 0.1); this.tone(880, 0.5, 'sine', 0.05, 0, 0.25); }
   talk() { for (let i = 0; i < 4; i++) this.tone(220 + Math.random() * 120, 0.06, 'triangle', 0.04, 0, i * 0.08); }
 }

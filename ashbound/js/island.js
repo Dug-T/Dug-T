@@ -150,17 +150,17 @@ export function buildIsland(scene, quality) {
   geo.computeVertexNormals();
   const tex = { sand: sandTexture(), grass: grassTexture(), rock: rockTexture(), ash: ashTexture(), noise: noiseTexture() };
   const U = world.uniforms;
-  U.uAsh = { value: 0 }; U.uTime = { value: 0 }; U.uWind = { value: 0.4 }; U.uCloud = { value: 0.35 }; U.uFlash = { value: 0 }; U.uNight = { value: 0 };
+  U.uAsh = { value: 0 }; U.uTime = { value: 0 }; U.uWind = { value: 0.4 }; U.uCloud = { value: 0.35 }; U.uFlash = { value: 0 }; U.uNight = { value: 0 }; U.uWet = { value: 0 }; U.uRain = { value: 0 };
   U.uGlow = { value: Array.from({ length: 8 }, () => new THREE.Vector4(0, 0, 1, 0)) }; // lava glow spots: x, z, radius, strength
   const bumpTex = tex.noise.clone(); bumpTex.repeat.set(140, 140); bumpTex.needsUpdate = true;
   const ground = new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.95, metalness: 0, bumpMap: bumpTex, bumpScale: hi ? 0.9 : 0.5 });
   ground.onBeforeCompile = (sh) => {
-    Object.assign(sh.uniforms, { tSand: { value: tex.sand }, tGrass: { value: tex.grass }, tRock: { value: tex.rock }, tAsh: { value: tex.ash }, tNoise: { value: tex.noise }, uAsh: U.uAsh, uTime: U.uTime, uCloud: U.uCloud, uGlow: U.uGlow, uNight: U.uNight });
+    Object.assign(sh.uniforms, { tSand: { value: tex.sand }, tGrass: { value: tex.grass }, tRock: { value: tex.rock }, tAsh: { value: tex.ash }, tNoise: { value: tex.noise }, uAsh: U.uAsh, uTime: U.uTime, uCloud: U.uCloud, uGlow: U.uGlow, uNight: U.uNight, uWet: U.uWet });
     sh.vertexShader = sh.vertexShader
       .replace('#include <common>', '#include <common>\nvarying vec3 vWPos; varying vec3 vWNormal;')
       .replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\nvWPos = (modelMatrix * vec4(transformed, 1.0)).xyz; vWNormal = normalize(mat3(modelMatrix) * objectNormal);');
     sh.fragmentShader = sh.fragmentShader
-      .replace('#include <common>', '#include <common>\nvarying vec3 vWPos; varying vec3 vWNormal; uniform sampler2D tSand, tGrass, tRock, tAsh, tNoise; uniform float uAsh, uTime, uCloud, uNight; uniform vec4 uGlow[8]; vec3 lavaGlow = vec3(0.0);')
+      .replace('#include <common>', '#include <common>\nvarying vec3 vWPos; varying vec3 vWNormal; uniform sampler2D tSand, tGrass, tRock, tAsh, tNoise; uniform float uAsh, uTime, uCloud, uNight, uWet; uniform vec4 uGlow[8]; vec3 lavaGlow = vec3(0.0);')
       .replace('#include <map_fragment>', `#include <map_fragment>
         float hgt = vWPos.y; float slope = 1.0 - vWNormal.y;
         float n = texture2D(tNoise, vWPos.xz * 0.011).r;
@@ -175,6 +175,7 @@ export function buildIsland(scene, quality) {
         vec3 col = mix(grass, sand, sandW); col = mix(col, rock, rockW); col = mix(col, ash, ashW);
         col = mix(col, col * vec3(1.15, 1.0, 0.62), smoothstep(45.0, 95.0, hgt) * (1.0 - rockW) * (1.0 - ashW) * n2);
         col *= mix(0.68, 1.0, smoothstep(-0.6, 1.3, hgt));
+        col *= mix(1.0, 0.68 + 0.12 * sandW, uWet * smoothstep(0.2, 1.0, hgt)); // rain darkens the ground
         col = mix(col, vec3(0.4, 0.38, 0.36) * (0.7 + 0.6 * n), uAsh * smoothstep(0.4, 3.0, hgt) * 0.9);
         // sunlight dancing on the shallow seabed
         if (hgt < 0.2) { float ca = texture2D(tNoise, vWPos.xz * 0.07 + uTime * 0.025).r * texture2D(tNoise, vWPos.xz * 0.1 - uTime * 0.02 + 0.5).r; col += vec3(0.5, 0.6, 0.55) * pow(ca, 2.2) * 4.0 * smoothstep(-14.0, -1.0, hgt) * (1.0 - uAsh) * (1.0 - uNight); }
@@ -184,6 +185,7 @@ export function buildIsland(scene, quality) {
         // the ground lit orange around the lava
         for (int gi = 0; gi < 8; gi++) { float gd = distance(vWPos.xz, uGlow[gi].xy); lavaGlow += vec3(1.0, 0.38, 0.08) * uGlow[gi].w * smoothstep(uGlow[gi].z, 0.0, gd) * (0.85 + 0.15 * sin(uTime * 3.0 + gd * 0.5)); }
         diffuseColor.rgb *= col;`)
+      .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\nroughnessFactor = mix(roughnessFactor, 0.32, uWet * (1.0 - rockW * 0.3) * smoothstep(0.2, 1.0, hgt));')
       .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance += lavaGlow * diffuseColor.rgb * 2.5 + lavaGlow * 0.25;');
   };
   const terrain = new THREE.Mesh(geo, ground);
@@ -202,7 +204,7 @@ export function buildIsland(scene, quality) {
   const seaMat = new THREE.ShaderMaterial({
     uniforms: THREE.UniformsUtils.merge([THREE.UniformsLib.fog, {
       time: U.uTime, tHeight: { value: hTex }, tNoise: { value: tex.noise }, uW: { value: W }, uSun: U.uSun, uSunCol: U.uSunCol, uSky: U.uSky,
-      deepCol: { value: new THREE.Color('#083a6b') }, shallowCol: { value: new THREE.Color('#2fc6c0') }, uAsh: U.uAsh, uGlow: U.uGlow,
+      deepCol: { value: new THREE.Color('#083a6b') }, shallowCol: { value: new THREE.Color('#2fc6c0') }, uAsh: U.uAsh, uGlow: U.uGlow, uRain: U.uRain,
     }]),
     transparent: true, fog: true, depthWrite: true,
     vertexShader: `uniform float time; varying vec3 vW; varying vec3 vN;
@@ -218,7 +220,7 @@ export function buildIsland(scene, quality) {
         vec4 mvPosition = viewMatrix * wp; gl_Position = projectionMatrix * mvPosition;
         #include <fog_vertex>
       }`,
-    fragmentShader: `uniform float time, uW, uAsh; uniform sampler2D tHeight, tNoise; uniform vec3 uSun, uSunCol, uSky, deepCol, shallowCol; uniform vec4 uGlow[8];
+    fragmentShader: `uniform float time, uW, uAsh, uRain; uniform sampler2D tHeight, tNoise; uniform vec3 uSun, uSunCol, uSky, deepCol, shallowCol; uniform vec4 uGlow[8];
       varying vec3 vW; varying vec3 vN;
       #include <fog_pars_fragment>
       void main(){
@@ -244,6 +246,8 @@ export function buildIsland(scene, quality) {
         // the lava's glow on the water
         for (int gi = 0; gi < 8; gi++) { float gd = distance(vW.xz, uGlow[gi].xy); col += vec3(1.0, 0.4, 0.1) * uGlow[gi].w * smoothstep(uGlow[gi].z * 2.2, 0.0, gd) * (0.5 + 0.3 * sin(time * 2.5 + gd * 0.4)); }
         col = mix(col, vec3(0.96, 0.98, 1.0), foam);
+        // raindrops pocking the surface
+        if (uRain > 0.01) { float rr = texture2D(tNoise, vW.xz * 1.3 + vec2(time * 1.7, -time * 1.3)).r; col += vec3(0.6) * smoothstep(0.8, 0.84, rr) * uRain * 0.5; col = mix(col, col * 0.8 + vec3(0.06, 0.07, 0.08), uRain * 0.5); }
         float alpha = mix(0.6, 0.94, smoothstep(0.0, 7.0, depth)); alpha = max(alpha, foam);
         gl_FragColor = vec4(col, alpha);
         #include <fog_fragment>

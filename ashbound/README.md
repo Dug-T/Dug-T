@@ -13,6 +13,12 @@ Open `ashbound/index.html` from any web server (GitHub Pages works). Nothing nee
 - **Survival**: health, stamina, hunger, thirst and clean air. Eat coconuts, bananas and mangos, drink at the well, the spring or the rock pool (and fill your canteen), and wear an ash mask or get under a roof when the ash falls. Sprinting, swimming and the heat all take their toll. Lava bombs, lava, falls and drowning hurt.
 - **The jeep**: the survey team's jeep is parked by the camp with the keys in it. It seats you and three followers, has headlights for the ash and the dusk, won't swim or climb cliffs, stops dead against palms, and lava or a falling rock will wreck it.
 - **Day and night**: the island clock runs from 08:00 on day 3 to sunset on day 4, so night falls during the ashfall and the surge comes at sunset. Nights are dark, lit by the moon, the lava and your fires. Build a campfire from two logs and two stones to rest and recover beside it, and carry a torch (a log and some cloth) that lights itself in the dark.
+- **Food and wildlife**: grab crabs on the beaches, spear fish in the shallows with a crafted spear, and cook them on a fire (raw food makes you ill). Goats graze the high ridges and flee the mountain as it wakes.
+- **Shelters**: build a lean-to from logs, vines and palm fronds to keep the ash off and sleep under.
+- **The quad bike**: parked at the ranger station, faster and nimbler than the jeep, climbs steeper slopes, seats two.
+- **Dr Osei's journal**: twelve pages hidden around the island, read aloud as you find them.
+- **Weather**: tropical rain squalls before the ash comes. Stand out in one to fill your canteen.
+- **Photo mode** (pause menu) and **achievements** (title screen).
 - **Crafting**: braid vines into rope, make a stone axe (then chop palms for logs), make an ash mask from cloth, and bandages.
 - **Four ways out**:
   - ⛵ **The raft**: 10 logs, 3 ropes and the tarpaulin from the plane wreck. Build it in stages on Raft Beach, launch it, and paddle out past the reef.
@@ -23,7 +29,7 @@ Open `ashbound/index.html` from any web server (GitHub Pages works). Nothing nee
 - **What the survivors want**: Dr Osei won't leave without her seismometer data (Ranger Station porch), Kai without his grandmother's pendant (Raft Beach), Lena without the station logbook (by the old bunker door). Old Pete won't go anywhere without Biscuit, his dog, who bolted towards the jungle spring. Once they tell you, it's marked on your compass and map.
 - **Sleep**: tap USE at a lit fire at night, or sleep under a roof, to wake fully rested at dawn. The mountain carries on while you sleep.
 - **The other survivors**: Dr Amara Osei (volcanologist, at the camp), Kai Tane (fisherman, in the village), Tomas Reyes (the injured pilot at the wreck, who needs a bandage before he can walk), Lena Hart (the ranger) and Old Pete (the hermit at the bunker). Each has their own advice as the stages change. Talk to them, then press again and they follow you. Anyone with you when you launch, lift off or seal the door is saved; the end screen counts them.
-- **Pace**: Relaxed (40 minutes to the surge), Standard (24, temporarily 5 while testing) or Hardcore (14, and everything hurts more).
+- **Pace**: Relaxed (40 minutes to the surge), Standard (24) or Hardcore (14, and everything hurts more).
 - **Graphics**: High (soft shadows, bloom, more jungle) or Low for older phones. The island, sea and sky are shader-driven: wet sand, breakers along the shore, a drifting eruption column and ash that greys the whole world out.
 - The game saves itself as you play and from the pause menu; **CONTINUE** on the title screen picks it back up.
 
@@ -49,6 +55,7 @@ Version 1.0 is single player with NPC survivors. The world is seeded and determi
 
 ## Versions
 
+- **2.1**: the 24-minute game restored; fishing, crabs and cooking; crabs, goats and fish schools; build lean-to shelters; the quad bike; twelve journal pages; photo mode; rain squalls; seventeen achievements.
 - **2.0**: survivor objectives (the data logger, the pendant, the logbook) and Biscuit, Old Pete's lost dog; surface footsteps for sand, grass, rock, ash and water; sleep till dawn at a fire or under a roof, at the cost of time.
 - **1.9**: day and night on an island clock (08:00 day 3 to sunset day 4); dark nights with moon, stars and crickets; build campfires to rest, recover and light the night; craft a torch that lights itself in the dark.
 - **1.8**: Kai's skiff: repair it with the battery, two logs and a rope and motor past the reef, a fourth ending; the battery is now a choice between the skiff and the radio.
