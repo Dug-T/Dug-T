@@ -9,7 +9,7 @@ export const SURVIVORS = [
     want: { item: 'logger', where: 'the Ranger Station porch', ask: 'I\'m not leaving without the data logger from my seismometer. It\'s on the Ranger Station porch. Thirty days of readings. The next island to face this will need them.', thanks: 'My readings! Thank you. Now I\'m with you, wherever you\'re going.' },
     lines: {
       calm: ['The seismometer at the station went off the scale last night. This mountain is waking up.', 'The survey jeep is parked by the camp with the keys in it. It won\'t swim and it won\'t climb cliffs, but it beats walking. There\'s room for three of us in the back.', 'We have hours, not days. Three ways off this rock: the sea, the sky, or underground. Pick one and commit.', 'Kai in the village knows boats. Lena at the ranger station has a radio, if it still works.'],
-      unrest: ['Feel that? Harmonic tremor. Magma is on the move.', 'When the ash starts, breathe through wet cloth. Your lungs will thank you.'],
+      unrest: ['Feel that? Harmonic tremor. Magma is on the move.', 'Gas is collecting in the hollows below the cone. If you smell rotten eggs, get out and get uphill. A mask helps, a bit.', 'When the ash starts, breathe through wet cloth. Your lungs will thank you.'],
       ashfall: ['Keep your mask on. This ash is glass. Fine as flour and twice as nasty.', 'The column is going to collapse eventually. When it does, run.'],
       eruption: ['Lava bombs. Watch the sky and listen for the whistle!', 'The flows take the valleys. Stay on the ridges and get to the coast.'],
       surge: ['This is it! Underground or off the island, NOW!'],
@@ -45,7 +45,7 @@ export const SURVIVORS = [
     id: 'lena', name: 'Lena Hart', role: 'Park Ranger', home: 'tower', offset: [3, 6], pose: 'stand',
     want: { item: 'logbook', where: 'the old bunker door', ask: 'Thirty years of island records are in the station logbook, and I left it by the old bunker door after the shelter inspection. Bring it back and I\'m yours.', thanks: 'The logbook. Thank you. Right, let\'s get everyone off this rock.' },
     lines: {
-      calm: ['The mast came down when that plane clipped it. Battery\'s flat. And the villagers borrowed my handset for their radio hut and never brought it back.', 'Get me a battery, the antenna from the mast and the handset, and I can raise the coastguard. A helicopter can be here in minutes.', 'The helipad is just east of here. Keep it clear.'],
+      calm: ['The old lighthouse on the western cliffs still has its lamp. Light it with a couple of logs and some rag, and any pilot coming in will find this island twice as fast.', 'The mast came down when that plane clipped it. Battery\'s flat. And the villagers borrowed my handset for their radio hut and never brought it back.', 'Get me a battery, the antenna from the mast and the handset, and I can raise the coastguard. A helicopter can be here in minutes.', 'The helipad is just east of here. Keep it clear.'],
       unrest: ['Every bird on the island just left. I\'ve never seen the sky so empty.'],
       ashfall: ['A chopper can land in light ash. Heavy ash, no chance. Hurry.'],
       eruption: ['Whatever you\'re doing, do it faster!'],

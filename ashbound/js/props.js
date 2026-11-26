@@ -235,6 +235,35 @@ export function buildLeanTo() {
   return g;
 }
 
+// the lighthouse on the western cliffs: a white tower with red bands, a gallery, and a lantern room whose lamp can be lit
+export function buildLighthouse() {
+  const g = new THREE.Group(), white = mat('#ecebe4', 0.6), red = mat('#b8322a', 0.55), dark = mat('#26282b', 0.5), glassM = new THREE.MeshStandardMaterial({ color: '#cfe6ff', roughness: 0.05, metalness: 0.3, transparent: true, opacity: 0.35 });
+  const H = 16;
+  const base = cyl(2.6, 2.9, 3, mat('#8a8780', 0.9), 20); base.position.y = -1; g.add(base); // footing sunk into the rock
+  for (let i = 0; i < 4; i++) { const seg = cyl(1.9 - i * 0.18, 2.1 - i * 0.18, H / 4, i % 2 ? red : white, 24); seg.position.y = 0.5 + H / 8 + i * H / 4; g.add(seg); }
+  const gallery = cyl(2.0, 2.0, 0.25, dark, 24); gallery.position.y = H + 0.6; g.add(gallery);
+  for (let i = 0; i < 16; i++) { const a = i / 16 * Math.PI * 2; const post = cyl(0.03, 0.03, 0.9, dark, 6); post.position.set(Math.cos(a) * 1.9, H + 1.15, Math.sin(a) * 1.9); g.add(post); }
+  const rail = new THREE.Mesh(new THREE.TorusGeometry(1.9, 0.04, 6, 32), dark); rail.rotation.x = Math.PI / 2; rail.position.y = H + 1.6; g.add(rail);
+  const room = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.2, 1.8, 16, 1, true), glassM); room.position.y = H + 1.65; g.add(room);
+  const cap = new THREE.Mesh(new THREE.ConeGeometry(1.45, 1.3, 16), red); cap.position.y = H + 3.2; g.add(cap);
+  const vent = cyl(0.18, 0.18, 0.5, dark, 8); vent.position.y = H + 4.0; g.add(vent);
+  const door = box(1.0, 2.0, 0.2, dark); door.position.set(0, 1.0, 1.95); g.add(door);
+  for (const y of [5, 9.5]) { const win = box(0.5, 0.8, 0.2, mat('#1a2a3a', 0.3)); win.position.set(0, y, 1.75 - (y - 5) * 0.03); g.add(win); }
+  const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.45, 16, 12), new THREE.MeshStandardMaterial({ color: '#fff4d0', emissive: '#ffe8a0', emissiveIntensity: 0 })); lamp.position.y = H + 1.6; g.add(lamp);
+  g.traverse((m) => { if (m.isMesh && m !== room) { m.castShadow = true; m.receiveShadow = true; } });
+  // two opposed beams that sweep round when it's lit
+  const beamM = new THREE.ShaderMaterial({
+    uniforms: { uI: { value: 0 } }, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
+    vertexShader: 'varying float vT; varying vec3 vN; varying vec3 vV; void main(){ vT = -position.z / 90.0; vec4 mv = modelViewMatrix * vec4(position, 1.0); vN = normalize(normalMatrix * normal); vV = normalize(-mv.xyz); gl_Position = projectionMatrix * mv; }',
+    fragmentShader: 'uniform float uI; varying float vT; varying vec3 vN; varying vec3 vV; void main(){ float a = uI * pow(1.0 - clamp(vT, 0.0, 1.0), 1.3) * pow(abs(dot(normalize(vN), normalize(vV))), 1.5); gl_FragColor = vec4(vec3(1.0, 0.95, 0.8) * a, a); }',
+  });
+  const rot = new THREE.Group(); rot.position.y = H + 1.6; g.add(rot);
+  for (const sd of [0, Math.PI]) { const cg = new THREE.CylinderGeometry(0.3, 7, 90, 20, 1, true); cg.translate(0, -45, 0); cg.rotateX(Math.PI / 2); const b = new THREE.Mesh(cg, beamM); b.rotation.y = sd; b.rotation.x = 0.04; b.renderOrder = 6; rot.add(b); }
+  rot.visible = false;
+  const light = new THREE.PointLight('#ffe8b0', 0, 60, 1.6); light.position.y = H + 1.6; g.add(light);
+  return { group: g, lamp, rot, beamM, light, top: H + 1.6 };
+}
+
 // ---- things to pick up ----
 const pickCache = {};
 export function pickupMesh(id) {

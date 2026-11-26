@@ -9,6 +9,7 @@ const CAST = {
   'Lena Hart': { pitch: 1.15, rate: 1.08, female: true, prefer: /en[-_](US|CA)/i },
   'Old Pete': { pitch: 0.6, rate: 0.82, female: false, prefer: /en[-_](AU|GB|IE)/i },
   Narrator: { pitch: 0.8, rate: 0.92, female: false, prefer: /en[-_]GB/i },
+  'Observatory radio': { pitch: 1.05, rate: 1.12, female: true, prefer: /en[-_](US|AU|GB)/i },
   You: { pitch: 0.95, rate: 1.0, female: false, prefer: /en[-_]GB/i },
 };
 
