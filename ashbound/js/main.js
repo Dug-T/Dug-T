@@ -64,11 +64,12 @@ input.bindTouch($);
 let composer = null, bloom = null, gradePass = null, gtaoPass = null, bokehPass = null;
 function applyQuality() {
   const hi = quality !== 'low', ultra = quality === 'ultra';
-  renderer.setPixelRatio(Math.min(devicePixelRatio || 1, hi ? 2 : 1.25));
+  // phones start a little below full resolution; the adaptive resolution raises it if there is headroom
+  res.max = Math.min(devicePixelRatio || 1, hi ? 2 : 1.25); res.scale = phoneGPU && hi ? 0.8 : 1; renderer.setPixelRatio(Math.max(0.6, res.max * res.scale));
   const sm = ultra ? 4096 : hi ? 2048 : 1024, ext = ultra ? 85 : 55; sun.shadow.mapSize.set(sm, sm);
   sun.shadow.camera.left = -ext; sun.shadow.camera.right = ext; sun.shadow.camera.top = ext; sun.shadow.camera.bottom = -ext; sun.shadow.camera.updateProjectionMatrix(); if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; }
   if (hi && !composer) {
-    const rt = new THREE.WebGLRenderTarget(innerWidth, innerHeight, { samples: 4, type: THREE.HalfFloatType });
+    const rt = new THREE.WebGLRenderTarget(innerWidth, innerHeight, { samples: matchMedia('(pointer: coarse)').matches ? 2 : 4, type: THREE.HalfFloatType });
     composer = new EffectComposer(renderer, rt);
     composer.addPass(new RenderPass(scene, camera));
     bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.32, 0.55, 0.88);
@@ -129,6 +130,53 @@ function applyQuality() {
   if ($('phDof')) $('phDof').classList.toggle('hidden', !hi);
   resize();
 }
+// ---------------- light budget ----------------
+// Every lit pixel loops over every visible light, switched off or not; the island has 17 point lights and 3 spotlights.
+// Each frame only the few that matter most to the camera stay visible, always the same number of them.
+const lightBudget = { point: [], spot: [], np: 6, ns: 2 };
+const _lw = new THREE.Vector3();
+function collectLights() {
+  lightBudget.point.length = 0; lightBudget.spot.length = 0;
+  scene.traverse((o) => { if (o.isPointLight) lightBudget.point.push(o); else if (o.isSpotLight) lightBudget.spot.push(o); });
+  const phone = matchMedia('(pointer: coarse)').matches;
+  lightBudget.np = quality === 'ultra' ? 8 : phone ? 4 : 6; lightBudget.ns = phone ? 1 : 3;
+}
+const shown = (o) => { for (let p = o.parent; p; p = p.parent) if (!p.visible) return false; return true; };
+function pickLights(list, n) {
+  const cam = camera.position, cand = [];
+  for (const l of list) {
+    if (!shown(l)) { l.visible = false; continue; }
+    l.getWorldPosition(_lw); const d = _lw.distanceTo(cam), reach = l.distance > 0 ? l.distance : 200;
+    l.userData.score = l.intensity > 0 && d < reach * 1.5 + 30 ? l.intensity / (1 + (d / reach) * (d / reach) * 4) : -d * 1e-6;
+    cand.push(l);
+  }
+  cand.sort((a, b) => b.userData.score - a.userData.score);
+  cand.forEach((l, i) => { l.visible = i < n; });
+}
+// phones redraw the sun's shadow map every other frame: the sun barely moves, and it saves the shadow pass half the time
+let shadowTick = 0;
+function budgetLights() {
+  if (phoneGPU) { renderer.shadowMap.autoUpdate = false; if ((shadowTick++ & 1) === 0) renderer.shadowMap.needsUpdate = true; } pickLights(lightBudget.point, lightBudget.np); pickLights(lightBudget.spot, lightBudget.ns); }
+
+// ---------------- adaptive resolution ----------------
+// Phones heat up and slow down. Every couple of seconds, if the frame rate is well below 60, render at a slightly lower
+// resolution, and raise it again when there is headroom. If lowering it doesn't help (the screen is capped, e.g. Low
+// Power Mode's 30 fps), put it back and leave it alone for a while.
+const phoneGPU = matchMedia('(pointer: coarse)').matches;
+const res = { max: 1, scale: 1, min: 0.55, t: 0, frames: 0, lastFps: 0, tried: null, hold: 0 };
+function adaptResolution(realDt) {
+  if (!game.started || game.paused || document.hidden) { res.t = 0; res.frames = 0; return; }
+  res.t += realDt; res.frames++; res.hold = Math.max(0, res.hold - realDt);
+  if (res.t < 2) return;
+  const fps = res.frames / res.t; res.t = 0; res.frames = 0;
+  let next = res.scale;
+  if (res.tried) { if (fps < res.tried.fps + 2) { next = res.tried.scale; res.hold = 25; } res.tried = null; }
+  else if (fps < 48 && res.scale > res.min && !res.hold) { next = Math.max(res.min, res.scale - 0.12); res.tried = { fps, scale: res.scale }; }
+  else if (fps > 57 && res.scale < 1) next = Math.min(1, res.scale + 0.08);
+  if (Math.abs(next - res.scale) > 0.001) { res.scale = next; renderer.setPixelRatio(Math.max(0.6, res.max * res.scale)); resize(); }
+  res.lastFps = fps;
+}
+
 function resize() {
   const w = innerWidth, h = innerHeight;
   renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
@@ -319,7 +367,7 @@ const marksOn = (x, z) => { const sf = surfaceAt(x, z); return sf === 'sand' || 
 // what is underfoot, for footsteps
 function surfaceAt(x, z) { const h = heightAt(x, z); if (h < 0.15) return 'water'; if (volcano.ash > 0.35) return 'ash'; if (h > 92 || 1 - normalAt(x, z).y > 0.32) return 'rock'; if (h < 4.5) return 'sand'; return 'grass'; }
 // sleeping until dawn: a full night's rest, but the mountain keeps going while you sleep
-let restTap = 0, restHeld = 0, lensBurst = 0;
+let restTap = 0, restHeld = 0, lensBurst = 0, hudSlow = 0;
 function trySleep(sheltered) {
   if (game.sleeping || game.over) return;
   const hrs = 8 + game.progress * 35;
@@ -456,7 +504,8 @@ function updateLens(dt, burst = 0) {
   const under = player.inBunker || player.inJeep || props.shelters.some((q) => Math.hypot(q.x - player.x, q.z - player.z) < q.r);
   const rate = (under || game.photo ? 0 : game.rain * 9) + burst;
   for (let n = rate * dt + Math.random(); n >= 1 && lensDrops.length < 70; n--) lensDrops.push({ x: Math.random() * W2, y: Math.random() * H2, r: 3 + Math.random() * 9, life: 2 + Math.random() * 3, vy: 0 });
-  lensCx.clearRect(0, 0, W2, H2);
+  if (!lensDrops.length) { if (lensCv.dirty) { lensCx.clearRect(0, 0, W2, H2); lensCv.dirty = false; } return; }
+  lensCx.clearRect(0, 0, W2, H2); lensCv.dirty = true;
   for (let i = lensDrops.length - 1; i >= 0; i--) {
     const d = lensDrops[i]; d.life -= dt; if (d.r > 8) { d.vy += dt * 18; d.y += d.vy * dt; }
     if (d.life <= 0 || d.y > H2 + 20) { lensDrops.splice(i, 1); continue; }
@@ -993,7 +1042,7 @@ function updatePlayer(dt) {
 }
 
 // ---------------- camera ----------------
-const camPos = new THREE.Vector3(), camTarget = new THREE.Vector3();
+const _camGoal = new THREE.Vector3(), camPos = new THREE.Vector3(), camTarget = new THREE.Vector3();
 function updateCamera(dt) {
   if (player.inHeli) { camera.lookAt(props.heli.position); return; }
   const look = input.lookDelta(dt);
@@ -1015,7 +1064,7 @@ function updateCamera(dt) {
   const t = performance.now() * 0.001;
   fx += Math.sin(t * 37) * sh * 0.3; fy += Math.sin(t * 41 + 1) * sh * 0.25; fz += Math.cos(t * 33) * sh * 0.3;
   const k = game.intro > 0 ? 1 : Math.min(1, dt * 10);
-  camPos.lerp(new THREE.Vector3(fx, fy, fz), k);
+  camPos.lerp(_camGoal.set(fx, fy, fz), k);
   camera.position.copy(camPos);
   camera.lookAt(camTarget.x + Math.sin(t * 29) * sh * 0.2, camTarget.y + Math.cos(t * 31) * sh * 0.2, camTarget.z);
   // the sun's shadows follow you
@@ -1166,10 +1215,12 @@ function updateHUD(dt) {
   setText('stage', game.stage.name);
   const sb = $('stageBar').firstElementChild, sw = (game.progress * 100).toFixed(1) + '%'; if (domCache.get('sb') !== sw) { domCache.set('sb', sw); sb.style.width = sw; }
   const fol = npcs.followers(); const pup = dog.follow && !dog.dead && !dog.saved ? ' 🐕' : ''; setHTML('companions', fol.length || pup ? `👥 ${fol.map((n) => n.def.name.split(' ').pop()).join(', ')}${pup}` : '');
-  setText('objective', objectiveText());
+  hudSlow -= dt; const slow = hudSlow <= 0; if (slow) hudSlow = 0.1;
+  if (slow) setText('objective', objectiveText());
   setText('tod', `${dayNight.night > 0.5 ? '🌙' : dayNight.dusk > 0.5 ? '🌅' : '☀️'} Day ${dayNight.day} · ${String(Math.floor(dayNight.hour)).padStart(2, '0')}:${String(Math.floor((dayNight.hour % 1) * 60)).padStart(2, '0')}`);
   setHTML('speed', player.inJeep ? `${Math.round(Math.abs(car.speed) * 3.6)}<small>km/h</small>` : player.inBoat ? `${Math.round(Math.abs(boat.speed) * 1.94)}<small>knots</small>` : '');
   // compass
+  if (slow) {
   const items = [];
   for (const [k, p] of Object.entries(POIS)) { if (k === 'cave') continue; items.push({ x: p.x, z: p.z, icon: p.icon, name: p.name }); }
   items.push({ x: VOLCANO.x, z: VOLCANO.z, icon: '🌋', name: 'Volcano' });
@@ -1186,6 +1237,7 @@ function updateHUD(dt) {
     if (Math.abs(d) < fov / 2) { const dist = Math.hypot(it.x - player.x, it.z - player.z); html += `<div class="m" style="left:${(0.5 - d / fov) * width}px">${it.icon}<small>${dist < 1000 ? Math.round(dist) + 'm' : ''}</small></div>`; }
   }
   setHTML('compass', html);
+  }
   // overlays
   player.hurtFlash = Math.max(0, player.hurtFlash - dt * 2);
   const red = clamp(player.hurtFlash * 0.7 + (s.health < 30 ? (1 - s.health / 30) * (0.35 + 0.15 * Math.sin(game.t * 6)) : 0), 0, 1);
@@ -1198,7 +1250,7 @@ function updateHUD(dt) {
   if (toastT > 0) { toastT -= dt; if (toastT <= 0) $('toast').classList.remove('on'); }
   if (bannerT > 0) { bannerT -= dt; if (bannerT <= 0) $('banner').classList.remove('on'); }
   if (subsT > 0) { subsT -= dt; if (subsT <= 0) $('subs').classList.remove('on'); }
-  renderInv();
+  if (slow) renderInv();
   // interaction prompt
   const it = currentInteract;
   if (player.inJeep) { show('prompt'); setHTML('prompt', Math.abs(car.speed) < 4 ? (input.isTouch ? '' : '<b>E</b> ') + `Get off the ${car.name}` : 'Slow down to get off'); }
@@ -1358,7 +1410,8 @@ addEventListener('beforeunload', () => save());
 let last = performance.now(), currentInteract = null, fpsT = 0;
 function frame(now) {
   requestAnimationFrame(frame);
-  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  const realDt = (now - last) / 1000, dt = Math.min(0.05, realDt); last = now;
+  adaptResolution(Math.min(realDt, 0.5));
   input.pollPad();
   if (input.pressed('pause')) { if (game.photo) exitPhoto(); else if (menu === 'pause' || !menu) togglePause(); else closeMenu(); }
   if (game.started && !game.over && !game.photo) {
@@ -1417,7 +1470,7 @@ function frame(now) {
       }
       if (game.progress >= 1) { if (player.inBunker) win('bunker'); else if (player.onRaft) win('raft'); else if (player.inBoat) win('boat'); else die('swallowed by the pyroclastic surge'); }
     }
-    cullT -= dt; if (cullT <= 0) { cullT = 0.5; cullPickups(); }
+    cullT -= dt; if (cullT <= 0) { cullT = 0.5; cullPickups(); world.cullVegetation(camera.position.x, camera.position.z, quality === 'low' ? 0.75 : quality === 'ultra' ? 1.3 : 1); }
     if (game.t - game.lastSave > 25 && !game.over) save();
     updateHUD(dt);
   } else if (!game.started) {
@@ -1431,13 +1484,21 @@ function frame(now) {
   else if (game.started && !player.inHeli) updateCamera(dt);
   else if (game.started && !game.photo) camera.lookAt(props.heli.position);
   input.endFrame();
-  if (showFps) { fpsT += dt; game.fpsN++; if (fpsT >= 0.5) { $('fps').textContent = Math.round(game.fpsN / fpsT) + ' FPS'; fpsT = 0; game.fpsN = 0; } }
+  if (showFps) { fpsT += dt; game.fpsN++; if (fpsT >= 0.5) { $('fps').textContent = Math.round(game.fpsN / fpsT) + ' FPS' + (res.scale < 0.999 ? ` · ${Math.round(res.scale * 100)}% res` : ''); fpsT = 0; game.fpsN = 0; } }
+  budgetLights();
   try { world.reflect(renderer, camera, scene, quality === 'ultra' && game.started && !player.inBunker, [...world.smallPlants, rainLines, gasFx.points, fx.dust.points, fx.spray.points, fx.mist.points, fx.leaves.points, fx.fireflies.points, fx.sparks.points, volcano.ashFall.points, decals.foot.m, decals.tyre.m, pillar]);
     if (composer && quality !== 'low') composer.render(); else renderer.render(scene, camera); if (game.snap) { game.snap = false; snapPhoto(); } }
   catch (e) { console.error(e); save(); show('crash'); throw e; }
 }
 renderer.domElement.addEventListener('webglcontextlost', (e) => { e.preventDefault(); save(); show('crash'); });
-window.ASH = { lighthouse, gasPockets, setWaypoint, lightBeacon, lensDrops, decals, quad, cars, car: () => car, wild: () => wild, unlock, enterPhoto, exitPhoto, addShelter, dog: () => dog, trySleep, surfaceAt, game, player, volcano, npcs, props, world, cam, save, load, die, win, jeep, enterJeep, exitJeep, voice, boat, enterBoat, exitBoat, dayNight, addFire };
+// render n frames back to back and wait for the GPU each time: the average cost of a frame in ms (for testing)
+function benchFrames(n = 10) {
+  const gl = renderer.getContext(), px = new Uint8Array(4); let t = 0;
+  for (let i = 0; i < n; i++) { const t0 = performance.now(); world.reflect(renderer, camera, scene, quality === 'ultra', []); if (composer && quality !== 'low') composer.render(); else renderer.render(scene, camera); gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px); t += performance.now() - t0; }
+  return t / n;
+}
+window.ASH = { composerRef: () => composer, bloomRef: () => bloom, res, resize, benchFrames, renderer, scene, camera: () => camera, lighthouse, gasPockets, setWaypoint, lightBeacon, lensDrops, decals, quad, cars, car: () => car, wild: () => wild, unlock, enterPhoto, exitPhoto, addShelter, dog: () => dog, trySleep, surfaceAt, game, player, volcano, npcs, props, world, cam, save, load, die, win, jeep, enterJeep, exitJeep, voice, boat, enterBoat, exitBoat, dayNight, addFire };
 applyQuality();
+collectLights(); world.cullVegetation(camera.position.x, camera.position.z);
 $('loading').classList.add('hidden');
 requestAnimationFrame(frame);

@@ -1,7 +1,14 @@
 // Bump VERSION for every update (1.1, 1.2, 1.3 ...) and add a line to CHANGES.
-export const VERSION = '2.5';
+export const VERSION = '2.6';
 
 export const CHANGES = [
+  ['2.6', [
+    'Performance: fixed the frame rate sliding down after a few minutes. Spent smoke and ash particles kept being drawn at full size, so the cost grew as the volcano\'s plume filled up; they now cost nothing',
+    'Performance: only the 4 lights that matter most are switched on at any moment (8 on Ultra), instead of all 17 point lights and 3 spotlights in every shader',
+    'Performance: the resolution adjusts itself to hold a smooth frame rate when a phone heats up and slows down, and rises again when there is headroom. The FPS counter shows it when it is below 100%',
+    'Performance: trees, bushes, grass and rocks are grouped by area so the game only draws the ones in view, and distant grass and flowers are skipped',
+    'Performance on phones: starts at 80% resolution, lighter anti-aliasing, the sun\'s shadows redrawn every other frame, and the HUD text updated ten times a second instead of every frame',
+  ]],
   ['2.5', [
     'Title screen on phones: the ASHBOUND title no longer runs off the top of the screen. On landscape phones the title and news sit on the left and the buttons on the right',
     '© Douglas Thomson on the title screen',

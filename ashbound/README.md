@@ -58,6 +58,7 @@ Version 1.0 is single player with NPC survivors. The world is seeded and determi
 
 ## Versions
 
+- **2.6**: performance: fixed the frame rate sliding over time (spent particles still drawn), a light budget (4 lights instead of 20), adaptive resolution for hot phones, area culling for vegetation, lighter settings on phones.
 - **2.5**: phone title screen fixed (two columns in landscape, title fully on screen); © Douglas Thomson credit.
 - **2.4**: fixed the GRAPHICS button getting stuck on Ultra.
 - **2.3**: the lighthouse and its beacon; sulphur gas pockets; observatory emergency broadcasts; map waypoints; sea reflections on Ultra; plants that part around you; cooling lava crust; raindrops on the lens; ash on clothes.

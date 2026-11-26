@@ -22,6 +22,7 @@ export class Puffs {
       vertexShader: `attribute float aSize, aAlpha, aShade; varying float vA, vS; uniform float uScale;
         #include <fog_pars_vertex>
         void main(){ vA = aAlpha; vS = aShade; vec4 mvPosition = modelViewMatrix * vec4(position, 1.0); gl_PointSize = aSize * uScale / max(1.0, -mvPosition.z); gl_Position = projectionMatrix * mvPosition;
+        if (aAlpha <= 0.002) { gl_PointSize = 0.0; gl_Position = vec4(2.0, 2.0, 2.0, 1.0); } // spent particles: no pixels at all
         #include <fog_vertex>
         }`,
       fragmentShader: `uniform sampler2D tMap; uniform vec3 uColA, uColB; uniform float uLight, uFogMul; varying float vA, vS;
@@ -43,12 +44,17 @@ export class Puffs {
     const i = this.head; this.head = (this.head + 1) % this.n;
     this.pos[i * 3] = x; this.pos[i * 3 + 1] = y; this.pos[i * 3 + 2] = z;
     this.vel[i * 3] = vx; this.vel[i * 3 + 1] = vy; this.vel[i * 3 + 2] = vz;
+    this.emitted = true;
     this.size[i] = size; this.alpha[i] = alpha; this.shade[i] = shade; this.life[i] = life; this.max[i] = life; this.grow[i] = grow; this.fade[i] = alpha * fade;
   }
   update(dt, drag = 0.2, gravity = 0, wind = 0) {
     const p = this.pos, v = this.vel;
+    // nothing alive and nothing just died: no work and no upload this frame
+    if (this.idle) { if (this.emitted) this.idle = false; else return; }
+    this.emitted = false; let live = 0;
     for (let i = 0; i < this.n; i++) {
-      if (this.life[i] <= 0) { this.alpha[i] = 0; continue; }
+      if (this.life[i] <= 0) { if (this.alpha[i] !== 0) { this.alpha[i] = 0; this.size[i] = 0; } continue; }
+      live++;
       this.life[i] -= dt;
       const k = 1 - Math.min(1, dt * drag);
       v[i * 3] = v[i * 3] * k + wind * dt; v[i * 3 + 1] = v[i * 3 + 1] * k - gravity * dt; v[i * 3 + 2] *= k;
@@ -57,6 +63,8 @@ export class Puffs {
       const t = this.life[i] / this.max[i];
       this.alpha[i] = this.fade[i] * Math.min(1, (1 - t) * 6) * Math.min(1, t * 2.5);
     }
+    if (!live) this.idle = true;
+    this.points.visible = live > 0;
     const g = this.points.geometry;
     g.attributes.position.needsUpdate = true; g.attributes.aSize.needsUpdate = true; g.attributes.aAlpha.needsUpdate = true; g.attributes.aShade.needsUpdate = true;
   }
