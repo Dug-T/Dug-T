@@ -5,14 +5,16 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { buildIsland, heightAt, normalAt, POIS, VOLCANO, SEA, W, distToVolcano } from './island.js';
-import { buildProps, pickupMesh, setRaftStage, buildFirePit } from './props.js';
+import { buildProps, pickupMesh, setRaftStage, buildFirePit, buildLeanTo } from './props.js';
 import { buildSurvivor, animateSurvivor, buildAxe, LOOKS, groundTilt } from './survivor.js';
 import { Volcano, Puffs } from './volcano.js';
 import { Jeep, Boat } from './vehicle.js';
 import { Dog } from './dog.js';
+import { Wildlife } from './wildlife.js';
+import { PAGES } from './journal.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { NpcManager, resolveObstacles } from './npcs.js';
-import { ITEMS, RECIPES, ESCAPES, STAGES, DIFFICULTY, FOOD, stageAt, newStats, tickStats, Inventory } from './survival.js';
+import { ITEMS, RECIPES, ESCAPES, STAGES, DIFFICULTY, FOOD, COOKS, ACHIEVEMENTS, stageAt, newStats, tickStats, Inventory } from './survival.js';
 import { Input } from './input.js';
 import { Audio } from './audio.js';
 import { Voice } from './voice.js';
@@ -112,7 +114,7 @@ const U = world.uniforms;
 const game = {
   running: false, paused: false, started: false, over: false, t: 0, duration: DIFFICULTY[difficulty].minutes * 60, progress: 0, stage: STAGES[0],
   flags: { talkedAmara: false, raft: { wood: 0, rope: 0, tarp: 0 }, bunker: { water: 0, food: 0, mask: 0 }, radioFixed: false, heliT: -1, heliState: 'away', sealed: false, launched: false, pastReef: false },
-  ending: null, intro: 0, saved: 0, deaths: 0, bombsNear: 0, startedAt: 0, lastSave: 0, fpsAcc: 0, fpsN: 0,
+  ending: null, intro: 0, saved: 0, journal: new Set(), stats: { crabs: 0, fish: 0, cooked: 0, quadDist: 0, slept: 0, photos: 0 }, rain: 0, wet: 0, seaFlash: 0, rainCatch: 0, photo: null, deaths: 0, bombsNear: 0, startedAt: 0, lastSave: 0, fpsAcc: 0, fpsN: 0,
 };
 const volcano = new Volcano(scene, world, quality, {
   onStage: (st) => { if (game.started && st.id !== 'calm') { banner(st.name.toUpperCase(), st.desc); audio.stageSting(); } },
@@ -127,7 +129,7 @@ const volcano = new Volcano(scene, world, quality, {
     if (!player.inBunker) npcs.blast(x, z, cold ? r : r * 1.1);
     if (dog && !dog.hidden && Math.hypot(x - dog.x, z - dog.z) < (cold ? r : r * 1.1)) killDog('rock');
     { const db = Math.hypot(x - boat.x, z - boat.z); if (db < r * 1.6) boat.damage((cold ? 90 : 70) * (1 - db / (r * 1.6)), { onDestroyed: () => { toast('The skiff is wrecked!', 3); } }); }
-    { const dj = Math.hypot(x - jeep.x, z - jeep.z); if (dj < r * 1.6) jeep.damage((cold ? 90 : 70) * (1 - dj / (r * 1.6)), { onDestroyed: () => { toast('The jeep is wrecked!', 3); } }); }
+    for (const v of cars) { const dj = Math.hypot(x - v.x, z - v.z); if (dj < r * 1.6) v.damage((cold ? 90 : 70) * (1 - dj / (r * 1.6)), { onDestroyed: () => { toast(`The ${v.name} is wrecked!`, 3); } }); }
     if (d < r * 1.5 && !player.inBunker) { const dmg = (cold ? 110 : 75) * (1 - d / (r * 1.5)); hurt(dmg, cold ? 'crushed by a falling rock' : 'blown apart by a lava bomb'); cam.kick = Math.min(1, cam.kick + 0.6); }
     else if (d < 60) cam.kick = Math.min(1, cam.kick + 0.25);
   },
@@ -164,6 +166,10 @@ function updateGulls(dt, stageIdx) {
 }
 // the survey team's jeep, parked beside the camp
 const jeep = new Jeep(scene, POIS.camp.x + 13, POIS.camp.z - 7, 0.9);
+// the ranger's quad bike, parked by the station: faster, nimbler, climbs steeper, seats two
+const quad = new Jeep(scene, POIS.tower.x - 7, POIS.tower.z + 10, 2.6, 'quad');
+const cars = [jeep, quad];
+let car = jeep; // the land vehicle you are in, or were last in
 // Kai's skiff, hauled up in the shallows beside the village jetty
 const boat = new Boat(scene, POIS.village.x + 24.6, POIS.village.z + 31, 0); // moored alongside the jetty, bow out to sea
 const sunNdc = new THREE.Vector3();
@@ -225,34 +231,36 @@ function boatTick(dt) {
   const sea = heightAt(boat.x, boat.z);
   if (sea < -24 && Math.hypot(boat.x - POIS.village.x, boat.z - POIS.village.z) > 120 && !game.flags.pastReef) { game.flags.pastReef = true; for (const n of boat.riders) { n.saved = true; n.state = 'saved'; game.saved++; } win('boat'); }
 }
-function enterJeep() {
-  if (jeep.dead) { toast('The jeep is a burnt-out wreck'); return; }
-  player.inJeep = true; jeep.driver = player; jeep.seat(player.rig, 0);
-  const near = npcs.followers().filter((n) => !n.riding && Math.hypot(n.x - jeep.x, n.z - jeep.z) < 16).slice(0, 3);
-  near.forEach((n, i) => { n.riding = true; jeep.riders.push(n); jeep.seat(n.rig, i + 1); });
-  if (near.length) toast(`${near.map((n) => n.def.name.split(' ').pop()).join(', ')} climb${near.length > 1 ? '' : 's'} in the back`);
+function enterJeep(v = car) {
+  car = v;
+  if (car.dead) { toast(`The ${car.name} is a burnt-out wreck`); return; }
+  player.inJeep = true; car.driver = player; car.seat(player.rig, 0);
+  const near = npcs.followers().filter((n) => !n.riding && Math.hypot(n.x - car.x, n.z - car.z) < 16).slice(0, car.seats.length - 1);
+  near.forEach((n, i) => { n.riding = true; car.riders.push(n); car.seat(n.rig, i + 1); });
+  if (near.length) toast(`${near.map((n) => n.def.name.split(' ').pop()).join(', ')} climb${near.length > 1 ? '' : 's'} on`);
   cam.distSel = 1; cam.dist = DISTS[1]; audio.ui();
 }
 function exitJeep() {
-  const spot = jeep.exitSpot();
-  jeep.unseat(player.rig, scene); player.inJeep = false; jeep.driver = null;
+  const spot = car.exitSpot();
+  car.unseat(player.rig, scene); player.inJeep = false; car.driver = null;
   player.x = spot.x; player.z = spot.z; player.y = heightAt(spot.x, spot.z); player.vy = 0; player.speed = 0; player.rig.root.rotation.set(0, player.yaw, 0);
-  jeep.riders.forEach((n, i) => { jeep.unseat(n.rig, scene); n.riding = false; n.x = spot.x + Math.cos(i * 2.1) * 1.6; n.z = spot.z + Math.sin(i * 2.1) * 1.6; n.y = heightAt(n.x, n.z); });
-  jeep.riders = [];
+  car.riders.forEach((n, i) => { car.unseat(n.rig, scene); n.riding = false; n.x = spot.x + Math.cos(i * 2.1) * 1.6; n.z = spot.z + Math.sin(i * 2.1) * 1.6; n.y = heightAt(n.x, n.z); });
+  car.riders = [];
   cam.distSel = 0; cam.dist = DISTS[0]; audio.ui();
 }
 function driveTick(dt) {
   const mv = input.move();
-  jeep.update({ dt, move: mv, brake: input.down('jump') || input.down('sprint'), world, heatAt: (x, z) => volcano.heatAt(x, z), dark: dayNight.night > 0.35 || volcano.ash > 0.3, fx: fx.dust,
+  car.update({ dt, move: mv, brake: input.down('jump') || input.down('sprint'), world, heatAt: (x, z) => volcano.heatAt(x, z), dark: dayNight.night > 0.35 || volcano.ash > 0.3, fx: fx.dust,
     onHit: (v) => { audio.crash(Math.min(1, v / 15)); cam.kick = Math.min(1, cam.kick + 0.3); if (v > 11) hurt((v - 11) * 3, 'killed in a crash'); },
-    onFlood: () => { audio.flood(); toast('The engine floods. Deep water and jeeps don\'t mix.', 3); voice.say('The engine\'s flooded. Out, out!', 'You', true); },
-    onDestroyed: () => { toast('The jeep is wrecked!', 3); audio.explosion(0); } });
-  animateSurvivor(player.rig, dt, { mode: 'drive', steer: jeep.steer });
+    onFlood: () => { audio.flood(); toast(`The engine floods. Deep water and a ${car.name} don't mix.`, 3); voice.say('The engine\'s flooded. Out, out!', 'You', true); },
+    onDestroyed: () => { toast(`The ${car.name} is wrecked!`, 3); audio.explosion(0); } });
+  if (car === quad) { game.stats.quadDist += Math.abs(quad.speed) * dt; if (game.stats.quadDist > 1000) unlock('quad'); }
+  animateSurvivor(player.rig, dt, { mode: 'drive', steer: car.steer });
   const s = player.stats, nearLava = volcano.heatAt(player.x, player.z);
   tickStats(s, dt, { sprinting: false, swimming: false, ash: volcano.ash, sheltered: false, mask: player.inv.count('mask') > 0, hard: difficulty === 'hardcore', moving: false, hot: nearLava > 0 || distToVolcano(player.x, player.z) < 140 });
   if (s.health <= 0) die(s.air <= 0 ? 'choked by the ash' : s.thirst <= 0 ? 'lost to thirst' : 'lost to hunger');
   if (nearLava > 0.3) hurt(nearLava * 25 * dt, 'taken by the lava');
-  if (jeep.dead || jeep.flooded) { exitJeep(); if (jeep.dead) hurt(25, 'burned with the jeep'); }
+  if (car.dead || car.flooded) { const wasDead = car.dead; exitJeep(); if (wasDead) hurt(25, `burned with the ${car.name}`); }
 }
 let dog = null;
 const npcs = new NpcManager(scene, world, {
@@ -280,7 +288,7 @@ function trySleep(sheltered) {
     st.stamina = 100; st.health = Math.min(100, st.health + 8 * slept); st.hunger = Math.max(8, st.hunger - 3.5 * slept); st.thirst = Math.max(8, st.thirst - 5 * slept); if (sheltered) st.air = 100;
     for (const f of props.fires) if (f.built) f.t = 0;
     if (game.flags.heliState === 'coming') game.flags.heliT = Math.max(0.5, game.flags.heliT - secs);
-    setTimeout(() => { $('fade').style.opacity = '0'; game.sleeping = false; banner('DAWN', `You slept ${Math.round(slept)} hours. The mountain did not.`, 5); }, 900);
+    setTimeout(() => { $('fade').style.opacity = '0'; game.sleeping = false; banner('DAWN', `You slept ${Math.round(slept)} hours. The mountain did not.`, 5); game.stats.slept++; unlock('sleep'); }, 900);
   }, 900);
 }
 
@@ -292,10 +300,13 @@ const player = {
 scene.add(player.rig.root);
 player.rig.arms[0].grip.add(torchModel);
 const axeModel = buildAxe(); axeModel.visible = false; player.rig.arms[1].grip.add(axeModel);
+const spearModel = (() => { const g = new THREE.Group(); const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.022, 1.6, 8), new THREE.MeshStandardMaterial({ color: '#8a6a40', roughness: 0.9 })); shaft.position.y = 0.4; g.add(shaft); const tip = new THREE.Mesh(new THREE.ConeGeometry(0.035, 0.18, 6), new THREE.MeshStandardMaterial({ color: '#3a3836', roughness: 0.6 })); tip.position.y = 1.28; g.add(tip); g.rotation.x = Math.PI / 2; g.visible = false; return g; })();
+player.rig.arms[1].grip.add(spearModel);
 const cam = { yaw: Math.PI + 0.4, pitch: 0.28, dist: 4.6, distSel: 0, kick: 0, shake: 0 };
 const DISTS = [4.6, 7.5, 2.8];
 
 dog = new Dog(scene);
+const wild = new Wildlife(scene, world, quality, { onBleat: (d) => audio.bleat(d) });
 function killDog(how) { if (dog.dead || dog.saved) return; dog.dead = true; toast(how === 'rock' ? 'Biscuit was hit by a falling rock' : 'Biscuit didn\'t make it', 3); audio.fail(); }
 
 // ---------------- pickups ----------------
@@ -327,6 +338,10 @@ function scatterPickups() {
   const t = POIS.tower; spawnPickup('antenna', t.x - 5.5, t.z + 2.5);
   spawnPickup('bandage', POIS.camp.x + 3, POIS.camp.z - 2); spawnPickup('bandage', t.x + 3, t.z + 6);
   spawnPickup('cloth', POIS.village.x - 9, POIS.village.z - 5); spawnPickup('cloth', POIS.camp.x - 3.2, POIS.camp.z - 0.8);
+  // palm fronds for thatching, under the palms
+  for (let i = 0; i < 60 && i < trees.length; i++) { const t = trees[(i * 7 + 3) % trees.length]; const a = r() * 6.3, d = 1.4 + r() * 1.5; spawnPickup('frond', t.x + Math.cos(a) * d, t.z + Math.sin(a) * d); }
+  // Dr Osei's lost journal pages (nudged onto dry land if a spot is in the water)
+  PAGES.forEach((pg, i) => { let x = pg.x, z = pg.z; for (let k = 0; k < 40 && heightAt(x, z) < 0.6; k++) { x *= 0.97; z = z * 0.97 - 3; } spawnPickup('page', x, z); pickups[pickups.length - 1].page = i; });
   // things the survivors won't leave without
   spawnPickup('logger', 224.8, 38.1); spawnPickup('pendant', POIS.boatyard.x - 10, POIS.boatyard.z + 8); spawnPickup('logbook', -174.2, 150.3);
   for (let i = 0; i < 8; i++) spawnPickup('wood', POIS.boatyard.x + (r() - 0.5) * 30, POIS.boatyard.z + (r() - 0.5) * 22);
@@ -338,11 +353,24 @@ function cullPickups() {
   for (const p of pickups) { if (p.taken) continue; const d = Math.hypot(p.x - player.x, p.z - player.z); p.m.visible = d < 110; }
 }
 
+// ---------------- achievements ----------------
+const achieved = store.get('ash-ach', {});
+function unlock(id) {
+  if (achieved[id]) return; const a = ACHIEVEMENTS.find((q) => q.id === id); if (!a) return;
+  achieved[id] = Date.now(); store.set('ash-ach', achieved);
+  if (game.started) { setTimeout(() => { toast(`🏆 ${a.name}: ${a.desc}`, 4); audio.achievement(); }, 400); }
+}
+function renderAchievements() {
+  const got = ACHIEVEMENTS.filter((a) => achieved[a.id]).length;
+  $('achCount').textContent = `${got} of ${ACHIEVEMENTS.length}`;
+  $('achList').innerHTML = ACHIEVEMENTS.map((a) => `<div class="rec"><div><div class="n">${achieved[a.id] ? '🏆' : '🔒'} ${a.name}</div><div class="need">${a.desc}</div></div></div>`).join('');
+}
+
 // ---------------- HUD helpers ----------------
 let toastT = 0, bannerT = 0, subsT = 0;
 function toast(msg, secs = 2.5) { $('toast').textContent = msg; $('toast').classList.add('on'); toastT = secs; }
 function banner(h, p, secs = 4) { $('banner').querySelector('h1').textContent = h; $('banner').querySelector('p').textContent = p || ''; $('banner').classList.add('on'); bannerT = secs; if (p) voice.say(h.toLowerCase() === 'ashbound' ? p : h + '. ' + p, 'Narrator', true); }
-function say(name, text, secs = 7) { $('subs').innerHTML = `<b>${name}:</b> ${text}`; $('subs').classList.add('on'); subsT = secs; if (voice.on && voice.ok) voice.say(text, name, true); else audio.talk(); }
+function say(name, text, secs = 7, who = name) { $('subs').innerHTML = `<b>${name}:</b> ${text}`; $('subs').classList.add('on'); subsT = secs; if (voice.on && voice.ok) voice.say(text, who, true); else audio.talk(); }
 function show(id, on = true) { $(id).classList.toggle('hidden', !on); }
 
 // ---------------- objectives and escapes ----------------
@@ -371,14 +399,18 @@ function nearestInteractable() {
   // the dog, and any survivor you're facing, come before everything else around them
   if (!dog.follow && !dog.dead && Math.hypot(dog.x - px, dog.z - pz) < 4) return { kind: 'dog', label: 'Call <b>Biscuit</b>' };
   { const n = npcs.nearest(px, pz, 3.0); if (n) { const dx = n.x - px, dz = n.z - pz, d = Math.hypot(dx, dz) || 1; if ((dx * fx + dz * fz) / d > 0.45) return npcPrompt(n); } }
+  // a crab within grabbing distance, a fish within spearing distance
+  { const c = wild.nearestCrab(px, pz, 1.7); if (c) return { kind: 'crab', c, label: 'Grab the <b>crab</b>' }; }
+  if (heightAt(px, pz) < 0.7 && !player.swimming) { const f = wild.nearestFish(px, pz, 3.4); if (f) return player.inv.count('spear') ? { kind: 'spear', f, label: 'Spear a <b>fish</b>' } : { kind: 'none', label: 'Fish in the shallows. A spear would catch them' }; }
   // then pickups
   let best = null, bd = 2.4;
-  for (const p of pickups) { if (p.taken || !p.m.visible) continue; const d = Math.hypot(p.x - px, p.z - pz); if (d < bd && infront(p.x, p.z, 0.5)) { bd = d; best = { kind: 'pickup', p, label: `Pick up <b>${ITEMS[p.id].name}</b>` }; } }
+  for (const p of pickups) { if (p.taken || !p.m.visible) continue; const d = Math.hypot(p.x - px, p.z - pz); if (d < bd && infront(p.x, p.z, 0.5)) { bd = d; best = { kind: 'pickup', p, label: p.id === 'page' ? 'Pick up the <b>journal page</b>' : `Pick up <b>${ITEMS[p.id].name}</b>` }; } }
   if (best) return best;
   for (const f of props.fires) {
     if (Math.hypot(f.x - px, f.z - pz) > 2.6) continue;
     const canSleep = dayNight.night > 0.5 && 8 + game.progress * 35 < 29;
-    if (f.t > 0) return { kind: 'rest', fire: f, canSleep, label: canSleep ? 'Hold USE: <b>rest</b> · Tap: <b>sleep till dawn</b>' : 'Hold USE: <b>rest by the fire</b>', hold: true };
+    const canCook = hasRaw();
+    if (f.t > 0) return { kind: 'rest', fire: f, canSleep, canCook, label: canCook ? 'Tap: <b>cook</b> · Hold: <b>rest</b>' : canSleep ? 'Hold USE: <b>rest</b> · Tap: <b>sleep till dawn</b>' : 'Hold USE: <b>rest by the fire</b>', hold: true };
     return { kind: 'relight', fire: f, can: player.inv.count('wood') > 0, label: player.inv.count('wood') ? '<b>Relight the fire</b> (1 log)' : 'The fire is out. A log would relight it' };
   }
   if (dayNight.night > 0.5) for (const sh of props.shelters) if (!sh.bunker && Math.hypot(sh.x - px, sh.z - pz) < sh.r) return { kind: 'sleep', label: '<b>Sleep until dawn</b> under cover' };
@@ -404,7 +436,7 @@ function nearestInteractable() {
     const f = npcs.followers().filter((q) => !q.riding).length;
     return { kind: 'boat', label: '<b>Board the skiff</b>' + (f ? ` with ${Math.min(3, f)} survivor${f > 1 ? 's' : ''}` : '') };
   }
-  if (Math.hypot(jeep.x - px, jeep.z - pz) < 3.8) { const f = npcs.followers().filter((q) => !q.riding).length; return jeep.dead ? { kind: 'none', label: 'The jeep is a burnt-out wreck' } : { kind: 'jeep', label: '<b>Get in the jeep</b>' + (f ? ` with ${Math.min(3, f)} survivor${f > 1 ? 's' : ''}` : '') }; }
+  for (const v of cars) if (Math.hypot(v.x - px, v.z - pz) < v.reach) { const f = npcs.followers().filter((q) => !q.riding).length, room = v.seats.length - 1; return v.dead ? { kind: 'none', label: `The ${v.name} is a burnt-out wreck` } : { kind: 'car', car: v, label: `<b>Get on the ${v.name}</b>` + (f ? ` with ${Math.min(room, f)} survivor${Math.min(room, f) > 1 ? 's' : ''}` : '') }; }
   const n = npcs.nearest(px, pz, 3.0);
   if (n && infront(n.x, n.z, 0.2)) return { kind: 'npc', n, label: n.hurt ? `Help <b>${n.def.name}</b>` : n.talkT > 0 ? (n.state === 'follow' ? `<b>${n.def.name}</b>: wait here` : `<b>${n.def.name}</b>: come with me`) : `Talk to <b>${n.def.name}</b>` };
   // chop a palm
@@ -417,6 +449,7 @@ function nearestInteractable() {
 }
 function doInteract(it) {
   if (!it) return;
+  if (it.kind === 'pickup' && it.p.id === 'page') { readPage(it.p); return; }
   if (it.kind === 'pickup') { it.p.taken = true; scene.remove(it.p.m); player.inv.add(it.p.id); audio.pickup(); toast(`+1 ${ITEMS[it.p.id].name}`, 1.2); if (it.p.id === 'axe') { /* n/a */ } }
   else if (it.kind === 'npc') { const r = npcs.interact(it.n, { inventory: player.inv, stageId: game.stage.id, radioFixed: game.flags.radioFixed }); say(r.name, r.text); if (it.n.def.id === 'amara') game.flags.talkedAmara = true; }
   else if (it.kind === 'water') { voice.say('Fresh water. That\'s better.', 'You', false); player.stats.thirst = 100; const add = Math.max(0, 4 - player.inv.count('water')); if (add) player.inv.add('water', add); audio.drink(); toast(add ? `You drink your fill and refill the canteen (+${add} water)` : 'You drink your fill'); }
@@ -439,9 +472,15 @@ function doInteract(it) {
     if (B.mask < 1 && player.inv.count('mask')) { player.inv.add('mask', -1); B.mask = 1; }
     audio.craft(); toast(bunkerDone() ? 'The bunker is stocked. Seal the door when you are ready.' : 'Supplies stacked inside the bunker');
   } else if (it.kind === 'seal') sealBunker();
-  else if (it.kind === 'jeep') enterJeep();
+  else if (it.kind === 'car') enterJeep(it.car);
   else if (it.kind === 'boat') enterBoat();
   else if (it.kind === 'sleep') trySleep(true);
+  else if (it.kind === 'crab') { wild.catchCrab(it.c); player.inv.add('crab'); audio.pinch(); toast('You grab the crab. It pinches. Cook it on a fire.', 2.5); game.stats.crabs++; unlock('crab'); }
+  else if (it.kind === 'spear') {
+    player.rig.chopT = 0.7; player.strikeTool = 'spear'; player.stats.stamina = Math.max(0, player.stats.stamina - 5); audio.splashSmall();
+    if (Math.random() < 0.65) { it.f.f.gone = 45 + Math.random() * 30; player.inv.add('fish_raw'); toast('Got one! Cook it on a fire.', 2); game.stats.fish++; if (game.stats.fish >= 3) unlock('fisher'); }
+    else { it.f.s.scatter = 3; toast('Missed! The fish scatter.', 1.5); }
+  }
   else if (it.kind === 'dog') { dog.follow = 'player'; audio.bark(0); toast('Biscuit trots after you, tail going', 3); const pete = npcs.byId('pete'); if (pete.wantKnown && !pete.dead) voice.say('Found you. Come on, Pete\'s waiting.', 'You', false); }
   else if (it.kind === 'relight') { if (!it.can) { toast('You need a log to relight it'); return; } player.inv.add('wood', -1); it.fire.t = 180; claimFireLight(it.fire); audio.craft(); toast('The fire catches again'); }
   else if (it.kind === 'repairBoat') {
@@ -484,10 +523,41 @@ function sealBunker() {
   audio.doorSlam(); banner('SEALED IN', 'Two metres of rock between you and the mountain. Now you wait.');
 }
 
+// ---------------- the journal ----------------
+function readPage(p) {
+  p.taken = true; scene.remove(p.m); game.journal.add(p.page); audio.page();
+  const pg = PAGES[p.page];
+  toast(`📜 Journal page ${game.journal.size} of ${PAGES.length}: ${pg.title}`, 3);
+  say('Amara\'s journal', `${pg.title}. ${pg.text}`, 12, 'Dr Amara Osei');
+  if (game.journal.size >= PAGES.length) unlock('journal');
+}
+// ---------------- food: crabs, fish and the fire ----------------
+function cookOne() {
+  for (const [raw, done] of Object.entries(COOKS)) if (player.inv.count(raw)) {
+    player.inv.add(raw, -1); player.inv.add(done, 1); audio.sizzle(); toast(`You cook the ${ITEMS[raw].name.toLowerCase()}: ${ITEMS[done].name}`, 2);
+    game.stats.cooked++; if (game.stats.cooked >= 3) unlock('chef'); return true;
+  }
+  return false;
+}
+function hasRaw() { return Object.keys(COOKS).some((k) => player.inv.count(k) > 0); }
+// ---------------- shelters you build ----------------
+function addShelter(x, z, yaw) {
+  const g = buildLeanTo(); g.position.set(x, heightAt(x, z), z); g.rotation.y = yaw; scene.add(g);
+  props.shelters.push({ x, z, r: 2.4, built: true, yaw, group: g });
+}
+function buildShelterHere() {
+  if (player.swimming || player.inJeep || player.inBoat || player.onRaft || player.inBunker) { toast('You can\'t build a shelter here'); return false; }
+  const x = player.x + Math.sin(player.yaw) * 2.2, z = player.z + Math.cos(player.yaw) * 2.2;
+  if (heightAt(x, z) < 0.6) { toast('You need dry ground for a shelter'); return false; }
+  if (1 - normalAt(x, z).y > 0.3) { toast('Too steep for a shelter here'); return false; }
+  addShelter(x, z, player.yaw + Math.PI); unlock('builder'); return true;
+}
+
 // ---------------- crafting ----------------
 function craft(rec) {
   if (!player.inv.has(rec.needs)) return;
-  if (rec.build) { if (!buildFireHere()) return; player.inv.take(rec.needs); audio.craft(); closeMenu(); toast('You build a campfire. Hold USE beside it to rest.', 3); voice.say('That\'ll keep the dark off.', 'You', false); return; }
+  if (rec.build === 'campfire') { if (!buildFireHere()) return; player.inv.take(rec.needs); audio.craft(); closeMenu(); toast('You build a campfire. Hold USE beside it to rest.', 3); voice.say('That\'ll keep the dark off.', 'You', false); return; }
+  if (rec.build === 'shelter') { if (!buildShelterHere()) return; player.inv.take(rec.needs); audio.craft(); closeMenu(); toast('You lash together a lean-to. It keeps the ash off, and you can sleep under it at night.', 4); return; }
   player.inv.take(rec.needs); for (const [k, n] of Object.entries(rec.gives)) player.inv.add(k, n);
   audio.craft(); toast(`Crafted ${rec.name}`); renderCraft();
 }
@@ -510,6 +580,8 @@ function renderCraft() {
     const row = document.createElement('div'); row.className = 'rec'; row.innerHTML = `<div><div class="n">${n.def.name} <span style="font-weight:400;opacity:.7">${n.def.role}</span></div><div class="need">${st}</div></div>`; $('survList').appendChild(row);
   }
   { const row = document.createElement('div'); row.className = 'rec'; row.innerHTML = `<div><div class="n">🐕 Biscuit <span style="font-weight:400;opacity:.7">Pete's dog</span></div><div class="need">${dog.dead ? '<span class="no">lost</span>' : dog.saved ? '<span class="ok">safe</span>' : dog.follow === 'pete' ? '<span class="ok">back with Pete</span>' : dog.follow === 'player' ? '<span class="ok">following you</span>' : 'lost somewhere on the island'}</div></div>`; $('survList').appendChild(row); }
+  $('journalCount').textContent = `${game.journal.size} of ${PAGES.length} found`;
+  $('journalList').innerHTML = game.journal.size ? [...game.journal].sort((a, b) => a - b).map((i) => `<div class="rec"><div><div class="n">📜 ${PAGES[i].title}</div><div class="need" style="font-size:14px;line-height:1.4">${PAGES[i].text}</div></div></div>`).join('') : '<div class="rec"><div class="need">Dr Osei\'s field journal is scattered across the island. Look for loose pages.</div></div>';
   $('escList').innerHTML = '';
   const rows = [
     ['⛵ Raft (Raft Beach)', needsText(ESCAPES.raft.needs, (k) => game.flags.raft[k]) + ' deposited'],
@@ -523,11 +595,11 @@ function useSlot(i) {
   const list = player.inv.list(); const id = list[i]; if (!id) return;
   const it = ITEMS[id]; if (!it.use) { toast(it.desc, 2); return; }
   const s = player.stats;
-  if (it.use.health && s.health > 98) { toast('You are not hurt'); return; }
+  if (it.use.health > 0 && s.health > 98) { toast('You are not hurt'); return; }
   for (const [k, v] of Object.entries(it.use)) s[k] = clamp(s[k] + v, 0, 100);
   player.inv.add(id, -1);
   if (id === 'water') audio.drink(); else if (id === 'bandage') audio.craft(); else audio.eat();
-  toast(id === 'water' ? 'You drink from the canteen' : id === 'bandage' ? 'You bandage your wounds' : `You eat the ${it.name.toLowerCase()}`, 1.5);
+  toast(id === 'water' ? 'You drink from the canteen' : id === 'bandage' ? 'You bandage your wounds' : it.use.health < 0 ? `You eat the ${it.name.toLowerCase()} raw. Your stomach complains.` : `You eat the ${it.name.toLowerCase()}`, 1.8);
 }
 $('inv').addEventListener('click', (e) => { const s = e.target.closest('.slot'); if (s) useSlot(+s.dataset.i); });
 function renderInv() {
@@ -539,12 +611,15 @@ function renderInv() {
 // ---------------- damage, death and endings ----------------
 function hurt(amount, cause) { if (player.dead || game.over) return; player.stats.health -= amount; player.hurtFlash = 1; player.lastDmg = cause; audio.hurt(); if (player.stats.health <= 0) die(cause); }
 function die(cause) {
-  if (game.over) return; player.dead = true; game.over = true; game.ending = 'dead';
+  if (game.over) return; player.dead = true; game.over = true; game.ending = 'dead'; unlock('end_dead');
   audio.fail(); store.del(SAVE_KEY);
   setTimeout(() => endScreen('YOU DIDN\'T MAKE IT', `You were ${cause}. The mountain keeps its island.`), 2200);
 }
 function win(kind) {
   if (game.over) return;
+  unlock('end_' + kind);
+  if (player.stats.health >= 90) unlock('healthy');
+  if (game.t < game.duration * 0.75) unlock('early');
   if (!dog.dead && (dog.follow === 'player' || (dog.follow === 'pete' && npcs.byId('pete').saved))) dog.saved = true; game.over = true; game.ending = kind; audio.success(); store.del(SAVE_KEY);
   const texts = {
     raft: ['OPEN WATER', 'The reef falls behind you and the island becomes a smudge under a black sky. By nightfall the mountain is a red glow on the horizon, and you are still alive.'],
@@ -560,8 +635,9 @@ function endScreen(title, text) {
   const left = Math.max(0, game.duration - game.t), m = Math.floor(left / 60), s = Math.floor(left % 60);
   const alive = npcs.list.filter((n) => !n.dead).length;
   $('endStats').innerHTML = `<span>Outcome</span><b>${game.ending === 'dead' ? 'Lost' : game.ending === 'raft' ? 'Escaped by raft' : game.ending === 'boat' ? 'Escaped in the skiff' : game.ending === 'rescue' ? 'Rescued by helicopter' : 'Survived in the bunker'}</b>
-    <span>Survivors brought with you</span><b>${game.saved} of ${npcs.list.length}</b><span>Survivors still alive</span><b>${alive}</b><span>Biscuit the dog</span><b>${dog.saved ? 'safe' : dog.dead ? 'lost' : 'left behind'}</b>
+    <span>Survivors brought with you</span><b>${game.saved} of ${npcs.list.length}</b><span>Survivors still alive</span><b>${alive}</b><span>Biscuit the dog</span><b>${dog.saved ? 'safe' : dog.dead ? 'lost' : 'left behind'}</b><span>Journal pages</span><b>${game.journal.size} of ${PAGES.length}</b>
     <span>Time to spare</span><b>${game.ending === 'dead' || game.ending === 'bunker' ? '—' : `${m}:${String(s).padStart(2, '0')}`}</b><span>Pace</span><b>${DIFFICULTY[difficulty].name}</b>`;
+  if (game.ending !== 'dead' && npcs.list.every((n) => n.saved) && dog.saved) unlock('everyone');
   game.running = false; if (document.pointerLockElement) document.exitPointerLock();
 }
 
@@ -569,13 +645,15 @@ function endScreen(title, text) {
 function save() {
   if (game.over || !game.started) return;
   const data = {
-    v: 1, t: game.t, difficulty, player: { x: player.inJeep ? jeep.exitSpot().x : player.inBoat ? boat.exitSpot().x : player.x, y: player.y, z: player.inJeep ? jeep.exitSpot().z : player.inBoat ? boat.exitSpot().z : player.z, yaw: player.yaw, stats: player.stats, inv: player.inv.items, onRaft: player.onRaft, inBunker: player.inBunker },
+    v: 1, t: game.t, difficulty, player: { x: player.inJeep ? car.exitSpot().x : player.inBoat ? boat.exitSpot().x : player.x, y: player.y, z: player.inJeep ? car.exitSpot().z : player.inBoat ? boat.exitSpot().z : player.z, yaw: player.yaw, stats: player.stats, inv: player.inv.items, onRaft: player.onRaft, inBunker: player.inBunker },
     flags: game.flags, saved: game.saved, taken: pickups.filter((p) => p.taken).map((p) => p.idx), felled: world.trees.map((t, i) => (t.alive ? -1 : i)).filter((i) => i >= 0),
     npcs: npcs.list.map((n) => ({ id: n.def.id, x: n.x, z: n.z, state: n.state, hurt: n.hurt, dead: n.dead, saved: n.saved, healedSaid: n.healedSaid, fixedSaid: !!n.fixedSaid, wantMet: !!n.wantMet, wantKnown: !!n.wantKnown })),
     dog: { x: dog.x, z: dog.z, follow: dog.follow, dead: dog.dead, saved: dog.saved },
     fires: props.fires.filter((f) => f.built).map((f) => ({ x: f.x, z: f.z, t: Math.max(0, f.t) })),
     raft: props.raft.parent === scene ? { x: props.raft.position.x, z: props.raft.position.z } : null, cam: { yaw: cam.yaw, pitch: cam.pitch },
-    jeep: { x: jeep.x, z: jeep.z, yaw: jeep.yaw, hp: jeep.hp, dead: jeep.dead },
+    cars: cars.map((v) => ({ x: v.x, z: v.z, yaw: v.yaw, hp: v.hp, dead: v.dead })),
+    shelters: props.shelters.filter((q) => q.built).map((q) => ({ x: q.x, z: q.z, yaw: q.yaw })),
+    journal: [...game.journal], stats: game.stats,
     boat: { x: boat.x, z: boat.z, yaw: boat.yaw, hp: boat.hp, dead: boat.dead, repaired: boat.repaired },
   };
   store.set(SAVE_KEY, data); game.lastSave = game.t;
@@ -596,7 +674,11 @@ function load(data) {
   if (data.cam) { cam.yaw = data.cam.yaw; cam.pitch = data.cam.pitch; }
   if (data.fires) for (const f of data.fires) addFire(f.x, f.z, f.t);
   if (data.boat) { boat.x = data.boat.x; boat.z = data.boat.z; boat.yaw = data.boat.yaw; boat.hp = data.boat.hp; if (data.boat.repaired) boat.repair(); if (data.boat.dead) boat.damage(1000); boat.group.position.set(boat.x, SEA, boat.z); boat.group.rotation.y = boat.yaw; }
-  if (data.jeep) { jeep.x = data.jeep.x; jeep.z = data.jeep.z; jeep.yaw = data.jeep.yaw; jeep.y = heightAt(jeep.x, jeep.z); jeep.hp = data.jeep.hp; if (data.jeep.dead) jeep.damage(1000); jeep.group.position.set(jeep.x, jeep.y, jeep.z); jeep.group.rotation.y = jeep.yaw; }
+  const carData = data.cars || (data.jeep ? [data.jeep] : []);
+  carData.forEach((d, i) => { const v = cars[i]; if (!v || !d) return; v.x = d.x; v.z = d.z; v.yaw = d.yaw; v.y = heightAt(v.x, v.z); v.hp = d.hp; if (d.dead) v.damage(1000); v.group.position.set(v.x, v.y, v.z); v.group.rotation.y = v.yaw; });
+  if (data.shelters) for (const q of data.shelters) addShelter(q.x, q.z, q.yaw);
+  if (data.journal) { game.journal = new Set(data.journal); for (const p of pickups) if (p.id === 'page' && game.journal.has(p.page) && !p.taken) { p.taken = true; scene.remove(p.m); } }
+  if (data.stats) Object.assign(game.stats, data.stats);
   if (player.onRaft) { cam.distSel = 1; cam.dist = DISTS[1]; }
 }
 
@@ -713,13 +795,13 @@ function updatePlayer(dt) {
   if (it && it.kind === 'chop' && input.down('interact')) {
     if (player.chopTree !== it.tree) { player.chopTree = it.tree; player.chop = 0; player.chopHits = 0; }
     player.chop += dt;
-    if (player.rig.chopT <= 0) player.rig.chopT = 0.7;
+    if (player.rig.chopT <= 0) { player.rig.chopT = 0.7; player.strikeTool = 'axe'; }
     if (player.chop >= 0.7) {
       player.chop = 0; player.chopHits++; audio.chop(); s.stamina = Math.max(0, s.stamina - 4);
-      if (player.chopHits >= 3) { world.fellTree(it.tree); for (let i = 0; i < 3; i++) spawnPickup('wood', it.tree.x + Math.cos(i * 2.1) * 1.5, it.tree.z + Math.sin(i * 2.1) * 1.5); pickups.slice(-3).forEach((p) => { p.m.visible = true; }); toast('The palm comes down: 3 logs'); player.chopTree = null; }
+      if (player.chopHits >= 3) { world.fellTree(it.tree); for (let i = 0; i < 3; i++) spawnPickup('wood', it.tree.x + Math.cos(i * 2.1) * 1.5, it.tree.z + Math.sin(i * 2.1) * 1.5); pickups.slice(-3).forEach((p) => { p.m.visible = true; }); spawnPickup('frond', it.tree.x + 1.8, it.tree.z - 0.6); spawnPickup('frond', it.tree.x - 1.2, it.tree.z + 1.6); pickups.slice(-2).forEach((p) => { p.m.visible = true; }); toast('The palm comes down: 3 logs and some fronds'); player.chopTree = null; }
     }
-    axeModel.visible = true;
-  } else { player.chop = 0; player.chopTree = null; axeModel.visible = player.rig.chopT > 0; }
+    axeModel.visible = true; spearModel.visible = false;
+  } else { player.chop = 0; player.chopTree = null; axeModel.visible = player.rig.chopT > 0 && player.strikeTool !== 'spear'; spearModel.visible = player.rig.chopT > 0 && player.strikeTool === 'spear'; }
   // the body
   const nearLava = volcano.heatAt(player.x, player.z);
   const sheltered = player.inBunker || props.shelters.some((z) => Math.hypot(z.x - player.x, z.z - player.z) < z.r);
@@ -756,7 +838,7 @@ function updateCamera(dt) {
   if (player.inHeli) { camera.lookAt(props.heli.position); return; }
   const look = input.lookDelta(dt);
   cam.yaw -= look.x; cam.pitch = clamp(cam.pitch + look.y, -0.45, 1.1);
-  const veh = player.inJeep ? jeep : player.inBoat ? boat : null;
+  const veh = player.inJeep ? car : player.inBoat ? boat : null;
   if (veh && Math.abs(look.x) < 0.0005 && Math.abs(veh.speed) > 1.5) { let d = veh.yaw + (veh.speed < 0 ? Math.PI : 0) - cam.yaw; while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2; cam.yaw += d * Math.min(1, dt * 1.6); }
   if (input.pressed('camera')) { cam.distSel = (cam.distSel + 1) % DISTS.length; cam.dist = DISTS[cam.distSel]; }
   let dist = (player.inJeep || player.inBoat) ? Math.max(cam.dist, 8.5) : cam.dist;
@@ -794,6 +876,7 @@ function updateAtmosphere(dt, vfx) {
   U.uSunCol.value.set('#fff2d0').lerp(tmpC.set('#ff9a50'), dusk).lerp(tmpC.set('#6a5a50'), ash * 0.8);
   U.uSkyTop.value.set('#2a72d6').lerp(tmpC.set('#3b4a7a'), dusk).lerp(tmpC.set('#050915'), night);
   U.uHorizon.value.set('#cfe4f5').lerp(tmpC.set('#ffb080'), dusk * (0.4 + 0.6 * dayK)).lerp(tmpC.set('#101a30'), night * 0.92);
+  if (game.rain > 0.01) { U.uSkyTop.value.lerp(tmpC.set('#56606c').multiplyScalar(0.3 + 0.7 * dayK), game.rain * 0.65); U.uHorizon.value.lerp(tmpC.set('#8a949c').multiplyScalar(0.3 + 0.7 * dayK), game.rain * 0.55); U.uCloud.value = Math.max(U.uCloud.value, 0.3 + game.rain * 0.65); }
   U.uSky.value.copy(U.uHorizon.value).lerp(tmpC.set('#4a4542').multiplyScalar(0.25 + 0.75 * dayK), ash);
   // one shadow-casting light: the sun by day, the moon by night, swapped at the horizon where both are faint
   if (sy > -0.02) { lightDir.copy(U.uSun.value); sun.color.copy(U.uSunCol.value); sun.intensity = 2.8 * (1 - ash * 0.8) * smooth(-0.02, 0.25, sy) * (0.55 + 0.45 * Math.max(0, sy)); }
@@ -801,14 +884,15 @@ function updateAtmosphere(dt, vfx) {
   // ash scatters what light there is, so by day the world goes flat and grey rather than black
   hemi.intensity = lerp(0.2, 0.9 * (1 - ash * 0.2) * (0.7 + 0.3 * Math.max(0, sy)) + ash * 0.35, dayK) + ash * 0.06 * night;
   hemi.color.set('#bfe0ff').lerp(tmpC.set('#8a827a'), ash).lerp(tmpC.set('#4a5a8a'), night * (1 - ash));
+  sun.intensity *= 1 - game.rain * 0.65; hemi.intensity *= 1 - game.rain * 0.2;
   renderer.toneMappingExposure = 1.05 + 0.4 * night;
   scene.fog.color.copy(U.uHorizon.value).lerp(tmpC.set('#6a625c').multiplyScalar(0.3 + 0.7 * dayK), ash * 0.9);
   const inSurge = volcano.surgeR > 0 && distToVolcano(player.x, player.z) < volcano.surgeR + 40 && !player.inBunker;
-  scene.fog.near = lerp(160, 14, ash) * (inSurge ? 0.2 : 1); scene.fog.far = lerp(1150, 210, ash) * (inSurge ? 0.25 : 1);
+  scene.fog.near = lerp(160, 14, ash) * (inSurge ? 0.2 : 1) * (1 - game.rain * 0.5); scene.fog.far = lerp(1150, 210, ash) * (inSurge ? 0.25 : 1) * (1 - game.rain * 0.45);
   if (player.inBunker) { scene.fog.near = 2; scene.fog.far = 16; scene.fog.color.set('#2a2320'); }
   // crater glow colours the underside of the ash cloud at dusk
   if (bloom) bloom.strength = 0.3 + 0.25 * dusk + 0.2 * (vfx.stageIdx >= 3 ? 1 : 0) + 0.15 * night;
-  U.uFlash.value = vfx.flash || 0; hemi.intensity += (vfx.flash || 0) * 1.8;
+  U.uFlash.value = (vfx.flash || 0) + game.seaFlash * 0.5; hemi.intensity += (vfx.flash || 0) * 1.8;
   for (let i = 0; i < 8; i++) U.uGlow.value[i].copy(volcano.glow[i]);
   if (gradePass) {
     gradePass.uniforms.uTime.value = game.t; gradePass.uniforms.uAsh.value = ash; gradePass.uniforms.uHurt.value = player.stats.health < 30 ? (1 - player.stats.health / 30) * 0.6 : 0;
@@ -852,10 +936,50 @@ function updateAtmosphere(dt, vfx) {
   audio.update(dt, {
     waves: player.inBunker ? 0 : clamp(1 - seaD / 25, 0.08, 1) * (player.swimming || player.onRaft ? 1 : 0.8),
     wind: player.inBunker ? 0.1 : 0.25 + vfx.stageIdx * 0.18 + (player.y > 60 ? 0.3 : 0),
-    rumble: player.inBunker ? vfx.rumble * 1.2 : vfx.rumble, heli: audio.vol.heli, crickets: player.inBunker ? 0 : night * (vfx.stageIdx < 3 ? 1 : 0.25) * (seaD > 1.5 ? 1 : 0.4), fire: clamp((() => { const f = litFireNear(player.x, player.z, 9); return f ? 0.45 * (1 - Math.hypot(f.x - player.x, f.z - player.z) / 9) : 0; })() + volcano.heatAt(player.x, player.z) * 1.5 + (vfx.stageIdx >= 3 ? 0.15 * (1 - clamp((distToVolcano(player.x, player.z) - 100) / 200, 0, 1)) : 0), 0, 1),
-    birds: player.inBunker ? 0 : dayK * [0.9, 0.25, 0.03, 0, 0][vfx.stageIdx] * clamp(1 - seaD / 90, 0.3, 1) * (player.y > 2 ? 1 : 0.5), hurt: player.stats.health < 30 ? 1 - player.stats.health / 30 : 0, engine: player.inJeep ? jeep.rpm : player.inBoat ? boat.rpm * 0.8 : 0,
+    rumble: player.inBunker ? vfx.rumble * 1.2 : vfx.rumble, heli: audio.vol.heli, rain: player.inBunker ? game.rain * 0.15 : game.rain, crickets: player.inBunker ? 0 : night * (vfx.stageIdx < 3 ? 1 : 0.25) * (seaD > 1.5 ? 1 : 0.4), fire: clamp((() => { const f = litFireNear(player.x, player.z, 9); return f ? 0.45 * (1 - Math.hypot(f.x - player.x, f.z - player.z) / 9) : 0; })() + volcano.heatAt(player.x, player.z) * 1.5 + (vfx.stageIdx >= 3 ? 0.15 * (1 - clamp((distToVolcano(player.x, player.z) - 100) / 200, 0, 1)) : 0), 0, 1),
+    birds: player.inBunker ? 0 : dayK * [0.9, 0.25, 0.03, 0, 0][vfx.stageIdx] * clamp(1 - seaD / 90, 0.3, 1) * (player.y > 2 ? 1 : 0.5), hurt: player.stats.health < 30 ? 1 - player.stats.health / 30 : 0, engine: player.inJeep ? car.rpm * (car === quad ? 1.2 : 1) : player.inBoat ? boat.rpm * 0.8 : 0,
   });
   audio.vol.heli = 0;
+}
+
+// ---------------- weather: tropical squalls before the ash comes ----------------
+const SQUALLS = [{ at: 0.07, len: 0.035 }, { at: 0.24, len: 0.04 }, { at: 0.4, len: 0.03 }];
+const rainLines = (() => {
+  const n = quality === 'low' ? 500 : 1400, pos = new Float32Array(n * 6), g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1e5);
+  const m = new THREE.LineSegments(g, new THREE.LineBasicMaterial({ color: '#b8c8d8', transparent: true, opacity: 0, depthWrite: false }));
+  m.frustumCulled = false; m.visible = false; scene.add(m); m.userData.n = n; m.userData.init = false; return m;
+})();
+function updateWeather(dt) {
+  const p = game.progress; let rain = 0;
+  for (const q of SQUALLS) { const k = (p - q.at) / q.len; if (k > 0 && k < 1) rain = Math.max(rain, Math.min(1, Math.min(k, 1 - k) * 5)); }
+  game.rain += (rain - game.rain) * Math.min(1, dt * 0.8);
+  game.wet = clamp(game.wet + (game.rain > 0.15 ? dt * 0.25 * game.rain : -dt * 0.02), 0, 1);
+  U.uWet.value = game.wet; U.uRain.value = game.rain;
+  const under = player.inBunker || props.shelters.some((q) => Math.hypot(q.x - player.x, q.z - player.z) < q.r);
+  // rain streaks round the camera
+  const R = rainLines, on = game.rain > 0.02 && !player.inBunker; R.visible = on;
+  if (on) {
+    const a = R.geometry.attributes.position.array, n = R.userData.n, c = camera.position, wind = 2.5 + U.uWind.value * 2;
+    if (!R.userData.init) { for (let i = 0; i < n; i++) { a[i * 6] = c.x + (Math.random() - 0.5) * 60; a[i * 6 + 1] = c.y + Math.random() * 30 - 10; a[i * 6 + 2] = c.z + (Math.random() - 0.5) * 60; } R.userData.init = true; }
+    for (let i = 0; i < n; i++) {
+      let x = a[i * 6], y = a[i * 6 + 1] - 24 * dt, z = a[i * 6 + 2];
+      x += wind * dt;
+      if (y < c.y - 14 || Math.abs(x - c.x) > 30 || Math.abs(z - c.z) > 30) { x = c.x + (Math.random() - 0.5) * 60; y = c.y + 12 + Math.random() * 14; z = c.z + (Math.random() - 0.5) * 60; }
+      a[i * 6] = x; a[i * 6 + 1] = y; a[i * 6 + 2] = z; a[i * 6 + 3] = x - wind * 0.04; a[i * 6 + 4] = y + 0.7; a[i * 6 + 5] = z;
+    }
+    R.geometry.attributes.position.needsUpdate = true; R.material.opacity = 0.35 * game.rain * (0.6 + 0.4 * dayNight.dayK);
+  }
+  // the rain fills your canteen when you're out in it
+  if (game.rain > 0.4 && !under && !player.inJeep) {
+    if (!game.rainSaid) { game.rainSaid = true; toast('Rain! Stand out in it and it fills your canteen.', 3); voice.say('Rain. Thank God.', 'You', false); }
+    game.rainCatch += dt * game.rain;
+    if (game.rainCatch > 10) { game.rainCatch = 0; if (player.inv.count('water') < 4) { player.inv.add('water', 1); toast('+1 water from the rain', 1.2); } player.stats.thirst = Math.min(100, player.stats.thirst + 6); }
+  }
+  if (game.rain < 0.05) game.rainSaid = false;
+  // lightning out over the sea in the heaviest squalls
+  game.seaFlash *= Math.max(0, 1 - dt * 7);
+  if (game.rain > 0.6 && Math.random() < dt * 0.07) { game.seaFlash = 0.8; audio.thunder(500 + Math.random() * 300); }
 }
 
 // ---------------- HUD ----------------
@@ -874,7 +998,7 @@ function updateHUD(dt) {
   const fol = npcs.followers(); const pup = dog.follow && !dog.dead && !dog.saved ? ' 🐕' : ''; setHTML('companions', fol.length || pup ? `👥 ${fol.map((n) => n.def.name.split(' ').pop()).join(', ')}${pup}` : '');
   setText('objective', objectiveText());
   setText('tod', `${dayNight.night > 0.5 ? '🌙' : dayNight.dusk > 0.5 ? '🌅' : '☀️'} Day ${dayNight.day} · ${String(Math.floor(dayNight.hour)).padStart(2, '0')}:${String(Math.floor((dayNight.hour % 1) * 60)).padStart(2, '0')}`);
-  setHTML('speed', player.inJeep ? `${Math.round(Math.abs(jeep.speed) * 3.6)}<small>km/h</small>` : player.inBoat ? `${Math.round(Math.abs(boat.speed) * 1.94)}<small>knots</small>` : '');
+  setHTML('speed', player.inJeep ? `${Math.round(Math.abs(car.speed) * 3.6)}<small>km/h</small>` : player.inBoat ? `${Math.round(Math.abs(boat.speed) * 1.94)}<small>knots</small>` : '');
   // compass
   const items = [];
   for (const [k, p] of Object.entries(POIS)) { if (k === 'cave') continue; items.push({ x: p.x, z: p.z, icon: p.icon, name: p.name }); }
@@ -906,7 +1030,7 @@ function updateHUD(dt) {
   renderInv();
   // interaction prompt
   const it = currentInteract;
-  if (player.inJeep) { show('prompt'); setHTML('prompt', Math.abs(jeep.speed) < 4 ? (input.isTouch ? '' : '<b>E</b> ') + 'Get out of the jeep' : 'Slow down to get out'); }
+  if (player.inJeep) { show('prompt'); setHTML('prompt', Math.abs(car.speed) < 4 ? (input.isTouch ? '' : '<b>E</b> ') + `Get off the ${car.name}` : 'Slow down to get off'); }
   else if (player.inBoat) { show('prompt'); setHTML('prompt', Math.abs(boat.speed) < 3 ? (input.isTouch ? '' : '<b>E</b> ') + 'Climb out of the skiff' : 'Slow down to climb out'); }
   else if (it && !player.onRaft && !player.inBunker && !player.inHeli) {
     show('prompt');
@@ -948,6 +1072,43 @@ function drawMap() {
   x.fillText(`${game.stage.name} · ${Math.floor(Math.max(0, game.duration - game.t) / 60)} min to the surge`, 12, 18);
   x.fillText('Yellow: survivors · Cyan: with you · Red arrow: you', 12, S - 14);
 }
+
+// ---------------- photo mode ----------------
+function enterPhoto() {
+  closeMenu(); game.photo = { yaw: cam.yaw, pitch: 0.15 };
+  show('hud', false); show('photo'); camera.fov = 60; camera.updateProjectionMatrix(); voice.stop();
+}
+function exitPhoto() { game.photo = null; show('photo', false); show('hud'); camera.fov = 60; camera.updateProjectionMatrix(); }
+const _pd = new THREE.Vector3();
+function updatePhotoCam(dt) {
+  const ph = game.photo, look = input.lookDelta(dt);
+  ph.yaw -= look.x; ph.pitch = clamp(ph.pitch + look.y, -1.45, 1.45);
+  const mv = input.move(), sp = 9 * dt, fx = Math.sin(ph.yaw), fz = Math.cos(ph.yaw), rx = -Math.cos(ph.yaw), rz = Math.sin(ph.yaw);
+  const c = camera.position;
+  c.x += (fx * mv.y + rx * mv.x) * sp; c.z += (fz * mv.y + rz * mv.x) * sp;
+  if (input.down('jump')) c.y += sp; if (input.down('sprint')) c.y -= sp;
+  // stay above the ground and the sea, and within reach of the player
+  c.y = Math.max(c.y, heightAt(c.x, c.z) + 0.3, SEA + 0.2);
+  const dx = c.x - player.x, dz = c.z - player.z, d = Math.hypot(dx, dz); if (d > 90) { c.x = player.x + dx / d * 90; c.z = player.z + dz / d * 90; }
+  _pd.set(fx * Math.cos(ph.pitch), -Math.sin(ph.pitch), fz * Math.cos(ph.pitch));
+  camera.lookAt(c.x + _pd.x, c.y + _pd.y, c.z + _pd.z);
+}
+function snapPhoto() {
+  // read the frame now, straight after it was drawn, while the canvas still holds it
+  const url = canvas.toDataURL('image/png');
+  const a = document.createElement('a'); a.href = url; a.download = `ashbound-${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)}.png`;
+  document.body.appendChild(a); a.click(); setTimeout(() => a.remove(), 2000);
+  audio.shutter(); const fl = $('flash'); fl.style.transition = 'none'; fl.style.opacity = '0.8'; requestAnimationFrame(() => { fl.style.transition = 'opacity .5s'; fl.style.opacity = '0'; });
+  game.stats.photos++; unlock('photo');
+}
+$('phSnap').onclick = () => { game.snap = true; };
+$('phExit').onclick = () => exitPhoto();
+$('phFovM').onclick = () => { camera.fov = clamp(camera.fov - 8, 15, 95); camera.updateProjectionMatrix(); };
+$('phFovP').onclick = () => { camera.fov = clamp(camera.fov + 8, 15, 95); camera.updateProjectionMatrix(); };
+addEventListener('wheel', (e) => { if (!game.photo) return; camera.fov = clamp(camera.fov + Math.sign(e.deltaY) * 4, 15, 95); camera.updateProjectionMatrix(); }, { passive: true });
+$('photoBtn').onclick = () => enterPhoto();
+$('achBtn').onclick = () => { renderAchievements(); show('ach'); };
+$('achBack').onclick = () => show('ach', false);
 
 // ---------------- menus ----------------
 let menu = null; // 'title' | 'pause' | 'help' | 'craft' | 'map' | 'end'
@@ -1009,8 +1170,8 @@ function frame(now) {
   requestAnimationFrame(frame);
   const dt = Math.min(0.05, (now - last) / 1000); last = now;
   input.pollPad();
-  if (input.pressed('pause')) { if (menu === 'pause' || !menu) togglePause(); else closeMenu(); }
-  if (game.started && !game.over) {
+  if (input.pressed('pause')) { if (game.photo) exitPhoto(); else if (menu === 'pause' || !menu) togglePause(); else closeMenu(); }
+  if (game.started && !game.over && !game.photo) {
     if (!menu) {
       if (input.pressed('craft')) openMenu('craft');
       else if (input.pressed('map')) openMenu('map');
@@ -1019,7 +1180,8 @@ function frame(now) {
     else if (menu === 'map' && input.pressed('map')) closeMenu();
     for (let i = 1; i <= 8; i++) if (!menu && input.pressed('slot' + i)) useSlot(i - 1);
   }
-  if (game.started && !game.paused) {
+  if (game.photo && input.pressed('craft')) game.snap = true;
+  if (game.started && !game.paused && !game.photo) {
     game.t += dt; game.progress = clamp(game.t / game.duration, 0, 1); game.stage = stageAt(game.progress);
     if (game.intro > 0) game.intro -= dt;
     currentInteract = (player.onRaft || player.inBunker || player.inHeli || player.inJeep || player.inBoat || game.intro > 0 || game.sleeping) ? null : nearestInteractable();
@@ -1027,26 +1189,28 @@ function frame(now) {
     // (measured in game time, so a slow frame can't turn a tap into a hold)
     if (currentInteract && currentInteract.kind === 'rest') {
       if (input.pressed('interact')) { restTap = 1; restHeld = 0; }
-      if (restTap) { if (input.down('interact')) restHeld += dt; else { if (restHeld < 0.3 && currentInteract.canSleep) trySleep(false); restTap = 0; } }
+      if (restTap) { if (input.down('interact')) restHeld += dt; else { if (restHeld < 0.3) { if (currentInteract.canCook) cookOne(); else if (currentInteract.canSleep) trySleep(false); } restTap = 0; } }
     } else restTap = 0;
-    if (player.inJeep && input.pressed('interact') && !game.over && Math.abs(jeep.speed) < 4) exitJeep();
+    if (player.inJeep && input.pressed('interact') && !game.over && Math.abs(car.speed) < 4) exitJeep();
     else if (player.inBoat && input.pressed('interact') && !game.over && Math.abs(boat.speed) < 3) exitBoat();
     else if (currentInteract && !currentInteract.hold && currentInteract.kind !== 'none' && input.pressed('interact') && !game.over) doInteract(currentInteract);
     if (!game.sleeping) updatePlayer(dt);
-    if (!player.inJeep) jeep.update({ dt, move: { x: 0, y: 0 }, brake: false, world, heatAt: (x, z) => volcano.heatAt(x, z), dark: false, fx: fx.dust });
+    for (const v of cars) if (!(player.inJeep && v === car)) v.update({ dt, move: { x: 0, y: 0 }, brake: false, world, heatAt: (x, z) => volcano.heatAt(x, z), dark: false, fx: fx.dust });
     if (!player.inBoat) boat.update({ dt, move: { x: 0, y: 0 }, brake: false, world, fx: null });
     const vfx = volcano.update({ dt, progress: game.progress, duration: game.duration, playerPos: player, camera, sunHeight: Math.max(0.1, U.uSun.value.y) });
     npcs.update(dt, { player, heatAt: (x, z) => volcano.heatAt(x, z), surgeR: volcano.surgeR, volcano: VOLCANO, hiddenInBunker: player.inBunker, followIndex: (n) => npcs.followers().indexOf(n) });
     updateHeli(dt);
+    wild.update(dt, { player, stageIdx: vfx.stageIdx, heatAt: (x, z) => volcano.heatAt(x, z) });
     // Biscuit: lost, following you, or back with Pete
     {
       const pete = npcs.byId('pete');
       const tgt = dog.follow === 'player' ? { x: player.x, z: player.z, riding: !!(player.inJeep || player.inBoat || player.onRaft || player.inHeli || player.inBunker) } : dog.follow === 'pete' ? { x: pete.x, z: pete.z, riding: !!(pete.riding || pete.saved) } : null;
       dog.update({ dt, world, heatAt: (x, z) => volcano.heatAt(x, z), onBark: (d) => audio.bark(d) }, tgt, player);
       if (dog.follow === 'pete' && pete.saved && !dog.dead) dog.saved = true;
-      if (dog.follow === 'player' && !pete.dead && !pete.saved && !pete.wantMet && Math.hypot(dog.x - pete.x, dog.z - pete.z) < 5) { pete.wantMet = true; pete.wantKnown = true; dog.follow = 'pete'; pete.state = 'follow'; say(pete.def.name, pete.def.want.thanks, 7); audio.success(); }
+      if (dog.follow === 'player' && !pete.dead && !pete.saved && !pete.wantMet && Math.hypot(dog.x - pete.x, dog.z - pete.z) < 5) { pete.wantMet = true; pete.wantKnown = true; dog.follow = 'pete'; pete.state = 'follow'; say(pete.def.name, pete.def.want.thanks, 7); audio.success(); unlock('dog'); }
       if (!dog.dead && !dog.saved && !dog.hidden && (volcano.heatAt(dog.x, dog.z) > 0.6 || (volcano.surgeR > 0 && distToVolcano(dog.x, dog.z) < volcano.surgeR))) killDog();
     }
+    updateWeather(dt);
     updateAtmosphere(dt, vfx);
     // the end of the world
     if (!game.over) {
@@ -1065,15 +1229,16 @@ function frame(now) {
     volcano.update({ dt, progress: 0.3, duration: 1440, playerPos: { x: 0, z: 300 }, camera, sunHeight: 0.8 });
     updateAtmosphere(dt, { ash: 0, plume: 0.3, stageIdx: 1, rumble: 0 });
   }
-  if (game.started && !player.inHeli) updateCamera(dt);
-  else if (game.started) camera.lookAt(props.heli.position);
+  if (game.photo) updatePhotoCam(dt);
+  else if (game.started && !player.inHeli) updateCamera(dt);
+  else if (game.started && !game.photo) camera.lookAt(props.heli.position);
   input.endFrame();
   if (showFps) { fpsT += dt; game.fpsN++; if (fpsT >= 0.5) { $('fps').textContent = Math.round(game.fpsN / fpsT) + ' FPS'; fpsT = 0; game.fpsN = 0; } }
-  try { if (composer && quality === 'high') composer.render(); else renderer.render(scene, camera); }
+  try { if (composer && quality === 'high') composer.render(); else renderer.render(scene, camera); if (game.snap) { game.snap = false; snapPhoto(); } }
   catch (e) { console.error(e); save(); show('crash'); throw e; }
 }
 renderer.domElement.addEventListener('webglcontextlost', (e) => { e.preventDefault(); save(); show('crash'); });
-window.ASH = { dog: () => dog, trySleep, surfaceAt, game, player, volcano, npcs, props, world, cam, save, load, die, win, jeep, enterJeep, exitJeep, voice, boat, enterBoat, exitBoat, dayNight, addFire };
+window.ASH = { quad, cars, car: () => car, wild: () => wild, unlock, enterPhoto, exitPhoto, addShelter, dog: () => dog, trySleep, surfaceAt, game, player, volcano, npcs, props, world, cam, save, load, die, win, jeep, enterJeep, exitJeep, voice, boat, enterBoat, exitBoat, dayNight, addFire };
 applyQuality();
 $('loading').classList.add('hidden');
 requestAnimationFrame(frame);

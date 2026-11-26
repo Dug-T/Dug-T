@@ -66,6 +66,14 @@
   #ashfx { position: absolute; inset: 0; background: radial-gradient(ellipse at center, transparent 45%, rgba(90,84,78,.75) 100%); opacity: 0; }
   #heat { position: absolute; inset: 0; background: radial-gradient(ellipse at center, transparent 30%, rgba(255,90,10,.75) 100%); opacity: 0; }
   #fade { position: fixed; inset: 0; background: #000; opacity: 0; pointer-events: none; transition: opacity .8s; z-index: 50; }
+  #flash { position: fixed; inset: 0; background: #fff; opacity: 0; pointer-events: none; z-index: 51; }
+  #photo { position: fixed; inset: 0; pointer-events: none; z-index: 15; }
+  #photo .ph-top { position: absolute; top: max(10px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); font-weight: 700; letter-spacing: 2px; text-shadow: var(--shadow); text-align: center; }
+  #photo .ph-top span { display: block; font-weight: 400; letter-spacing: 0; font-size: 13px; opacity: .85; margin-top: 2px; }
+  #photo .ph-btns { position: absolute; top: calc(max(10px, env(safe-area-inset-top)) + 46px); right: max(16px, env(safe-area-inset-right)); display: flex; gap: 8px; pointer-events: auto; }
+  #photo .ph-btns button { font: 700 15px 'Barlow'; color: #fff; background: #000a; border: 2px solid #fff8; border-radius: 10px; padding: 8px 14px; cursor: pointer; }
+  #photo .ph-btns #phSnap { background: var(--ember); border-color: #fff; }
+  body.touch #photo .ph-top span { display: none; }
   #fps { position: fixed; top: calc(max(10px, env(safe-area-inset-top)) + 136px); left: max(14px, env(safe-area-inset-left)); font: 600 13px 'Barlow'; color: #9f9; text-shadow: var(--shadow); z-index: 9; display: none; letter-spacing: 1px; }
   #cross { position: absolute; left: 50%; top: 50%; width: 4px; height: 4px; margin: -2px; background: #fff9; border-radius: 50%; }
   /* ---------- touch controls ---------- */
@@ -176,6 +184,7 @@
     <button class="btn alt hidden" id="continue">↻ CONTINUE</button>
     <div class="row"><button class="btn dim" id="diff">PACE: STANDARD</button><button class="btn dim" id="gfx">GRAPHICS: HIGH</button></div>
     <div class="row"><button class="btn dim" id="howto">? HOW TO PLAY</button><button class="btn dim" id="snd">SOUND: ON</button><button class="btn dim" id="vox">VOICES: ON</button></div>
+    <button class="btn dim" id="achBtn" style="max-width:380px">🏆 ACHIEVEMENTS</button>
   </div>
 </div>
 <div id="help" class="screen hidden">
@@ -186,6 +195,7 @@
     🚤 <b>Skiff</b>: Kai's boat lies by the village jetty. Patch it with 2 logs and a rope and fit the plane's battery, then motor out past the reef. The battery is also what the radio needs, so choose.<br>
     📡 <b>Radio</b>: find the battery (wreck), antenna (ranger tower) and handset (village radio hut). Repair the ranger radio and board the helicopter at the helipad.<br>
     🚪 <b>Bunker</b>: stock the old bunker with 4 waters, 4 meals and an ash mask, then seal the door and wait it out.</p>
+    <p class="tag">Food: grab crabs on the beaches, and craft a fishing spear (a log, a stone and a vine) to spear fish from the shallows. Raw food makes you ill, so cook it: tap USE at a lit fire. Goats live on the high ridges. Build a lean-to (3 logs, 2 vines, 3 palm fronds) for shelter from the ash and a place to sleep. The ranger's quad bike at the station is quicker and climbs steeper than the jeep, and seats two. Rain squalls fill your canteen if you stand out in them. Twelve pages of Dr Osei's journal are scattered over the island. Photo mode is in the pause menu.</p>
     <p class="tag">Some survivors won't leave without something they've lost. Ask them to come with you and they'll tell you what; it's then marked on your compass and map. Old Pete won't go anywhere without Biscuit, his dog.</p>
     <p class="tag">Night falls once during the game, during the ashfall. Build a campfire (2 logs, 2 stones) and hold USE beside it to rest and recover, or tap USE to sleep till dawn (you can also sleep under a roof). Sleeping restores you fully, but the eruption carries on while you sleep; craft a torch (a log and some cloth) and it lights itself in the dark and in thick ash.</p>
     <p class="tag">Keep eating, drinking and resting. When the ash falls, wear a mask or get under a roof. Bring the other survivors with you: talk to them, then press again and they'll follow. The survey jeep by the camp seats you and three passengers; it won't swim and it won't climb cliffs, and lava and falling rocks will wreck it.</p>
@@ -211,6 +221,7 @@
     <button class="btn dim" id="snd2">SOUND: ON</button>
     <button class="btn dim" id="vox2">VOICES: ON</button>
     <button class="btn dim" id="fpsBtn">FPS COUNTER: OFF</button>
+    <button class="btn dim" id="photoBtn">📷 PHOTO MODE</button>
     <button class="btn alt" id="quit">⌂ SAVE &amp; QUIT TO TITLE</button>
   </div>
 </div>
@@ -223,6 +234,8 @@
     <div id="escList"></div>
     <h2 style="font-size:24px;margin-top:14px">Survivors</h2>
     <div id="survList"></div>
+    <h2 style="font-size:24px;margin-top:14px">Dr Osei's journal <span class="ver" id="journalCount"></span></h2>
+    <div id="journalList"></div>
     <button class="btn" id="craftClose">◀ BACK</button>
   </div>
 </div>
@@ -251,13 +264,25 @@
 <div id="rotate"><div class="phone"></div><h2>TURN YOUR PHONE SIDEWAYS</h2><p>Ashbound plays in landscape, so you can see the mountain coming.</p></div>
 <div id="fps"></div>
 <div id="fade"></div>
+<div id="flash"></div>
+<div id="photo" class="hidden">
+  <div class="ph-top">📷 PHOTO MODE <span>WASD / stick move · mouse (click first) or small stick to look · Space / Shift up and down · scroll or − + zoom · C snap · Esc exit</span></div>
+  <div class="ph-btns"><button id="phFovM">−</button><button id="phFovP">+</button><button id="phSnap">📸 SNAP</button><button id="phExit">✕ EXIT</button></div>
+</div>
+<div id="ach" class="screen hidden">
+  <div class="card" style="min-width:min(520px,90vw)">
+    <h2>Achievements <span class="ver" id="achCount"></span></h2>
+    <div id="achList"></div>
+    <button class="btn" id="achBack">◀ BACK</button>
+  </div>
+</div>
 <div id="loading">RAISING THE ISLAND...<small>Everything is built in code, so this takes a moment the first time.</small></div>
 <script>
 // Cache-proof loader: ask the server (never the cache) which version is live, then load
 // every game file stamped with that version, so a browser can't mix old and new files.
 // If you add a new file to js/, add its name to this list too.
 (function () {
-  var files = ['main', 'audio', 'dog', 'input', 'island', 'npcs', 'props', 'survival', 'survivor', 'textures', 'vehicle', 'version', 'voice', 'volcano'];
+  var files = ['main', 'audio', 'dog', 'input', 'island', 'journal', 'wildlife', 'npcs', 'props', 'survival', 'survivor', 'textures', 'vehicle', 'version', 'voice', 'volcano'];
   function boot(v) {
     var map = { imports: { 'three': './lib/three.module.min.js', 'three/addons/': './lib/' } };
     files.forEach(function (f) { map.imports['./js/' + f + '.js'] = './js/' + f + '.js?v=' + v; });

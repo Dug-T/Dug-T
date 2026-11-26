@@ -80,9 +80,48 @@ export function buildJeep() {
   return { group: g, body, wheels, pivots, lamps, seats, paint };
 }
 
+export function buildQuad() {
+  const g = new THREE.Group();
+  const paint = new THREE.MeshStandardMaterial({ color: '#c0392b', roughness: 0.45, metalness: 0.3 });
+  const dark = mat('#1d1d1d', 0.6), rubber = mat('#161616', 0.95), steel = mat('#8a9098', 0.4, { metalness: 0.7 }), seatM = mat('#222', 0.8);
+  const body = new THREE.Group(); g.add(body);
+  const frame = box(0.7, 0.25, 1.5, dark); frame.position.set(0, 0.55, 0); body.add(frame);
+  const tank = box(0.62, 0.3, 0.55, paint); tank.position.set(0, 0.82, 0.3); tank.rotation.x = -0.12; body.add(tank);
+  const seat = new THREE.Mesh(new THREE.CapsuleGeometry(0.2, 0.7, 4, 12), seatM); seat.rotation.x = Math.PI / 2; seat.scale.set(1.25, 1, 0.55); seat.position.set(0, 0.86, -0.3); body.add(seat);
+  for (const [z, w] of [[0.62, 1.25], [-0.62, 1.25]]) { const fender = box(w, 0.08, 0.6, paint); fender.position.set(0, 0.82, z); body.add(fender); }
+  const nose = box(0.55, 0.22, 0.35, paint); nose.position.set(0, 0.74, 0.88); nose.rotation.x = 0.35; body.add(nose);
+  const rack = box(0.9, 0.04, 0.4, steel); rack.position.set(0, 0.92, -0.8); body.add(rack);
+  const stem = cyl(0.03, 0.03, 0.4, steel, 8); stem.position.set(0, 1.0, 0.55); stem.rotation.x = -0.35; body.add(stem);
+  const bars = cyl(0.025, 0.025, 0.8, dark, 8); bars.rotation.z = Math.PI / 2; bars.position.set(0, 1.18, 0.5); body.add(bars);
+  for (const s of [-1, 1]) { const grip = cyl(0.035, 0.035, 0.12, rubber, 8); grip.rotation.z = Math.PI / 2; grip.position.set(s * 0.42, 1.18, 0.5); body.add(grip); }
+  const lamps = [];
+  const lens = new THREE.Mesh(new THREE.CircleGeometry(0.09, 16), new THREE.MeshStandardMaterial({ color: '#fff6d8', emissive: '#fff0c0', emissiveIntensity: 0, roughness: 0.2 })); lens.position.set(0, 0.8, 1.06); lens.rotation.x = 0.35; body.add(lens); lamps.push(lens);
+  const spot = new THREE.SpotLight('#fff0c8', 0, 45, 0.6, 0.5, 1.2); spot.position.set(0, 0.85, 1.05); spot.target.position.set(0, 0.1, 15); body.add(spot, spot.target); lamps.push(spot);
+  const tail = new THREE.Mesh(new THREE.CircleGeometry(0.05, 10), new THREE.MeshStandardMaterial({ color: '#500', emissive: '#ff2020', emissiveIntensity: 0.4 })); tail.rotation.y = Math.PI; tail.position.set(0, 0.8, -1.01); body.add(tail);
+  const wheels = [], pivots = [];
+  for (const [x, z, front] of [[-0.55, 0.62, 1], [0.55, 0.62, 1], [-0.55, -0.62, 0], [0.55, -0.62, 0]]) {
+    const pivot = new THREE.Group(); pivot.position.set(x, 0.32, z); body.add(pivot);
+    const w = new THREE.Group(); pivot.add(w);
+    const tyre = cyl(0.32, 0.32, 0.28, rubber, 18); tyre.rotation.z = Math.PI / 2; w.add(tyre);
+    for (let i = 0; i < 10; i++) { const lug = box(0.28, 0.06, 0.08, rubber); lug.position.set(0, Math.cos(i / 10 * Math.PI * 2) * 0.32, Math.sin(i / 10 * Math.PI * 2) * 0.32); lug.rotation.x = -i / 10 * Math.PI * 2; w.add(lug); }
+    const hub = cyl(0.15, 0.15, 0.3, steel, 10); hub.rotation.z = Math.PI / 2; w.add(hub);
+    wheels.push(w); if (front) pivots.push(pivot);
+  }
+  const seats = [new THREE.Vector3(0, 0.88, -0.2), new THREE.Vector3(0, 0.92, -0.72)];
+  g.traverse((m) => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } });
+  return { group: g, body, wheels, pivots, lamps, seats, paint };
+}
+
+// what makes each land vehicle handle the way it does
+const LAND = {
+  jeep: { build: buildJeep, label: 'jeep', maxF: 17, maxR: 6, radius: 1.3, climb: 0.56, wheelR: 0.42, base: 2.5, track: 1.84, corners: [[-0.92, 1.25], [0.92, 1.25], [-0.92, -1.25], [0.92, -1.25]], beam: 60, reach: 3.8 },
+  quad: { build: buildQuad, label: 'quad bike', maxF: 21, maxR: 5, radius: 0.8, climb: 0.45, wheelR: 0.32, base: 1.24, track: 1.1, corners: [[-0.55, 0.62], [0.55, 0.62], [-0.55, -0.62], [0.55, -0.62]], beam: 45, reach: 2.8 },
+};
+
 export class Jeep {
-  constructor(scene, x, z, yaw) {
-    const m = buildJeep();
+  constructor(scene, x, z, yaw, kind = 'jeep') {
+    this.kind = kind; this.spec = LAND[kind];
+    const m = this.spec.build();
     Object.assign(this, m);
     this.scene = scene; this.x = x; this.z = z; this.y = heightAt(x, z); this.yaw = yaw; this.speed = 0; this.steer = 0; this.pitch = 0; this.roll = 0; this.bounce = 0;
     this.driver = null; this.riders = []; this.hp = 100; this.dead = false; this.flooded = false; this.lightsOn = false; this.smokeT = 0; this.rpm = 0;
@@ -90,7 +129,8 @@ export class Jeep {
     scene.add(this.group);
     this.normal = new THREE.Vector3(0, 1, 0);
   }
-  get name() { return 'jeep'; }
+  get name() { return this.spec.label; }
+  get reach() { return this.spec.reach; }
   // drive it. ctx: { dt, move (x,y), brake, world, heatAt, dark, onHit(speed), fx }
   update(ctx) {
     const { dt, world } = ctx;
@@ -101,7 +141,7 @@ export class Jeep {
     const uphill = -(grade.x * fx + grade.z * fz); // >0 when the nose points up a slope
     const depth = SEA - heightAt(this.x, this.z);
     // power, brakes and drag
-    const maxF = 17, maxR = 6;
+    const sp = this.spec, maxF = sp.maxF, maxR = sp.maxR;
     let throttle = mv.y;
     if (this.flooded) throttle = 0;
     if (throttle > 0 && this.speed >= -0.5) this.speed += (maxF - Math.max(0, this.speed)) * 0.55 * throttle * dt;
@@ -110,27 +150,27 @@ export class Jeep {
     if (ctx.brake) this.speed -= Math.sign(this.speed) * Math.min(Math.abs(this.speed), 18 * dt);
     this.speed -= this.speed * 0.35 * dt + Math.sign(this.speed) * Math.min(Math.abs(this.speed), 1.2 * dt);
     this.speed -= 9.81 * uphill * 0.9 * dt; // gravity along the slope
-    if (grade.y < 0.56 && uphill > 0.3 && this.speed > 2) this.speed = 2; // it won't climb cliffs
+    if (grade.y < sp.climb && uphill > 0.3 && this.speed > 2) this.speed = 2; // it won't climb cliffs
     if (depth > 0.5) { this.speed *= 1 - Math.min(1, dt * 2.5); if (depth > 1.0 && !this.flooded) { this.flooded = true; if (ctx.onFlood) ctx.onFlood(); } }
     if (depth < 0.2) this.flooded = false;
     // steering: lighter at speed, and the car turns about its rear axle
     const target = mv.x * 0.6 / (1 + Math.abs(this.speed) / 14);
     this.steer += (target - this.steer) * Math.min(1, dt * 6);
-    this.yaw -= (this.speed / 2.5) * Math.tan(this.steer) * dt;
+    this.yaw -= (this.speed / sp.base) * Math.tan(this.steer) * dt;
     let nx = this.x + fx * this.speed * dt, nz = this.z + fz * this.speed * dt;
     // trees and boulders stop it
-    const r = resolveObstacles(nx, nz, 1.3, world);
+    const r = resolveObstacles(nx, nz, sp.radius, world);
     if (Math.hypot(r.x - nx, r.z - nz) > 0.01) { if (Math.abs(this.speed) > 6 && ctx.onHit) ctx.onHit(Math.abs(this.speed)); this.hp -= Math.abs(this.speed) > 6 ? Math.abs(this.speed) * 1.5 : 0; this.speed *= -0.25; nx = r.x; nz = r.z; }
     const dc = Math.hypot(nx, nz); if (dc > 430) { nx *= 430 / dc; nz *= 430 / dc; this.speed *= -0.3; }
     this.x = nx; this.z = nz;
     // suspension: fit the body to the ground under the four wheels. The car's local +x is its LEFT side
     // (a yaw of 0 faces +z), so sample left at +x and right at -x.
     const lx = fz, lz = -fx;
-    const corners = [[-0.92, 1.25], [0.92, 1.25], [-0.92, -1.25], [0.92, -1.25]]; // local (x, z) of each wheel, same order as this.wheels
+    const corners = sp.corners; // local (x, z) of each wheel, same order as this.wheels
     const hW = corners.map(([cx, cz]) => heightAt(this.x + lx * cx + fx * cz, this.z + lz * cx + fz * cz));
     const hF = (hW[0] + hW[1]) / 2, hB = (hW[2] + hW[3]) / 2, hL = (hW[1] + hW[3]) / 2, hR = (hW[0] + hW[2]) / 2;
     const ground = Math.max((hF + hB) / 2, SEA - 0.8);
-    const pitchT = Math.atan2(hB - hF, 2.5) + this.speed * (throttle > 0 ? -0.004 : 0.006), rollT = Math.atan2(hL - hR, 1.84) - this.steer * this.speed * 0.012;
+    const pitchT = Math.atan2(hB - hF, sp.base) + this.speed * (throttle > 0 ? -0.004 : 0.006), rollT = Math.atan2(hL - hR, sp.track) - this.steer * this.speed * (this.kind === 'quad' ? 0.018 : 0.012);
     this.pitch += (pitchT - this.pitch) * Math.min(1, dt * 9); this.roll += (rollT - this.roll) * Math.min(1, dt * 9);
     this.y += (ground - this.y) * Math.min(1, dt * 14);
     this.group.position.set(this.x, this.y, this.z); this.group.rotation.set(0, this.yaw, 0); this.body.rotation.set(this.pitch, 0, this.roll, 'YXZ');
@@ -138,14 +178,14 @@ export class Jeep {
     this.group.updateMatrixWorld(true);
     this.wheels.forEach((w, i) => {
       const pivot = w.parent; pivot.getWorldPosition(_wp);
-      const gy = hW[i] + 0.42, travel = Math.max(-0.3, Math.min(0.3, gy - _wp.y));
-      pivot.position.y += (0.42 + travel - pivot.position.y) * Math.min(1, dt * 16);
-      w.rotation.x += this.speed / 0.42 * dt;
+      const gy = hW[i] + sp.wheelR, travel = Math.max(-0.3, Math.min(0.3, gy - _wp.y));
+      pivot.position.y += (sp.wheelR + travel - pivot.position.y) * Math.min(1, dt * 16);
+      w.rotation.x += this.speed / sp.wheelR * dt;
     });
     for (const p of this.pivots) p.rotation.y = this.steer;
     // headlights in the dark
     const want = ctx.dark && driving;
-    if (want !== this.lightsOn) { this.lightsOn = want; this.lamps.forEach((l) => { if (l.isSpotLight) l.intensity = want ? 60 : 0; else l.material.emissiveIntensity = want ? 2.5 : 0; }); }
+    if (want !== this.lightsOn) { this.lightsOn = want; this.lamps.forEach((l) => { if (l.isSpotLight) l.intensity = want ? sp.beam : 0; else l.material.emissiveIntensity = want ? 2.5 : 0; }); }
     this.rpm = driving ? Math.min(1, 0.15 + Math.abs(this.speed) / maxF + Math.max(0, throttle) * 0.2) : 0;
     // lava
     const heat = ctx.heatAt(this.x, this.z);

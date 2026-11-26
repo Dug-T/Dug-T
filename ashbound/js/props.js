@@ -1,7 +1,8 @@
 // The places on the island: camp, village, plane wreck, ranger station, bunker, raft beach and the things lying about.
 import * as THREE from 'three';
 import { POIS, heightAt, normalAt } from './island.js';
-import { thatchTexture, metalTexture, concreteTexture, signTexture, sparkTexture, rng } from './textures.js';
+import { thatchTexture, metalTexture, concreteTexture, signTexture, sparkTexture, frondTexture, rng } from './textures.js';
+let _frondTex = null; const frondTex = () => (_frondTex = _frondTex || frondTexture());
 import { mat } from './survivor.js';
 
 const box = (w, h, d, m) => new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m);
@@ -222,6 +223,18 @@ export function buildHelicopter() {
   return g;
 }
 
+// a lean-to you build yourself: a pole frame thatched with fronds
+export function buildLeanTo() {
+  const g = new THREE.Group(), woodM = mat('#7a5a34', 0.9);
+  const roof = new THREE.Mesh(new THREE.PlaneGeometry(3.2, 2.6), new THREE.MeshStandardMaterial({ map: thatchTexture(), roughness: 1, side: THREE.DoubleSide }));
+  roof.rotation.x = -Math.PI / 2 + 0.8; roof.position.set(0, 1.25, 0); g.add(roof);
+  for (const s of [-1, 1]) { const post = cyl(0.06, 0.07, 2.2, woodM, 6); post.position.set(s * 1.4, 1.1, 0.75); post.rotation.x = 0.15; g.add(post); const brace = cyl(0.05, 0.05, 2.6, woodM, 6); brace.rotation.x = -0.8; brace.position.set(s * 1.45, 1.2, 0.05); g.add(brace); }
+  const ridge = cyl(0.06, 0.06, 3.2, woodM, 6); ridge.rotation.z = Math.PI / 2; ridge.position.set(0, 2.15, 0.85); g.add(ridge);
+  const bed = new THREE.Mesh(new THREE.PlaneGeometry(1.0, 1.8), new THREE.MeshStandardMaterial({ map: thatchTexture(), roughness: 1, color: '#9a8a5a' })); bed.rotation.x = -Math.PI / 2; bed.rotation.z = Math.PI / 2; bed.position.set(0, 0.04, -0.1); g.add(bed);
+  g.traverse((m) => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } });
+  return g;
+}
+
 // ---- things to pick up ----
 const pickCache = {};
 export function pickupMesh(id) {
@@ -242,6 +255,8 @@ export function pickupMesh(id) {
       case 'logger': { const g = new THREE.Group(); const b = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.16, 0.24), mat('#3a3f45', 0.5)); b.position.y = 0.08; g.add(b); const led = new THREE.Mesh(new THREE.SphereGeometry(0.02, 6, 4), new THREE.MeshStandardMaterial({ color: '#0f0', emissive: '#3f3', emissiveIntensity: 2 })); led.position.set(0.1, 0.17, 0.08); g.add(led); const ant = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.25, 4), mat('#111', 0.5)); ant.position.set(-0.12, 0.28, -0.08); g.add(ant); m = g; break; }
       case 'pendant': { const g = new THREE.Group(); const cord = new THREE.Mesh(new THREE.TorusGeometry(0.1, 0.006, 4, 20), mat('#3a2a1a', 0.9)); cord.rotation.x = Math.PI / 2; cord.position.y = 0.01; g.add(cord); const bone = new THREE.Mesh(new THREE.TorusGeometry(0.035, 0.012, 6, 12, Math.PI * 1.6), mat('#efe6d0', 0.6)); bone.rotation.x = Math.PI / 2; bone.position.set(0.1, 0.02, 0); g.add(bone); m = g; break; }
       case 'logbook': m = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.05, 0.34), mat('#2f5a2a', 0.8)); m.position.y = 0.03; m.rotation.y = 0.4; break;
+      case 'frond': { const f = new THREE.Mesh(new THREE.PlaneGeometry(0.35, 1.3), new THREE.MeshStandardMaterial({ map: frondTex(), alphaTest: 0.5, side: THREE.DoubleSide, roughness: 0.8 })); f.rotation.x = -Math.PI / 2; f.rotation.z = 0.6; f.position.y = 0.04; m = f; break; }
+      case 'page': { const g = new THREE.Group(); const pg = new THREE.Mesh(new THREE.PlaneGeometry(0.24, 0.32), new THREE.MeshStandardMaterial({ color: '#f3ead2', roughness: 0.9, emissive: '#fff4d0', emissiveIntensity: 0.35, side: THREE.DoubleSide })); pg.rotation.x = -Math.PI / 2 + 0.25; pg.rotation.z = 0.4; pg.position.y = 0.05; g.add(pg); const ink = new THREE.Mesh(new THREE.PlaneGeometry(0.16, 0.2), new THREE.MeshBasicMaterial({ color: '#3a3a5a', transparent: true, opacity: 0.25 })); ink.rotation.copy(pg.rotation); ink.position.y = 0.055; g.add(ink); m = g; break; }
       case 'bandage': m = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.12, 0.2), mat('#f2f2f2', 0.9)); m.position.y = 0.07; break;
       default: m = new THREE.Mesh(new THREE.SphereGeometry(0.2), mat('#ff00ff'));
     }
