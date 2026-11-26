@@ -442,8 +442,9 @@ export function buildIsland(scene, quality) {
     if (r() > dens * 0.8 + beach * 0.5) continue;
     if (distToVolcano(x, z) < 95) continue;
     const v = (r() * variants.length) | 0, sc = 0.8 + r() * 0.45;
-    palmLists[v].push({ x, z, y: h, yaw: r() * Math.PI * 2, s: sc });
-    world.trees.push({ x: x, z: z, r: 0.42 * sc, v, i: palmLists[v].length - 1, s: sc, alive: true, h: variants[v].h * sc });
+    const tree = { x: x, z: z, r: 0.42 * sc, v, s: sc, alive: true, h: variants[v].h * sc, parts: [] };
+    palmLists[v].push({ x, z, y: h, yaw: r() * Math.PI * 2, s: sc, tree });
+    world.trees.push(tree);
   }
   tries = 0;
   while (bushes.length < counts.bush && tries++ < 80000) {
@@ -474,33 +475,44 @@ export function buildIsland(scene, quality) {
     if (h < 2.6 || h > 70 || slopeAt(x, z) > 0.45 || distToVolcano(x, z) < 100) continue;
     tufts.push({ x, z, y: h - 0.03, yaw: r() * Math.PI * 2, s: 0.5 + r() * 0.7 });
   }
-  const place = (list, mesh, extraY = 0) => {
-    list.forEach((o, i) => {
-      E.set(0, o.yaw, 0); Q.setFromEuler(E); S.set(o.s, o.sy ? o.s * o.sy : o.s, o.s); P.set(o.x, o.y + extraY, o.z);
-      M.compose(P, Q, S); mesh.setMatrixAt(i, M);
-    });
-    mesh.instanceMatrix.needsUpdate = true; mesh.frustumCulled = false;
-    scene.add(mesh);
+  const CELL_M = 100;
+  world.chunks = [];
+  // returns the meshes made; opts: { castShadow, receiveShadow, drawDist, margin }
+  const place = (list, geo, mat, opts = {}) => {
+    const cells = new Map();
+    for (const o of list) { const k = Math.floor(o.x / CELL_M) + ':' + Math.floor(o.z / CELL_M); if (!cells.has(k)) cells.set(k, []); cells.get(k).push(o); }
+    const meshes = [];
+    for (const items of cells.values()) {
+      const mesh = new THREE.InstancedMesh(geo, mat, items.length);
+      items.forEach((o, i) => {
+        E.set(0, o.yaw, 0); Q.setFromEuler(E); S.set(o.s, o.sy ? o.s * o.sy : o.s, o.s); P.set(o.x, o.y, o.z);
+        M.compose(P, Q, S); mesh.setMatrixAt(i, M);
+        if (o.tree) o.tree.parts.push({ mesh, i });
+      });
+      mesh.instanceMatrix.needsUpdate = true;
+      mesh.computeBoundingSphere(); mesh.boundingSphere.radius += opts.margin || 3; // room for the wind to move them
+      mesh.frustumCulled = true; mesh.castShadow = !!opts.castShadow; mesh.receiveShadow = !!opts.receiveShadow;
+      if (opts.drawDist) world.chunks.push({ mesh, c: mesh.boundingSphere.center.clone(), r: mesh.boundingSphere.radius, far: opts.drawDist });
+      scene.add(mesh); meshes.push(mesh);
+    }
+    return meshes;
   };
-  world.palmTrunks = []; world.palmCrowns = [];
+  // hide small-plant cells beyond their draw distance (cheap: about a hundred distance checks)
+  world.cullVegetation = (x, z, scale = 1) => { for (const ch of world.chunks) ch.mesh.visible = Math.hypot(ch.c.x - x, ch.c.z - z) - ch.r < ch.far * scale; };
   variants.forEach((v, k) => {
     const list = palmLists[k];
-    const t = new THREE.InstancedMesh(v.trunk, bark, Math.max(1, list.length)); t.castShadow = hi; t.receiveShadow = false;
-    const c = new THREE.InstancedMesh(v.crown, frondM, Math.max(1, list.length)); c.castShadow = hi;
-    place(list, t); place(list, c);
-    world.palmTrunks.push(t); world.palmCrowns.push(c);
+    place(list, v.trunk, bark, { castShadow: hi, margin: 4 }); place(list, v.crown, frondM, { castShadow: hi, margin: 5 });
   });
   const bushG = mergeGeos([0, 1, 2].map((k) => { const g = new THREE.PlaneGeometry(2.4, 2.0); g.translate(0, 1.0, 0); g.rotateY(k * Math.PI / 3); return g; }));
-  const bushMesh = new THREE.InstancedMesh(bushG, bushM, Math.max(1, bushes.length)); place(bushes, bushMesh);
+  const bushMesh = place(bushes, bushG, bushM, { drawDist: 260, margin: 2 });
   const flowerG = mergeGeos([0, 1].map((k) => { const g = new THREE.PlaneGeometry(1.3, 1.1); g.translate(0, 0.55, 0); g.rotateY(k * Math.PI / 2); return g; }));
-  const flowerMesh = new THREE.InstancedMesh(flowerG, flowerM, Math.max(1, flowers.length)); place(flowers, flowerMesh);
+  const flowerMesh = place(flowers, flowerG, flowerM, { drawDist: 150, margin: 1 });
   const tuftG = mergeGeos([0, 1].map((k) => { const g = new THREE.PlaneGeometry(0.9, 0.6); g.translate(0, 0.3, 0); g.rotateY(k * Math.PI / 2 + 0.4); return g; }));
-  const tuftMesh = new THREE.InstancedMesh(tuftG, tuftM, Math.max(1, tufts.length)); place(tufts, tuftMesh);
-  world.smallPlants = [tuftMesh, flowerMesh, bushMesh];
+  const tuftMesh = place(tufts, tuftG, tuftM, { drawDist: 130, margin: 1 });
+  world.smallPlants = [...tuftMesh, ...flowerMesh, ...bushMesh];
   const rockG = new THREE.IcosahedronGeometry(1, 2);
   { const p = rockG.attributes.position, rr = rng(55); for (let i = 0; i < p.count; i++) { const k = 0.8 + rr() * 0.4; p.setXYZ(i, p.getX(i) * k, p.getY(i) * k, p.getZ(i) * k); } rockG.computeVertexNormals(); }
-  const rockMesh = new THREE.InstancedMesh(rockG, rockM, Math.max(1, rocks.length)); rockMesh.castShadow = hi; rockMesh.receiveShadow = true; place(rocks, rockMesh);
-  world.rockMesh = rockMesh;
+  place(rocks, rockG, rockM, { castShadow: hi, receiveShadow: true, margin: 1 });
 
   // obstacle grid for collisions (trees and big rocks)
   const key = (x, z) => ((x / 16) | 0) + ':' + ((z / 16) | 0);
@@ -515,9 +527,8 @@ export function buildIsland(scene, quality) {
   // fell a palm: shrink its instance away and drop its collision
   world.fellTree = (t) => {
     t.alive = false; t.r = 0;
-    const mesh = world.palmTrunks[t.v], crown = world.palmCrowns[t.v];
-    M.makeScale(0.0001, 0.0001, 0.0001); mesh.setMatrixAt(t.i, M); crown.setMatrixAt(t.i, M);
-    mesh.instanceMatrix.needsUpdate = true; crown.instanceMatrix.needsUpdate = true;
+    M.makeScale(0.0001, 0.0001, 0.0001);
+    for (const pt of t.parts) { pt.mesh.setMatrixAt(pt.i, M); pt.mesh.instanceMatrix.needsUpdate = true; }
   };
   world.variants = variants;
   world.H = H;
