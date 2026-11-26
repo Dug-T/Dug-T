@@ -106,7 +106,9 @@
   #title { background: #000; }
   #title .bg { position: absolute; inset: 0; background: url(img/concept.jpg) center/cover no-repeat; filter: saturate(1.1); }
   #title .bg::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, #0005 0%, #0002 40%, #0a0806f0 100%); }
-  #title .panel { position: relative; text-align: center; max-width: 560px; padding: 20px; margin-top: 12vh; }
+  #title .panel { position: relative; text-align: center; max-width: 560px; padding: 20px; margin: auto; margin-top: max(12vh, 16px); display: grid; grid-template-areas: 'tl' 'tr' 'cp'; }
+  #title .tl { grid-area: tl; } #title .tr { grid-area: tr; }
+  #copyright { grid-area: cp; margin: 12px 0 0; font-weight: 700; color: var(--gold); font-size: 15px; letter-spacing: 1px; text-shadow: var(--shadow); }
   #title .logo { font-size: clamp(54px, 12vw, 120px); line-height: .9; margin: 0; color: #fff; text-shadow: 0 0 30px #ff6a1a, 0 4px 0 #000, 0 0 60px #ff6a1a66; }
   #title .logo span { display: block; font-size: .32em; letter-spacing: 7px; color: var(--gold); text-shadow: 0 2px 0 #000; margin-top: 6px; }
   #title .tagline { font-size: clamp(16px, 2.6vw, 22px); font-style: italic; margin: 14px 0 18px; text-shadow: var(--shadow); color: var(--sand); }
@@ -114,7 +116,19 @@
   #title .row { display: flex; gap: 8px; max-width: 380px; margin: 8px auto; } #title .row .btn { flex: 1; margin: 0; }
   #news { text-align: left; font-size: 13px; opacity: .8; max-width: 380px; margin: 6px auto; max-height: 90px; overflow: auto; }
   #news ul { margin: 2px 0 0 16px; padding: 0; }
-  @media (max-width: 760px), (max-height: 520px) { #title .panel { margin-top: 2vh; transform: scale(.82); } .keys { grid-template-columns: 1fr; } .card { padding: 14px 18px; } .card h2 { font-size: 26px; } }
+  /* short landscape phones: title and news on the left, buttons on the right, so nothing runs off the top */
+  @media (max-height: 520px) and (orientation: landscape) {
+    #title .panel { max-width: 96vw; width: 900px; margin: auto; padding: 12px 16px; grid-template-columns: 1fr 1fr; grid-template-areas: 'tl tr' 'cp tr'; column-gap: 24px; align-items: center; }
+    #title .logo { font-size: min(58px, 14.5vh); }
+    #title .logo span { letter-spacing: 4px; margin-top: 4px; }
+    #title .tagline { font-size: 14px; margin: 8px 0 6px; }
+    #news { max-height: 70px; margin: 4px auto 0; font-size: 12px; }
+    #title .btn { margin: 6px auto; padding: 9px 14px; font-size: 15px; } #title .btn.dim { padding: 7px 10px; font-size: 13px; }
+    #title .row { margin: 6px auto; }
+    #copyright { margin: 6px 0 0; font-size: 14px; }
+  }
+  @media (max-width: 760px) and (orientation: portrait) { #title .panel { margin-top: 2vh; } }
+  @media (max-width: 760px), (max-height: 520px) { .keys { grid-template-columns: 1fr; } .card { padding: 14px 18px; } .card h2 { font-size: 26px; } }
   /* craft & map */
   #craftList .rec, #escList .rec { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 7px 0; border-bottom: 1px solid #fff2; }
   .rec .n { font-weight: 700; font-size: 17px; } .rec .need { font-size: 13px; opacity: .85; } .rec .need .ok { color: #8fe38f; } .rec .need .no { color: #ff8a7a; }
@@ -176,15 +190,20 @@
 <div id="title" class="screen">
   <div class="bg"></div>
   <div class="panel">
+    <div class="tl">
     <h1 class="logo">ASHBOUND<span>SURVIVE THE ERUPTION</span></h1>
     <p class="tagline">“The island is paradise. The mountain has other plans.”</p>
     <span class="ver" id="verTitle"></span>
     <div id="news"></div>
+    </div>
+    <div class="tr">
     <button class="btn" id="play">▶ NEW GAME</button>
     <button class="btn alt hidden" id="continue">↻ CONTINUE</button>
     <div class="row"><button class="btn dim" id="diff">PACE: STANDARD</button><button class="btn dim" id="gfx">GRAPHICS: HIGH</button></div>
     <div class="row"><button class="btn dim" id="howto">? HOW TO PLAY</button><button class="btn dim" id="snd">SOUND: ON</button><button class="btn dim" id="vox">VOICES: ON</button></div>
     <button class="btn dim" id="achBtn" style="max-width:380px">🏆 ACHIEVEMENTS</button>
+    </div>
+    <p id="copyright">© Douglas Thomson</p>
   </div>
 </div>
 <div id="help" class="screen hidden">
