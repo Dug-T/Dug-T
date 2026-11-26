@@ -1,7 +1,10 @@
 // Bump VERSION for every update (1.1, 1.2, 1.3 ...) and add a line to CHANGES.
-export const VERSION = '2.3';
+export const VERSION = '2.4';
 
 export const CHANGES = [
+  ['2.4', [
+    'Fixed: once you picked ULTRA graphics, the GRAPHICS button stayed on ULTRA. It now cycles LOW, HIGH, ULTRA and back to LOW again',
+  ]],
   ['2.3', [
     'The lighthouse on the western cliffs: light its lamp with 2 logs and some cloth and its beams sweep the night; the rescue helicopter then reaches the island much faster',
     'Sulphur gas pools in the hollows below the cone from the unrest onwards: a yellowish haze and a rotten-egg smell. It strips the air from your lungs; a mask helps. Pockets you find are marked on the map',

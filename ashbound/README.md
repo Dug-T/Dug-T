@@ -58,6 +58,7 @@ Version 1.0 is single player with NPC survivors. The world is seeded and determi
 
 ## Versions
 
+- **2.4**: fixed the GRAPHICS button getting stuck on Ultra.
 - **2.3**: the lighthouse and its beacon; sulphur gas pockets; observatory emergency broadcasts; map waypoints; sea reflections on Ultra; plants that part around you; cooling lava crust; raindrops on the lens; ash on clothes.
 - **2.2**: ULTRA graphics (ambient occlusion, bigger and sharper shadows, denser jungle); lens flare; depth of field in photo mode; speed blur; footprints and tyre tracks; dawn mist and rainbows; headlight beams.
 - **2.1**: the 24-minute game restored; fishing, crabs and cooking; crabs, goats and fish schools; build lean-to shelters; the quad bike; twelve journal pages; photo mode; rain squalls; seventeen achievements.

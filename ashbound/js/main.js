@@ -1317,7 +1317,7 @@ $('resume').onclick = () => { audio.init(); closeMenu(); };
 $('craftClose').onclick = () => closeMenu();
 $('mapClose').onclick = () => closeMenu();
 $('mapCanvas').addEventListener('click', (e) => { const r = $('mapCanvas').getBoundingClientRect(); setWaypoint(W / 2 - (e.clientX - r.left) / r.width * W, W / 2 - (e.clientY - r.top) / r.height * W); drawMap(); });
-const toggleGfx = () => { quality = quality === 'low' ? 'high' : quality !== 'low' ? 'ultra' : 'low'; store.set('ash-gfx', quality); toast(quality === 'ultra' ? 'Ultra: ambient occlusion, sharper and longer shadows, denser jungle. Best on a PC or Mac. Reload for the full effect.' : 'Graphics change fully after a reload', 4); applyQuality(); };
+const toggleGfx = () => { quality = { low: 'high', high: 'ultra', ultra: 'low' }[quality] || 'high'; store.set('ash-gfx', quality); toast(quality === 'ultra' ? 'Ultra: ambient occlusion, sharper and longer shadows, denser jungle. Best on a PC or Mac. Reload for the full effect.' : 'Graphics change fully after a reload', 4); applyQuality(); };
 $('gfx').onclick = toggleGfx; $('gfx2').onclick = toggleGfx;
 const toggleSnd = () => { soundOn = !soundOn; store.set('ash-snd', soundOn); audio.init(); audio.setOn(soundOn); for (const id of ['snd', 'snd2']) $(id).textContent = 'SOUND: ' + (soundOn ? 'ON' : 'OFF'); };
 $('snd').onclick = toggleSnd; $('snd2').onclick = toggleSnd;
