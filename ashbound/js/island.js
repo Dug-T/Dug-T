@@ -129,7 +129,7 @@ function lavaPaths() {
 
 // ---------------- building the scene ----------------
 export function buildIsland(scene, quality) {
-  const hi = quality === 'high';
+  const hi = quality !== 'low', ultra = quality === 'ultra';
   generateHeights();
   const world = { paths: lavaPaths(), trees: [], rocks: [], grid: new Map(), mats: {}, uniforms: {} };
 
@@ -150,7 +150,7 @@ export function buildIsland(scene, quality) {
   geo.computeVertexNormals();
   const tex = { sand: sandTexture(), grass: grassTexture(), rock: rockTexture(), ash: ashTexture(), noise: noiseTexture() };
   const U = world.uniforms;
-  U.uAsh = { value: 0 }; U.uTime = { value: 0 }; U.uWind = { value: 0.4 }; U.uCloud = { value: 0.35 }; U.uFlash = { value: 0 }; U.uNight = { value: 0 }; U.uWet = { value: 0 }; U.uRain = { value: 0 };
+  U.uAsh = { value: 0 }; U.uTime = { value: 0 }; U.uWind = { value: 0.4 }; U.uCloud = { value: 0.35 }; U.uFlash = { value: 0 }; U.uNight = { value: 0 }; U.uWet = { value: 0 }; U.uRain = { value: 0 }; U.uRainbow = { value: 0 };
   U.uGlow = { value: Array.from({ length: 8 }, () => new THREE.Vector4(0, 0, 1, 0)) }; // lava glow spots: x, z, radius, strength
   const bumpTex = tex.noise.clone(); bumpTex.repeat.set(140, 140); bumpTex.needsUpdate = true;
   const ground = new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.95, metalness: 0, bumpMap: bumpTex, bumpScale: hi ? 0.9 : 0.5 });
@@ -263,10 +263,10 @@ export function buildIsland(scene, quality) {
   // ---- the sky ----
   U.uSkyTop = { value: new THREE.Color('#2a72d6') }; U.uHorizon = { value: new THREE.Color('#cfe4f5') }; U.uPlume = { value: 0 }; U.uDusk = { value: 0 };
   const sky = new THREE.Mesh(new THREE.SphereGeometry(1900, 32, 16), new THREE.ShaderMaterial({
-    uniforms: { top: U.uSkyTop, horizon: U.uHorizon, sunDir: U.uSun, sunCol: U.uSunCol, time: U.uTime, cover: U.uCloud, ash: U.uAsh, dusk: U.uDusk, plume: U.uPlume, flash: U.uFlash, night: U.uNight, volc: { value: new THREE.Vector3(VOLCANO.x, 0, VOLCANO.z) } },
+    uniforms: { top: U.uSkyTop, horizon: U.uHorizon, sunDir: U.uSun, sunCol: U.uSunCol, time: U.uTime, cover: U.uCloud, ash: U.uAsh, dusk: U.uDusk, plume: U.uPlume, flash: U.uFlash, night: U.uNight, rainbow: U.uRainbow, volc: { value: new THREE.Vector3(VOLCANO.x, 0, VOLCANO.z) } },
     side: THREE.BackSide, depthWrite: false, fog: false,
     vertexShader: 'varying vec3 vP; void main(){ vP = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
-    fragmentShader: `uniform vec3 top, horizon, sunDir, sunCol, volc; uniform float time, cover, ash, dusk, plume, flash, night; varying vec3 vP;
+    fragmentShader: `uniform vec3 top, horizon, sunDir, sunCol, volc; uniform float time, cover, ash, dusk, plume, flash, night, rainbow; varying vec3 vP;
       float h21(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
       float vnoise(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f); return mix(mix(h21(i), h21(i + vec2(1, 0)), f.x), mix(h21(i + vec2(0, 1)), h21(i + vec2(1, 1)), f.x), f.y); }
       float fbm(vec2 p){ float a = 0.5, s = 0.0; for (int k = 0; k < 5; k++) { s += a * vnoise(p); p *= 2.03; a *= 0.5; } return s; }
@@ -302,6 +302,8 @@ export function buildIsland(scene, quality) {
         if (h > 0.02 && starK > 0.0) { vec2 g = floor(d.xz / (d.y + 0.3) * 240.0); float st = step(0.9955, h21(g)) * (0.5 + 0.5 * h21(g + 7.0)); float tw = 0.75 + 0.25 * sin(time * 3.0 + h21(g) * 40.0); c += vec3(st * tw) * starK * smoothstep(0.02, 0.3, h) * (1.0 - ash) * (1.0 - pl); }
         // the moon, opposite the sun, with a soft halo
         { vec3 md = normalize(-sunDir); float mm = max(dot(d, md), 0.0); c += vec3(0.85, 0.9, 1.0) * (smoothstep(0.99965, 0.9998, mm) * 1.6 + pow(mm, 90.0) * 0.12) * night * (1.0 - ash * 0.9) * (1.0 - pl); }
+        // a rainbow after the rain, 42 degrees round from the point opposite the sun
+        if (rainbow > 0.01 && h > 0.0) { float ang = degrees(acos(clamp(dot(d, -sd), -1.0, 1.0))); float t = (ang - 39.5) / 4.0; if (t > 0.0 && t < 1.0) { vec3 rb = clamp(abs(mod(t * 0.8 * 6.0 + vec3(0.0, 4.0, 2.0), 6.0) - 3.0) - 1.0, 0.0, 1.0); c += rb * sin(t * 3.14159) * 0.32 * rainbow * smoothstep(0.0, 0.12, h) * (1.0 - night) * (1.0 - ash); } }
         // lightning in the column lights the whole cloud
         c += vec3(0.8, 0.85, 1.0) * flash * (0.25 + 0.75 * pl);
         gl_FragColor = vec4(c, 1.0);
@@ -379,7 +381,8 @@ export function buildIsland(scene, quality) {
     const crown = mergeGeos(fronds);
     variants.push({ trunk, crown, h: Hh, lx, lz });
   }
-  const counts = { palm: hi ? 1100 : 650, bush: hi ? 2600 : 1300, flower: hi ? 600 : 300, rock: hi ? 420 : 240, tuft: hi ? 6000 : 2500 };
+  const more = ultra ? 1.4 : 1;
+  const counts = { palm: Math.round((hi ? 1100 : 650) * more), bush: Math.round((hi ? 2600 : 1300) * more), flower: hi ? 600 : 300, rock: hi ? 420 : 240, tuft: Math.round((hi ? 6000 : 2500) * more) };
   const tuftM = new THREE.MeshStandardMaterial({ map: tuftTexture(), alphaTest: 0.5, side: THREE.DoubleSide, roughness: 0.9 }); sway(tuftM, 0.8, 1, 1); ashify(tuftM);
   const palmLists = variants.map(() => []);
   const bushes = [], flowers = [], rocks = [], tufts = [];

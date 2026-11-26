@@ -64,7 +64,7 @@ export class Puffs {
 
 export class Volcano {
   constructor(scene, world, quality, hooks = {}) {
-    this.scene = scene; this.world = world; this.hi = quality === 'high'; this.hooks = hooks;
+    this.scene = scene; this.world = world; this.hi = quality !== 'low'; this.hooks = hooks;
     this.progress = 0; this.stage = stageAt(0); this.shake = 0; this.rumbleLevel = 0; this.tremorT = 20; this.tremorEnv = 0; this.bombT = 8; this.ash = 0; this.flowFront = 0; this.surgeR = 0;
     this.t = 0; this.wind = 1.2;
     const puff = puffTexture(), spark = sparkTexture();

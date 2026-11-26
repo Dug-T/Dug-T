@@ -1,7 +1,16 @@
 // Bump VERSION for every update (1.1, 1.2, 1.3 ...) and add a line to CHANGES.
-export const VERSION = '2.1';
+export const VERSION = '2.2';
 
 export const CHANGES = [
+  ['2.2', [
+    'New ULTRA graphics setting for PCs and Macs: ambient occlusion that darkens creases and contact points, 4096 shadows reaching further, and a denser jungle',
+    'Lens flare: ghosts and a halo when you look towards the sun, hidden when anything blocks it',
+    'Depth of field in photo mode: BLUR focuses on whatever is in the middle of the frame, with the rest softly out of focus',
+    'Speed blur when you drive fast, ride the skiff or flee the surge',
+    'Footprints in sand, ash and wet ground, and tyre tracks behind the jeep and the quad bike',
+    'Mist lies in the low ground at dawn and after the rain, and a rainbow appears when the sun comes out after a squall',
+    'Headlights throw visible beams through the dark and the ash',
+  ]],
   ['2.1', [
     'The full 24-minute game is back (Standard pace); Relaxed and Hardcore unchanged',
     'Fishing and cooking: craft a spear and take fish from the shallows, grab crabs on the beaches, and cook them on a fire. Raw food makes you ill',

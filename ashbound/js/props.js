@@ -11,7 +11,7 @@ const shadow = (g) => { g.traverse((m) => { if (m.isMesh) { m.castShadow = true;
 const place = (g, x, z, y = null, yaw = 0) => { g.position.set(x, y == null ? heightAt(x, z) : y, z); g.rotation.y = yaw; return g; };
 
 export function buildProps(scene, world, quality) {
-  const hi = quality === 'high';
+  const hi = quality !== 'low';
   const P = { shelters: [], water: [], fires: [], anim: [], signs: [] };
   const thatch = new THREE.MeshStandardMaterial({ map: thatchTexture(), roughness: 1 });
   const woodM = mat('#7a5a34', 0.9), darkWood = mat('#4a3520', 0.9), metal = new THREE.MeshStandardMaterial({ map: metalTexture(), roughness: 0.5, metalness: 0.6 });
