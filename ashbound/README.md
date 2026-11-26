@@ -17,6 +17,9 @@ Open `ashbound/index.html` from any web server (GitHub Pages works). Nothing nee
 - **Shelters**: build a lean-to from logs, vines and palm fronds to keep the ash off and sleep under.
 - **The quad bike**: parked at the ranger station, faster and nimbler than the jeep, climbs steeper slopes, seats two.
 - **Dr Osei's journal**: twelve pages hidden around the island, read aloud as you find them.
+- **The lighthouse**: light the lamp on the western cliffs with two logs and some cloth, and the helicopter finds the island much faster.
+- **Volcanic gas**: from the unrest onwards, sulphur gas pools in the hollows below the cone. Smell rotten eggs, get uphill.
+- **Radio and waypoints**: the observatory broadcasts warnings you can hear in the jeep and at the ranger station; tap the map to set a waypoint.
 - **Weather**: tropical rain squalls before the ash comes. Stand out in one to fill your canteen.
 - **Photo mode** (pause menu) and **achievements** (title screen).
 - **Crafting**: braid vines into rope, make a stone axe (then chop palms for logs), make an ash mask from cloth, and bandages.
@@ -55,6 +58,7 @@ Version 1.0 is single player with NPC survivors. The world is seeded and determi
 
 ## Versions
 
+- **2.3**: the lighthouse and its beacon; sulphur gas pockets; observatory emergency broadcasts; map waypoints; sea reflections on Ultra; plants that part around you; cooling lava crust; raindrops on the lens; ash on clothes.
 - **2.2**: ULTRA graphics (ambient occlusion, bigger and sharper shadows, denser jungle); lens flare; depth of field in photo mode; speed blur; footprints and tyre tracks; dawn mist and rainbows; headlight beams.
 - **2.1**: the 24-minute game restored; fishing, crabs and cooking; crabs, goats and fish schools; build lean-to shelters; the quad bike; twelve journal pages; photo mode; rain squalls; seventeen achievements.
 - **2.0**: survivor objectives (the data logger, the pendant, the logbook) and Biscuit, Old Pete's lost dog; surface footsteps for sand, grass, rock, ash and water; sleep till dawn at a fire or under a roof, at the cost of time.

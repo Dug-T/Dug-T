@@ -123,4 +123,7 @@ export const ACHIEVEMENTS = [
   { id: 'photo', name: 'Shutterbug', desc: 'Take a photo in photo mode' },
   { id: 'early', name: 'Early bird', desc: 'Escape with a quarter of the time still left' },
   { id: 'healthy', name: 'Not a scratch', desc: 'Escape with 90 health or more' },
+  { id: 'beacon', name: 'Keeper of the light', desc: 'Light the lighthouse beacon' },
+  { id: 'gas', name: 'Rotten eggs', desc: 'Walk out of a sulphur gas pocket alive' },
+  { id: 'radio_ear', name: 'Stay tuned', desc: 'Hear three emergency broadcasts' },
 ];

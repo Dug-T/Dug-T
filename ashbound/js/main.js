@@ -7,7 +7,7 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
 import { BokehPass } from 'three/addons/postprocessing/BokehPass.js';
 import { buildIsland, heightAt, normalAt, POIS, VOLCANO, SEA, W, distToVolcano } from './island.js';
-import { buildProps, pickupMesh, setRaftStage, buildFirePit, buildLeanTo } from './props.js';
+import { buildProps, pickupMesh, setRaftStage, buildFirePit, buildLeanTo, buildLighthouse } from './props.js';
 import { buildSurvivor, animateSurvivor, buildAxe, LOOKS, groundTilt } from './survivor.js';
 import { Volcano, Puffs } from './volcano.js';
 import { Jeep, Boat } from './vehicle.js';
@@ -319,7 +319,7 @@ const marksOn = (x, z) => { const sf = surfaceAt(x, z); return sf === 'sand' || 
 // what is underfoot, for footsteps
 function surfaceAt(x, z) { const h = heightAt(x, z); if (h < 0.15) return 'water'; if (volcano.ash > 0.35) return 'ash'; if (h > 92 || 1 - normalAt(x, z).y > 0.32) return 'rock'; if (h < 4.5) return 'sand'; return 'grass'; }
 // sleeping until dawn: a full night's rest, but the mountain keeps going while you sleep
-let restTap = 0, restHeld = 0;
+let restTap = 0, restHeld = 0, lensBurst = 0;
 function trySleep(sheltered) {
   if (game.sleeping || game.over) return;
   const hrs = 8 + game.progress * 35;
@@ -345,6 +345,7 @@ const player = {
 };
 scene.add(player.rig.root);
 player.rig.arms[0].grip.add(torchModel);
+for (const r of [player.rig.root, ...npcs.list.map((n) => n.rig.root)]) r.traverse((o) => { if (o.isMesh) for (const m of Array.isArray(o.material) ? o.material : [o.material]) if (!m.transparent) world.ashify(m); });
 const axeModel = buildAxe(); axeModel.visible = false; player.rig.arms[1].grip.add(axeModel);
 const spearModel = (() => { const g = new THREE.Group(); const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.022, 1.6, 8), new THREE.MeshStandardMaterial({ color: '#8a6a40', roughness: 0.9 })); shaft.position.y = 0.4; g.add(shaft); const tip = new THREE.Mesh(new THREE.ConeGeometry(0.035, 0.18, 6), new THREE.MeshStandardMaterial({ color: '#3a3836', roughness: 0.6 })); tip.position.y = 1.28; g.add(tip); g.rotation.x = Math.PI / 2; g.visible = false; return g; })();
 player.rig.arms[1].grip.add(spearModel);
@@ -352,7 +353,118 @@ const cam = { yaw: Math.PI + 0.4, pitch: 0.28, dist: 4.6, distSel: 0, kick: 0, s
 const DISTS = [4.6, 7.5, 2.8];
 
 dog = new Dog(scene);
+dog.group.traverse((o) => { if (o.isMesh) world.ashify(o.material); });
 const wild = new Wildlife(scene, world, quality, { onBleat: (d) => audio.bleat(d) });
+// ---------------- the lighthouse on the western cliffs ----------------
+const lighthouse = (() => {
+  let best = null;
+  for (let x = -340; x < -140; x += 4) for (let z = -220; z < 260; z += 4) {
+    const h = heightAt(x, z); if (h < 14 || h > 55 || 1 - normalAt(x, z).y > 0.2 || heightAt(x - 40, z) > 0) continue;
+    const score = h - Math.abs(z - 20) * 0.05; if (!best || score > best.score) best = { x, z, h, score };
+  }
+  if (!best) best = { x: -236, z: 10, h: heightAt(-236, 10) };
+  const L = buildLighthouse(); L.group.position.set(best.x, best.h, best.z); L.group.rotation.y = Math.PI / 2; scene.add(L.group);
+  for (const o of world.obstaclesNear(best.x, best.z)) if (o.alive && o.v != null && Math.hypot(o.x - best.x, o.z - best.z) < 6) world.fellTree(o);
+  world.grid.get(((best.x / 16) | 0) + ':' + ((best.z / 16) | 0)) || world.grid.set(((best.x / 16) | 0) + ':' + ((best.z / 16) | 0), []);
+  world.grid.get(((best.x / 16) | 0) + ':' + ((best.z / 16) | 0)).push({ x: best.x, z: best.z, r: 2.2 });
+  POIS.lighthouse = { x: best.x, z: best.z, r: 8, y: best.h, name: 'Lighthouse', icon: '🗼' };
+  return Object.assign(L, { x: best.x, z: best.z, door: { x: best.x + 2.6, z: best.z } });
+})();
+function lightBeacon() {
+  if (!player.inv.has({ wood: 2, cloth: 1 })) { toast('The lamp needs 2 logs and some cloth for a wick'); return; }
+  player.inv.take({ wood: 2, cloth: 1 }); game.flags.beacon = true; audio.craft(); unlock('beacon');
+  if (game.flags.heliState === 'coming') game.flags.heliT *= 0.6;
+  banner('BEACON LIT', 'The old lamp blazes over the western cliffs. Any pilot coming in will find this island now.', 5);
+}
+// ---------------- sulphur gas pooling in the hollows below the cone ----------------
+const gasPockets = (() => {
+  const out = [], r = rng(4242);
+  const cands = [];
+  for (let i = 0; i < 900; i++) {
+    const a = r() * Math.PI * 2, d = 110 + r() * 130, x = VOLCANO.x + Math.cos(a) * d, z = VOLCANO.z + Math.sin(a) * d, h = heightAt(x, z);
+    if (h < 6 || h > 95) continue;
+    let ring = 0; for (let k = 0; k < 8; k++) ring += heightAt(x + Math.cos(k * 0.785) * 18, z + Math.sin(k * 0.785) * 18);
+    cands.push({ x, z, h, hollow: ring / 8 - h });
+  }
+  cands.sort((p, q) => q.hollow - p.hollow);
+  for (const c of cands) { if (out.length >= 3) break; if (c.hollow < 1 || out.some((o) => Math.hypot(o.x - c.x, o.z - c.z) < 90)) continue; if (Object.values(POIS).some((p) => Math.hypot(p.x - c.x, p.z - c.z) < p.r + 25)) continue; out.push({ x: c.x, z: c.z, r: 17, seen: false }); }
+  return out;
+})();
+const gasFx = new Puffs(scene, 220, puffTexture(), '#e4dc8a', '#a89c54');
+let inGas = false;
+function updateGas(dt, stageIdx) {
+  const active = stageIdx >= 1 && stageIdx < 4;
+  let here = null;
+  for (const g of gasPockets) {
+    const d = Math.hypot(g.x - player.x, g.z - player.z);
+    if (active && d < 160 && Math.random() < dt * 9) { const a = Math.random() * 6.3, rr = Math.random() * g.r; const x = g.x + Math.cos(a) * rr, z = g.z + Math.sin(a) * rr; gasFx.emit(x, heightAt(x, z) + 0.4 + Math.random(), z, (Math.random() - 0.5) * 0.4, 0.05, (Math.random() - 0.5) * 0.4, 5 + Math.random() * 5, 7 + Math.random() * 4, Math.random(), 0.22, 0.8, 1); }
+    if (active && d < g.r && !player.inBunker && !player.inHeli && !player.inBoat && !player.onRaft) here = g;
+  }
+  gasFx.update(dt, 0.3, -0.05, 0.1); gasFx.u.uScale.value = innerHeight * 1.1; gasFx.u.uLight.value = 0.3 + 0.7 * dayNight.dayK;
+  if (here) {
+    const s = player.stats; s.air = Math.max(0, s.air - dt * 22 * (player.inv.count('mask') ? 0.35 : 1));
+    if (s.air <= 0) hurt(dt * 8, 'overcome by volcanic gas');
+    if (!here.seen) { here.seen = true; toast('Rotten eggs! Sulphur gas pools in this hollow. Get uphill!', 3.5); voice.say('That smell. Gas! Get out of the hollow!', 'You', true); }
+    if (!game.flags.gasSeen) game.flags.gasSeen = [];
+    const gi = gasPockets.indexOf(here); if (!game.flags.gasSeen.includes(gi)) game.flags.gasSeen.push(gi);
+    inGas = true;
+  } else if (inGas) { inGas = false; if (player.stats.health > 0) unlock('gas'); }
+}
+// ---------------- a waypoint you set on the map ----------------
+const pillar = (() => {
+  const g = new THREE.CylinderGeometry(0.9, 0.9, 170, 16, 1, true); g.translate(0, 85, 0);
+  const m = new THREE.Mesh(g, new THREE.ShaderMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, uniforms: { uT: { value: 0 } },
+    vertexShader: 'varying float vY; varying vec2 vU; void main(){ vY = position.y / 170.0; vU = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+    fragmentShader: 'uniform float uT; varying float vY; varying vec2 vU; void main(){ float a = pow(1.0 - vY, 0.6) * (0.4 + 0.15 * sin(uT * 3.0 - vY * 40.0)); gl_FragColor = vec4(vec3(0.3, 0.9, 1.0) * a, a); }' }));
+  m.visible = false; m.renderOrder = 6; m.frustumCulled = false; scene.add(m); return m;
+})();
+function setWaypoint(x, z) {
+  const w = game.flags.waypoint;
+  if (w && Math.hypot(w.x - x, w.z - z) < 18) { game.flags.waypoint = null; toast('Waypoint cleared', 1.5); }
+  else { game.flags.waypoint = { x, z }; toast('Waypoint set. Follow the 📍 on your compass.', 2); audio.ui(); }
+}
+function updateWaypoint(dt) {
+  const w = game.flags.waypoint; pillar.visible = !!w && !player.inBunker;
+  if (!w) return;
+  pillar.position.set(w.x, Math.max(heightAt(w.x, w.z), SEA), w.z); pillar.material.uniforms.uT.value = game.t;
+  if (Math.hypot(w.x - player.x, w.z - player.z) < 6) { game.flags.waypoint = null; toast('You reached your waypoint', 1.5); audio.ui(); }
+}
+// ---------------- emergency broadcasts from the volcano observatory ----------------
+const BROADCASTS = {
+  calm: 'Kalani Volcano Observatory, routine bulletin. Steam emissions at the summit are elevated. Visitors should stay off the upper slopes.',
+  unrest: 'Alert level raised to orange. Harmonic tremor and swelling beneath the summit. All remaining residents should leave Kalani island now.',
+  ashfall: 'Alert level red. An ash column is rising over Kalani. Cover your nose and mouth. Rescue flights are on standby for any signal from the island.',
+  eruption: 'Eruption in progress. Lava flows on every flank, and lava bombs landing a kilometre from the vent. Keep to the coast and out of the valleys.',
+  surge: 'Column collapse imminent. A pyroclastic surge will reach the coast within minutes. Get underground or get out to sea. Now.',
+};
+let lastBroadcast = { stage: null, t: -999 };
+function updateBroadcasts() {
+  const listening = (player.inJeep && car === jeep) || Math.hypot(POIS.tower.x - player.x, POIS.tower.z - player.z) < 16;
+  if (!listening || game.over) return;
+  const sid = game.stage.id;
+  if (sid === lastBroadcast.stage && game.t - lastBroadcast.t < 110) return;
+  lastBroadcast = { stage: sid, t: game.t };
+  audio.radioStatic(); say('📻 Observatory radio', BROADCASTS[sid], 11, 'Observatory radio');
+  game.stats.broadcasts = (game.stats.broadcasts || 0) + 1; if (game.stats.broadcasts >= 3) unlock('radio_ear');
+}
+// ---------------- raindrops on the lens ----------------
+const lensCv = document.createElement('canvas'); lensCv.id = 'lens'; Object.assign(lensCv.style, { position: 'fixed', inset: '0', width: '100%', height: '100%', pointerEvents: 'none', zIndex: '4' }); document.body.appendChild(lensCv);
+const lensCx = lensCv.getContext('2d'); const lensDrops = [];
+function updateLens(dt, burst = 0) {
+  if (quality === 'low') { if (lensDrops.length) { lensDrops.length = 0; lensCx.clearRect(0, 0, lensCv.width, lensCv.height); } return; }
+  const W2 = Math.ceil(innerWidth / 2), H2 = Math.ceil(innerHeight / 2); if (lensCv.width !== W2 || lensCv.height !== H2) { lensCv.width = W2; lensCv.height = H2; }
+  const under = player.inBunker || player.inJeep || props.shelters.some((q) => Math.hypot(q.x - player.x, q.z - player.z) < q.r);
+  const rate = (under || game.photo ? 0 : game.rain * 9) + burst;
+  for (let n = rate * dt + Math.random(); n >= 1 && lensDrops.length < 70; n--) lensDrops.push({ x: Math.random() * W2, y: Math.random() * H2, r: 3 + Math.random() * 9, life: 2 + Math.random() * 3, vy: 0 });
+  lensCx.clearRect(0, 0, W2, H2);
+  for (let i = lensDrops.length - 1; i >= 0; i--) {
+    const d = lensDrops[i]; d.life -= dt; if (d.r > 8) { d.vy += dt * 18; d.y += d.vy * dt; }
+    if (d.life <= 0 || d.y > H2 + 20) { lensDrops.splice(i, 1); continue; }
+    const a = Math.min(1, d.life) * 0.55, gr = lensCx.createRadialGradient(d.x - d.r * 0.3, d.y - d.r * 0.3, d.r * 0.1, d.x, d.y, d.r);
+    gr.addColorStop(0, `rgba(255,255,255,${a * 0.7})`); gr.addColorStop(0.55, `rgba(200,220,235,${a * 0.18})`); gr.addColorStop(0.9, `rgba(40,50,60,${a * 0.35})`); gr.addColorStop(1, 'rgba(0,0,0,0)');
+    lensCx.fillStyle = gr; lensCx.beginPath(); lensCx.ellipse(d.x, d.y, d.r * 0.85, d.r, 0, 0, 7); lensCx.fill();
+  }
+}
 function killDog(how) { if (dog.dead || dog.saved) return; dog.dead = true; toast(how === 'rock' ? 'Biscuit was hit by a falling rock' : 'Biscuit didn\'t make it', 3); audio.fail(); }
 
 // ---------------- pickups ----------------
@@ -460,6 +572,7 @@ function nearestInteractable() {
     return { kind: 'relight', fire: f, can: player.inv.count('wood') > 0, label: player.inv.count('wood') ? '<b>Relight the fire</b> (1 log)' : 'The fire is out. A log would relight it' };
   }
   if (dayNight.night > 0.5) for (const sh of props.shelters) if (!sh.bunker && Math.hypot(sh.x - px, sh.z - pz) < sh.r) return { kind: 'sleep', label: '<b>Sleep until dawn</b> under cover' };
+  if (Math.hypot(lighthouse.door.x - px, lighthouse.door.z - pz) < 4.5 && !game.flags.beacon) return { kind: 'beacon', label: player.inv.has({ wood: 2, cloth: 1 }) ? '<b>Light the lighthouse beacon</b>' : 'The lamp needs 2 logs and some cloth' };
   for (const w of props.water) if (Math.hypot(w.x - px, w.z - pz) < w.r) return { kind: 'water', w, label: `Drink and fill canteen at <b>${w.name}</b>` };
   const by = POIS.boatyard;
   if (Math.hypot(by.x - px, by.z - pz) < 5.5 && !game.flags.launched) {
@@ -506,7 +619,7 @@ function doInteract(it) {
   } else if (it.kind === 'launch') launchRaft();
   else if (it.kind === 'radio') {
     if (!it.can) { toast('You still need parts for the radio'); return; }
-    player.inv.take(ESCAPES.radio.needs); game.flags.radioFixed = true; game.flags.heliT = Math.min(difficulty === 'hardcore' ? 90 : 120, game.duration * 0.25); game.flags.heliState = 'coming';
+    player.inv.take(ESCAPES.radio.needs); game.flags.radioFixed = true; game.flags.heliT = Math.min(difficulty === 'hardcore' ? 90 : 120, game.duration * 0.25) * (game.flags.beacon ? 0.6 : 1); game.flags.heliState = 'coming';
     props.radioLamp.material.emissiveIntensity = 3; audio.radioStatic();
     const lena = npcs.byId('lena'); say(lena.def.name, lena.def.lines.fixed[0], 9); banner('MAYDAY SENT', 'Helicopter inbound. Get everyone to the helipad.');
   } else if (it.kind === 'heli') boardHeli();
@@ -521,6 +634,7 @@ function doInteract(it) {
   else if (it.kind === 'car') enterJeep(it.car);
   else if (it.kind === 'boat') enterBoat();
   else if (it.kind === 'sleep') trySleep(true);
+  else if (it.kind === 'beacon') lightBeacon();
   else if (it.kind === 'crab') { wild.catchCrab(it.c); player.inv.add('crab'); audio.pinch(); toast('You grab the crab. It pinches. Cook it on a fire.', 2.5); game.stats.crabs++; unlock('crab'); }
   else if (it.kind === 'spear') {
     player.rig.chopT = 0.7; player.strikeTool = 'spear'; player.stats.stamina = Math.max(0, player.stats.stamina - 5); audio.splashSmall();
@@ -1062,6 +1176,7 @@ function updateHUD(dt) {
   if (game.flags.heliState === 'landed' || game.flags.heliState === 'coming') items.push({ x: props.heli.position.x, z: props.heli.position.z, icon: '🚁', name: 'Helicopter' });
   for (const n of npcs.list) if (!n.dead && !n.saved && n.state !== 'follow') items.push({ x: n.x, z: n.z, icon: '🧍', name: n.def.name.split(' ').pop() });
   for (const w of wantedMarkers()) items.push(w);
+  if (game.flags.waypoint) items.push({ x: game.flags.waypoint.x, z: game.flags.waypoint.z, icon: '📍', name: 'Waypoint' });
   let html = '';
   const width = compassEl.clientWidth || 400, fov = 1.9;
   const cardinal = [['N', 0], ['W', Math.PI / 2], ['S', Math.PI], ['E', -Math.PI / 2]];
@@ -1119,7 +1234,10 @@ function drawMap() {
   x.fillText('🌋', px(VOLCANO.x), px(VOLCANO.z));
   x.font = '18px sans-serif';
   for (const [key, p] of Object.entries(POIS)) { if (key === 'cave') continue; x.fillText(p.icon, px(p.x), px(p.z)); x.font = 'bold 11px Barlow, sans-serif'; x.fillStyle = '#fff'; x.shadowColor = '#000'; x.shadowBlur = 4; x.fillText(p.name, px(p.x), px(p.z) + 16); x.shadowBlur = 0; x.font = '18px sans-serif'; }
+  for (const gi of game.flags.gasSeen || []) { const g = gasPockets[gi]; if (!g) continue; x.fillStyle = 'rgba(220,210,90,0.45)'; x.beginPath(); x.arc(px(g.x), px(g.z), g.r * k * 1.4, 0, 7); x.fill(); x.fillStyle = '#fff'; x.font = '14px sans-serif'; x.textAlign = 'center'; x.fillText('☠', px(g.x), px(g.z) + 5); }
   x.font = '16px sans-serif'; x.textAlign = 'center'; for (const w of wantedMarkers()) x.fillText(w.icon, px(w.x), px(w.z));
+  if (game.flags.waypoint) { const wx = px(game.flags.waypoint.x), wz = px(game.flags.waypoint.z); x.fillStyle = '#4fe3ff'; x.strokeStyle = '#003a4a'; x.lineWidth = 2; x.beginPath(); x.moveTo(wx, wz); x.lineTo(wx - 8, wz - 14); x.arc(wx, wz - 18, 9, Math.PI * 0.8, Math.PI * 0.2); x.closePath(); x.fill(); x.stroke(); x.fillStyle = '#003a4a'; x.beginPath(); x.arc(wx, wz - 18, 3.5, 0, 7); x.fill(); }
+  x.font = 'bold 13px Barlow, sans-serif'; x.fillStyle = '#fff'; x.textAlign = 'right'; x.fillText('Tap the map to set a waypoint', S - 12, 18);
   for (const n of npcs.list) { if (n.dead || n.saved) continue; x.fillStyle = n.state === 'follow' ? '#38c9c0' : '#ffd23f'; x.beginPath(); x.arc(px(n.x), px(n.z), 5, 0, 7); x.fill(); }
   if (game.flags.heliState === 'landed' || game.flags.heliState === 'coming') x.fillText('🚁', px(props.heli.position.x), px(props.heli.position.z));
   // you
@@ -1198,6 +1316,7 @@ $('helpBack').onclick = () => { show('help', false); if (helpFrom === 'pause') s
 $('resume').onclick = () => { audio.init(); closeMenu(); };
 $('craftClose').onclick = () => closeMenu();
 $('mapClose').onclick = () => closeMenu();
+$('mapCanvas').addEventListener('click', (e) => { const r = $('mapCanvas').getBoundingClientRect(); setWaypoint(W / 2 - (e.clientX - r.left) / r.width * W, W / 2 - (e.clientY - r.top) / r.height * W); drawMap(); });
 const toggleGfx = () => { quality = quality === 'low' ? 'high' : quality !== 'low' ? 'ultra' : 'low'; store.set('ash-gfx', quality); toast(quality === 'ultra' ? 'Ultra: ambient occlusion, sharper and longer shadows, denser jungle. Best on a PC or Mac. Reload for the full effect.' : 'Graphics change fully after a reload', 4); applyQuality(); };
 $('gfx').onclick = toggleGfx; $('gfx2').onclick = toggleGfx;
 const toggleSnd = () => { soundOn = !soundOn; store.set('ash-snd', soundOn); audio.init(); audio.setOn(soundOn); for (const id of ['snd', 'snd2']) $(id).textContent = 'SOUND: ' + (soundOn ? 'ON' : 'OFF'); };
@@ -1272,6 +1391,14 @@ function frame(now) {
     npcs.update(dt, { player, heatAt: (x, z) => volcano.heatAt(x, z), surgeR: volcano.surgeR, volcano: VOLCANO, hiddenInBunker: player.inBunker, followIndex: (n) => npcs.followers().indexOf(n) });
     updateHeli(dt);
     wild.update(dt, { player, stageIdx: vfx.stageIdx, heatAt: (x, z) => volcano.heatAt(x, z) });
+    updateGas(dt, vfx.stageIdx); updateWaypoint(dt); updateBroadcasts();
+    if (player.wasSwimming && !player.swimming && !player.inBoat) lensBurst = 14;
+    updateLens(dt, lensBurst); lensBurst = 0;
+    // the beacon
+    if (game.flags.beacon) { const dk = clamp(dayNight.night + volcano.ash, 0, 1); lighthouse.lamp.material.emissiveIntensity = 3; lighthouse.rot.visible = dk > 0.15; lighthouse.rot.rotation.y += dt * 0.9; lighthouse.beamM.uniforms.uI.value = 0.22 * dk; lighthouse.light.intensity = 40; }
+    // plants bend away from you, or the vehicle you're in, and from the first survivor with you
+    { const v = player.inJeep ? car : player.inBoat ? null : null; if (v) U.uPush.value.set(v.x, v.z, v === quad ? 2.0 : 2.8, 1.2); else U.uPush.value.set(player.x, player.z, 1.5, player.swimming || player.inBoat ? 0 : 1);
+      const f = npcs.followers().find((n) => !n.riding); if (f) U.uPush2.value.set(f.x, f.z, 1.3, 1); else U.uPush2.value.w = 0; }
     // Biscuit: lost, following you, or back with Pete
     {
       const pete = npcs.byId('pete');
@@ -1305,11 +1432,12 @@ function frame(now) {
   else if (game.started && !game.photo) camera.lookAt(props.heli.position);
   input.endFrame();
   if (showFps) { fpsT += dt; game.fpsN++; if (fpsT >= 0.5) { $('fps').textContent = Math.round(game.fpsN / fpsT) + ' FPS'; fpsT = 0; game.fpsN = 0; } }
-  try { if (composer && quality !== 'low') composer.render(); else renderer.render(scene, camera); if (game.snap) { game.snap = false; snapPhoto(); } }
+  try { world.reflect(renderer, camera, scene, quality === 'ultra' && game.started && !player.inBunker, [...world.smallPlants, rainLines, gasFx.points, fx.dust.points, fx.spray.points, fx.mist.points, fx.leaves.points, fx.fireflies.points, fx.sparks.points, volcano.ashFall.points, decals.foot.m, decals.tyre.m, pillar]);
+    if (composer && quality !== 'low') composer.render(); else renderer.render(scene, camera); if (game.snap) { game.snap = false; snapPhoto(); } }
   catch (e) { console.error(e); save(); show('crash'); throw e; }
 }
 renderer.domElement.addEventListener('webglcontextlost', (e) => { e.preventDefault(); save(); show('crash'); });
-window.ASH = { decals, quad, cars, car: () => car, wild: () => wild, unlock, enterPhoto, exitPhoto, addShelter, dog: () => dog, trySleep, surfaceAt, game, player, volcano, npcs, props, world, cam, save, load, die, win, jeep, enterJeep, exitJeep, voice, boat, enterBoat, exitBoat, dayNight, addFire };
+window.ASH = { lighthouse, gasPockets, setWaypoint, lightBeacon, lensDrops, decals, quad, cars, car: () => car, wild: () => wild, unlock, enterPhoto, exitPhoto, addShelter, dog: () => dog, trySleep, surfaceAt, game, player, volcano, npcs, props, world, cam, save, load, die, win, jeep, enterJeep, exitJeep, voice, boat, enterBoat, exitBoat, dayNight, addFire };
 applyQuality();
 $('loading').classList.add('hidden');
 requestAnimationFrame(frame);

@@ -1,7 +1,18 @@
 // Bump VERSION for every update (1.1, 1.2, 1.3 ...) and add a line to CHANGES.
-export const VERSION = '2.2';
+export const VERSION = '2.3';
 
 export const CHANGES = [
+  ['2.3', [
+    'The lighthouse on the western cliffs: light its lamp with 2 logs and some cloth and its beams sweep the night; the rescue helicopter then reaches the island much faster',
+    'Sulphur gas pools in the hollows below the cone from the unrest onwards: a yellowish haze and a rotten-egg smell. It strips the air from your lungs; a mask helps. Pockets you find are marked on the map',
+    'Emergency broadcasts from the volcano observatory, heard in the jeep and at the ranger station as the alert level rises',
+    'Tap the map to set a waypoint: it shows on the compass and as a pillar of light in the world',
+    'Ultra: the sea reflects the island, the volcano and the sky',
+    'Grass, flowers and bushes part around you, your vehicle and the survivors with you',
+    'Older lava cools to a black crust split by glowing cracks',
+    'Raindrops run down the camera lens in the squalls and after a swim',
+    'Ash settles on everyone\'s clothes as it falls',
+  ]],
   ['2.2', [
     'New ULTRA graphics setting for PCs and Macs: ambient occlusion that darkens creases and contact points, 4096 shadows reaching further, and a denser jungle',
     'Lens flare: ghosts and a halo when you look towards the sun, hidden when anything blocks it',

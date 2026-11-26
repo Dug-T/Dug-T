@@ -76,7 +76,7 @@ export class Volcano {
     this.surge = new Puffs(scene, this.hi ? 700 : 350, puff, '#6a6360', '#1c1818', THREE.NormalBlending, false, 0.3);
     // the crater: a lava lake and its glow
     const lavaTex = lavaTexture();
-    this.lavaU = { tLava: { value: lavaTex }, uFront: { value: 1e6 }, uTime: { value: 0 } };
+    this.lavaU = { tLava: { value: lavaTex }, uFront: { value: 1e6 }, uTime: { value: 0 }, uCool: { value: 0 } };
     this.lavaMat = new THREE.ShaderMaterial({
       uniforms: THREE.UniformsUtils.merge([THREE.UniformsLib.fog, this.lavaU]), fog: true,
       vertexShader: `attribute float aDist; varying float vDist; varying vec2 vUv;
@@ -84,7 +84,7 @@ export class Volcano {
         void main(){ vDist = aDist; vUv = uv; vec4 mvPosition = modelViewMatrix * vec4(position, 1.0); gl_Position = projectionMatrix * mvPosition;
         #include <fog_vertex>
         }`,
-      fragmentShader: `uniform sampler2D tLava; uniform float uFront, uTime; varying float vDist; varying vec2 vUv;
+      fragmentShader: `uniform sampler2D tLava; uniform float uFront, uTime, uCool; varying float vDist; varying vec2 vUv;
         #include <fog_pars_fragment>
         void main(){
           if (vDist > uFront) discard;
@@ -94,7 +94,12 @@ export class Volcano {
           float edge = smoothstep(0.0, 0.2, vUv.x) * smoothstep(1.0, 0.8, vUv.x);
           float pulse = 0.06 * sin(uTime * 2.2 + vDist * 0.12) + 0.04 * sin(uTime * 3.7 - vUv.x * 9.0);
           float heat = clamp(crack * (0.62 + 0.38 * edge) + front * 0.6 + 0.14 + pulse, 0.0, 1.0);
+          // well behind the front the surface cools to a black crust, split by thin glowing cracks
+          float cool = uCool * smoothstep(35.0, 170.0, uFront - vDist);
+          float cracks = smoothstep(0.26, 0.62, crack) * (0.7 + 0.3 * sin(uTime * 1.3 + vDist * 0.3));
           vec3 col = mix(vec3(0.09, 0.04, 0.03), vec3(1.0, 0.32, 0.05) * 1.8, heat) + vec3(1.0, 0.62, 0.22) * pow(heat, 3.0) * 1.7;
+          vec3 crust = vec3(0.012, 0.011, 0.011) + vec3(1.0, 0.28, 0.04) * 2.2 * pow(cracks, 1.4);
+          col = mix(col, crust, cool);
           gl_FragColor = vec4(col * 1.5, 1.0);
           #include <fog_fragment>
           #include <tonemapping_fragment>
@@ -160,7 +165,7 @@ export class Volcano {
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.BufferAttribute(uv, 2)); g.setAttribute('aDist', new THREE.BufferAttribute(dist, 1));
     g.setIndex(idxs); g.computeVertexNormals();
-    const mat = this.lavaMat.clone(); mat.uniforms.uFront.value = -1;
+    const mat = this.lavaMat.clone(); mat.uniforms.uFront.value = -1; mat.uniforms.uCool.value = 1;
     const m = new THREE.Mesh(g, mat); m.frustumCulled = false; m.visible = false; this.scene.add(m);
     return { pts, mesh: m, mat, length: d, widths, front: -1, burnIdx: 0, start: (k % 4) * 9 + (k * 7) % 11, speed: 2.4 + ((k * 13) % 7) * 0.25 };
   }

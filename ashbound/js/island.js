@@ -150,7 +150,7 @@ export function buildIsland(scene, quality) {
   geo.computeVertexNormals();
   const tex = { sand: sandTexture(), grass: grassTexture(), rock: rockTexture(), ash: ashTexture(), noise: noiseTexture() };
   const U = world.uniforms;
-  U.uAsh = { value: 0 }; U.uTime = { value: 0 }; U.uWind = { value: 0.4 }; U.uCloud = { value: 0.35 }; U.uFlash = { value: 0 }; U.uNight = { value: 0 }; U.uWet = { value: 0 }; U.uRain = { value: 0 }; U.uRainbow = { value: 0 };
+  U.uAsh = { value: 0 }; U.uTime = { value: 0 }; U.uWind = { value: 0.4 }; U.uPush = { value: new THREE.Vector4(0, 0, 0, 0) }; U.uPush2 = { value: new THREE.Vector4(0, 0, 0, 0) }; U.uCloud = { value: 0.35 }; U.uFlash = { value: 0 }; U.uNight = { value: 0 }; U.uWet = { value: 0 }; U.uRain = { value: 0 }; U.uRainbow = { value: 0 };
   U.uGlow = { value: Array.from({ length: 8 }, () => new THREE.Vector4(0, 0, 1, 0)) }; // lava glow spots: x, z, radius, strength
   const bumpTex = tex.noise.clone(); bumpTex.repeat.set(140, 140); bumpTex.needsUpdate = true;
   const ground = new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.95, metalness: 0, bumpMap: bumpTex, bumpScale: hi ? 0.9 : 0.5 });
@@ -205,9 +205,10 @@ export function buildIsland(scene, quality) {
     uniforms: THREE.UniformsUtils.merge([THREE.UniformsLib.fog, {
       time: U.uTime, tHeight: { value: hTex }, tNoise: { value: tex.noise }, uW: { value: W }, uSun: U.uSun, uSunCol: U.uSunCol, uSky: U.uSky,
       deepCol: { value: new THREE.Color('#083a6b') }, shallowCol: { value: new THREE.Color('#2fc6c0') }, uAsh: U.uAsh, uGlow: U.uGlow, uRain: U.uRain,
+      tReflect: { value: null }, uReflect: { value: 0 }, uTexMat: { value: new THREE.Matrix4() },
     }]),
     transparent: true, fog: true, depthWrite: true,
-    vertexShader: `uniform float time; varying vec3 vW; varying vec3 vN;
+    vertexShader: `uniform float time; uniform mat4 uTexMat; varying vec3 vW; varying vec3 vN; varying vec4 vRefl;
       #include <fog_pars_vertex>
       void main(){
         vec3 p = position; vec2 q = (modelMatrix * vec4(p, 1.0)).xz;
@@ -216,12 +217,12 @@ export function buildIsland(scene, quality) {
         WAVE(0.22, 26.0, 1.1, 1.0, 0.35) WAVE(0.14, 11.0, 1.7, -0.4, 1.0) WAVE(0.07, 5.0, 2.6, 0.7, -0.6) WAVE(0.04, 2.3, 3.4, -0.9, -0.3)
         p.z += h; // the plane is rotated flat, so its local z is up
         vN = normalize(vec3(-dx, 1.0, -dz));
-        vec4 wp = modelMatrix * vec4(p, 1.0); vW = wp.xyz;
+        vec4 wp = modelMatrix * vec4(p, 1.0); vW = wp.xyz; vRefl = uTexMat * vec4(position, 1.0);
         vec4 mvPosition = viewMatrix * wp; gl_Position = projectionMatrix * mvPosition;
         #include <fog_vertex>
       }`,
-    fragmentShader: `uniform float time, uW, uAsh, uRain; uniform sampler2D tHeight, tNoise; uniform vec3 uSun, uSunCol, uSky, deepCol, shallowCol; uniform vec4 uGlow[8];
-      varying vec3 vW; varying vec3 vN;
+    fragmentShader: `uniform float time, uW, uAsh, uRain; uniform sampler2D tHeight, tNoise; uniform vec3 uSun, uSunCol, uSky, deepCol, shallowCol; uniform vec4 uGlow[8]; uniform sampler2D tReflect; uniform float uReflect;
+      varying vec3 vW; varying vec3 vN; varying vec4 vRefl;
       #include <fog_pars_fragment>
       void main(){
         float th = texture2D(tHeight, vW.xz / uW + 0.5).r * 200.0 - 60.0;
@@ -240,7 +241,10 @@ export function buildIsland(scene, quality) {
         vec2 rp = texture2D(tNoise, vW.xz * 0.33 + vec2(time * 0.06, time * 0.04)).rg - texture2D(tNoise, vW.xz * 0.27 - vec2(time * 0.05, -time * 0.03)).rg;
         vec3 Nr = normalize(Nn + vec3(rp.x, 0.0, rp.y) * 0.45);
         float fres = pow(1.0 - max(dot(Nn, V), 0.0), 3.0);
-        col = mix(col, uSky, fres * 0.75);
+        vec3 skyR = uSky;
+        // the island, the mountain and the sky mirrored in the water, broken up by the ripples
+        if (uReflect > 0.5) { vec4 rc = vRefl; rc.xy += (Nr.xz * 0.9 + vec2(rp.x, rp.y) * 0.4) * 0.06 * rc.w; skyR = texture2DProj(tReflect, rc).rgb; }
+        col = mix(col, skyR, uReflect > 0.5 ? 0.25 + fres * 0.65 : fres * 0.75);
         vec3 Hh = normalize(V + normalize(uSun)); float sp = max(dot(Nr, Hh), 0.0), sp2 = max(dot(Nn, Hh), 0.0);
         col += uSunCol * (pow(sp, 420.0) * 4.0 + pow(sp2, 20.0) * 0.12) * (1.0 - uAsh * 0.8);
         // the lava's glow on the water
@@ -259,6 +263,39 @@ export function buildIsland(scene, quality) {
   sea.rotation.x = -Math.PI / 2; sea.position.y = SEA; sea.renderOrder = 2;
   scene.add(sea);
   world.sea = sea;
+  // Ultra: render the world upside down from below the waterline into a texture the sea samples (Lengyel oblique clipping
+  // keeps the seabed out of it). Small plants and particles are left out, and shadows aren't recomputed for it.
+  {
+    const rcam = new THREE.PerspectiveCamera(), tm = seaMat.uniforms.uTexMat.value, n = new THREE.Vector3(0, 1, 0);
+    const camPos = new THREE.Vector3(), look = new THREE.Vector3(), rot = new THREE.Matrix4(), plane = new THREE.Plane(), clip = new THREE.Vector4(), q = new THREE.Vector4();
+    let rt = null;
+    world.reflect = (renderer, camera, scene, on, skip = []) => {
+      seaMat.uniforms.uReflect.value = on ? 1 : 0;
+      if (!on) return;
+      const pr = renderer.getPixelRatio(), w = Math.max(64, Math.floor(innerWidth * pr * 0.5)), h = Math.max(64, Math.floor(innerHeight * pr * 0.5));
+      if (!rt) { rt = new THREE.WebGLRenderTarget(w, h, { type: THREE.HalfFloatType }); seaMat.uniforms.tReflect.value = rt.texture; }
+      else if (rt.width !== w || rt.height !== h) rt.setSize(w, h);
+      camPos.setFromMatrixPosition(camera.matrixWorld);
+      if (camPos.y < SEA + 0.2) { seaMat.uniforms.uReflect.value = 0; return; }
+      rot.extractRotation(camera.matrixWorld);
+      look.set(0, 0, -1).applyMatrix4(rot).add(camPos);
+      rcam.position.set(camPos.x, 2 * SEA - camPos.y, camPos.z);
+      rcam.up.set(0, 1, 0).applyMatrix4(rot); rcam.up.y = -rcam.up.y;
+      rcam.lookAt(look.x, 2 * SEA - look.y, look.z);
+      rcam.far = camera.far; rcam.updateMatrixWorld(); rcam.projectionMatrix.copy(camera.projectionMatrix);
+      tm.set(0.5, 0, 0, 0.5, 0, 0.5, 0, 0.5, 0, 0, 0.5, 0.5, 0, 0, 0, 1); tm.multiply(rcam.projectionMatrix); tm.multiply(rcam.matrixWorldInverse); tm.multiply(sea.matrixWorld);
+      plane.setFromNormalAndCoplanarPoint(n, new THREE.Vector3(0, SEA, 0)); plane.applyMatrix4(rcam.matrixWorldInverse);
+      clip.set(plane.normal.x, plane.normal.y, plane.normal.z, plane.constant);
+      const pm = rcam.projectionMatrix.elements;
+      q.x = (Math.sign(clip.x) + pm[8]) / pm[0]; q.y = (Math.sign(clip.y) + pm[9]) / pm[5]; q.z = -1; q.w = (1 + pm[10]) / pm[14];
+      clip.multiplyScalar(2 / clip.dot(q)); pm[2] = clip.x; pm[6] = clip.y; pm[10] = clip.z + 1 - 0.003; pm[14] = clip.w;
+      const hidden = [sea, ...skip].filter((o) => o && o.visible); hidden.forEach((o) => { o.visible = false; });
+      const prevRT = renderer.getRenderTarget(), prevShadow = renderer.shadowMap.autoUpdate;
+      renderer.shadowMap.autoUpdate = false; renderer.setRenderTarget(rt); renderer.state.buffers.depth.setMask(true); renderer.clear(); renderer.render(scene, rcam);
+      renderer.setRenderTarget(prevRT); renderer.shadowMap.autoUpdate = prevShadow;
+      hidden.forEach((o) => { o.visible = true; });
+    };
+  }
 
   // ---- the sky ----
   U.uSkyTop = { value: new THREE.Color('#2a72d6') }; U.uHorizon = { value: new THREE.Color('#cfe4f5') }; U.uPlume = { value: 0 }; U.uDusk = { value: 0 };
@@ -327,10 +364,10 @@ export function buildIsland(scene, quality) {
   // chain shader hooks so a material can both sway and grey over with ash
   const hook = (mat, fn) => { const prev = mat.onBeforeCompile; mat.onBeforeCompile = (sh) => { if (prev) prev(sh); fn(sh); }; };
   // wind: the whole plant bends more the higher up it is (exp shapes the curve), leaves flutter on top of that
-  const sway = (mat, height, exp = 1, flutter = 1) => hook(mat, (sh) => {
-    sh.uniforms.uTime = U.uTime; sh.uniforms.uWind = U.uWind;
+  const sway = (mat, height, exp = 1, flutter = 1, push = false) => hook(mat, (sh) => {
+    sh.uniforms.uTime = U.uTime; sh.uniforms.uWind = U.uWind; sh.uniforms.uPush = U.uPush; sh.uniforms.uPush2 = U.uPush2;
     sh.vertexShader = sh.vertexShader
-      .replace('#include <common>', '#include <common>\nuniform float uTime, uWind;')
+      .replace('#include <common>', '#include <common>\nuniform float uTime, uWind; uniform vec4 uPush, uPush2;')
       .replace('#include <begin_vertex>', `#include <begin_vertex>
         #ifdef USE_INSTANCING
         float seed = instanceMatrix[3].x * 0.37 + instanceMatrix[3].z * 0.23;
@@ -340,16 +377,24 @@ export function buildIsland(scene, quality) {
         float k = pow(smoothstep(0.0, 1.0, position.y / ${height.toFixed(1)}), ${exp.toFixed(1)}) * uWind;
         float gust = sin(uTime * 1.6 + seed) + 0.5 * sin(uTime * 0.37 + seed * 0.3);
         transformed.x += gust * 0.35 * k + sin(uTime * 4.1 + seed * 2.0) * 0.08 * k * ${flutter.toFixed(1)};
-        transformed.z += cos(uTime * 1.3 + seed * 1.7) * 0.3 * k;`);
+        transformed.z += cos(uTime * 1.3 + seed * 1.7) * 0.3 * k;
+        ${push ? `#ifdef USE_INSTANCING
+        // bend away from whoever is pushing through (you, or the vehicle you are in): uPush = x, z, radius, strength
+        { vec3 o = instanceMatrix[3].xyz; mat3 im = mat3(instanceMatrix); float s2 = dot(im[0], im[0]);
+          for (int pi = 0; pi < 2; pi++) { vec4 P = pi == 0 ? uPush : uPush2; if (P.w <= 0.0) continue;
+            vec2 d = o.xz - P.xy; float dl = length(d); float pk = smoothstep(P.z, P.z * 0.25, dl) * P.w * smoothstep(0.0, 1.0, position.y / ${height.toFixed(1)});
+            vec3 pw = vec3(d / max(dl, 0.05) * 0.75, -0.35) * pk;
+            transformed += vec3(dot(im[0], pw), dot(im[1], pw), dot(im[2], pw)) / s2; } }
+        #endif` : ''}`);
   });
   // ash settles on everything: colours drain toward grey as it thickens
-  const ashify = (mat) => hook(mat, (sh) => {
+  const ashify = (mat) => { if (!mat || mat.userData.ashified) return; mat.userData.ashified = true; hook(mat, (sh) => {
     sh.uniforms.uAsh = U.uAsh;
     sh.fragmentShader = sh.fragmentShader
       .replace('#include <common>', '#include <common>\nuniform float uAsh;')
       .replace('#include <color_fragment>', '#include <color_fragment>\ndiffuseColor.rgb = mix(diffuseColor.rgb, vec3(dot(diffuseColor.rgb, vec3(0.3, 0.59, 0.11))) * vec3(0.78, 0.75, 0.72) + 0.12, uAsh * 0.8);');
-  });
-  sway(bark, 9, 1.6, 0); sway(frondM, 9, 1.6, 1); sway(bushM, 1.5, 1, 1); sway(flowerM, 1.0, 1, 1);
+  }); };
+  sway(bark, 9, 1.6, 0); sway(frondM, 9, 1.6, 1); sway(bushM, 1.5, 1, 1, true); sway(flowerM, 1.0, 1, 1, true);
   for (const m of [bark, frondM, bushM, flowerM, rockM]) ashify(m);
   world.ashify = ashify;
   world.mats = { bark, frondM, bushM, flowerM, rockM };
@@ -383,7 +428,7 @@ export function buildIsland(scene, quality) {
   }
   const more = ultra ? 1.4 : 1;
   const counts = { palm: Math.round((hi ? 1100 : 650) * more), bush: Math.round((hi ? 2600 : 1300) * more), flower: hi ? 600 : 300, rock: hi ? 420 : 240, tuft: Math.round((hi ? 6000 : 2500) * more) };
-  const tuftM = new THREE.MeshStandardMaterial({ map: tuftTexture(), alphaTest: 0.5, side: THREE.DoubleSide, roughness: 0.9 }); sway(tuftM, 0.8, 1, 1); ashify(tuftM);
+  const tuftM = new THREE.MeshStandardMaterial({ map: tuftTexture(), alphaTest: 0.5, side: THREE.DoubleSide, roughness: 0.9 }); sway(tuftM, 0.8, 1, 1, true); ashify(tuftM);
   const palmLists = variants.map(() => []);
   const bushes = [], flowers = [], rocks = [], tufts = [];
   const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), S = new THREE.Vector3(), P = new THREE.Vector3(), E = new THREE.Euler();
@@ -451,6 +496,7 @@ export function buildIsland(scene, quality) {
   const flowerMesh = new THREE.InstancedMesh(flowerG, flowerM, Math.max(1, flowers.length)); place(flowers, flowerMesh);
   const tuftG = mergeGeos([0, 1].map((k) => { const g = new THREE.PlaneGeometry(0.9, 0.6); g.translate(0, 0.3, 0); g.rotateY(k * Math.PI / 2 + 0.4); return g; }));
   const tuftMesh = new THREE.InstancedMesh(tuftG, tuftM, Math.max(1, tufts.length)); place(tufts, tuftMesh);
+  world.smallPlants = [tuftMesh, flowerMesh, bushMesh];
   const rockG = new THREE.IcosahedronGeometry(1, 2);
   { const p = rockG.attributes.position, rr = rng(55); for (let i = 0; i < p.count; i++) { const k = 0.8 + rr() * 0.4; p.setXYZ(i, p.getX(i) * k, p.getY(i) * k, p.getZ(i) * k); } rockG.computeVertexNormals(); }
   const rockMesh = new THREE.InstancedMesh(rockG, rockM, Math.max(1, rocks.length)); rockMesh.castShadow = hi; rockMesh.receiveShadow = true; place(rocks, rockMesh);
