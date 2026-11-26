@@ -4,6 +4,8 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
+import { BokehPass } from 'three/addons/postprocessing/BokehPass.js';
 import { buildIsland, heightAt, normalAt, POIS, VOLCANO, SEA, W, distToVolcano } from './island.js';
 import { buildProps, pickupMesh, setRaftStage, buildFirePit, buildLeanTo } from './props.js';
 import { buildSurvivor, animateSurvivor, buildAxe, LOOKS, groundTilt } from './survivor.js';
@@ -59,11 +61,12 @@ const input = new Input(canvas);
 input.onAny = () => audio.init();
 input.bindTouch($);
 
-let composer = null, bloom = null, gradePass = null;
+let composer = null, bloom = null, gradePass = null, gtaoPass = null, bokehPass = null;
 function applyQuality() {
-  const hi = quality === 'high';
+  const hi = quality !== 'low', ultra = quality === 'ultra';
   renderer.setPixelRatio(Math.min(devicePixelRatio || 1, hi ? 2 : 1.25));
-  sun.shadow.mapSize.set(hi ? 2048 : 1024, hi ? 2048 : 1024); if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; }
+  const sm = ultra ? 4096 : hi ? 2048 : 1024, ext = ultra ? 85 : 55; sun.shadow.mapSize.set(sm, sm);
+  sun.shadow.camera.left = -ext; sun.shadow.camera.right = ext; sun.shadow.camera.top = ext; sun.shadow.camera.bottom = -ext; sun.shadow.camera.updateProjectionMatrix(); if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; }
   if (hi && !composer) {
     const rt = new THREE.WebGLRenderTarget(innerWidth, innerHeight, { samples: 4, type: THREE.HalfFloatType });
     composer = new EffectComposer(renderer, rt);
@@ -72,9 +75,9 @@ function applyQuality() {
     composer.addPass(bloom);
     // a film grade: a soft vignette, a warm tint, grain, and the colour draining out as the ash thickens
     gradePass = new ShaderPass({
-      uniforms: { tDiffuse: { value: null }, uTime: { value: 0 }, uAsh: { value: 0 }, uHurt: { value: 0 }, uHeat: { value: 0 }, uSun: { value: new THREE.Vector2(0.5, 0.5) }, uShaft: { value: 0 }, uTint: { value: new THREE.Vector3(1, 1, 1) }, uAberr: { value: 0 } },
+      uniforms: { tDiffuse: { value: null }, uTime: { value: 0 }, uAsh: { value: 0 }, uHurt: { value: 0 }, uHeat: { value: 0 }, uSun: { value: new THREE.Vector2(0.5, 0.5) }, uShaft: { value: 0 }, uTint: { value: new THREE.Vector3(1, 1, 1) }, uAberr: { value: 0 }, uBlur: { value: 0 }, uFlare: { value: 0 }, uAspect: { value: 1.6 } },
       vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
-      fragmentShader: `uniform sampler2D tDiffuse; uniform float uTime, uAsh, uHurt, uHeat, uShaft, uAberr; uniform vec2 uSun; uniform vec3 uTint; varying vec2 vUv;
+      fragmentShader: `uniform sampler2D tDiffuse; uniform float uTime, uAsh, uHurt, uHeat, uShaft, uAberr, uBlur, uFlare, uAspect; uniform vec2 uSun; uniform vec3 uTint; varying vec2 vUv;
         float h21(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
         void main(){
           vec2 uv = vUv;
@@ -83,10 +86,20 @@ function applyQuality() {
           vec4 c = texture2D(tDiffuse, uv);
           // the colours split at the edges when you are hurt, cooking or being shaken
           if (uAberr > 0.002) { vec2 off = (uv - 0.5) * uAberr * 0.014; c.r = texture2D(tDiffuse, uv + off).r; c.b = texture2D(tDiffuse, uv - off).b; }
+          // speed blur: smeared outward from the centre when you're moving fast
+          if (uBlur > 0.002) { vec2 dir = (uv - 0.5) * uBlur * 0.07; vec3 acc = c.rgb; for (int i = 1; i < 8; i++) acc += texture2D(tDiffuse, uv - dir * float(i) / 8.0).rgb; c.rgb = acc / 8.0; }
           // shafts of light: bright sky sampled along the line to the sun
           if (uShaft > 0.002) { vec2 dd = (uSun - uv) / 28.0; vec2 pp = uv; vec3 acc = vec3(0.0); float wgt = 1.0; for (int i = 0; i < 28; i++) { pp += dd; vec3 sm = texture2D(tDiffuse, pp).rgb; acc += max(sm - 1.1, 0.0) * wgt; wgt *= 0.95; } c.rgb += acc * 0.045 * uShaft; }
           vec2 d = vUv - 0.5; float vig = 1.0 - smoothstep(0.35, 1.05, dot(d, d) * 2.2);
           c.rgb *= mix(0.55, 1.0, vig);
+          // a lens flare: ghosts strung along the line through the centre, and a faint halo, when the sun is in view and not hidden
+          if (uFlare > 0.002) {
+            float occ = smoothstep(1.0, 1.8, dot(texture2D(tDiffuse, clamp(uSun, 0.0, 1.0)).rgb, vec3(0.333)));
+            vec2 axis = vec2(0.5) - uSun; vec3 fl = vec3(0.0);
+            for (int i = 1; i <= 6; i++) { float k = float(i) * 0.33 - 0.15; vec2 gp = uSun + axis * k * 2.0; float r = 0.018 + 0.022 * mod(float(i), 3.0); float d = length((uv - gp) * vec2(uAspect, 1.0)); fl += mix(vec3(1.0, 0.55, 0.25), vec3(0.35, 0.65, 1.0), float(i) / 6.0) * (smoothstep(r, r * 0.5, d) * 0.07 + smoothstep(r * 1.4, r, d) * 0.03); }
+            float dh = length((uv - uSun) * vec2(uAspect, 1.0)); fl += vec3(0.9, 0.85, 1.0) * exp(-pow((dh - 0.34) * 34.0, 2.0)) * 0.045 + vec3(1.0, 0.8, 0.55) * exp(-dh * 9.0) * 0.12;
+            c.rgb += fl * occ * uFlare;
+          }
           c.rgb = mix(c.rgb, c.rgb * vec3(1.05, 1.0, 0.93), 0.5) * uTint;
           float g = dot(c.rgb, vec3(0.3, 0.59, 0.11));
           c.rgb = mix(c.rgb, vec3(g), uAsh * 0.4 + uHurt * 0.5);
@@ -97,7 +110,23 @@ function applyQuality() {
     composer.addPass(gradePass);
     composer.addPass(new OutputPass());
   }
+  // Ultra: ground-truth ambient occlusion, which darkens creases, contact points and the undersides of things
+  if (ultra && composer && !gtaoPass) {
+    gtaoPass = new GTAOPass(scene, camera, innerWidth, innerHeight, undefined, { radius: 2.2, distanceExponent: 1.2, thickness: 2, scale: 1.1, samples: 16, distanceFallOff: 1 }, { lumaPhi: 10, depthPhi: 2, normalPhi: 3, radius: 8, rings: 2, samples: 16 });
+    gtaoPass.blendIntensity = 0.85;
+    // leaf cards, particles, sky and sea would show up as solid shapes in its normal buffer, so it doesn't see them
+    const aoRender = gtaoPass.render.bind(gtaoPass);
+    gtaoPass.render = (r, w, rb, d, m) => {
+      const hid = [];
+      scene.traverse((o) => { if (!o.visible) return; const mt = o.material; if (o.isPoints || o.isSprite || o.isLine || (mt && !Array.isArray(mt) && (mt.transparent || mt.alphaTest > 0 || mt.isShaderMaterial))) { o.visible = false; hid.push(o); } });
+      aoRender(r, w, rb, d, m);
+      for (const o of hid) o.visible = true;
+    };
+    composer.insertPass(gtaoPass, 1);
+  }
+  if (gtaoPass) gtaoPass.enabled = ultra;
   for (const id of ['gfx', 'gfx2']) $(id).textContent = 'GRAPHICS: ' + quality.toUpperCase();
+  if ($('phDof')) $('phDof').classList.toggle('hidden', !hi);
   resize();
 }
 function resize() {
@@ -137,7 +166,7 @@ const volcano = new Volcano(scene, world, quality, {
   onBurst: () => { if (distToVolcano(player.x, player.z) < 500) audio.noise(2.5, 160, 0.5 * (1 - distToVolcano(player.x, player.z) / 500), 'lowpass', 1, 0, 60); },
 });
 // small particle systems of our own: dust kicked up by feet, spray off the swimmer
-const fx = { sparks: new Puffs(scene, 140, glowTexture(), '#ffd080', '#ff6a10', THREE.AdditiveBlending), dust: new Puffs(scene, 160, puffTexture(), '#e6d8b4', '#6a6058'), spray: new Puffs(scene, 160, puffTexture(), '#ffffff', '#cfe8f0'), fireflies: new Puffs(scene, 120, glowTexture(), '#e8ff8a', '#8aff6a', THREE.AdditiveBlending), leaves: new Puffs(scene, 160, puffTexture(), '#7aa83a', '#c9a24a'), stepT: 0 };
+const fx = { mist: new Puffs(scene, 260, puffTexture(), '#eef3f8', '#c6ced8'), sparks: new Puffs(scene, 140, glowTexture(), '#ffd080', '#ff6a10', THREE.AdditiveBlending), dust: new Puffs(scene, 160, puffTexture(), '#e6d8b4', '#6a6058'), spray: new Puffs(scene, 160, puffTexture(), '#ffffff', '#cfe8f0'), fireflies: new Puffs(scene, 120, glowTexture(), '#e8ff8a', '#8aff6a', THREE.AdditiveBlending), leaves: new Puffs(scene, 160, puffTexture(), '#7aa83a', '#c9a24a'), stepT: 0 };
 // the sun itself: a glare sprite far out along the light, hidden by the mountain when it stands in front
 const sunSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture(), color: '#fff4dc', transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, depthTest: true }));
 sunSprite.scale.set(260, 260, 1); scene.add(sunSprite);
@@ -254,6 +283,8 @@ function driveTick(dt) {
     onHit: (v) => { audio.crash(Math.min(1, v / 15)); cam.kick = Math.min(1, cam.kick + 0.3); if (v > 11) hurt((v - 11) * 3, 'killed in a crash'); },
     onFlood: () => { audio.flood(); toast(`The engine floods. Deep water and a ${car.name} don't mix.`, 3); voice.say('The engine\'s flooded. Out, out!', 'You', true); },
     onDestroyed: () => { toast(`The ${car.name} is wrecked!`, 3); audio.explosion(0); } });
+  car.trackDist = (car.trackDist || 0) + Math.abs(car.speed) * dt;
+  if (car.trackDist > 0.7) { car.trackDist = 0; const fx2 = Math.sin(car.yaw), fz2 = Math.cos(car.yaw), lx = fz2, lz = -fx2, [cx, cz] = car.spec.corners[2]; for (const sd of [1, -1]) { const x = car.x + lx * cx * sd + fx2 * cz, z = car.z + lz * cx * sd + fz2 * cz; if (marksOn(x, z)) stamp(decals.tyre, x, z, car.yaw); } }
   if (car === quad) { game.stats.quadDist += Math.abs(quad.speed) * dt; if (game.stats.quadDist > 1000) unlock('quad'); }
   animateSurvivor(player.rig, dt, { mode: 'drive', steer: car.steer });
   const s = player.stats, nearLava = volcano.heatAt(player.x, player.z);
@@ -269,6 +300,21 @@ const npcs = new NpcManager(scene, world, {
   onStep: (n) => { const d = Math.hypot(n.x - player.x, n.z - player.z); if (d < 14) audio.step(surfaceAt(n.x, n.z), 0.35 * (1 - d / 14)); },
   onDeath: (n, how) => { toast(n.def.name + (how === 'rock' ? ' was hit by a falling rock' : ' didn\'t make it'), 4); audio.fail(); voice.say(n.def.name + (how === 'rock' ? ' was hit by a falling rock.' : ' didn\'t make it.'), 'Narrator', false); },
 });
+
+// footprints and tyre tracks pressed into sand, ash and wet ground
+const decals = (() => {
+  const paint = (w, h, fn) => { const c = document.createElement('canvas'); c.width = w; c.height = h; const x = c.getContext('2d'); fn(x, w, h); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; };
+  const footTex = paint(64, 128, (x) => { x.fillStyle = '#fff'; x.beginPath(); x.ellipse(32, 44, 18, 30, 0, 0, 7); x.fill(); x.beginPath(); x.ellipse(32, 100, 14, 20, 0, 0, 7); x.fill(); x.globalCompositeOperation = 'destination-out'; for (let i = 0; i < 6; i++) { x.fillRect(10, 22 + i * 9, 44, 3); } });
+  const tyreTex = paint(64, 128, (x) => { x.fillStyle = '#fff'; x.fillRect(6, 0, 52, 128); x.globalCompositeOperation = 'destination-out'; for (let i = 0; i < 9; i++) { x.save(); x.translate(32, i * 15 + 4); x.rotate(i % 2 ? 0.5 : -0.5); x.fillRect(-20, -3, 40, 6); x.restore(); } });
+  const mk = (tex, n, w, l) => { const g = new THREE.PlaneGeometry(w, l); g.rotateX(-Math.PI / 2); const m = new THREE.InstancedMesh(g, new THREE.MeshBasicMaterial({ map: tex, color: '#1a120a', transparent: true, opacity: 0.6, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4, fog: true }), n); m.frustumCulled = false; m.count = 0; m.renderOrder = 1; scene.add(m); return { m, n, i: 0, filled: 0 }; };
+  return { foot: mk(footTex, 260, 0.2, 0.36), tyre: mk(tyreTex, 420, 0.34, 0.8) };
+})();
+const _dq = new THREE.Quaternion(), _dy = new THREE.Quaternion(), _dm = new THREE.Matrix4(), _dv = new THREE.Vector3(), _UP = new THREE.Vector3(0, 1, 0), _ONE = new THREE.Vector3(1, 1, 1), _dn = new THREE.Vector3();
+function stamp(d, x, z, yaw) {
+  normalAt(x, z, _dn); _dq.setFromUnitVectors(_UP, _dn); _dy.setFromAxisAngle(_UP, yaw); _dq.multiply(_dy);
+  _dm.compose(_dv.set(x, heightAt(x, z) + 0.07, z), _dq, _ONE); d.m.setMatrixAt(d.i, _dm); d.i = (d.i + 1) % d.n; d.filled = Math.min(d.n, d.filled + 1); d.m.count = d.filled; d.m.instanceMatrix.needsUpdate = true;
+}
+const marksOn = (x, z) => { const sf = surfaceAt(x, z); return sf === 'sand' || sf === 'ash' || (game.wet > 0.4 && sf === 'grass'); };
 
 // what is underfoot, for footsteps
 function surfaceAt(x, z) { const h = heightAt(x, z); if (h < 0.15) return 'water'; if (volcano.ash > 0.35) return 'ash'; if (h > 92 || 1 - normalAt(x, z).y > 0.32) return 'rock'; if (h < 4.5) return 'sand'; return 'grass'; }
@@ -820,7 +866,7 @@ function updatePlayer(dt) {
   animateSurvivor(player.rig, dt, { speed: resting ? 0 : player.speed, mode: player.swimming ? 'swim' : resting ? 'sit' : 'move', torch: torchModel.visible, air: !player.onGround, hurt: s.health < 30, tilt: player.onGround && !player.swimming ? groundTilt(slope, player.yaw) : [0, 0] });
   if (Math.floor(player.rig.phase / Math.PI) !== Math.floor(ph0 / Math.PI)) {
     if (player.swimming) audio.stroke(player.speed > 0.3 ? 0.8 : 0.35);
-    else if (player.onGround && player.speed > 0.4) audio.step(surfaceAt(player.x, player.z), player.speed > 4 ? 1 : 0.7);
+    else if (player.onGround && player.speed > 0.4) { audio.step(surfaceAt(player.x, player.z), player.speed > 4 ? 1 : 0.7); if (marksOn(player.x, player.z)) { player.footSide = -(player.footSide || 1); stamp(decals.foot, player.x + Math.cos(player.yaw) * 0.12 * player.footSide, player.z - Math.sin(player.yaw) * 0.12 * player.footSide, player.yaw); } }
   }
   // dust off your heels on sand and ash, spray when you swim
   fx.stepT -= dt * Math.max(0.3, player.speed);
@@ -892,19 +938,29 @@ function updateAtmosphere(dt, vfx) {
   if (player.inBunker) { scene.fog.near = 2; scene.fog.far = 16; scene.fog.color.set('#2a2320'); }
   // crater glow colours the underside of the ash cloud at dusk
   if (bloom) bloom.strength = 0.3 + 0.25 * dusk + 0.2 * (vfx.stageIdx >= 3 ? 1 : 0) + 0.15 * night;
-  U.uFlash.value = (vfx.flash || 0) + game.seaFlash * 0.5; hemi.intensity += (vfx.flash || 0) * 1.8;
+  U.uFlash.value = (vfx.flash || 0) + game.seaFlash * 0.5;
+  const rbWant = game.wet > 0.2 && game.rain < 0.12 && dayK > 0.6 && sy < 0.5 && ash < 0.2 ? 1 : 0; U.uRainbow.value += (rbWant - U.uRainbow.value) * Math.min(1, dt * 0.15);
+  // mist lying in the low ground at dawn and after the rain
+  { const dawnK = clamp(1 - Math.abs(dayNight.hour - 6.6) / 2.4, 0, 1), mk = clamp(dawnK + game.wet * 0.35 * dayK, 0, 1) * (1 - ash) * (player.inBunker ? 0 : 1);
+    fx.mistAcc = (fx.mistAcc || 0) + dt * mk * (quality === 'low' ? 3 : 7);
+    while (fx.mistAcc >= 1) { fx.mistAcc--; const a = Math.random() * 6.3, r = 20 + Math.random() * 150, x = player.x + Math.cos(a) * r, z = player.z + Math.sin(a) * r, h = heightAt(x, z); if (h < 1 || h > 32) continue; fx.mist.emit(x, h + 1.5 + Math.random() * 3, z, 0.3 + Math.random() * 0.3, 0.05, (Math.random() - 0.5) * 0.3, 26 + Math.random() * 24, 18 + Math.random() * 10, Math.random(), 0.16, 1.2, 1); }
+    fx.mist.update(dt, 0.02, 0, 0.15); fx.mist.u.uScale.value = innerHeight * 1.1; fx.mist.u.uLight.value = 0.25 + 0.75 * dayK; } hemi.intensity += (vfx.flash || 0) * 1.8;
   for (let i = 0; i < 8; i++) U.uGlow.value[i].copy(volcano.glow[i]);
   if (gradePass) {
     gradePass.uniforms.uTime.value = game.t; gradePass.uniforms.uAsh.value = ash; gradePass.uniforms.uHurt.value = player.stats.health < 30 ? (1 - player.stats.health / 30) * 0.6 : 0;
     const tints = [[1, 1, 1], [1, 0.99, 0.97], [0.96, 0.94, 0.93], [1.06, 0.93, 0.87], [1.1, 0.9, 0.84]][vfx.stageIdx];
     const tv = gradePass.uniforms.uTint.value; tv.x += (tints[0] - tv.x) * dt * 0.5; tv.y += (tints[1] - tv.y) * dt * 0.5; tv.z += (tints[2] - tv.z) * dt * 0.5;
     gradePass.uniforms.uAberr.value = clamp(gradePass.uniforms.uHurt.value * 1.2 + gradePass.uniforms.uHeat.value * 0.8 + volcano.shake * 1.5 + cam.kick, 0, 1.5);
+    const vSpeed = player.inJeep ? Math.abs(car.speed) : player.inBoat ? Math.abs(boat.speed) * 1.3 : player.speed > 5 ? 5 : 0;
+    gradePass.uniforms.uBlur.value += (clamp((vSpeed - 7) / 14, 0, 1) * 0.9 + (volcano.surgeR > 0 && distToVolcano(player.x, player.z) < volcano.surgeR + 120 ? 0.3 : 0) - gradePass.uniforms.uBlur.value) * Math.min(1, dt * 4);
+    gradePass.uniforms.uAspect.value = innerWidth / innerHeight;
     const nf = vfx.nearFront == null ? 1e9 : vfx.nearFront;
     gradePass.uniforms.uHeat.value = player.inBunker ? 0 : clamp(volcano.heatAt(player.x, player.z) * 1.2 + Math.max(0, 1 - nf / 45) + (vfx.stageIdx >= 3 ? Math.max(0, 1 - distToVolcano(player.x, player.z) / 150) * 0.7 : 0), 0, 1);
     sunNdc.copy(camera.position).addScaledVector(U.uSun.value, 200).project(camera);
     const onScreen = sunNdc.z < 1 && Math.abs(sunNdc.x) < 1.6 && Math.abs(sunNdc.y) < 1.6;
     gradePass.uniforms.uSun.value.set(sunNdc.x * 0.5 + 0.5, sunNdc.y * 0.5 + 0.5);
     gradePass.uniforms.uShaft.value = onScreen && !player.inBunker ? dayK * (1 - ash * 0.9) * clamp(1.6 - Math.max(Math.abs(sunNdc.x), Math.abs(sunNdc.y)), 0, 1) : 0;
+    gradePass.uniforms.uFlare.value = onScreen && !player.inBunker ? dayK * (1 - ash) * (1 - game.rain) * clamp(1.3 - Math.max(Math.abs(sunNdc.x), Math.abs(sunNdc.y)), 0, 1) : 0;
     gradePass.uniforms.uAberr.value = clamp(gradePass.uniforms.uHurt.value * 1.2 + gradePass.uniforms.uHeat.value * 0.8 + volcano.shake * 1.5 + cam.kick, 0, 1.5);
   }
   sunSprite.position.copy(camera.position).addScaledVector(U.uSun.value, 1500);
@@ -968,7 +1024,7 @@ function updateWeather(dt) {
       if (y < c.y - 14 || Math.abs(x - c.x) > 30 || Math.abs(z - c.z) > 30) { x = c.x + (Math.random() - 0.5) * 60; y = c.y + 12 + Math.random() * 14; z = c.z + (Math.random() - 0.5) * 60; }
       a[i * 6] = x; a[i * 6 + 1] = y; a[i * 6 + 2] = z; a[i * 6 + 3] = x - wind * 0.04; a[i * 6 + 4] = y + 0.7; a[i * 6 + 5] = z;
     }
-    R.geometry.attributes.position.needsUpdate = true; R.material.opacity = 0.35 * game.rain * (0.6 + 0.4 * dayNight.dayK);
+    R.geometry.attributes.position.needsUpdate = true; R.material.opacity = 0.55 * game.rain * (0.6 + 0.4 * dayNight.dayK);
   }
   // the rain fills your canteen when you're out in it
   if (game.rain > 0.4 && !under && !player.inJeep) {
@@ -1078,7 +1134,7 @@ function enterPhoto() {
   closeMenu(); game.photo = { yaw: cam.yaw, pitch: 0.15 };
   show('hud', false); show('photo'); camera.fov = 60; camera.updateProjectionMatrix(); voice.stop();
 }
-function exitPhoto() { game.photo = null; show('photo', false); show('hud'); camera.fov = 60; camera.updateProjectionMatrix(); }
+function exitPhoto() { if (bokehPass) bokehPass.enabled = false; dofOn = false; if ($('phDof')) $('phDof').textContent = 'BLUR: OFF'; game.photo = null; show('photo', false); show('hud'); camera.fov = 60; camera.updateProjectionMatrix(); }
 const _pd = new THREE.Vector3();
 function updatePhotoCam(dt) {
   const ph = game.photo, look = input.lookDelta(dt);
@@ -1092,6 +1148,7 @@ function updatePhotoCam(dt) {
   const dx = c.x - player.x, dz = c.z - player.z, d = Math.hypot(dx, dz); if (d > 90) { c.x = player.x + dx / d * 90; c.z = player.z + dz / d * 90; }
   _pd.set(fx * Math.cos(ph.pitch), -Math.sin(ph.pitch), fz * Math.cos(ph.pitch));
   camera.lookAt(c.x + _pd.x, c.y + _pd.y, c.z + _pd.z);
+  if (bokehPass && dofOn) bokehPass.uniforms.focus.value += (photoFocus() - bokehPass.uniforms.focus.value) * Math.min(1, dt * 6);
 }
 function snapPhoto() {
   // read the frame now, straight after it was drawn, while the canvas still holds it
@@ -1102,6 +1159,20 @@ function snapPhoto() {
   game.stats.photos++; unlock('photo');
 }
 $('phSnap').onclick = () => { game.snap = true; };
+let dofOn = false;
+$('phDof').onclick = () => {
+  if (!composer) return; dofOn = !dofOn; $('phDof').textContent = 'BLUR: ' + (dofOn ? 'ON' : 'OFF');
+  if (dofOn && !bokehPass) { bokehPass = new BokehPass(scene, camera, { focus: 10, aperture: 0.0035, maxblur: 0.012 }); composer.insertPass(bokehPass, composer.passes.indexOf(bloom)); }
+  if (bokehPass) bokehPass.enabled = dofOn;
+};
+// focus on whatever is under the middle of the screen: you, if you're there, otherwise the ground
+function photoFocus() {
+  const dir = _pd.clone().normalize(), c = camera.position;
+  const toP = new THREE.Vector3(player.x - c.x, player.y + 1 - c.y, player.z - c.z), along = toP.dot(dir);
+  if (along > 0 && toP.clone().addScaledVector(dir, -along).length() < 1.5) return along;
+  for (let t = 0.5; t < 220; t *= 1.08) { const x = c.x + dir.x * t, y = c.y + dir.y * t, z = c.z + dir.z * t; if (y < Math.max(heightAt(x, z), SEA)) return t; }
+  return 220;
+}
 $('phExit').onclick = () => exitPhoto();
 $('phFovM').onclick = () => { camera.fov = clamp(camera.fov - 8, 15, 95); camera.updateProjectionMatrix(); };
 $('phFovP').onclick = () => { camera.fov = clamp(camera.fov + 8, 15, 95); camera.updateProjectionMatrix(); };
@@ -1127,7 +1198,7 @@ $('helpBack').onclick = () => { show('help', false); if (helpFrom === 'pause') s
 $('resume').onclick = () => { audio.init(); closeMenu(); };
 $('craftClose').onclick = () => closeMenu();
 $('mapClose').onclick = () => closeMenu();
-const toggleGfx = () => { quality = quality === 'high' ? 'low' : 'high'; store.set('ash-gfx', quality); toast('Graphics change fully after a reload', 3); applyQuality(); };
+const toggleGfx = () => { quality = quality === 'low' ? 'high' : quality !== 'low' ? 'ultra' : 'low'; store.set('ash-gfx', quality); toast(quality === 'ultra' ? 'Ultra: ambient occlusion, sharper and longer shadows, denser jungle. Best on a PC or Mac. Reload for the full effect.' : 'Graphics change fully after a reload', 4); applyQuality(); };
 $('gfx').onclick = toggleGfx; $('gfx2').onclick = toggleGfx;
 const toggleSnd = () => { soundOn = !soundOn; store.set('ash-snd', soundOn); audio.init(); audio.setOn(soundOn); for (const id of ['snd', 'snd2']) $(id).textContent = 'SOUND: ' + (soundOn ? 'ON' : 'OFF'); };
 $('snd').onclick = toggleSnd; $('snd2').onclick = toggleSnd;
@@ -1234,11 +1305,11 @@ function frame(now) {
   else if (game.started && !game.photo) camera.lookAt(props.heli.position);
   input.endFrame();
   if (showFps) { fpsT += dt; game.fpsN++; if (fpsT >= 0.5) { $('fps').textContent = Math.round(game.fpsN / fpsT) + ' FPS'; fpsT = 0; game.fpsN = 0; } }
-  try { if (composer && quality === 'high') composer.render(); else renderer.render(scene, camera); if (game.snap) { game.snap = false; snapPhoto(); } }
+  try { if (composer && quality !== 'low') composer.render(); else renderer.render(scene, camera); if (game.snap) { game.snap = false; snapPhoto(); } }
   catch (e) { console.error(e); save(); show('crash'); throw e; }
 }
 renderer.domElement.addEventListener('webglcontextlost', (e) => { e.preventDefault(); save(); show('crash'); });
-window.ASH = { quad, cars, car: () => car, wild: () => wild, unlock, enterPhoto, exitPhoto, addShelter, dog: () => dog, trySleep, surfaceAt, game, player, volcano, npcs, props, world, cam, save, load, die, win, jeep, enterJeep, exitJeep, voice, boat, enterBoat, exitBoat, dayNight, addFire };
+window.ASH = { decals, quad, cars, car: () => car, wild: () => wild, unlock, enterPhoto, exitPhoto, addShelter, dog: () => dog, trySleep, surfaceAt, game, player, volcano, npcs, props, world, cam, save, load, die, win, jeep, enterJeep, exitJeep, voice, boat, enterBoat, exitBoat, dayNight, addFire };
 applyQuality();
 $('loading').classList.add('hidden');
 requestAnimationFrame(frame);

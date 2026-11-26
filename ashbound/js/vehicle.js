@@ -7,6 +7,16 @@ import { mat } from './survivor.js';
 import { signTexture, metalTexture } from './textures.js';
 
 const _wp = new THREE.Vector3();
+// a soft cone of light in the air in front of a headlamp: brightest at the lamp, fading along its length and at its edges
+const beamMat = new THREE.ShaderMaterial({
+  uniforms: { uCol: { value: new THREE.Color('#fff0c8') }, uI: { value: 0.28 } }, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
+  vertexShader: 'varying float vT; varying vec3 vN; varying vec3 vV; void main(){ vT = position.z / 13.0; vec4 mv = modelViewMatrix * vec4(position, 1.0); vN = normalize(normalMatrix * normal); vV = normalize(-mv.xyz); gl_Position = projectionMatrix * mv; }',
+  fragmentShader: 'uniform vec3 uCol; uniform float uI; varying float vT; varying vec3 vN; varying vec3 vV; void main(){ float a = uI * pow(1.0 - clamp(vT, 0.0, 1.0), 1.6) * pow(abs(dot(normalize(vN), normalize(vV))), 1.8); gl_FragColor = vec4(uCol * a, a); }',
+});
+function headBeam(x, y, z, len = 13, spread = 2.2) {
+  const g = new THREE.CylinderGeometry(0.1, spread, len, 18, 1, true); g.translate(0, -len / 2, 0); g.rotateX(-Math.PI / 2);
+  const m = new THREE.Mesh(g, beamMat); m.position.set(x, y, z); m.rotation.x = 0.07; m.visible = false; m.renderOrder = 6; return m;
+}
 const box = (w, h, d, m) => new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m);
 const cyl = (r1, r2, h, m, seg = 16) => new THREE.Mesh(new THREE.CylinderGeometry(r1, r2, h, seg), m);
 
@@ -37,6 +47,7 @@ export function buildJeep() {
     const rim = cyl(0.16, 0.16, 0.08, steel, 18); rim.rotation.x = Math.PI / 2; rim.position.set(s * 0.6, 0.9, 1.88); body.add(rim);
     const lens = new THREE.Mesh(new THREE.CircleGeometry(0.13, 18), new THREE.MeshStandardMaterial({ color: '#fff6d8', emissive: '#fff0c0', emissiveIntensity: 0, roughness: 0.2 })); lens.position.set(s * 0.6, 0.9, 1.93); body.add(lens); lamps.push(lens);
     const spot = new THREE.SpotLight('#fff0c8', 0, 60, 0.55, 0.5, 1.2); spot.position.set(s * 0.6, 0.95, 1.9); spot.target.position.set(s * 0.6, 0.2, 20); body.add(spot, spot.target); lamps.push(spot);
+    const beam = headBeam(s * 0.6, 0.9, 1.95); body.add(beam); lamps.push(beam);
     const tail = new THREE.Mesh(new THREE.CircleGeometry(0.08, 12), new THREE.MeshStandardMaterial({ color: '#500', emissive: '#ff2020', emissiveIntensity: 0.4 })); tail.rotation.y = Math.PI; tail.position.set(s * 0.6, 1.0, -1.91); body.add(tail);
   }
   // windscreen and roll cage
@@ -97,6 +108,7 @@ export function buildQuad() {
   const lamps = [];
   const lens = new THREE.Mesh(new THREE.CircleGeometry(0.09, 16), new THREE.MeshStandardMaterial({ color: '#fff6d8', emissive: '#fff0c0', emissiveIntensity: 0, roughness: 0.2 })); lens.position.set(0, 0.8, 1.06); lens.rotation.x = 0.35; body.add(lens); lamps.push(lens);
   const spot = new THREE.SpotLight('#fff0c8', 0, 45, 0.6, 0.5, 1.2); spot.position.set(0, 0.85, 1.05); spot.target.position.set(0, 0.1, 15); body.add(spot, spot.target); lamps.push(spot);
+  const beam = headBeam(0, 0.8, 1.1, 11, 2.0); body.add(beam); lamps.push(beam);
   const tail = new THREE.Mesh(new THREE.CircleGeometry(0.05, 10), new THREE.MeshStandardMaterial({ color: '#500', emissive: '#ff2020', emissiveIntensity: 0.4 })); tail.rotation.y = Math.PI; tail.position.set(0, 0.8, -1.01); body.add(tail);
   const wheels = [], pivots = [];
   for (const [x, z, front] of [[-0.55, 0.62, 1], [0.55, 0.62, 1], [-0.55, -0.62, 0], [0.55, -0.62, 0]]) {
@@ -185,7 +197,7 @@ export class Jeep {
     for (const p of this.pivots) p.rotation.y = this.steer;
     // headlights in the dark
     const want = ctx.dark && driving;
-    if (want !== this.lightsOn) { this.lightsOn = want; this.lamps.forEach((l) => { if (l.isSpotLight) l.intensity = want ? sp.beam : 0; else l.material.emissiveIntensity = want ? 2.5 : 0; }); }
+    if (want !== this.lightsOn) { this.lightsOn = want; this.lamps.forEach((l) => { if (l.isSpotLight) l.intensity = want ? sp.beam : 0; else if (l.material === beamMat) l.visible = want; else l.material.emissiveIntensity = want ? 2.5 : 0; }); }
     this.rpm = driving ? Math.min(1, 0.15 + Math.abs(this.speed) / maxF + Math.max(0, throttle) * 0.2) : 0;
     // lava
     const heat = ctx.heatAt(this.x, this.z);
@@ -200,7 +212,7 @@ export class Jeep {
   damage(n, ctx) {
     if (this.dead) return;
     this.hp -= n;
-    if (this.hp <= 0) { this.hp = 0; this.dead = true; this.paint.color.set('#2a2622'); this.paint.roughness = 1; this.lamps.forEach((l) => { if (l.isSpotLight) l.intensity = 0; }); if (ctx && ctx.onDestroyed) ctx.onDestroyed(); }
+    if (this.hp <= 0) { this.hp = 0; this.dead = true; this.paint.color.set('#2a2622'); this.paint.roughness = 1; this.lamps.forEach((l) => { if (l.isSpotLight) l.intensity = 0; else if (l.material === beamMat) l.visible = false; }); if (ctx && ctx.onDestroyed) ctx.onDestroyed(); }
   }
   seatFor(index) { return this.seats[Math.min(index, this.seats.length - 1)]; }
   // put a rig in a seat (it becomes a child of the body so it leans with the car)

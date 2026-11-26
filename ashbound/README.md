@@ -30,7 +30,7 @@ Open `ashbound/index.html` from any web server (GitHub Pages works). Nothing nee
 - **Sleep**: tap USE at a lit fire at night, or sleep under a roof, to wake fully rested at dawn. The mountain carries on while you sleep.
 - **The other survivors**: Dr Amara Osei (volcanologist, at the camp), Kai Tane (fisherman, in the village), Tomas Reyes (the injured pilot at the wreck, who needs a bandage before he can walk), Lena Hart (the ranger) and Old Pete (the hermit at the bunker). Each has their own advice as the stages change. Talk to them, then press again and they follow you. Anyone with you when you launch, lift off or seal the door is saved; the end screen counts them.
 - **Pace**: Relaxed (40 minutes to the surge), Standard (24) or Hardcore (14, and everything hurts more).
-- **Graphics**: High (soft shadows, bloom, more jungle) or Low for older phones. The island, sea and sky are shader-driven: wet sand, breakers along the shore, a drifting eruption column and ash that greys the whole world out.
+- **Graphics**: Low for older phones, High (soft shadows, bloom, film grade), or Ultra for PCs and Macs (adds ambient occlusion, bigger and sharper shadows and a denser jungle). The island, sea and sky are shader-driven: wet sand, breakers along the shore, a drifting eruption column and ash that greys the whole world out.
 - The game saves itself as you play and from the pause menu; **CONTINUE** on the title screen picks it back up.
 
 ## Controls
@@ -55,6 +55,7 @@ Version 1.0 is single player with NPC survivors. The world is seeded and determi
 
 ## Versions
 
+- **2.2**: ULTRA graphics (ambient occlusion, bigger and sharper shadows, denser jungle); lens flare; depth of field in photo mode; speed blur; footprints and tyre tracks; dawn mist and rainbows; headlight beams.
 - **2.1**: the 24-minute game restored; fishing, crabs and cooking; crabs, goats and fish schools; build lean-to shelters; the quad bike; twelve journal pages; photo mode; rain squalls; seventeen achievements.
 - **2.0**: survivor objectives (the data logger, the pendant, the logbook) and Biscuit, Old Pete's lost dog; surface footsteps for sand, grass, rock, ash and water; sleep till dawn at a fire or under a roof, at the cost of time.
 - **1.9**: day and night on an island clock (08:00 day 3 to sunset day 4); dark nights with moon, stars and crickets; build campfires to rest, recover and light the night; craft a torch that lights itself in the dark.
