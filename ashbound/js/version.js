@@ -1,7 +1,11 @@
 // Bump VERSION for every update (1.1, 1.2, 1.3 ...) and add a line to CHANGES.
-export const VERSION = '2.4';
+export const VERSION = '2.5';
 
 export const CHANGES = [
+  ['2.5', [
+    'Title screen on phones: the ASHBOUND title no longer runs off the top of the screen. On landscape phones the title and news sit on the left and the buttons on the right',
+    '© Douglas Thomson on the title screen',
+  ]],
   ['2.4', [
     'Fixed: once you picked ULTRA graphics, the GRAPHICS button stayed on ULTRA. It now cycles LOW, HIGH, ULTRA and back to LOW again',
   ]],
