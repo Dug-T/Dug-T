@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { VOLCANO, heightAt, W } from './island.js';
 import { puffTexture, sparkTexture, lavaTexture, glowTexture, makeNoise } from './textures.js';
 import { stageAt } from './survival.js';
+import { makeFlame } from './flame.js';
 
 // a pool of billboard particles with per-point size, alpha and shade
 export class Puffs {
@@ -309,8 +310,7 @@ export class Volcano {
     for (let i = this.fires.length - 1; i >= 0; i--) {
       const f = this.fires[i]; f.t -= dt;
       const k = Math.min(1, f.t / 10);
-      f.s.scale.set((2.5 + Math.sin(this.t * 13 + f.x) * 0.6) * k, (4 + Math.sin(this.t * 17 + f.z) * 1.2) * k, 1);
-      f.s.position.y = f.y + f.s.scale.y * 0.4;
+      f.s.scale.set((2.6 + Math.sin(this.t * 3 + f.x) * 0.3) * k, (4.6 + Math.sin(this.t * 4 + f.z) * 0.6) * k, 1);
       if (Math.random() < 0.25 * k) this.plume.emit(f.x, f.y + 2, f.z, 0, 2.5, 0, 3, 6, 0.75, 0.35, 1.5);
       if (f.t <= 0) { this.scene.remove(f.s); this.fires.splice(i, 1); }
     }
@@ -404,8 +404,7 @@ export class Volcano {
     if (this.hooks.onExplode) this.hooks.onExplode(x, y, z, radius, false, true);
   }
   fire(x, y, z, life) {
-    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.fireTex, color: '#ff8a20', transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
-    s.position.set(x, y + 1.5, z); this.scene.add(s);
+    const s = makeFlame(); s.position.set(x, y, z); this.scene.add(s);
     this.fires.push({ s, x, y, z, t: life });
   }
 }

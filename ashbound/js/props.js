@@ -4,6 +4,7 @@ import { POIS, heightAt, normalAt } from './island.js';
 import { thatchTexture, metalTexture, concreteTexture, signTexture, sparkTexture, frondTexture, rng } from './textures.js';
 let _frondTex = null; const frondTex = () => (_frondTex = _frondTex || frondTexture());
 import { mat } from './survivor.js';
+import { makeFlame } from './flame.js';
 
 const box = (w, h, d, m) => new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m);
 const cyl = (r1, r2, h, m, seg = 12) => new THREE.Mesh(new THREE.CylinderGeometry(r1, r2, h, seg), m);
@@ -23,8 +24,8 @@ export function buildProps(scene, world, quality) {
     const stones = new THREE.Group(); for (let i = 0; i < 9; i++) { const a = i / 9 * Math.PI * 2; const s = new THREE.Mesh(new THREE.DodecahedronGeometry(0.25), mat('#6a6560', 0.9)); s.position.set(Math.cos(a) * 0.8, 0.12, Math.sin(a) * 0.8); stones.add(s); }
     g.add(stones);
     for (let i = 0; i < 3; i++) { const l = cyl(0.08, 0.1, 1.1, darkWood, 7); l.rotation.z = Math.PI / 2 + 0.5; l.rotation.y = i * 2.1; l.position.y = 0.2; g.add(l); }
-    const flame = new THREE.Sprite(new THREE.SpriteMaterial({ map: sparkTexture(), color: '#ff9a30', transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.95 }));
-    flame.scale.set(1.2, 1.8, 1); flame.position.y = 0.9; g.add(flame);
+    const flame = makeFlame();
+    flame.scale.set(1.2, 1.8, 1); flame.position.y = 0.05; g.add(flame);
     const light = new THREE.PointLight('#ff8a30', 14, 22, 1.8); light.position.y = 1.5; g.add(light);
     P.fires.push({ flame, light, x: c.x, z: c.z, t: Infinity, camp: true });
     const log = cyl(0.25, 0.25, 2.4, woodM, 9); log.rotation.z = Math.PI / 2; log.position.set(0, 0.25, 2.2); g.add(log);
@@ -173,14 +174,13 @@ export function buildProps(scene, world, quality) {
 }
 
 // a fire pit you build yourself: a ring of stones, crossed logs and a flame
-const firePitTex = sparkTexture();
 export function buildFirePit() {
   const g = new THREE.Group(), stoneM = mat('#6a6560', 0.9), logM = mat('#4a3520', 0.9), charM = mat('#1a1410', 1);
   for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2; const st = new THREE.Mesh(new THREE.DodecahedronGeometry(0.2), stoneM); st.position.set(Math.cos(a) * 0.65, 0.1, Math.sin(a) * 0.65); st.rotation.set(a, a * 2, 0); g.add(st); }
   const ash = new THREE.Mesh(new THREE.CircleGeometry(0.5, 12), charM); ash.rotation.x = -Math.PI / 2; ash.position.y = 0.03; g.add(ash);
   for (let i = 0; i < 3; i++) { const l = cyl(0.07, 0.09, 0.95, logM, 7); l.rotation.z = Math.PI / 2 + 0.45; l.rotation.y = i * 2.1; l.position.y = 0.18; g.add(l); }
-  const flame = new THREE.Sprite(new THREE.SpriteMaterial({ map: firePitTex, color: '#ff9a30', transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.95 }));
-  flame.scale.set(1.0, 1.5, 1); flame.position.y = 0.75; g.add(flame);
+  const flame = makeFlame();
+  flame.scale.set(1.0, 1.5, 1); flame.position.y = 0.05; g.add(flame);
   g.traverse((m) => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } });
   return { group: g, flame };
 }
