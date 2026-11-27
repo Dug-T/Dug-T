@@ -1,7 +1,14 @@
 // Bump VERSION for every update (1.1, 1.2, 1.3 ...) and add a line to CHANGES.
-export const VERSION = '4.4';
+export const VERSION = '4.5';
 
 export const CHANGES = [
+  ['4.5', [
+    "The Isle of Neep: take the ferry from the east promenade (white triangle on the radar) to an island wi' cottages, a ruined castle, standing stones, a distillery and a field full of sheep",
+    'The Highland Games on the island: toss the caber and throw the hammer with a power-and-timing meter. Beat the record for $500',
+    "Two new Nessie missions: Nessie Kidnapped! (stop McGinty's circus lorry) and Nessie's Big Day Out (take her to the Highland Games)",
+    'Night life: a ceilidh in Hero Square from 7pm to midnight, with dancers and a live band you can hear as you walk up, and fireworks over the bay from 10pm (a big show at Hogmanay)',
+    'Folk at home in the tenement windows at night, and the distant hills drawn as one mesh for a wee bit more speed',
+  ]],
   ['4.4', [
     "Buy property: The Chippy, Pie Palace, Haggis Hut, the Wally Wash and the Neep Market (green squares on the radar). Each pays you every hour",
     "Wally's phone (T, the 📱 button, or Back on a controller): a full city map where you can tap to set a waypoint, contacts to phone (each does you a wee favour), property, stats and the camera",

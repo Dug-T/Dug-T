@@ -145,6 +145,16 @@ export function facadeTextures(style, seed) {
       ex.fillRect(wx + 2, wy + 2, ww - 4, wh - 4);
       ex.globalAlpha = 1;
       ex.fillStyle = 'rgba(0,0,0,0.4)'; ex.fillRect(wx + ww / 2 - 2, wy, 4, wh);
+      // somebody's home: a silhouette in some of the lit windows (a person, a couple, someone wi' a cuppa, or the cat)
+      if (!glass && r() < 0.35) {
+        const kind = r(), cx = wx + ww * (0.3 + r() * 0.4), base = wy + wh - 2;
+        ex.fillStyle = 'rgba(15,10,8,0.82)';
+        const person = (px, s) => { ex.beginPath(); ex.arc(px, base - wh * 0.62 * s, wh * 0.11 * s, 0, 7); ex.fill(); ex.beginPath(); ex.ellipse(px, base - wh * 0.12 * s, wh * 0.2 * s, wh * 0.38 * s, 0, Math.PI, 0); ex.fill(); ex.fillRect(px - wh * 0.2 * s, base - wh * 0.12 * s, wh * 0.4 * s, wh * 0.12 * s); };
+        if (kind < 0.45) person(cx, 1);
+        else if (kind < 0.7) { person(cx - ww * 0.14, 1); person(cx + ww * 0.14, 0.85); }
+        else if (kind < 0.88) { person(cx, 1); ex.fillRect(cx + wh * 0.16, base - wh * 0.5, wh * 0.09, wh * 0.11); ex.fillRect(cx + wh * 0.05, base - wh * 0.42, wh * 0.14, wh * 0.06); }
+        else { ex.beginPath(); ex.ellipse(cx, base - wh * 0.08, wh * 0.12, wh * 0.08, 0, 0, 7); ex.fill(); ex.beginPath(); ex.arc(cx + wh * 0.1, base - wh * 0.17, wh * 0.06, 0, 7); ex.fill(); ex.beginPath(); ex.moveTo(cx + wh * 0.07, base - wh * 0.21); ex.lineTo(cx + wh * 0.08, base - wh * 0.27); ex.lineTo(cx + wh * 0.11, base - wh * 0.22); ex.moveTo(cx + wh * 0.12, base - wh * 0.21); ex.lineTo(cx + wh * 0.14, base - wh * 0.27); ex.lineTo(cx + wh * 0.15, base - wh * 0.2); ex.fill(); }
+      }
     }
   }
   return { map: tex(c), emissive: tex(e) };

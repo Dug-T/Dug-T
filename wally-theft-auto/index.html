@@ -69,6 +69,13 @@
   .photoBtns { display: flex; gap: 10px; } .photoBtns button { background: #000a; color: #fff; border: 2px solid #fff; border-radius: 10px; font: 700 18px 'Oswald'; padding: 8px 14px; }
   #photoSnap { background: var(--gold) !important; color: #000 !important; }
   #photoFlash { position: fixed; inset: 0; background: #fff; opacity: 0; pointer-events: none; z-index: 36; transition: opacity .25s; }
+  #games { position: fixed; left: 50%; bottom: 22%; transform: translateX(-50%); z-index: 30; width: min(440px, 86vw); background: #0d1630e6; border: 3px solid var(--gold); border-radius: 12px; padding: 10px 14px; color: #fff; text-align: center; font-family: Oswald, sans-serif; }
+  #games.hidden { display: none; }
+  #games b { font: 400 26px 'Bangers', Impact; letter-spacing: 1px; color: var(--gold); }
+  #gamesMeter { position: relative; height: 22px; margin: 8px 0; background: #ffffff22; border-radius: 11px; overflow: hidden; }
+  #gamesBar { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: linear-gradient(90deg, #2ecc71, #ffd23f, #e74c3c); }
+  #gamesMark { position: absolute; top: -2px; bottom: -2px; width: 4px; margin-left: -2px; background: #fff; display: none; box-shadow: 0 0 6px #fff; }
+  #games small { opacity: .85; }
   #fps { position: fixed; top: max(6px, env(safe-area-inset-top)); left: max(10px, env(safe-area-inset-left)); z-index: 30; font: 600 12px/1 ui-monospace, Menlo, Consolas, monospace; color: #7dff8a; background: #000a; padding: 4px 7px; border-radius: 5px; pointer-events: none; display: none; }
   #zone { position: absolute; right: max(16px, env(safe-area-inset-right)); bottom: max(26px, env(safe-area-inset-bottom)); font: 400 34px 'Bangers', Impact, sans-serif; letter-spacing: 2px; color: #fff; text-shadow: var(--shadow); opacity: 0; transition: opacity .6s; text-align: right; }
   #zone small { display: block; font: 700 16px 'Oswald'; color: var(--gold); }
@@ -331,6 +338,7 @@
   <div class="photoBtns"><button id="photoOut">−</button><button id="photoSnap">📸 SNAP</button><button id="photoIn">+</button><button id="photoExit">✖ EXIT</button></div>
 </div>
 <div id="photoFlash"></div>
+<div id="games" class="hidden"><b id="gamesTitle">HIGHLAND GAMES</b><div id="gamesMeter"><div id="gamesBar"></div><div id="gamesMark"></div><span class="sweet"></span></div><small id="gamesHelp"></small></div>
 <div id="fps"></div>
 <div id="fade"></div>
 <div id="loading">BUILDING WALLYPOOL...</div>
@@ -339,7 +347,7 @@
 // every game file stamped with that version, so a browser can't mix old and new files.
 // If you add a new file to js/, add its name to this list too.
 (function () {
-  var files = ['main', 'audio', 'city', 'content', 'custommodel', 'extras', 'flat', 'humans', 'gamepad', 'missions', 'nessie', 'peds', 'phone', 'player', 'radio', 'textures', 'ufo', 'vehicles', 'version', 'voice', 'weapons', 'weather'];
+  var files = ['main', 'audio', 'city', 'content', 'custommodel', 'extras', 'flat', 'humans', 'gamepad', 'island', 'missions', 'nessie', 'peds', 'phone', 'player', 'radio', 'textures', 'ufo', 'vehicles', 'version', 'voice', 'weapons', 'weather'];
   function boot(v) {
     var map = { imports: { 'three': './lib/three.module.min.js', 'three/addons/': './lib/' } };
     files.forEach(function (f) { map.imports['./js/' + f + '.js'] = './js/' + f + '.js?v=' + v; });

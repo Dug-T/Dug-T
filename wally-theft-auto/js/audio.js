@@ -192,11 +192,15 @@ export class Audio {
     this.wind.gain.setTargetAtTime(st.flying ? 0.35 : Math.min(0.15, Math.abs(st.speed) / 400), t, 0.2);
     // the radio: remember whether it should be playing ourselves (reading the gain back isn't reliable on
     // every phone), and only touch the volume when that changes
-    const want = !!(st.inCar && this.station < STATIONS.length && this.on);
+    // the radio in a car, or a live band (the ceilidh) when you're near one on foot
+    this.inCar = !!st.inCar;
+    const band = !st.inCar && (this.ambient || 0) > 0.02 && this.on;
+    const want = !!((st.inCar && this.station < STATIONS.length && this.on) || band);
+    if (want && band && Math.abs((this.ambient || 0) - (this.ambLast || 0)) > 0.05) { this.ambLast = this.ambient; this.music.gain.setTargetAtTime(0.22 * this.ambient, t, 0.3); }
     if (want !== this.musicOn) {
       this.musicOn = want;
       this.music.gain.cancelScheduledValues(t); this.music.gain.setValueAtTime(this.music.gain.value, t);
-      this.music.gain.setTargetAtTime(want ? 0.22 : 0, t, want ? 0.15 : 0.3);
+      this.music.gain.setTargetAtTime(want ? 0.22 * (band ? this.ambient : 1) : 0, t, want ? 0.15 : 0.3); this.ambLast = this.ambient || 0;
       if (want) { this.nextT = t + 0.05; this.musicOffAt = 0; } else this.musicOffAt = t;
     }
     // if the phone has paused the sound (a call, another app, speech), wake it back up
@@ -286,7 +290,7 @@ export class Audio {
   song(st = this.station) { const S = STATIONS[st]; return S ? S.songs[this.songIdx[st] % S.songs.length] : null; }
   schedule() {
     const c = this.ctx; if (!c) return;
-    const st = this.station;
+    const st = !this.inCar && (this.ambient || 0) > 0.02 ? (this.ambientStation ?? 3) : this.station;
     const faded = !this.musicOn && c.currentTime - (this.musicOffAt || 0) > 1.5;
     if (st >= STATIONS.length || faded) { this.nextT = c.currentTime + 0.1; return; }
     let song = this.song(st);

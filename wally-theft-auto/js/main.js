@@ -25,6 +25,7 @@ import { buildFlat, FLAT } from './flat.js';
 import { initContent } from './content.js';
 import { initExtras } from './extras.js';
 import { initPhone } from './phone.js';
+import { initIsland } from './island.js';
 import { Voice, QUIPS, DJ, WEAPON_QUIPS, CHATS, CALLS } from './voice.js';
 import { DJ_LINES } from './radio.js';
 import { OUTFITS } from './player.js';
@@ -1763,6 +1764,7 @@ function drawRadar() {
   rctx.setTransform(s * rx / k, -s * fx / k, s * rz / k, -s * fz / k,
     c + s * rx * (-ISLAND - px) + s * rz * (-ISLAND - pz), c - s * fx * (-ISLAND - px) - s * fz * (-ISLAND - pz));
   rctx.drawImage(mapCanvas, 0, 0);
+  rctx.fillStyle = '#5e8f3e'; rctx.fillRect((ISLAND + 95 + ISLAND) * mapK, (-80 + ISLAND) * mapK, 150 * mapK, 160 * mapK); // the Isle of Neep
   rctx.setTransform(1, 0, 0, 1, 0, 0);
   const toR = (x, z) => { const dx = x - px, dz = z - pz; return [c + s * (dx * rx + dz * rz), c - s * (dx * fx + dz * fz)]; };
   const dot = (x, z, col, r = 7, clamp = true, shape) => {
@@ -1912,7 +1914,7 @@ function updateMission(dt) {
 
 // ---------------- save ----------------
 function save(bed) {
-  store.set(slotKey(), { v: 2, savedAt: Date.now(), slept: !!(bed || (store.get(slotKey(), {}) || {}).slept), money: player.money, missionIdx: game.missionIdx, specs: game.collected || [], weapons: Object.keys(player.owned), ammoOf: player.ammoOf, stats: game.stats, time: game.time, outfit: player.outfit, extra: content.save(), extra2: extras.save(), extra3: phone.save() });
+  store.set(slotKey(), { v: 2, savedAt: Date.now(), slept: !!(bed || (store.get(slotKey(), {}) || {}).slept), money: player.money, missionIdx: game.missionIdx, specs: game.collected || [], weapons: Object.keys(player.owned), ammoOf: player.ammoOf, stats: game.stats, time: game.time, outfit: player.outfit, extra: content.save(), extra2: extras.save(), extra3: phone.save(), extra4: island.save() });
 }
 // Wally never leaves the house without his Highland Rifle
 function defaultWeapon(equip) {
@@ -1935,6 +1937,7 @@ function load(fresh) {
   content.load(s.extra);
   extras.load(s.extra2);
   phone.load(s.extra3);
+  island.load(s.extra4);
   game.stats.specs = game.collected.length;
   if (s.time) game.time = s.time;
   return s;
@@ -2284,6 +2287,7 @@ function updateAmbientFx(dt) {
   litterInst.instanceMatrix.needsUpdate = true;
 }
 function updateNessie(dt) {
+  if (nessie.kidnapped) { nessie.group.visible = false; return; }
   if (!game.inside) nessie.update(dt, player);
   nessie.group.visible = !game.inside;
   if (game.intro || game.inside || player.dead) return;
@@ -2385,8 +2389,10 @@ game.map = { canvas: mapCanvas, island: ISLAND };
 game.nextMissionPos = () => (missionMarker && !game.mission ? { x: missionMarker.x, z: missionMarker.z } : null);
 game.dropCrate = (x, z) => addPickup('crate', x, z, {});
 game.renderNow = () => render();
-game.statsHTML = () => { const s = game.stats; return `<div class="stat">Missions: ${game.missionIdx} / ${MISSIONS.length}</div><div class="stat">Golden Specs: ${s.specs} / 20</div><div class="stat">Motors borrowed: ${s.cars} · Successful flights: ${s.flights}</div><div class="stat">Times hopeless: ${s.wasted} · Times nicked: ${s.busted}</div><div class="stat">${content.stats()}</div><div class="stat">${extras.stats()}</div><div class="stat">${phone.stats()}</div>`; };
+game.statsHTML = () => { const s = game.stats; return `<div class="stat">Missions: ${game.missionIdx} / ${MISSIONS.length}</div><div class="stat">Golden Specs: ${s.specs} / 20</div><div class="stat">Motors borrowed: ${s.cars} · Successful flights: ${s.flights}</div><div class="stat">Times hopeless: ${s.wasted} · Times nicked: ${s.busted}</div><div class="stat">${content.stats()}</div><div class="stat">${extras.stats()}</div><div class="stat">${phone.stats()}</div><div class="stat">${island.stats()}</div>`; };
 const phone = initPhone(game, scene, world); game.phone = phone;
+const island = initIsland(game, scene, world); game.island = island;
+game.cam = cam;
 
 let last = performance.now();
 let acc = 0;
@@ -2414,6 +2420,7 @@ function frame(now) {
   if (inp.radio && player.car) { audio.nextStation(); showRadio(); if (audio.station < DJ_LINES.length && Math.random() < 0.6) voice.say(pickDJ(audio.station), 'DJ', true); }
   if (game.cuffs) { inp.enter = false; inp.mx = inp.my = 0; }
   phone.update(dt, inp);
+  island.update(dt);
   updateFlat(dt, inp);
   if (inp.enter && !game.jack && !game.inside) { if (player.car) exitCar(); else enterCar(); }
   if (inp.aimPressed && !player.car && WEAPONS[player.weapon].melee) game.toast(player.hasWeapons ? 'You can only aim with a gun or neeps. Tap WEAPON to switch.' : 'Nothing to aim yet! Find a gun lying about town (gold rings on the radar... well, on the pavement).');

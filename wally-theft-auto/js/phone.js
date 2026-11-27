@@ -115,6 +115,7 @@ export function initPhone(game, scene, world) {
     screen.innerHTML = '<canvas id="phoneMap" width="512" height="512"></canvas><p class="pnote">Tap the map to set a waypoint.</p>';
     const cv = $('phoneMap'), x = cv.getContext('2d'), M = game.map;
     x.drawImage(M.canvas, 0, 0, 512, 512);
+    x.fillStyle = '#2d5f86'; x.fillRect(0, 0, 0, 0); // (the map covers the city; the Isle of Neep is off to the east, reached by ferry)
     const k = 512 / (M.island * 2), toC = (wx, wz) => [(wx + M.island) * k, (wz + M.island) * k];
     const icon = (wx, wz, col, t) => { const [cx, cy] = toC(wx, wz); x.fillStyle = col; x.strokeStyle = '#000'; x.lineWidth = 2; x.beginPath(); x.arc(cx, cy, 9, 0, 7); x.fill(); x.stroke(); x.fillStyle = '#fff'; x.font = 'bold 11px sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(t, cx, cy + 0.5); };
     const S = world.specials;
