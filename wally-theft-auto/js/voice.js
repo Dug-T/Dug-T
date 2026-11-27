@@ -13,6 +13,8 @@ const CAST = {
   DRIVER: { pitch: 0.85, rate: 1.15, male: true },
   GRANDA: { pitch: 0.6, rate: 0.85, male: true },
   NESSIE: { pitch: 0.45, rate: 0.85, male: false },
+  'CAPTAIN CLYDE': { pitch: 1.1, rate: 1.15, male: true },
+  'TARTAN AVENGER': { pitch: 0.65, rate: 0.95, male: true },
   'UNCLE TAM': { pitch: 0.7, rate: 1.0, male: true },
   'MR FUDGE': { pitch: 1.1, rate: 1.1, male: true },
   'AUNTIE SENGA': { pitch: 1.4, rate: 1.15, male: false },

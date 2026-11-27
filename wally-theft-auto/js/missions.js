@@ -430,6 +430,53 @@ export const MISSIONS = [
     },
     end(g) { g.clearMarkers(); g.setGps(null); },
   },
+  {
+    id: 'circus', title: 'Nessie Kidnapped!', reward: 3000,
+    intro: ["NESSIE: Wally! WALLY! Help! They've got me in a cage!", "WALLY MAN: Nessie?! Who has?", "MR FUDGE: It's McGinty's Circus, Wally! They want her for the big top. Stop that lorry!"],
+    start(g) {
+      const pl = g.player, n = g.nessie;
+      this.van = g.spawnCar('van', 0, 0, 0, { paint: '#b3122e' });
+      addLivery(this.van, "McGINTY'S CIRCUS", 'See the monster! Two pound!', '#f2c200');
+      // the lorry sets off from just up the road
+      const i = 2, j = 2, d = [1, 0];
+      this.van.ai = new TrafficAI(this.van, i, j, d); this.van.driver = 'ai'; this.van.mission = true; this.van.health = 1800; this.van.name = 'Circus lorry';
+      const [sx, sz] = this.van.ai.path[0]; this.van.x = sx; this.van.z = sz; this.van.heading = Math.atan2(d[0], d[1]); this.van.ai.cruise = 15;
+      if (n) { n.kidnapped = true; n.group.visible = false; }
+      g.blip(this.van, 'target');
+    },
+    update(dt, g) {
+      const van = this.van;
+      g.setGps(van.x, van.z);
+      g.objective(`Stop the ~r~circus lorry~w~! Damage: ~y~${Math.max(0, Math.round((1800 - van.health) / 14))}%~w~`);
+      if (van.dead || van.health < 400) {
+        const n = g.nessie;
+        if (n) { n.kidnapped = false; n.group.visible = true; n.x = van.x + 3; n.z = van.z + 3; }
+        g.subs(['NESSIE: Ma hero! Ye smashed the cage wi\' yer face!', 'WALLY MAN: That was the plan. Mostly.']);
+        return 'pass';
+      }
+      return null;
+    },
+    end(g) { g.clearBlips(); g.setGps(null); if (this.van) this.van.mission = false; const n = g.nessie; if (n && n.kidnapped) { n.kidnapped = false; n.group.visible = true; } },
+  },
+  {
+    id: 'games', title: "Nessie's Big Day Out", reward: 2500, allowFerry: true,
+    intro: ["NESSIE: Wally, I've never seen the Highland Games. Can we go? Can we? Can we?", "WALLY MAN: They're on the Isle of Neep. We'll need the ferry.", "NESSIE: A boat! I love boats! Well. I've eaten a few."],
+    start(g) { this.stage = 0; this.best = 0; },
+    update(dt, g) {
+      const I = g.island, pl = g.player;
+      if (this.stage === 0) {
+        g.setGps(I.pierCity.x - 1.5, 0);
+        g.objective('Take the ~y~ferry~w~ to the Isle of Neep (white triangle on the radar).');
+        if (I.inIsle(pl.x, pl.z)) { this.stage = 1; g.onGamesResult = (ev, d) => { if (ev === 'caber') this.best = Math.max(this.best, d); }; }
+      } else {
+        g.setGps(I.field.x, I.field.z);
+        g.objective(`Toss the ~y~caber~w~ over 18 m at the Highland Games. Best: ~y~${this.best.toFixed(1)} m~w~`);
+        if (this.best >= 18) { g.subs(["NESSIE: WALLY! Ye're a Highland legend! I'm gonnae cry. Into the sea."]); return 'pass'; }
+      }
+      return null;
+    },
+    end(g) { g.setGps(null); g.onGamesResult = null; },
+  },
 ];
 
 export function missionStartPoint(world) {

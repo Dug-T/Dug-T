@@ -57,6 +57,7 @@ export class Ped {
   }
   hurt(amount, game, fromX, fromZ, kind) {
     if (this.state === 'dead') return false;
+    if (game && game.onPedHit) game.onPedHit(this, kind);
     this.health -= amount;
     const dx = this.x - fromX, dz = this.z - fromZ, d = Math.hypot(dx, dz) || 1;
     if (this.health <= 0) {

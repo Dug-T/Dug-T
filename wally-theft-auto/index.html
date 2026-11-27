@@ -36,6 +36,46 @@
   @keyframes blink { 50% { opacity: .2; } }
   #radarWrap { pointer-events: auto; cursor: pointer; position: absolute; left: max(18px, env(safe-area-inset-left)); bottom: max(18px, env(safe-area-inset-bottom)); width: 190px; height: 190px; border-radius: 50%; overflow: hidden; border: 4px solid #000; box-shadow: 0 0 0 2px #fff6, 0 4px 14px #000a; background: #213; }
   #radar { width: 100%; height: 100%; }
+  /* save slots */
+  #slots .card { background: #0d1630ee; border: 3px solid var(--gold); border-radius: 12px; padding: 18px 24px; max-width: 94vw; max-height: 90vh; overflow: auto; }
+  #slotList { display: flex; gap: 12px; flex-wrap: wrap; }
+  .slot { background: #ffffff10; border: 2px solid #ffffff30; border-radius: 10px; padding: 10px 12px; width: 230px; }
+  .slot.cur { border-color: var(--gold); }
+  .slot p { margin: 6px 0; font-size: 14px; } .slot .btn { width: 100%; font-size: 20px; padding: 6px 10px; margin: 6px 0; }
+  /* Wally's phone */
+  #tphone { position: absolute; top: max(10px, env(safe-area-inset-top)); left: calc(50% + 70px); pointer-events: auto; background: #0007; border: 2px solid #fff; color: #fff; border-radius: 8px; font: 700 16px 'Oswald'; padding: 4px 10px; }
+  #phone { position: fixed; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center; background: #0006; }
+  #phone.hidden { display: none; }
+  .handset { width: min(360px, 92vw); height: min(640px, 92vh); background: #111; border: 4px solid #333; border-radius: 28px; box-shadow: 0 20px 60px #000; display: flex; flex-direction: column; padding: 14px; box-sizing: border-box; }
+  .phoneTop { color: #fff; font: 600 14px 'Oswald'; text-align: center; padding: 2px 0 8px; opacity: .85; }
+  #phoneScreen { flex: 1; overflow: auto; background: linear-gradient(160deg, #1f5fc4, #0d1630); border-radius: 16px; padding: 10px; color: #fff; }
+  #phoneClose { width: 100%; margin: 10px 0 0; font-size: 20px; padding: 6px; text-align: center; }
+  .apps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .app { background: #ffffff18; border: 0; border-radius: 16px; color: #fff; font: 600 13px 'Oswald'; padding: 12px 4px; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .app span { font-size: 30px; }
+  .contact { display: flex; width: 100%; align-items: center; gap: 10px; background: #ffffff14; border: 0; border-radius: 12px; color: #fff; font: 600 16px 'Oswald'; padding: 10px; margin-bottom: 8px; text-align: left; }
+  .contact span { font-size: 26px; } .contact i { margin-left: auto; color: #7dff8a; font-style: normal; font-size: 13px; }
+  #phoneMap { width: 100%; height: auto; border-radius: 10px; display: block; }
+  .pnote { font-size: 13px; opacity: .85; margin: 6px 2px; }
+  .prop { background: #ffffff14; border-radius: 12px; padding: 8px 10px; margin-bottom: 8px; display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; }
+  .prop.own { border: 2px solid var(--gold); } .prop i { font-style: normal; color: #7dff8a; } .prop small { grid-column: 1 / -1; opacity: .8; }
+  .prop button { grid-column: 1 / -1; justify-self: start; background: var(--gold); border: 0; border-radius: 6px; font: 600 13px 'Oswald'; padding: 4px 10px; }
+  .pstats .stat { font-size: 14px; margin: 6px 0; }
+  /* photo mode: just the picture and a few buttons */
+  body.photo #hud > *, body.photo #touch, body.photo #fps, body.photo #bubbles { display: none !important; }
+  #photoUI { position: fixed; inset: 0; z-index: 35; display: flex; flex-direction: column; justify-content: space-between; align-items: center; padding: 14px; box-sizing: border-box; touch-action: none; }
+  #photoUI.hidden { display: none; }
+  .photoHint { color: #fff; background: #0008; border-radius: 8px; padding: 4px 10px; font: 500 14px 'Oswald'; }
+  .photoBtns { display: flex; gap: 10px; } .photoBtns button { background: #000a; color: #fff; border: 2px solid #fff; border-radius: 10px; font: 700 18px 'Oswald'; padding: 8px 14px; }
+  #photoSnap { background: var(--gold) !important; color: #000 !important; }
+  #photoFlash { position: fixed; inset: 0; background: #fff; opacity: 0; pointer-events: none; z-index: 36; transition: opacity .25s; }
+  #games { position: fixed; left: 50%; bottom: 22%; transform: translateX(-50%); z-index: 30; width: min(440px, 86vw); background: #0d1630e6; border: 3px solid var(--gold); border-radius: 12px; padding: 10px 14px; color: #fff; text-align: center; font-family: Oswald, sans-serif; }
+  #games.hidden { display: none; }
+  #games b { font: 400 26px 'Bangers', Impact; letter-spacing: 1px; color: var(--gold); }
+  #gamesMeter { position: relative; height: 22px; margin: 8px 0; background: #ffffff22; border-radius: 11px; overflow: hidden; }
+  #gamesBar { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: linear-gradient(90deg, #2ecc71, #ffd23f, #e74c3c); }
+  #gamesMark { position: absolute; top: -2px; bottom: -2px; width: 4px; margin-left: -2px; background: #fff; display: none; box-shadow: 0 0 6px #fff; }
+  #games small { opacity: .85; }
   #fps { position: fixed; top: max(6px, env(safe-area-inset-top)); left: max(10px, env(safe-area-inset-left)); z-index: 30; font: 600 12px/1 ui-monospace, Menlo, Consolas, monospace; color: #7dff8a; background: #000a; padding: 4px 7px; border-radius: 5px; pointer-events: none; display: none; }
   #zone { position: absolute; right: max(16px, env(safe-area-inset-right)); bottom: max(26px, env(safe-area-inset-bottom)); font: 400 34px 'Bangers', Impact, sans-serif; letter-spacing: 2px; color: #fff; text-shadow: var(--shadow); opacity: 0; transition: opacity .6s; text-align: right; }
   #zone small { display: block; font: 700 16px 'Oswald'; color: var(--gold); }
@@ -169,6 +209,7 @@
   <div id="stick"><div id="knob"></div></div>
   <div id="lstick"><div id="lknob">⟲</div></div>
   <button id="tpause">II PAUSE</button>
+  <button id="tphone">📱</button>
   <button id="tfire" data-k="fire">PUNCH<br>/FIRE</button>
   <div id="tbtns">
     <button data-k="power">POWER</button><button data-k="weapon">WEAPON</button><button data-k="enter">ENTER<br>/LEAVE</button>
@@ -186,6 +227,7 @@
     <div id="news"></div>
     <button class="btn" id="play">▶ PLAY</button>
     <button class="btn alt" id="newgame">↺ NEW GAME</button>
+    <button class="btn dim" id="slotsOpen">💾 SAVE SLOTS</button>
     <button class="btn dim" id="howto">? CONTROLS</button>
     <button class="btn dim" id="padOpen2">🎮 CONTROLLER</button>
     <button class="btn dim" id="gfx">GRAPHICS: HIGH</button>
@@ -276,6 +318,27 @@
     <button class="btn alt" id="padBack">◀ BACK</button>
   </div>
 </div>
+<div id="slots" class="screen hidden">
+  <div class="card">
+    <h2>💾 Save slots</h2>
+    <p class="tag">Three separate games. Sleeping in Wally's bed and finishing missions save to the current slot.</p>
+    <div id="slotList"></div>
+    <button class="btn alt" id="slotsBack">◀ BACK</button>
+  </div>
+</div>
+<div id="phone" class="hidden">
+  <div class="handset">
+    <div class="phoneTop"><span id="phoneTitle">WallyFone</span></div>
+    <div id="phoneScreen"></div>
+    <button id="phoneClose" class="btn dim">✖ CLOSE</button>
+  </div>
+</div>
+<div id="photoUI" class="hidden">
+  <div class="photoHint">Drag to move round Wally · mouse wheel or +/− to zoom</div>
+  <div class="photoBtns"><button id="photoOut">−</button><button id="photoSnap">📸 SNAP</button><button id="photoIn">+</button><button id="photoExit">✖ EXIT</button></div>
+</div>
+<div id="photoFlash"></div>
+<div id="games" class="hidden"><b id="gamesTitle">HIGHLAND GAMES</b><div id="gamesMeter"><div id="gamesBar"></div><div id="gamesMark"></div><span class="sweet"></span></div><small id="gamesHelp"></small></div>
 <div id="fps"></div>
 <div id="fade"></div>
 <div id="loading">BUILDING WALLYPOOL...</div>
@@ -284,7 +347,7 @@
 // every game file stamped with that version, so a browser can't mix old and new files.
 // If you add a new file to js/, add its name to this list too.
 (function () {
-  var files = ['main', 'audio', 'city', 'content', 'custommodel', 'flat', 'humans', 'gamepad', 'missions', 'nessie', 'peds', 'player', 'radio', 'textures', 'ufo', 'vehicles', 'version', 'voice', 'weapons', 'weather'];
+  var files = ['main', 'audio', 'city', 'content', 'custommodel', 'extras', 'flat', 'humans', 'gamepad', 'island', 'missions', 'nessie', 'peds', 'phone', 'player', 'radio', 'textures', 'ufo', 'vehicles', 'version', 'voice', 'weapons', 'weather'];
   function boot(v) {
     var map = { imports: { 'three': './lib/three.module.min.js', 'three/addons/': './lib/' } };
     files.forEach(function (f) { map.imports['./js/' + f + '.js'] = './js/' + f + '.js?v=' + v; });

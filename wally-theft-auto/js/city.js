@@ -530,7 +530,11 @@ export function buildCity(scene, quality) {
       const hg = new THREE.ConeGeometry(120 + rr() * 160, 60 + rr() * 140, 7, 2);
       const m = new THREE.Mesh(hg, hm); m.position.set(Math.cos(a) * d, -2 + 20, Math.sin(a) * d); m.scale.y = 0.7; hills.add(m);
     }
-    scene.add(hills);
+    // performance: 26 hills drawn as one mesh
+    hills.updateMatrixWorld(true);
+    const hgs = hills.children.map((m) => { const g = m.geometry.toNonIndexed(); g.applyMatrix4(m.matrixWorld); return g; });
+    const one = new THREE.Mesh(mergeGeometries(hgs), hm); one.receiveShadow = false;
+    scene.add(one);
   }
 
   // ---------- Wally Man statue in the plaza ----------

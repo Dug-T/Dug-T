@@ -6,7 +6,7 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { buildCity, N, P, HALF, ROAD, LANE, ISLAND, KERB, roadC, blockMin, blockMax } from './city.js';
-import { Car, TrafficAI, PoliceAI, randomType, DIRS, validDir, disposeObject, SHARED } from './vehicles.js';
+import { Car, TrafficAI, PoliceAI, randomType, DIRS, validDir, disposeObject, SHARED, mergeStatic } from './vehicles.js';
 import { PedManager, Ped } from './peds.js';
 import { Player } from './player.js';
 import { Audio } from './audio.js';
@@ -23,6 +23,9 @@ import { buildNessie } from './nessie.js';
 import { Pad, runSetup } from './gamepad.js';
 import { buildFlat, FLAT } from './flat.js';
 import { initContent } from './content.js';
+import { initExtras } from './extras.js';
+import { initPhone } from './phone.js';
+import { initIsland } from './island.js';
 import { Voice, QUIPS, DJ, WEAPON_QUIPS, CHATS, CALLS } from './voice.js';
 import { DJ_LINES } from './radio.js';
 import { OUTFITS } from './player.js';
@@ -40,13 +43,16 @@ const store = {
   get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch { return d; } },
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* private mode */ } },
 };
+// three save slots: slot 1 keeps the original key so existing saves carry on
+let saveSlot = store.get('wta-slot', 0) | 0;
+const slotKey = (i = saveSlot) => (i ? `wta-save-${i}` : 'wta-save');
 let quality = store.get('wta-gfx', 'high'); // v1.3: everyone starts on High (old 'wta-quality' choice is reset once)
 
 // ---------------- renderer ----------------
 const canvas = $('gl');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
 renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.shadowMap.type = (matchMedia('(pointer: coarse)').matches ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap); // soft shadows cost a lot on phones
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.0;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -123,15 +129,16 @@ scene.add(headlight, headlight.target);
 const flashLight = new THREE.PointLight('#ffaa55', 0, 40, 1.6);
 scene.add(flashLight);
 
-let composer = null, bloom = null, gradePass = null;
+let composer = null, bloom = null, gradePass = null, basePR = 1, resScale = 1;
 function applyQuality() {
   const hi = quality === 'high';
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, hi ? 2 : 1.25));
+  basePR = Math.min(window.devicePixelRatio || 1, hi ? (isTouch ? 1.6 : 2) : 1.1);
+  renderer.setPixelRatio(basePR * resScale);
   sun.shadow.mapSize.set(hi ? 2048 : 1024, hi ? 2048 : 1024);
   if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; }
   if (hi && !composer) {
     // render into a multisampled target: the composer otherwise loses the canvas's anti-aliasing
-    const rt = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight, { type: THREE.HalfFloatType, samples: renderer.capabilities.isWebGL2 ? 4 : 0 });
+    const rt = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight, { type: THREE.HalfFloatType, samples: renderer.capabilities.isWebGL2 ? (isTouch ? 2 : 4) : 0 });
     composer = new EffectComposer(renderer, rt);
     composer.addPass(new RenderPass(scene, camera));
     bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.35, 0.5, 0.88);
@@ -208,31 +215,75 @@ const cars = [];
 
 // particles
 const smokeTex = smokeTexture();
-const particles = [];
+// Particles: every puff of smoke, spark and flame lives in one of two GPU point clouds (normal and
+// additive), so hundreds of particles cost two draw calls instead of hundreds.
+const PMAX = 600;
+function makeCloud(additive) {
+  const geo = new THREE.BufferGeometry();
+  const pos = new Float32Array(PMAX * 3), col = new Float32Array(PMAX * 3), size = new Float32Array(PMAX), alpha = new Float32Array(PMAX);
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3).setUsage(THREE.DynamicDrawUsage));
+  geo.setAttribute('color', new THREE.BufferAttribute(col, 3).setUsage(THREE.DynamicDrawUsage));
+  geo.setAttribute('size', new THREE.BufferAttribute(size, 1).setUsage(THREE.DynamicDrawUsage));
+  geo.setAttribute('alpha', new THREE.BufferAttribute(alpha, 1).setUsage(THREE.DynamicDrawUsage));
+  const mat = new THREE.ShaderMaterial({
+    uniforms: THREE.UniformsUtils.merge([THREE.UniformsLib.fog, { map: { value: smokeTex }, uScale: { value: 400 } }]),
+    vertexShader: `attribute float size; attribute float alpha; attribute vec3 color; varying vec3 vCol; varying float vA;
+      #include <fog_pars_vertex>
+      void main(){ vCol = color; vA = alpha; vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+        gl_PointSize = alpha > 0.0 ? size * uScale / max(0.1, -mvPosition.z) : 0.0; gl_Position = projectionMatrix * mvPosition;
+        #include <fog_vertex>
+      }`.replace('void main(){', 'uniform float uScale; void main(){'),
+    fragmentShader: `uniform sampler2D map; varying vec3 vCol; varying float vA;
+      #include <fog_pars_fragment>
+      void main(){ vec4 t = texture2D(map, gl_PointCoord); gl_FragColor = vec4(vCol, t.a * vA);
+        #include <fog_fragment>
+      }`,
+    transparent: true, depthWrite: false, fog: true, blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending,
+  });
+  const pts = new THREE.Points(geo, mat); pts.frustumCulled = false; pts.renderOrder = 2; scene.add(pts);
+  return { pts, geo, pos, col, size, alpha, items: new Array(PMAX).fill(null), next: 0, live: 0 };
+}
+const clouds = [makeCloud(false), makeCloud(true)];
+const colorCache = new Map();
+const colorOf = (c) => { let v = colorCache.get(c); if (!v) { v = new THREE.Color(c); colorCache.set(c, v); } return v; };
 function puff(x, y, z, o = {}) {
-  let p = particles.find((q) => !q.alive);
-  if (!p) {
-    if (particles.length > 380) return;
-    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: smokeTex, transparent: true, depthWrite: false, fog: true }));
-    p = { s, alive: false }; particles.push(p); scene.add(s);
-  }
+  const cl = clouds[o.add ? 1 : 0];
+  // find a free slot (ring search); if everything's busy, reuse the oldest
+  let i = cl.next, tries = 0;
+  while (cl.items[i] && tries < PMAX) { i = (i + 1) % PMAX; tries++; }
+  cl.next = (i + 1) % PMAX;
+  const p = cl.items[i] || (cl.items[i] = {});
   p.alive = true; p.t = 0; p.life = o.life || 1.5;
-  p.s.position.set(x, y, z); p.s.visible = true;
+  p.x = x; p.y = y; p.z = z;
   p.vx = o.vx ?? (Math.random() - 0.5) * 0.8; p.vy = o.vy ?? 1.5; p.vz = o.vz ?? (Math.random() - 0.5) * 0.8;
-  p.size0 = o.size || 1; p.grow = o.grow ?? 2;
-  p.s.material.color.set(o.color || '#888');
-  p.s.material.blending = o.add ? THREE.AdditiveBlending : THREE.NormalBlending;
-  p.op = o.opacity ?? 0.7;
+  p.size0 = o.size || 1; p.grow = o.grow ?? 2; p.op = o.opacity ?? 0.7;
+  const c = colorOf(o.color || '#888'); cl.col[i * 3] = c.r; cl.col[i * 3 + 1] = c.g; cl.col[i * 3 + 2] = c.b;
+  cl.dirtyCol = true;
 }
 function updateParticles(dt) {
-  for (const p of particles) {
-    if (!p.alive) continue;
-    p.t += dt;
-    if (p.t >= p.life) { p.alive = false; p.s.visible = false; continue; }
-    const k = p.t / p.life;
-    p.s.position.x += p.vx * dt; p.s.position.y += p.vy * dt; p.s.position.z += p.vz * dt;
-    p.s.scale.setScalar(p.size0 * (1 + k * p.grow));
-    p.s.material.opacity = p.op * (1 - k);
+  const scale = renderer.domElement.height * 0.5 / Math.tan(THREE.MathUtils.degToRad(camera.fov * 0.5)) * 0.5;
+  for (const cl of clouds) {
+    cl.pts.material.uniforms.uScale.value = scale;
+    let live = 0;
+    for (let i = 0; i < PMAX; i++) {
+      const p = cl.items[i];
+      if (!p || !p.alive) { if (cl.alpha[i] !== 0) cl.alpha[i] = 0; continue; }
+      p.t += dt;
+      if (p.t >= p.life) { p.alive = false; cl.items[i] = null; cl.alpha[i] = 0; continue; }
+      const k = p.t / p.life;
+      p.x += p.vx * dt; p.y += p.vy * dt; p.z += p.vz * dt;
+      cl.pos[i * 3] = p.x; cl.pos[i * 3 + 1] = p.y; cl.pos[i * 3 + 2] = p.z;
+      cl.size[i] = p.size0 * (1 + k * p.grow) * 2.2; // sprites were scaled by world size; points are diameters
+      cl.alpha[i] = p.op * (1 - k);
+      live++;
+    }
+    cl.live = live;
+    cl.pts.visible = live > 0;
+    if (live || cl.wasLive) {
+      cl.geo.attributes.position.needsUpdate = true; cl.geo.attributes.size.needsUpdate = true; cl.geo.attributes.alpha.needsUpdate = true;
+      if (cl.dirtyCol) { cl.geo.attributes.color.needsUpdate = true; cl.dirtyCol = false; }
+    }
+    cl.wasLive = live > 0;
   }
 }
 // skid marks: a ring buffer of dark rubber strips on the road, plus tyre smoke
@@ -275,7 +326,7 @@ game.onSkid = skidAt;
 // ----- wanted level -----
 game.wanted = {
   heat: 0, level: 0, unseen: 0, seen: false,
-  add(h) { const was = this.level; this.heat = Math.min(30, this.heat + h); this.recalc(); this.unseen = 0; if (was === 0 && this.level > 0) game.quip('wanted', 0.7); else if (was < 4 && this.level >= 4) game.quip('wantedHigh', 1); },
+  add(h) { if (game.rampage) return; const was = this.level; this.heat = Math.min(30, this.heat + h); this.recalc(); this.unseen = 0; if (was === 0 && this.level > 0) game.quip('wanted', 0.7); else if (was < 4 && this.level >= 4) game.quip('wantedHigh', 1); },
   recalc() { const t = [1, 3, 6, 10, 15]; let l = 0; for (const x of t) if (this.heat >= x) l++; this.level = l; },
   clear() { this.heat = 0; this.level = 0; },
   update(dt) {
@@ -521,11 +572,19 @@ const PICK = {
 };
 const ringMat = new THREE.MeshStandardMaterial({ color: '#ffd23f', emissive: '#ffb300', emissiveIntensity: 1.4, roughness: 0.3 });
 const pickupModels = {}, PICKUP_SHARED = new Set();
+// collapse a nested weapon model into one level of meshes, then merge them per material
+function flattenModel(src) {
+  const g = new THREE.Group(); g.userData = src.userData; src.updateMatrixWorld(true);
+  src.traverse((m) => { if (m.isMesh) { const c = new THREE.Mesh(m.geometry, m.material); c.applyMatrix4(m.matrixWorld); g.add(c); } });
+  g.position.copy(src.position); g.rotation.copy(src.rotation); g.scale.copy(src.scale);
+  mergeStatic(g, { has: () => true });
+  return g;
+}
 function makePickupMesh(kind, weapon) {
   const g = new THREE.Group();
   if (kind === 'weapon') {
     if (!pickupModels[weapon]) {
-      const t = buildWeaponModel(weapon);
+      const t = flattenModel(buildWeaponModel(weapon));
       t.traverse((o) => { if (o.isMesh) { o.castShadow = false; PICKUP_SHARED.add(o.geometry); const ms = Array.isArray(o.material) ? o.material : [o.material]; for (const mm of ms) { PICKUP_SHARED.add(mm); if (mm.map) PICKUP_SHARED.add(mm.map); } } });
       pickupModels[weapon] = t;
     }
@@ -569,7 +628,7 @@ function setupCollectibles(save) {
   const chosen = spots.slice(0, 20);
   chosen.forEach((s, i) => {
     if (save.specs && save.specs.includes(i)) return;
-    const m = buildSpecsMesh(); const y = (s[2] != null ? s[2] : KERB) + 1.1;
+    const m = flattenModel(buildSpecsMesh()); const y = (s[2] != null ? s[2] : KERB) + 1.1;
     m.position.set(s[0], y, s[1]); scene.add(m);
     game.specs.push({ id: i, x: s[0], y, z: s[1], obj: m });
   });
@@ -669,10 +728,15 @@ game.playerShoot = (W = WEAPONS.blaster) => {
         if (t > minT && t < best) { best = t; hit = { kind: 'car', c }; }
       }
     }
+    for (const xt of game.extraTargets || []) {
+      const t = raySphere(origin, dir, tmpV2.set(xt.x, xt.y, xt.z), xt.r);
+      if (t > minT && t < best) { best = t; hit = { kind: 'extra', xt }; }
+    }
     const end = origin.clone().addScaledVector(dir, best);
     tracer(muzzle, end, W.tracer || '#7fe8ff', W.beam ? 0.16 : 0.09);
     if (W.soak) for (let k = 0; k < 3; k++) { const t = 0.3 + Math.random() * 0.7; puff(muzzle.x + (end.x - muzzle.x) * t, muzzle.y + (end.y - muzzle.y) * t, muzzle.z + (end.z - muzzle.z) * t, { color: '#9fd8ff', life: 0.35, size: 0.15, grow: 1, vy: -1, opacity: 0.8 }); }
     if (!hit) continue;
+    if (hit.kind === 'extra') { hit.xt.hit(W.soak ? 0 : W.dmg); continue; }
     if (hit.kind === 'ped') {
       const p = hit.p;
       if (W.soak) { // soaked: knocked flat and fleeing, but not hurt much
@@ -805,6 +869,7 @@ function updateShots(dt) {
     let victim = null;
     for (const p of peds.list) if (p.state !== 'dead' && Math.hypot(p.x - nx, p.z - nz) < 0.6 && ny > p.y && ny < p.y + 2) { victim = p; hit = true; break; }
     let car = null;
+    if (!victim && !car) for (const xt of game.extraTargets || []) if (Math.hypot(xt.x - nx, xt.y - ny, xt.z - nz) < xt.r + 0.3) { xt.hit(s.kind === 'haggis' || s.kind === 'caber' ? 600 : (s.W.dmg || 40)); hit = true; break; }
     if (!victim) for (const c of cars) if (c !== player.car && !c.dead && Math.hypot(c.x - nx, c.z - nz) < c.T.len / 2 && ny < c.y + c.T.hgt) { car = c; hit = true; break; }
     s.x = nx; s.y = ny; s.z = nz; s.m.position.set(nx, ny, nz);
     s.m.lookAt(nx + s.vx, ny + s.vy, nz + s.vz);
@@ -1250,7 +1315,7 @@ document.addEventListener('mousemove', (e) => {
 });
 document.addEventListener('pointerlockchange', () => {
   game._plT = performance.now();
-  if (document.pointerLockElement !== canvas && game.playing && !game.paused && !game.shopOpen && !isTouch) togglePause(true);
+  if (document.pointerLockElement !== canvas && game.playing && !game.paused && !game.shopOpen && !game.phoneOpen && !game.photo && !isTouch) togglePause(true);
 });
 
 // ---------------- game controller ----------------
@@ -1271,7 +1336,7 @@ window.addEventListener('popstate', () => { if (!game.playing) return; guardBack
 // menus: D-pad or left stick to move, A to choose, B to go back
 let menuFocus = null, menuRepeat = 0;
 function activeScreen() {
-  for (const id of ['padscreen', 'help', 'shop', 'crash', 'pause']) { const e = $(id); if (e && !e.classList.contains('hidden')) return e; }
+  for (const id of ['padscreen', 'slots', 'help', 'shop', 'crash', 'phone', 'pause']) { const e = $(id); if (e && !e.classList.contains('hidden')) return e; }
   if (!game.playing) return $('title');
   return null;
 }
@@ -1297,6 +1362,8 @@ function padMenus(dt) {
     else if (scr.id === 'help') $('helpBack').click();
     else if (scr.id === 'shop') game.closeShop();
     else if (scr.id === 'pause') togglePause(false);
+    else if (scr.id === 'phone') $('phoneClose').click();
+    else if (scr.id === 'slots') $('slotsBack').click();
   }
 }
 // the CONTROLLER screen: shows what's connected, the button layout, and lets you teach it your buttons
@@ -1400,7 +1467,7 @@ function readInput() {
   }
   // game controller
   const g = pad.state;
-  if (g && game.playing && !game.paused && !game.shopOpen) {
+  if (g && game.playing && !game.paused && !game.shopOpen && !game.phoneOpen) {
     const P = g.pressed;
     inp.mx += g.mx; inp.my += g.my;
     padLook.x = g.lx; padLook.y = g.ly;
@@ -1419,7 +1486,8 @@ function readInput() {
     inp.enter ||= P.enter; inp.power ||= P.power; inp.weapon ||= P.weapon || P.right;
     inp.gps ||= P.gps || P.left; inp.camera ||= P.camera; inp.radio ||= P.radio;
     if (P.down && player.car) inp.horn = true;
-    if (P.pause || P.back) togglePause();
+    if (P.pause) togglePause();
+    if (P.back) phone.open();
     if (g.any) usingPad(true);
   } else { padLook.x = padLook.y = 0; }
   inp.mx = Math.max(-1, Math.min(1, inp.mx)); inp.my = Math.max(-1, Math.min(1, inp.my));
@@ -1680,6 +1748,12 @@ function userGpsTarget() {
   if (Math.hypot(p.x - px, p.z - pz) < 12) { userGps = -1; game.toast(`🧭 You have arrived at ${p.name}. Probably.`); return null; }
   return p;
 }
+function waypointTarget() {
+  const w = game.waypoint; if (!w) return null;
+  const px = player.car ? player.car.x : player.x, pz = player.car ? player.car.z : player.z;
+  if (Math.hypot(w.x - px, w.z - pz) < 12) { game.waypoint = null; game.toast(`🧭 You have arrived: ${w.name}.`); return null; }
+  return w;
+}
 function drawRadar() {
   const W = RAD.width, c = W / 2, s = 1.1 * (W / 190) / 1.15;
   const px = player.car ? player.car.x : player.x, pz = player.car ? player.car.z : player.z;
@@ -1690,6 +1764,7 @@ function drawRadar() {
   rctx.setTransform(s * rx / k, -s * fx / k, s * rz / k, -s * fz / k,
     c + s * rx * (-ISLAND - px) + s * rz * (-ISLAND - pz), c - s * fx * (-ISLAND - px) - s * fz * (-ISLAND - pz));
   rctx.drawImage(mapCanvas, 0, 0);
+  rctx.fillStyle = '#5e8f3e'; rctx.fillRect((ISLAND + 95 + ISLAND) * mapK, (-80 + ISLAND) * mapK, 150 * mapK, 160 * mapK); // the Isle of Neep
   rctx.setTransform(1, 0, 0, 1, 0, 0);
   const toR = (x, z) => { const dx = x - px, dz = z - pz; return [c + s * (dx * rx + dz * rz), c - s * (dx * fx + dz * fz)]; };
   const dot = (x, z, col, r = 7, clamp = true, shape) => {
@@ -1703,7 +1778,7 @@ function drawRadar() {
   };
   // specials
   // GPS route along the roads to the current target
-  const tgt = game.gps || (game.mission && !game.inside && game.autoRoute) || (game.inside ? null : userGpsTarget());
+  const tgt = game.gps || (game.mission && !game.inside && game.autoRoute) || (game.inside ? null : (waypointTarget() || userGpsTarget()));
   if (tgt) {
     const pts = gpsRoute(px, pz, tgt.x, tgt.z).map(([x, z]) => toR(x, z));
     rctx.save(); rctx.beginPath(); rctx.arc(c, c, c - 2, 0, 7); rctx.clip();
@@ -1839,7 +1914,7 @@ function updateMission(dt) {
 
 // ---------------- save ----------------
 function save(bed) {
-  store.set('wta-save', { v: 2, slept: !!(bed || (store.get('wta-save', {}) || {}).slept), money: player.money, missionIdx: game.missionIdx, specs: game.collected || [], weapons: Object.keys(player.owned), ammoOf: player.ammoOf, stats: game.stats, time: game.time, outfit: player.outfit, extra: content.save() });
+  store.set(slotKey(), { v: 2, savedAt: Date.now(), slept: !!(bed || (store.get(slotKey(), {}) || {}).slept), money: player.money, missionIdx: game.missionIdx, specs: game.collected || [], weapons: Object.keys(player.owned), ammoOf: player.ammoOf, stats: game.stats, time: game.time, outfit: player.outfit, extra: content.save(), extra2: extras.save(), extra3: phone.save(), extra4: island.save() });
 }
 // Wally never leaves the house without his Highland Rifle
 function defaultWeapon(equip) {
@@ -1848,7 +1923,7 @@ function defaultWeapon(equip) {
   if (equip) player.weapon = 'rifle';
 }
 function load(fresh) {
-  const s = fresh ? {} : store.get('wta-save', {});
+  const s = fresh ? {} : store.get(slotKey(), {});
   player.money = s.money || 0; game.missionIdx = s.missionIdx || 0;
   if (!s.v) game.missionIdx = 0; // mission 1 is new (Pamazon), so older saves start the story again
   game.collected = s.specs || [];
@@ -1860,6 +1935,9 @@ function load(fresh) {
   if (s.stats) Object.assign(game.stats, s.stats);
   player.setOutfit(s.outfit || 0, game);
   content.load(s.extra);
+  extras.load(s.extra2);
+  phone.load(s.extra3);
+  island.load(s.extra4);
   game.stats.specs = game.collected.length;
   if (s.time) game.time = s.time;
   return s;
@@ -1871,7 +1949,7 @@ function updatePickups(dt) {
   for (const p of game.pickups) {
     if (p.gone > 0) { p.gone -= dt; if (p.gone <= 0) p.obj.visible = true; continue; }
     const pd = Math.abs(p.x - px) + Math.abs(p.z - pz);
-    const far = (p.kind === 'weapon' || p.kind === 'crate') ? 80 : 110;
+    const far = (p.kind === 'weapon' || p.kind === 'crate') ? 60 : 100;
     p.obj.visible = pd < far;
     if (pd > far) continue;
     p.t += dt; p.obj.rotation.y = p.t * 2; p.obj.position.y = p.y + Math.sin(p.t * 3) * 0.15;
@@ -2108,7 +2186,7 @@ function updateFlat(dt, inp) {
   flat.update(dt, performance.now() / 1000, game.inside, game.night);
   if (player.car || player.dead || game.intro || game.jack || performance.now() < doorUntil || game.sleeping) { $('prompt').classList.add('hidden'); return; }
   const near = (p, r) => Math.hypot(player.x - p[0], player.z - p[1]) < r;
-  let prompt = '';
+  let prompt = game._extraPrompt || ''; game._extraPrompt = '';
   if (!game.inside) { if (near(flat.door, 0.9)) enterFlat(); }
   else {
     if (near(flat.exitMarker, 0.8)) exitFlat();
@@ -2127,7 +2205,7 @@ let ufo = null;
 const ease = (k) => { k = Math.max(0, Math.min(1, k)); return k * k * (3 - 2 * k); };
 // exhaust puffs from Wally's motor, and litter blowing about the streets
 const litter = [];
-let litterMat = null, litterGeo = null;
+let litterMat = null, litterGeo = null, litterInst = null;
 game.onLand = (pl, v) => {
   if (v < 7 || game.inside) return;
   const n = Math.min(16, 6 + v * 0.6);
@@ -2177,11 +2255,14 @@ function updateAmbientFx(dt) {
     puff(c.x - fx * (c.T.len / 2 + 0.1) + lx * ex, c.y + 0.3, c.z - fz * (c.T.len / 2 + 0.1) + lz * ex, { color: game.night > 0.5 ? '#6d6d70' : '#9a9a9c', life: 0.9, size: 0.18, grow: 2.5, vx: -fx * 1.5 + (Math.random() - 0.5), vy: 0.6, vz: -fz * 1.5 + (Math.random() - 0.5), opacity: 0.35 });
   }
   // a dozen bits of paper tumbling along in the wind near Wally
-  if (quality !== 'high' || game.inside) { for (const l of litter) l.m.visible = false; return; }
+  if (quality !== 'high' || game.inside) { if (litterInst) litterInst.visible = false; return; }
+  if (litterInst) litterInst.visible = true;
   if (!litter.length) {
     litterGeo = new THREE.PlaneGeometry(0.28, 0.2);
     litterMat = new THREE.MeshStandardMaterial({ color: '#e8e4da', roughness: 0.9, side: THREE.DoubleSide });
-    for (let i = 0; i < 12; i++) { const m = new THREE.Mesh(litterGeo, litterMat); m.castShadow = true; scene.add(m); litter.push({ m, x: 1e9, z: 0, y: 0, vy: 0, spin: Math.random() * 6 }); }
+    litterInst = new THREE.InstancedMesh(litterGeo, litterMat, 12); litterInst.castShadow = true; litterInst.frustumCulled = false; scene.add(litterInst);
+    for (let i = 0; i < 12; i++) litter.push({ m: new THREE.Object3D(), x: 1e9, z: 0, y: 0, vy: 0, spin: Math.random() * 6 });
+    const hide = new THREE.Matrix4().makeScale(0, 0, 0); for (let i = 0; i < 12; i++) litterInst.setMatrixAt(i, hide);
   }
   const wind = ((weather.v && weather.v.wind) ?? 0.5) + 0.6, wa = performance.now() / 9000;
   const wx = Math.cos(wa) * wind * 2.2, wz = Math.sin(wa * 0.7) * wind * 2.2;
@@ -2201,10 +2282,12 @@ function updateAmbientFx(dt) {
     l.spin += dt * (airborne > 0.5 ? 6 : 1);
     l.m.position.set(l.x, l.y, l.z);
     l.m.rotation.set(airborne > 0.5 ? l.spin : -Math.PI / 2, l.spin * 0.5, airborne > 0.5 ? l.spin * 0.7 : 0);
-    l.m.visible = true;
+    l.m.updateMatrix(); litterInst.setMatrixAt(litter.indexOf(l), l.m.matrix);
   }
+  litterInst.instanceMatrix.needsUpdate = true;
 }
 function updateNessie(dt) {
+  if (nessie.kidnapped) { nessie.group.visible = false; return; }
   if (!game.inside) nessie.update(dt, player);
   nessie.group.visible = !game.inside;
   if (game.intro || game.inside || player.dead) return;
@@ -2297,6 +2380,19 @@ function updateIntro(dt, inp) {
 game.puff = puff;
 game.relock = () => { if (!isTouch && game.playing && !game.paused) canvas.requestPointerLock?.(); };
 const content = initContent(game, scene, world);
+const extras = initExtras(game, scene, world); game.extras = extras;
+// hooks the phone needs
+game.isTouch = isTouch;
+game.prompt = (t) => { game._extraPrompt = t; };
+game.save = () => save();
+game.map = { canvas: mapCanvas, island: ISLAND };
+game.nextMissionPos = () => (missionMarker && !game.mission ? { x: missionMarker.x, z: missionMarker.z } : null);
+game.dropCrate = (x, z) => addPickup('crate', x, z, {});
+game.renderNow = () => render();
+game.statsHTML = () => { const s = game.stats; return `<div class="stat">Missions: ${game.missionIdx} / ${MISSIONS.length}</div><div class="stat">Golden Specs: ${s.specs} / 20</div><div class="stat">Motors borrowed: ${s.cars} · Successful flights: ${s.flights}</div><div class="stat">Times hopeless: ${s.wasted} · Times nicked: ${s.busted}</div><div class="stat">${content.stats()}</div><div class="stat">${extras.stats()}</div><div class="stat">${phone.stats()}</div><div class="stat">${island.stats()}</div>`; };
+const phone = initPhone(game, scene, world); game.phone = phone;
+const island = initIsland(game, scene, world); game.island = island;
+game.cam = cam;
 
 let last = performance.now();
 let acc = 0;
@@ -2306,7 +2402,7 @@ function frame(now) {
   let dt = Math.max(0, Math.min(0.05, (now - last) / 1000)); last = now;
   pad.poll(); padMenus(dt);
   if (!$('padscreen').classList.contains('hidden')) $('padLive').textContent = pad.live();
-  if (!game.playing || game.paused || game.shopOpen || !$('padscreen').classList.contains('hidden')) { if (!game.playing) titleCam(dt); if (game.shopOpen && pressed.has('Escape')) { pressed.clear(); game.closeShop(); } render(); return; }
+  if (!game.playing || game.paused || game.shopOpen || game.phoneOpen || !$('padscreen').classList.contains('hidden')) { if (!game.playing) titleCam(dt); if (game.shopOpen && pressed.has('Escape')) { pressed.clear(); game.closeShop(); } render(); return; }
   // slow motion while Wally's car is flying off a stunt ramp
   const wantScale = player.car && player.car.air ? 0.4 : 1;
   game.timeScale += (wantScale - game.timeScale) * Math.min(1, dt * 6);
@@ -2323,6 +2419,8 @@ function frame(now) {
   if (inp.gps) cycleGps();
   if (inp.radio && player.car) { audio.nextStation(); showRadio(); if (audio.station < DJ_LINES.length && Math.random() < 0.6) voice.say(pickDJ(audio.station), 'DJ', true); }
   if (game.cuffs) { inp.enter = false; inp.mx = inp.my = 0; }
+  phone.update(dt, inp);
+  island.update(dt);
   updateFlat(dt, inp);
   if (inp.enter && !game.jack && !game.inside) { if (player.car) exitCar(); else enterCar(); }
   if (inp.aimPressed && !player.car && WEAPONS[player.weapon].melee) game.toast(player.hasWeapons ? 'You can only aim with a gun or neeps. Tap WEAPON to switch.' : 'Nothing to aim yet! Find a gun lying about town (gold rings on the radar... well, on the pavement).');
@@ -2358,6 +2456,7 @@ function frame(now) {
   if (game.intro) updateIntro(dt, inp); else updateCamera(dt, inp);
   updateWeather(dt);
   content.update(dt, game._inp);
+  extras.update(dt);
   if (!player.car && !game.mission && !game.intro && !player.dead) { idleQuipT -= dt; if (idleQuipT <= 0) { idleQuipT = 45 + Math.random() * 40; game.quip('idle', 1); } }
   updateChatter(dt);
   if (nessie) updateNessie(dt);
@@ -2389,12 +2488,27 @@ function frame(now) {
 const sunScr = new THREE.Vector3(); game.skyU = skyU;
 // frames-per-second counter (toggle in the pause menu), averaged over half a second
 let fpsOn = store.get('wta-fps', true), fpsN = 0, fpsT = 0, fpsLast = performance.now();
+let frameEMA = 16, resCool = 0;
+function adaptRes(ms) {
+  frameEMA += (Math.min(ms, 100) - frameEMA) * 0.05;
+  resCool -= ms;
+  if (resCool > 0 || !game.playing || game.paused) return;
+  const STEPS = [1, 0.85, 0.72, 0.62, 0.55];
+  let i = STEPS.indexOf(resScale);
+  if (frameEMA > 24 && i < STEPS.length - 1) i++;        // under ~42 fps: drop a step
+  else if (frameEMA < 15 && i > 0) i--;                   // well over 60 fps: bring the sharpness back
+  else return;
+  resScale = STEPS[i]; resCool = 2500;
+  renderer.setPixelRatio(basePR * resScale);
+  if (composer) composer.setPixelRatio(renderer.getPixelRatio());
+  resize();
+}
 function updateFps() {
-  const now = performance.now(); fpsN++; fpsT += now - fpsLast; fpsLast = now;
+  const now = performance.now(); adaptRes(now - fpsLast); fpsN++; fpsT += now - fpsLast; fpsLast = now;
   if (fpsT < 500) return;
   const fps = Math.round(fpsN * 1000 / fpsT), ms = (fpsT / fpsN).toFixed(1); fpsN = 0; fpsT = 0;
   const e = $('fps'); e.style.display = fpsOn ? 'block' : 'none'; if (!fpsOn) return;
-  e.textContent = `${fps} FPS · ${ms} ms`;
+  e.textContent = `${fps} FPS · ${ms} ms` + (resScale < 1 ? ` · res ${Math.round(resScale * 100)}%` : '');
   e.style.color = fps >= 50 ? '#7dff8a' : (fps >= 30 ? '#ffe066' : '#ff6b6b');
 }
 const toggleFps = () => { fpsOn = !fpsOn; store.set('wta-fps', fpsOn); $('fpsBtn').textContent = 'FPS COUNTER: ' + (fpsOn ? 'ON' : 'OFF'); $('fps').style.display = fpsOn ? 'block' : 'none'; };
@@ -2444,7 +2558,7 @@ function togglePause(force) {
     voice.stop();
     if (document.pointerLockElement) document.exitPointerLock();
     const s = game.stats;
-    $('statsBox').innerHTML = `<div class="stat">Missions: ${game.missionIdx} / ${MISSIONS.length}</div><div class="stat">Golden Specs: ${s.specs} / 20</div><div class="stat">Motors borrowed: ${s.cars} · Successful flights: ${s.flights}</div><div class="stat">Times hopeless: ${s.wasted} · Times nicked: ${s.busted}</div><div class="stat">${content.stats()}</div>`;
+    $('statsBox').innerHTML = game.statsHTML();
     if (audio.ctx) audio.ctx.suspend();
   } else {
     if (!isTouch) canvas.requestPointerLock?.();
@@ -2471,9 +2585,9 @@ const NESSIE_BANTER = [
   ['NESSIE: Mammy Wally gave me a scone this morning.', 'WALLY MAN: She\'s never given ME a scone!', 'NESSIE: Ye\'re no\' as cute as me, Wally.'],
 ];
 const NESSIE_LINES = ['Och aye the noo!', 'Och aye the noo! Fancy a deep-fried Mars bar?', 'Och aye the noo! Seen ma loch anywhere?', 'Och aye the noo! Nae photos, I\'m shy.', 'Och aye the noo, Wally!'];
-function startGame(fresh) {
+function startGame(fresh, reload) {
   audio.init();
-  if (!started || fresh) {
+  if (!started || fresh || reload) {
     const s = load(fresh);
     if (started) { for (const sp of game.specs) dropObject(sp.obj); for (const p of game.pickups) dropObject(p.obj); game.specs = []; game.pickups = []; failMission(); }
     setupCollectibles(s);
@@ -2520,7 +2634,21 @@ const onTurn = () => { if (isTouch && portrait.matches && game.playing && !game.
 portrait.addEventListener ? portrait.addEventListener('change', onTurn) : portrait.addListener(onTurn);
 for (const id of ['play', 'newgame']) $(id).addEventListener('click', lockLandscape);
 $('play').onclick = () => startGame(false);
-$('newgame').onclick = () => { if (!store.get('wta-save', null) || confirm('Start a new game? Your progress will be wiped.')) { store.set('wta-save', {}); startGame(true); } };
+$('newgame').onclick = () => { if (!store.get(slotKey(), null) || confirm(`Start a new game in slot ${saveSlot + 1}? That slot's progress will be wiped.`)) { store.set(slotKey(), {}); startGame(true); } };
+// the save slots screen
+function slotSummary(i) {
+  const s = store.get(slotKey(i), null);
+  if (!s || !s.v) return '<i>Empty</i>';
+  const when = s.savedAt ? new Date(s.savedAt).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'earlier';
+  return `Missions ${s.missionIdx || 0} / ${MISSIONS.length} · $${(s.money || 0).toLocaleString('en-GB')} · Specs ${(s.specs || []).length} / 20<br><small>Saved ${when}</small>`;
+}
+function renderSlots() {
+  $('slotList').innerHTML = [0, 1, 2].map((i) => `<div class="slot ${i === saveSlot ? 'cur' : ''}"><b>SLOT ${i + 1}${i === saveSlot ? ' · current' : ''}</b><p>${slotSummary(i)}</p><button class="btn" data-play="${i}">▶ PLAY</button><button class="btn alt" data-del="${i}">✖ CLEAR</button></div>`).join('');
+  for (const b of document.querySelectorAll('[data-play]')) b.onclick = () => { const i = +b.dataset.play; const changed = i !== saveSlot; saveSlot = i; store.set('wta-slot', i); $('slots').classList.add('hidden'); startGame(false, changed); };
+  for (const b of document.querySelectorAll('[data-del]')) b.onclick = () => { const i = +b.dataset.del; if (store.get(slotKey(i), null) && confirm(`Clear slot ${i + 1}? This can't be undone.`)) { store.set(slotKey(i), {}); if (i === saveSlot && started) startGame(true); renderSlots(); } };
+}
+$('slotsOpen').onclick = () => { renderSlots(); $('slots').classList.remove('hidden'); };
+$('slotsBack').onclick = () => $('slots').classList.add('hidden');
 $('howto').onclick = () => { $('help').classList.remove('hidden'); };
 $('pauseHelp').onclick = () => { $('help').classList.remove('hidden'); };
 $('helpBack').onclick = () => $('help').classList.add('hidden');
