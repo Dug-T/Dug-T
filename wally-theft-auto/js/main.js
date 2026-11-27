@@ -6,7 +6,7 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { buildCity, N, P, HALF, ROAD, LANE, ISLAND, KERB, roadC, blockMin, blockMax } from './city.js';
-import { Car, TrafficAI, PoliceAI, randomType, DIRS, validDir, disposeObject, SHARED } from './vehicles.js';
+import { Car, TrafficAI, PoliceAI, randomType, DIRS, validDir, disposeObject, SHARED, mergeStatic } from './vehicles.js';
 import { PedManager, Ped } from './peds.js';
 import { Player } from './player.js';
 import { Audio } from './audio.js';
@@ -46,7 +46,7 @@ let quality = store.get('wta-gfx', 'high'); // v1.3: everyone starts on High (ol
 const canvas = $('gl');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
 renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.shadowMap.type = (matchMedia('(pointer: coarse)').matches ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap); // soft shadows cost a lot on phones
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.0;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -123,15 +123,16 @@ scene.add(headlight, headlight.target);
 const flashLight = new THREE.PointLight('#ffaa55', 0, 40, 1.6);
 scene.add(flashLight);
 
-let composer = null, bloom = null, gradePass = null;
+let composer = null, bloom = null, gradePass = null, basePR = 1, resScale = 1;
 function applyQuality() {
   const hi = quality === 'high';
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, hi ? 2 : 1.25));
+  basePR = Math.min(window.devicePixelRatio || 1, hi ? (isTouch ? 1.6 : 2) : 1.1);
+  renderer.setPixelRatio(basePR * resScale);
   sun.shadow.mapSize.set(hi ? 2048 : 1024, hi ? 2048 : 1024);
   if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; }
   if (hi && !composer) {
     // render into a multisampled target: the composer otherwise loses the canvas's anti-aliasing
-    const rt = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight, { type: THREE.HalfFloatType, samples: renderer.capabilities.isWebGL2 ? 4 : 0 });
+    const rt = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight, { type: THREE.HalfFloatType, samples: renderer.capabilities.isWebGL2 ? (isTouch ? 2 : 4) : 0 });
     composer = new EffectComposer(renderer, rt);
     composer.addPass(new RenderPass(scene, camera));
     bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.35, 0.5, 0.88);
@@ -208,31 +209,75 @@ const cars = [];
 
 // particles
 const smokeTex = smokeTexture();
-const particles = [];
+// Particles: every puff of smoke, spark and flame lives in one of two GPU point clouds (normal and
+// additive), so hundreds of particles cost two draw calls instead of hundreds.
+const PMAX = 600;
+function makeCloud(additive) {
+  const geo = new THREE.BufferGeometry();
+  const pos = new Float32Array(PMAX * 3), col = new Float32Array(PMAX * 3), size = new Float32Array(PMAX), alpha = new Float32Array(PMAX);
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3).setUsage(THREE.DynamicDrawUsage));
+  geo.setAttribute('color', new THREE.BufferAttribute(col, 3).setUsage(THREE.DynamicDrawUsage));
+  geo.setAttribute('size', new THREE.BufferAttribute(size, 1).setUsage(THREE.DynamicDrawUsage));
+  geo.setAttribute('alpha', new THREE.BufferAttribute(alpha, 1).setUsage(THREE.DynamicDrawUsage));
+  const mat = new THREE.ShaderMaterial({
+    uniforms: THREE.UniformsUtils.merge([THREE.UniformsLib.fog, { map: { value: smokeTex }, uScale: { value: 400 } }]),
+    vertexShader: `attribute float size; attribute float alpha; attribute vec3 color; varying vec3 vCol; varying float vA;
+      #include <fog_pars_vertex>
+      void main(){ vCol = color; vA = alpha; vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+        gl_PointSize = alpha > 0.0 ? size * uScale / max(0.1, -mvPosition.z) : 0.0; gl_Position = projectionMatrix * mvPosition;
+        #include <fog_vertex>
+      }`.replace('void main(){', 'uniform float uScale; void main(){'),
+    fragmentShader: `uniform sampler2D map; varying vec3 vCol; varying float vA;
+      #include <fog_pars_fragment>
+      void main(){ vec4 t = texture2D(map, gl_PointCoord); gl_FragColor = vec4(vCol, t.a * vA);
+        #include <fog_fragment>
+      }`,
+    transparent: true, depthWrite: false, fog: true, blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending,
+  });
+  const pts = new THREE.Points(geo, mat); pts.frustumCulled = false; pts.renderOrder = 2; scene.add(pts);
+  return { pts, geo, pos, col, size, alpha, items: new Array(PMAX).fill(null), next: 0, live: 0 };
+}
+const clouds = [makeCloud(false), makeCloud(true)];
+const colorCache = new Map();
+const colorOf = (c) => { let v = colorCache.get(c); if (!v) { v = new THREE.Color(c); colorCache.set(c, v); } return v; };
 function puff(x, y, z, o = {}) {
-  let p = particles.find((q) => !q.alive);
-  if (!p) {
-    if (particles.length > 380) return;
-    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: smokeTex, transparent: true, depthWrite: false, fog: true }));
-    p = { s, alive: false }; particles.push(p); scene.add(s);
-  }
+  const cl = clouds[o.add ? 1 : 0];
+  // find a free slot (ring search); if everything's busy, reuse the oldest
+  let i = cl.next, tries = 0;
+  while (cl.items[i] && tries < PMAX) { i = (i + 1) % PMAX; tries++; }
+  cl.next = (i + 1) % PMAX;
+  const p = cl.items[i] || (cl.items[i] = {});
   p.alive = true; p.t = 0; p.life = o.life || 1.5;
-  p.s.position.set(x, y, z); p.s.visible = true;
+  p.x = x; p.y = y; p.z = z;
   p.vx = o.vx ?? (Math.random() - 0.5) * 0.8; p.vy = o.vy ?? 1.5; p.vz = o.vz ?? (Math.random() - 0.5) * 0.8;
-  p.size0 = o.size || 1; p.grow = o.grow ?? 2;
-  p.s.material.color.set(o.color || '#888');
-  p.s.material.blending = o.add ? THREE.AdditiveBlending : THREE.NormalBlending;
-  p.op = o.opacity ?? 0.7;
+  p.size0 = o.size || 1; p.grow = o.grow ?? 2; p.op = o.opacity ?? 0.7;
+  const c = colorOf(o.color || '#888'); cl.col[i * 3] = c.r; cl.col[i * 3 + 1] = c.g; cl.col[i * 3 + 2] = c.b;
+  cl.dirtyCol = true;
 }
 function updateParticles(dt) {
-  for (const p of particles) {
-    if (!p.alive) continue;
-    p.t += dt;
-    if (p.t >= p.life) { p.alive = false; p.s.visible = false; continue; }
-    const k = p.t / p.life;
-    p.s.position.x += p.vx * dt; p.s.position.y += p.vy * dt; p.s.position.z += p.vz * dt;
-    p.s.scale.setScalar(p.size0 * (1 + k * p.grow));
-    p.s.material.opacity = p.op * (1 - k);
+  const scale = renderer.domElement.height * 0.5 / Math.tan(THREE.MathUtils.degToRad(camera.fov * 0.5)) * 0.5;
+  for (const cl of clouds) {
+    cl.pts.material.uniforms.uScale.value = scale;
+    let live = 0;
+    for (let i = 0; i < PMAX; i++) {
+      const p = cl.items[i];
+      if (!p || !p.alive) { if (cl.alpha[i] !== 0) cl.alpha[i] = 0; continue; }
+      p.t += dt;
+      if (p.t >= p.life) { p.alive = false; cl.items[i] = null; cl.alpha[i] = 0; continue; }
+      const k = p.t / p.life;
+      p.x += p.vx * dt; p.y += p.vy * dt; p.z += p.vz * dt;
+      cl.pos[i * 3] = p.x; cl.pos[i * 3 + 1] = p.y; cl.pos[i * 3 + 2] = p.z;
+      cl.size[i] = p.size0 * (1 + k * p.grow) * 2.2; // sprites were scaled by world size; points are diameters
+      cl.alpha[i] = p.op * (1 - k);
+      live++;
+    }
+    cl.live = live;
+    cl.pts.visible = live > 0;
+    if (live || cl.wasLive) {
+      cl.geo.attributes.position.needsUpdate = true; cl.geo.attributes.size.needsUpdate = true; cl.geo.attributes.alpha.needsUpdate = true;
+      if (cl.dirtyCol) { cl.geo.attributes.color.needsUpdate = true; cl.dirtyCol = false; }
+    }
+    cl.wasLive = live > 0;
   }
 }
 // skid marks: a ring buffer of dark rubber strips on the road, plus tyre smoke
@@ -521,11 +566,19 @@ const PICK = {
 };
 const ringMat = new THREE.MeshStandardMaterial({ color: '#ffd23f', emissive: '#ffb300', emissiveIntensity: 1.4, roughness: 0.3 });
 const pickupModels = {}, PICKUP_SHARED = new Set();
+// collapse a nested weapon model into one level of meshes, then merge them per material
+function flattenModel(src) {
+  const g = new THREE.Group(); g.userData = src.userData; src.updateMatrixWorld(true);
+  src.traverse((m) => { if (m.isMesh) { const c = new THREE.Mesh(m.geometry, m.material); c.applyMatrix4(m.matrixWorld); g.add(c); } });
+  g.position.copy(src.position); g.rotation.copy(src.rotation); g.scale.copy(src.scale);
+  mergeStatic(g, { has: () => true });
+  return g;
+}
 function makePickupMesh(kind, weapon) {
   const g = new THREE.Group();
   if (kind === 'weapon') {
     if (!pickupModels[weapon]) {
-      const t = buildWeaponModel(weapon);
+      const t = flattenModel(buildWeaponModel(weapon));
       t.traverse((o) => { if (o.isMesh) { o.castShadow = false; PICKUP_SHARED.add(o.geometry); const ms = Array.isArray(o.material) ? o.material : [o.material]; for (const mm of ms) { PICKUP_SHARED.add(mm); if (mm.map) PICKUP_SHARED.add(mm.map); } } });
       pickupModels[weapon] = t;
     }
@@ -569,7 +622,7 @@ function setupCollectibles(save) {
   const chosen = spots.slice(0, 20);
   chosen.forEach((s, i) => {
     if (save.specs && save.specs.includes(i)) return;
-    const m = buildSpecsMesh(); const y = (s[2] != null ? s[2] : KERB) + 1.1;
+    const m = flattenModel(buildSpecsMesh()); const y = (s[2] != null ? s[2] : KERB) + 1.1;
     m.position.set(s[0], y, s[1]); scene.add(m);
     game.specs.push({ id: i, x: s[0], y, z: s[1], obj: m });
   });
@@ -1871,7 +1924,7 @@ function updatePickups(dt) {
   for (const p of game.pickups) {
     if (p.gone > 0) { p.gone -= dt; if (p.gone <= 0) p.obj.visible = true; continue; }
     const pd = Math.abs(p.x - px) + Math.abs(p.z - pz);
-    const far = (p.kind === 'weapon' || p.kind === 'crate') ? 80 : 110;
+    const far = (p.kind === 'weapon' || p.kind === 'crate') ? 60 : 100;
     p.obj.visible = pd < far;
     if (pd > far) continue;
     p.t += dt; p.obj.rotation.y = p.t * 2; p.obj.position.y = p.y + Math.sin(p.t * 3) * 0.15;
@@ -2127,7 +2180,7 @@ let ufo = null;
 const ease = (k) => { k = Math.max(0, Math.min(1, k)); return k * k * (3 - 2 * k); };
 // exhaust puffs from Wally's motor, and litter blowing about the streets
 const litter = [];
-let litterMat = null, litterGeo = null;
+let litterMat = null, litterGeo = null, litterInst = null;
 game.onLand = (pl, v) => {
   if (v < 7 || game.inside) return;
   const n = Math.min(16, 6 + v * 0.6);
@@ -2177,11 +2230,14 @@ function updateAmbientFx(dt) {
     puff(c.x - fx * (c.T.len / 2 + 0.1) + lx * ex, c.y + 0.3, c.z - fz * (c.T.len / 2 + 0.1) + lz * ex, { color: game.night > 0.5 ? '#6d6d70' : '#9a9a9c', life: 0.9, size: 0.18, grow: 2.5, vx: -fx * 1.5 + (Math.random() - 0.5), vy: 0.6, vz: -fz * 1.5 + (Math.random() - 0.5), opacity: 0.35 });
   }
   // a dozen bits of paper tumbling along in the wind near Wally
-  if (quality !== 'high' || game.inside) { for (const l of litter) l.m.visible = false; return; }
+  if (quality !== 'high' || game.inside) { if (litterInst) litterInst.visible = false; return; }
+  if (litterInst) litterInst.visible = true;
   if (!litter.length) {
     litterGeo = new THREE.PlaneGeometry(0.28, 0.2);
     litterMat = new THREE.MeshStandardMaterial({ color: '#e8e4da', roughness: 0.9, side: THREE.DoubleSide });
-    for (let i = 0; i < 12; i++) { const m = new THREE.Mesh(litterGeo, litterMat); m.castShadow = true; scene.add(m); litter.push({ m, x: 1e9, z: 0, y: 0, vy: 0, spin: Math.random() * 6 }); }
+    litterInst = new THREE.InstancedMesh(litterGeo, litterMat, 12); litterInst.castShadow = true; litterInst.frustumCulled = false; scene.add(litterInst);
+    for (let i = 0; i < 12; i++) litter.push({ m: new THREE.Object3D(), x: 1e9, z: 0, y: 0, vy: 0, spin: Math.random() * 6 });
+    const hide = new THREE.Matrix4().makeScale(0, 0, 0); for (let i = 0; i < 12; i++) litterInst.setMatrixAt(i, hide);
   }
   const wind = ((weather.v && weather.v.wind) ?? 0.5) + 0.6, wa = performance.now() / 9000;
   const wx = Math.cos(wa) * wind * 2.2, wz = Math.sin(wa * 0.7) * wind * 2.2;
@@ -2201,8 +2257,9 @@ function updateAmbientFx(dt) {
     l.spin += dt * (airborne > 0.5 ? 6 : 1);
     l.m.position.set(l.x, l.y, l.z);
     l.m.rotation.set(airborne > 0.5 ? l.spin : -Math.PI / 2, l.spin * 0.5, airborne > 0.5 ? l.spin * 0.7 : 0);
-    l.m.visible = true;
+    l.m.updateMatrix(); litterInst.setMatrixAt(litter.indexOf(l), l.m.matrix);
   }
+  litterInst.instanceMatrix.needsUpdate = true;
 }
 function updateNessie(dt) {
   if (!game.inside) nessie.update(dt, player);
@@ -2389,12 +2446,27 @@ function frame(now) {
 const sunScr = new THREE.Vector3(); game.skyU = skyU;
 // frames-per-second counter (toggle in the pause menu), averaged over half a second
 let fpsOn = store.get('wta-fps', true), fpsN = 0, fpsT = 0, fpsLast = performance.now();
+let frameEMA = 16, resCool = 0;
+function adaptRes(ms) {
+  frameEMA += (Math.min(ms, 100) - frameEMA) * 0.05;
+  resCool -= ms;
+  if (resCool > 0 || !game.playing || game.paused) return;
+  const STEPS = [1, 0.85, 0.72, 0.62, 0.55];
+  let i = STEPS.indexOf(resScale);
+  if (frameEMA > 24 && i < STEPS.length - 1) i++;        // under ~42 fps: drop a step
+  else if (frameEMA < 15 && i > 0) i--;                   // well over 60 fps: bring the sharpness back
+  else return;
+  resScale = STEPS[i]; resCool = 2500;
+  renderer.setPixelRatio(basePR * resScale);
+  if (composer) composer.setPixelRatio(renderer.getPixelRatio());
+  resize();
+}
 function updateFps() {
-  const now = performance.now(); fpsN++; fpsT += now - fpsLast; fpsLast = now;
+  const now = performance.now(); adaptRes(now - fpsLast); fpsN++; fpsT += now - fpsLast; fpsLast = now;
   if (fpsT < 500) return;
   const fps = Math.round(fpsN * 1000 / fpsT), ms = (fpsT / fpsN).toFixed(1); fpsN = 0; fpsT = 0;
   const e = $('fps'); e.style.display = fpsOn ? 'block' : 'none'; if (!fpsOn) return;
-  e.textContent = `${fps} FPS · ${ms} ms`;
+  e.textContent = `${fps} FPS · ${ms} ms` + (resScale < 1 ? ` · res ${Math.round(resScale * 100)}%` : '');
   e.style.color = fps >= 50 ? '#7dff8a' : (fps >= 30 ? '#ffe066' : '#ff6b6b');
 }
 const toggleFps = () => { fpsOn = !fpsOn; store.set('wta-fps', fpsOn); $('fpsBtn').textContent = 'FPS COUNTER: ' + (fpsOn ? 'ON' : 'OFF'); $('fps').style.display = fpsOn ? 'block' : 'none'; };

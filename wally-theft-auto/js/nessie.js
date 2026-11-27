@@ -28,21 +28,39 @@ export function buildNessie(scene, world, home) {
   const body = [];
   for (let i = 0; i < SEG; i++) {
     const u = i / (SEG - 1), r = 0.5 * (1 - u) ** 0.7 + 0.08;
-    const m = new THREE.Mesh(ball, skin); m.scale.setScalar(r); m.castShadow = true; group.add(m);
+    // (placeholders: the balls are drawn in three instanced batches, see drawBatches)
+    const m = new THREE.Object3D(); m.scale.setScalar(r); group.add(m);
     // a paler belly underneath and darker spots along the back
-    const b = new THREE.Mesh(ball, belly); b.scale.set(0.9, 0.5, 0.9); b.position.y = -0.45; m.add(b);
-    if (i % 3 === 1 && i < SEG - 3) { const s = new THREE.Mesh(ball, spot); s.scale.setScalar(0.22); s.position.set(0, 0.85, 0); m.add(s); }
-    body.push({ m, r });
+    const b = new THREE.Object3D(); b.scale.set(0.9, 0.5, 0.9); b.position.y = -0.45; b.updateMatrix();
+    let s = null; if (i % 3 === 1 && i < SEG - 3) { s = new THREE.Object3D(); s.scale.setScalar(0.22); s.position.set(0, 0.85, 0); s.updateMatrix(); }
+    body.push({ m, r, b, s });
   }
   // four flippers that paddle as she wriggles
   const flippers = [];
   for (const [seg, side] of [[2, 1], [2, -1], [9, 1], [9, -1]]) {
-    const f = new THREE.Mesh(ball, skin); f.scale.set(0.42, 0.07, 0.2); f.castShadow = true; group.add(f);
+    const f = new THREE.Object3D(); f.scale.set(0.42, 0.07, 0.2); group.add(f);
     flippers.push({ f, seg, side });
   }
   // neck and head
   const neck = [];
-  for (let j = 0; j < NECK; j++) { const m = new THREE.Mesh(ball, skin); m.scale.setScalar(0.3 - j * 0.008); m.castShadow = true; group.add(m); neck.push(m); }
+  for (let j = 0; j < NECK; j++) { const m = new THREE.Object3D(); m.scale.setScalar(0.3 - j * 0.008); group.add(m); neck.push(m); }
+  // performance: every green ball is one instance of one mesh (3 draw calls for the whole body instead of ~70)
+  const nSpots = body.filter((x) => x.s).length;
+  const skinI = new THREE.InstancedMesh(ball, skin, SEG + NECK + 4), bellyI = new THREE.InstancedMesh(ball, belly, SEG), spotI = new THREE.InstancedMesh(ball, spot, nSpots);
+  for (const im of [skinI, bellyI, spotI]) { im.castShadow = true; im.frustumCulled = false; group.add(im); }
+  const tmpM = new THREE.Matrix4();
+  const drawBatches = () => {
+    let k = 0, sp = 0;
+    for (let i = 0; i < SEG; i++) {
+      const B = body[i]; B.m.updateMatrix();
+      skinI.setMatrixAt(k++, B.m.matrix);
+      bellyI.setMatrixAt(i, tmpM.multiplyMatrices(B.m.matrix, B.b.matrix));
+      if (B.s) spotI.setMatrixAt(sp++, tmpM.multiplyMatrices(B.m.matrix, B.s.matrix));
+    }
+    for (const m of neck) { m.updateMatrix(); skinI.setMatrixAt(k++, m.matrix); }
+    for (const fl of flippers) { fl.f.updateMatrix(); skinI.setMatrixAt(k++, fl.f.matrix); }
+    skinI.instanceMatrix.needsUpdate = true; bellyI.instanceMatrix.needsUpdate = true; spotI.instanceMatrix.needsUpdate = true;
+  };
   const head = new THREE.Group(); group.add(head);
   const skull = new THREE.Mesh(ball, skin); skull.scale.set(0.32, 0.28, 0.46); skull.castShadow = true; head.add(skull);
   const snout = new THREE.Mesh(ball, belly); snout.scale.set(0.26, 0.16, 0.2); snout.position.set(0, -0.08, 0.3); head.add(snout);
@@ -153,6 +171,7 @@ export function buildNessie(scene, world, home) {
     // speech bubbles are drawn 2.2m above .y, so keep .y just under her head
     N.y = head.position.y - 1.6;
     N.sayCool -= dt;
+    drawBatches();
   };
   return N;
 }

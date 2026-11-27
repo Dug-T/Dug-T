@@ -1,6 +1,7 @@
 // Cars: smooth extruded bodies, arcade drift physics, traffic and police AI.
 import * as THREE from 'three';
 import { plateTexture, rng } from './textures.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { N, P, HALF, ROAD, LANE, roadC } from './city.js';
 
 const TYPES = {
@@ -32,6 +33,33 @@ function M(key, make) { if (!sharedM[key]) { sharedM[key] = make(); SHARED.add(s
 
 // Free the GPU memory held by an object's own geometry, materials and textures.
 // Anything in `keep` (shared caches) is left alone; sprites share one internal geometry, so skip it.
+// Performance: a car is built from ~100 small meshes (each one a draw call, twice with shadows).
+// Everything that never moves on its own is merged into one mesh per material. Parts that move or
+// change (door, driver, light glows, light bar, wheels' pivots) stay separate.
+export function mergeStatic(group, keep = SHARED) {
+  group.updateMatrixWorld(true);
+  const inv = new THREE.Matrix4().copy(group.matrixWorld).invert();
+  const byMat = new Map(), victims = [];
+  for (const m of group.children) {
+    if (!m.isMesh || m.isSkinnedMesh || Array.isArray(m.material) || m.userData.keep || m.children.length) continue;
+    let g = m.geometry.index ? m.geometry.toNonIndexed() : m.geometry.clone();
+    for (const k of Object.keys(g.attributes)) if (!['position', 'normal', 'uv'].includes(k)) g.deleteAttribute(k);
+    if (!g.attributes.normal) g.computeVertexNormals();
+    if (!g.attributes.uv) g.setAttribute('uv', new THREE.Float32BufferAttribute(new Float32Array(g.attributes.position.count * 2), 2));
+    g.applyMatrix4(new THREE.Matrix4().multiplyMatrices(inv, m.matrixWorld));
+    if (!byMat.has(m.material)) byMat.set(m.material, { geos: [], cast: false, recv: false, order: m.renderOrder });
+    const e = byMat.get(m.material); e.geos.push(g); e.cast ||= m.castShadow; e.recv ||= m.receiveShadow;
+    victims.push(m);
+  }
+  for (const [mat, e] of byMat) {
+    if (e.geos.length < 2) { for (const g of e.geos) g.dispose(); victims.splice(victims.findIndex((x) => x.material === mat), 1); continue; }
+    const merged = new THREE.Mesh(mergeGeometries(e.geos), mat);
+    for (const g of e.geos) g.dispose();
+    merged.castShadow = e.cast; merged.receiveShadow = e.recv; merged.renderOrder = e.order;
+    group.add(merged);
+  }
+  for (const m of victims) { group.remove(m); if (!keep.has(m.geometry)) m.geometry.dispose(); }
+}
 export function disposeObject(root, keep = SHARED) {
   const seen = new Set();
   root.traverse((o) => {
@@ -204,6 +232,7 @@ function buildWedge(T, paint) {
   body.position.y = 0.05;
   g.traverse((m) => { if (m.isMesh) m.castShadow = true; }); glass.castShadow = false;
   const amberM = M('amber', () => new THREE.MeshStandardMaterial({ color: '#ff9a1c', emissive: '#ff7a00', emissiveIntensity: 0.35, roughness: 0.3 }));
+  mergeStatic(body); for (const w of wheels) mergeStatic(w.spin);
   return { group: g, body, wheels, lightbar: null, paintM: steel, tailM, headM, door, driverFig, amberM, glows, tailGlows, rearAxle: { x: wx, z: zR } };
 }
 
@@ -285,6 +314,7 @@ function buildTrike(T, paint) {
   body.position.y = 0.03;
   g.traverse((m) => { if (m.isMesh) m.castShadow = true; });
   const amberM = M('amber', () => new THREE.MeshStandardMaterial({ color: '#ff9a1c', emissive: '#ff7a00', emissiveIntensity: 0.35, roughness: 0.3 }));
+  mergeStatic(body); for (const w of wheels) mergeStatic(w.spin);
   return { group: g, body, wheels, lightbar: null, paintM, tailM, headM, door, driverFig, amberM, glows, tailGlows, rearAxle: { x: wx, z: zR } };
 }
 
@@ -547,6 +577,7 @@ export function buildCarModel(type, paint) {
   driver.position.set(-(T.wid / 2 - 0.45), seatY, seatZ - 0.05);
   driver.userData = { shirt, skinD, hairD, own: [shirt.color.clone(), skinD.color.clone(), hairD.color.clone()] };
   driver.visible = false; body.add(driver);
+  mergeStatic(body); for (const w of wheels) mergeStatic(w.spin);
   return { group: g, body, wheels, lightbar, paintM, tailM, headM, door, driverFig: driver, amberM, glows, tailGlows, rearAxle: { x: wx, z: S.zR } };
 }
 
@@ -712,7 +743,7 @@ export class Car {
     if (this.door) this.door.rotation.y += (this.doorOpen * 1.15 - this.door.rotation.y) * Math.min(1, dt * 10);
     if (this.driverFig) {
       const who = this.driver === 'player' ? 'wally' : ((this.driver === 'ai' || this.driver === 'cop' || (this.driver === 'jacked' && !this.driverOut)) ? 'npc' : null);
-      this.driverFig.visible = !!who && !this.dead;
+      this.driverFig.visible = !!who && !this.dead && !this.driverFig.userData.lodHide;
       if (who !== this._who) {
         this._who = who; const u = this.driverFig.userData;
         if (who === 'wally') { u.shirt.color.set((game && game.wallySuit) || '#1f5fc4'); u.skinD.color.set('#f0c09a'); u.hairD.color.set('#c8763a'); }
@@ -725,6 +756,7 @@ export class Car {
     const lit = !!game && (game.night > 0.25 || game.weatherDark) && !this.dead;
     if (this.glows) for (const s of this.glows) s.visible = lit;
     if (this.beam) this.beam.visible = lit && !!game.hiFx && !this.tip;
+    if (game && game.camera) this.lod(game.camera.position);
     if (lit) for (const s of this.tailGlows) s.scale.setScalar(braking ? 1.4 : 0.8);
     // tyres squeal and leave rubber when the back end steps out or the handbrake's on
     if (game && game.onSkid && this.speed > 5 && (Math.abs(vr) > 3.2 || (inp.hand && Math.abs(vf) > 6))) {
@@ -747,6 +779,19 @@ export class Car {
     this.vx += (Math.random() - 0.5) * 2; this.vz += (Math.random() - 0.5) * 2;
     this.body.position.y = 0.2; this.body.rotation.z = (Math.random() - 0.5) * 0.3;
     if (game) game.onExplosion(this.x, this.y + 1, this.z, this);
+  }
+  // level of detail: far-off cars skip shadows and the wee parts you can't see from there anyway
+  lod(camPos) {
+    const d = Math.abs(this.x - camPos.x) + Math.abs(this.z - camPos.z);
+    const far = d > 55;
+    if (far === this._far) return;
+    this._far = far;
+    this.group.traverse((m) => { if (m.isMesh && m !== this.beam && m !== this.blob) m.castShadow = !far; });
+    for (const w of this.wheels) {
+      w.spin.children.forEach((m, i) => { if (i > 0) m.visible = !far; }); // keep the first (the tyre), hide rims and discs
+      for (const m of w.pivot.children) if (m !== w.spin) m.visible = !far; // calipers
+    }
+    if (this.driverFig) this.driverFig.userData.lodHide = far;
   }
   sync() {
     this.group.position.set(this.x, this.y, this.z);

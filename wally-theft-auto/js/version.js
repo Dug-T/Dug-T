@@ -1,7 +1,14 @@
 // Bump VERSION for every update (1.1, 1.2, 1.3 ...) and add a line to CHANGES.
-export const VERSION = '4.1';
+export const VERSION = '4.2';
 
 export const CHANGES = [
+  ['4.2', [
+    'Big frame rate boost: smoke, sparks and flames are now drawn on the graphics card in two batches instead of one object each, so explosions, flamethrowers and rain no longer make the game stutter',
+    "Cars are merged into a handful of pieces instead of about 110 each, and far-off cars skip shadows and wee details",
+    "Nessie, pickups, Golden Specs and litter are drawn in batches too: about a third fewer draw calls overall",
+    'Adaptive resolution: if the frame rate drops, the game quietly lowers the resolution a step and raises it again when there is headroom (shown on the FPS counter)',
+    'Phones: a slightly lower resolution cap, lighter shadow filtering and lighter anti-aliasing',
+  ]],
   ['4.1', [
     "Wally Man gets a quality upgrade: a knitted Lycra suit with a soft sheen, warmer skin, strand-textured ginger hair, catchlights and heavy lids on his eyes, a proper handlebar moustache, a darker cape lining, a gold W belt buckle, boot soles, smoother curves and a soft shadow underneath him",
     'Use your own 3D Wally: put a rigged glTF model at models/wally.glb and the game uses it, playing its idle, walk, run, jump and other animations automatically',
