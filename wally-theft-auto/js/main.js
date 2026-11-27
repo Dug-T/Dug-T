@@ -2135,8 +2135,19 @@ game.onLand = (pl, v) => {
   if (v > 14) cam.shake = Math.max(cam.shake, 0.2);
 };
 let dustT = 0;
+const wallyBlob = (() => {
+  const c = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d');
+  const g = x.createRadialGradient(32, 32, 2, 32, 32, 32); g.addColorStop(0, 'rgba(0,0,0,0.6)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+  x.fillStyle = g; x.fillRect(0, 0, 64, 64);
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 1.1).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }));
+  m.renderOrder = 1; scene.add(m); return m;
+})();
 function updateAmbientFx(dt) {
   const c = player.car;
+  // the soft shadow under Wally shrinks and fades as he rises off the ground
+  { const g = world.groundHeight(player.x, player.z, player.y + 0.5), up = Math.max(0, player.y - g);
+    wallyBlob.visible = !c && !player.dead && !game.inside && up < 12; wallyBlob.position.set(player.x, g + 0.02, player.z);
+    wallyBlob.scale.setScalar(1 / (1 + up * 0.25)); wallyBlob.material.opacity = 1 / (1 + up * 0.4); }
   updateCasings(dt); updateWave(dt);
   // dust kicked up when Wally sprints
   if (!c && player.onGround && player.speed > 6 && !game.inside && (dustT -= dt) <= 0) {

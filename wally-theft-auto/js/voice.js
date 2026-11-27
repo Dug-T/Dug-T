@@ -76,6 +76,18 @@ export const QUIPS = {
     "I'm a legend in ma ain lunchtime.",
     "I've got the strength of ten men. Ten very tired men.",
     "Scottish superhero rules: never fight during the fitba', and always stop for a piece and jam.",
+    "I've got a face that could stop a clock. Mammy says it stopped three.",
+    "Fit like? Naw, that's Aberdeen. Here we say: awright?",
+    "I'm no' a big drinker. I'm just a big fella who drinks.",
+    "Somewhere in Wallypool, a granny's waiting on a superhero. And a bus. The bus'll come first.",
+    "Ma dad was a superhero too. Well. He fixed the telly once wi' a fork.",
+    "It's no' a beer belly. It's a fuel tank for a sex machine. Mammy, don't read the subtitles.",
+    "Ah'm that skint, if crime paid I'd be tempted.",
+    "Cannae see a thing wi' these specs. Cannae see a thing withoot them either.",
+    "Ye know ye've made it in Wallypool when the seagulls know yer name.",
+    "Every day's a school day. Today I learned capes and revolving doors don't mix.",
+    "I'm ginger, Scottish and wearing tights in public. I fear nothing.",
+    "Ma dating profile says 'GSOH'. Good sense of humour. Or Ginger, Skint, Owns Hat.",
     "The trick to being a superhero is confidence. And elasticated waistbands.",
   ],
   car: [
@@ -163,6 +175,16 @@ export const WEAPON_QUIPS = {
   flamer: "A flamethrower! I'll never need a lighter again.",
   neep: "Neep grenades! Bashed neeps, coming right up!",
 };
+// the patter generator: endless Scottish insults and compliments from a few parts
+const P_FACE = ['a face like a skelped arse', 'a face like a bag of spanners', 'a face like a wet weekend in Largs', 'a face like a bulldog chewing a wasp', 'a face like a melted welly', 'a face like a burst couch'];
+const P_BRAIN = ['the brains of a burst haggis', 'the sense God gave a seagull', 'the wit of a wet tattie', 'fewer brain cells than a bag of chips', 'the patience of a wean at Christmas'];
+const P_NAME = ['ya numpty', 'ya walloper', 'ya bampot', 'ya big jessie', 'ya absolute weapon', 'ya roaster', 'ya clown', 'ya heid-the-baw'];
+const P_NICE = ["Ye're pure dead brilliant", "Ye're a wee belter", "Ye're gallus as anything", "Ye're a total stoater", "Ye're braw"];
+const pickOne = (a) => a[(Math.random() * a.length) | 0];
+export function patter(kind = 'insult') {
+  if (kind === 'nice') return `${pickOne(P_NICE)}, Wally! ${pickOne(['Mind and wrap up!', "Gie's a wave!", 'Gaun yersel!', 'Away and save the world!'])}`;
+  return Math.random() < 0.5 ? `Ye've got ${pickOne(P_FACE)}, ${pickOne(P_NAME)}!` : `Ye've got ${pickOne(P_BRAIN)}, ${pickOne(P_NAME)}!`;
+}
 // pavement chats: two folk blethering as Wally walks past
 export const CHATS = [
   ["Did ye hear Big Davie got a new motor?", "Aye. He'll have it till Wally finds it."],
@@ -185,6 +207,11 @@ export const CHATS = [
   ["Is that a monster on the pavement?", "Naw, that's just Big Shug's dug. Oh wait. Naw, it's a monster."],
   ["Did ye go tae the ceilidh?", "Aye. I did a Strip the Willow and stripped a ligament."],
   ["Ma doctor says I need tae cut doon on the pies.", "Whit did ye say?", "I says, I'll cut them in half. And eat both halves."],
+  ["Ma Tam's started jogging.", "Good for him!", "No' really. He's jogging tae the bookies."],
+  ["Did ye hear aboot the fire at the chippy?", "Naw!", "Aye. Fish supper's well done the day."],
+  ["Is it gonnae rain?", "Is the Pope Catholic? Is Wally a numpty? Aye."],
+  ["I've been on a diet for three weeks.", "Lost anything?", "Three weeks."],
+  ["Seen the new Wally Man statue?", "Aye. The seagulls have already given it a review."],
 ];
 // phone calls: the cast ring Wally for a blether when he's not on a job
 export const CALLS = [
@@ -206,6 +233,9 @@ export const CALLS = [
   ["AUNTIE SENGA: Wallace, are ye eating properly?", "WALLY MAN: I had a pie, a sausage roll and a fish supper.", "AUNTIE SENGA: That's no' a diet, that's a cry for help."],
   ["MAMMY WALLY: Wallace, it's yer turn to put the bins oot.", "WALLY MAN: Mammy, I'm chasing a bank robber!", "MAMMY WALLY: Well catch him and come hame. The bins'll no' put themselves oot."],
   ["BIG DAVIE: Wally. I've been told there's a big green monster following ye.", "WALLY MAN: Aye.", "BIG DAVIE: Is it a polis car? They're mostly white noo, Wally."],
+  ["MAMMY WALLY: Wallace, I've washed yer cape.", "WALLY MAN: Thanks, Mammy!", "MAMMY WALLY: Wi' yer red socks. It's pink noo. Ye'll look lovely."],
+  ["GRANDA: Wallace, whit's this internet everybody's on aboot?", "WALLY MAN: It's where ye find information, Granda.", "GRANDA: We had that. It was called yer granny."],
+  ["UNCLE TAM: Wally! I've got ye a sponsorship deal!", "WALLY MAN: Wi' who?", "UNCLE TAM: Me. I'm selling Wally Man tea towels oot ma van. Ye get ten percent. Of the tea towels."],
 ];
 export const DJ = [
   "You're listening to Wally F M. The only station that plays... whatever this is.",

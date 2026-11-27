@@ -1,7 +1,12 @@
 // Bump VERSION for every update (1.1, 1.2, 1.3 ...) and add a line to CHANGES.
-export const VERSION = '4.0';
+export const VERSION = '4.1';
 
 export const CHANGES = [
+  ['4.1', [
+    "Wally Man gets a quality upgrade: a knitted Lycra suit with a soft sheen, warmer skin, strand-textured ginger hair, catchlights and heavy lids on his eyes, a proper handlebar moustache, a darker cape lining, a gold W belt buckle, boot soles, smoother curves and a soft shadow underneath him",
+    'Use your own 3D Wally: put a rigged glTF model at models/wally.glb and the game uses it, playing its idle, walk, run, jump and other animations automatically',
+    'More Scottish patter: a patter generator for endless insults and compliments from passers-by ("Ye\'ve got a face like a wet weekend in Largs, ya walloper!"), plus new lines, chats and phone calls',
+  ]],
   ['4.0', [
     'FPS counter in the top corner (turn it on or off in the pause menu)',
     'Spent bullet cases and red shotgun shells fly out of the guns and bounce on the pavement, and guns leave a wisp of smoke',

@@ -54,6 +54,45 @@ function mat(color, rough = 0.6, metal = 0, extra = {}) {
 
 let emblemTex = null;
 
+// ---- materials for Wally himself: knitted Lycra with a soft sheen, skin with peach-fuzz, strand-textured hair ----
+let knitNormal = null, hairTex = null;
+function makeKnitNormal() {
+  // a fine knit/weave height pattern, turned into a normal map
+  const N = 128, hgt = new Float32Array(N * N);
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    const u = x / N * Math.PI * 2 * 16, v = y / N * Math.PI * 2 * 16;
+    hgt[y * N + x] = Math.sin(u + Math.sin(v) * 0.9) * 0.5 + Math.sin(v * 2) * 0.25 + (Math.random() - 0.5) * 0.15;
+  }
+  const c = document.createElement('canvas'); c.width = c.height = N; const x = c.getContext('2d'), im = x.createImageData(N, N);
+  for (let y = 0; y < N; y++) for (let xx = 0; xx < N; xx++) {
+    const H = (a, b) => hgt[((b + N) % N) * N + ((a + N) % N)];
+    const dx = H(xx + 1, y) - H(xx - 1, y), dy = H(xx, y + 1) - H(xx, y - 1);
+    const nx = -dx, ny = -dy, nz = 2, l = Math.hypot(nx, ny, nz), i = (y * N + xx) * 4;
+    im.data[i] = (nx / l * 0.5 + 0.5) * 255; im.data[i + 1] = (ny / l * 0.5 + 0.5) * 255; im.data[i + 2] = (nz / l * 0.5 + 0.5) * 255; im.data[i + 3] = 255;
+  }
+  x.putImageData(im, 0, 0);
+  const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(3, 3);
+  return t;
+}
+function makeHairTex() {
+  const c = document.createElement('canvas'); c.width = 64; c.height = 128; const x = c.getContext('2d');
+  x.fillStyle = '#c8763a'; x.fillRect(0, 0, 64, 128);
+  for (let i = 0; i < 260; i++) { const px = Math.random() * 64; x.strokeStyle = Math.random() < 0.5 ? 'rgba(255,190,120,0.35)' : 'rgba(110,50,15,0.35)'; x.lineWidth = 0.6 + Math.random(); x.beginPath(); x.moveTo(px, 0); x.quadraticCurveTo(px + (Math.random() - 0.5) * 8, 64, px + (Math.random() - 0.5) * 6, 128); x.stroke(); }
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(4, 1);
+  return t;
+}
+function wallyMats() {
+  if (!knitNormal) { knitNormal = makeKnitNormal(); hairTex = makeHairTex(); SHARED_HUMAN.add(knitNormal); SHARED_HUMAN.add(hairTex); }
+  const fabric = (color, sheenColor) => new THREE.MeshPhysicalMaterial({ color, roughness: 0.48, metalness: 0, sheen: 1, sheenRoughness: 0.45, sheenColor: new THREE.Color(sheenColor), normalMap: knitNormal, normalScale: new THREE.Vector2(0.35, 0.35) });
+  return {
+    suit: fabric('#1f5fc4', '#9cc4ff'),
+    legs: fabric('#1f5fc4', '#9cc4ff'),
+    red: fabric('#e0471c', '#ffb39a'),
+    skin: new THREE.MeshPhysicalMaterial({ color: '#f0c09a', roughness: 0.52, sheen: 0.5, sheenRoughness: 0.8, sheenColor: new THREE.Color('#ff9f86'), clearcoat: 0.08, clearcoatRoughness: 0.6 }),
+    hair: new THREE.MeshPhysicalMaterial({ color: '#ffffff', map: hairTex, roughness: 0.62, sheen: 0.6, sheenColor: new THREE.Color('#ffc890'), sheenRoughness: 0.4 }),
+  };
+}
+
 function capsule(r, len, m, seg) {
   const g = new THREE.CapsuleGeometry(r, len, seg ? 4 : 6, seg || 20);
   return new THREE.Mesh(g, m);
@@ -90,12 +129,13 @@ export function buildHuman(o = {}) {
   const wally = !!o.wally;
   const cop = !!o.cop;
   const detail = wally ? 1 : 0;
-  const seg = wally ? 24 : 12;
-  const suit = mat(wally ? '#1f5fc4' : (cop ? '#1c2a4a' : o.shirt || '#888'), wally ? 0.45 : 0.8, 0);
-  const legsM = mat(wally ? '#1f5fc4' : (cop ? '#1c2a4a' : o.pants || '#333'), wally ? 0.45 : 0.85);
-  const red = mat('#e0471c', 0.5);
-  const skin = mat(wally ? '#f0c09a' : o.skin || '#e0ac85', 0.55);
-  const hairM = mat(wally ? '#c8763a' : o.hair || '#333', 0.9);
+  const seg = wally ? 32 : 12;
+  const W = wally ? wallyMats() : null;
+  const suit = W ? W.suit : mat(cop ? '#1c2a4a' : o.shirt || '#888', 0.8, 0);
+  const legsM = W ? W.legs : mat(cop ? '#1c2a4a' : o.pants || '#333', 0.85);
+  const red = W ? W.red : mat('#e0471c', 0.5);
+  const skin = W ? W.skin : mat(o.skin || '#e0ac85', 0.55);
+  const hairM = W ? W.hair : mat(o.hair || '#333', 0.9);
   const shoeM = wally ? red : mat(cop ? '#111' : o.shoes || '#222', 0.5);
 
   const root = new THREE.Group();
@@ -119,6 +159,10 @@ export function buildHuman(o = {}) {
     // belt
     const belt = new THREE.Mesh(new THREE.CylinderGeometry(0.312, 0.31, 0.09, 40, 1, true), red);
     belt.scale.set(1.0, 1, 0.86); belt.position.y = -0.04; spine.add(belt);
+    const gold = new THREE.MeshPhysicalMaterial({ color: '#e8b84a', metalness: 1, roughness: 0.25, clearcoat: 0.6 });
+    const buckle = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.075, 0.025), gold); buckle.position.set(0, -0.04, 0.272); buckle.userData.acc = true; spine.add(buckle);
+    // a wee embossed W
+    for (const [x, r] of [[-0.03, 0.35], [-0.012, -0.35], [0.012, 0.35], [0.03, -0.35]]) { const s = new THREE.Mesh(new THREE.BoxGeometry(0.008, 0.05, 0.012), gold); s.position.set(x, -0.04, 0.287); s.rotation.z = r; s.userData.acc = true; spine.add(s); }
   }
   if (cop) {
     const vest = new THREE.Mesh(new THREE.CylinderGeometry(0.31, 0.3, 0.42, 24, 1, true), mat('#d8e03a', 0.6));
@@ -172,7 +216,13 @@ export function buildHuman(o = {}) {
   let tails = null;
   if (wally) {
     // ginger moustache
-    const mo = capsule(0.014, 0.05, hairM, 10); mo.rotation.z = Math.PI / 2; mo.position.set(0, 0.052, hr * 0.97); head.add(mo);
+    for (const sd of [-1, 1]) {
+      for (let k = 0; k < 4; k++) {
+        const mo = capsule(0.011 - k * 0.0015, 0.022, hairM, 10);
+        mo.rotation.z = Math.PI / 2 + sd * (0.15 + k * 0.28); mo.rotation.y = sd * k * 0.18;
+        mo.position.set(sd * (0.012 + k * 0.016), 0.052 + k * k * 0.0028, hr * 0.975 - k * k * 0.004); head.add(mo);
+      }
+    }
     // blue mask band round the eyes
     const blue = mat('#1f5fc4', 0.55, 0, { side: THREE.DoubleSide });
     const band = new THREE.Mesh(new THREE.CylinderGeometry(hr * 1.02, hr * 1.01, 0.075, 40, 1, true), blue);
@@ -205,6 +255,8 @@ export function buildHuman(o = {}) {
       const eb = sphere(0.027, white, 18, 12); eb.position.set(sd * 0.054, 0.114, hr * 0.94); eb.scale.set(1, 0.82, 1); head.add(eb);
       const ir = sphere(0.012, iris, 12, 8); ir.position.set(sd * 0.052, 0.113, hr * 0.94 + 0.022); ir.scale.set(1, 1, 0.45); head.add(ir);
       const pu = sphere(0.0062, pupil, 8, 6); pu.position.set(sd * 0.052, 0.113, hr * 0.94 + 0.0265); pu.scale.set(1, 1, 0.4); head.add(pu);
+      const glint = sphere(0.0024, mat('#ffffff', 0.1, 0, { emissive: '#ffffff', emissiveIntensity: 1.2 }), 6, 4); glint.position.set(sd * 0.05 + 0.004, 0.117, hr * 0.94 + 0.029); head.add(glint);
+      const lid = new THREE.Mesh(new THREE.SphereGeometry(0.0285, 18, 8, 0, Math.PI * 2, 0, Math.PI * 0.42), skin); lid.position.set(sd * 0.054, 0.114, hr * 0.94); lid.rotation.x = 0.35; lid.scale.set(1.02, 0.85, 1.04); head.add(lid);
       // ginger eyebrows above the mask, raised in permanent mild surprise
       const br = capsule(0.0075, 0.042, hairM, 8); br.rotation.z = Math.PI / 2 + sd * 0.18; br.position.set(sd * 0.054, 0.163, hr * 0.98); head.add(br);
     }
@@ -246,6 +298,7 @@ export function buildHuman(o = {}) {
       const cuff = new THREE.Mesh(new THREE.TorusGeometry(0.105, 0.018, 8, seg), red); cuff.rotation.x = Math.PI / 2; cuff.position.y = -0.16; knee.add(cuff);
     }
     const foot = capsule(0.062, 0.14, shoeM, 12); foot.rotation.x = Math.PI / 2; foot.position.set(0, -0.44, 0.05); foot.scale.set(1.1, 1, 0.8); knee.add(foot);
+    if (wally) { const sole = capsule(0.064, 0.15, mat('#2a1a14', 0.8), 12); sole.rotation.x = Math.PI / 2; sole.position.set(0, -0.475, 0.05); sole.scale.set(1.12, 1, 0.3); knee.add(sole); }
     legs.push({ hip, knee, side: s });
   }
 
@@ -253,7 +306,10 @@ export function buildHuman(o = {}) {
   let cape = null;
   if (wally) {
     const g = new THREE.PlaneGeometry(0.72, 1.15, 10, 16); g.translate(0, -0.575, 0);
-    cape = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ color: '#e14a1e', roughness: 0.75, side: THREE.DoubleSide }));
+    cape = new THREE.Mesh(g, new THREE.MeshPhysicalMaterial({ color: '#e14a1e', roughness: 0.7, sheen: 1, sheenRoughness: 0.5, sheenColor: new THREE.Color('#ffb092'), normalMap: knitNormal, normalScale: new THREE.Vector2(0.25, 0.25), side: THREE.FrontSide }));
+    // the inside of the cape is a darker lining (same geometry, so it waves with the cape)
+    const lining = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ color: '#e14a1e', roughness: 0.9, side: THREE.BackSide }));
+    lining.userData.lining = true; lining.castShadow = true; cape.add(lining);
     cape.position.set(0, 0.6, 0); cape.userData.acc = true; // vertices are posed in spine space so they can be kept clear of the body
     cape.userData.base = Float32Array.from(g.attributes.position.array);
     spine.add(cape);
