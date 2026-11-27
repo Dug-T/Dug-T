@@ -1,7 +1,13 @@
 // Bump VERSION for every update (1.1, 1.2, 1.3 ...) and add a line to CHANGES.
-export const VERSION = '4.2';
+export const VERSION = '4.3';
 
 export const CHANGES = [
+  ['4.3', [
+    "Rampages: six red tokens around town (red squares on the radar). Walk into one for a timed challenge, like clattering 10 folk wi' Granda's golf club in a minute. $1500 each, $5000 bonus for all six",
+    'Rival superheroes: Captain Clyde and the Tartan Avenger drop in now and then and race you to a landmark. Beat them for $750',
+    'The polis helicopter comes out at 4 stars: it follows you, a marksman takes potshots, and at night its searchlight tracks you. Shoot it down if you dare',
+    'Roadblocks at 3 stars: polis cars and officers block the road ahead of you',
+  ]],
   ['4.2', [
     'Big frame rate boost: smoke, sparks and flames are now drawn on the graphics card in two batches instead of one object each, so explosions, flamethrowers and rain no longer make the game stutter',
     "Cars are merged into a handful of pieces instead of about 110 each, and far-off cars skip shadows and wee details",

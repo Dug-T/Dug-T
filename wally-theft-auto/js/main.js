@@ -23,6 +23,7 @@ import { buildNessie } from './nessie.js';
 import { Pad, runSetup } from './gamepad.js';
 import { buildFlat, FLAT } from './flat.js';
 import { initContent } from './content.js';
+import { initExtras } from './extras.js';
 import { Voice, QUIPS, DJ, WEAPON_QUIPS, CHATS, CALLS } from './voice.js';
 import { DJ_LINES } from './radio.js';
 import { OUTFITS } from './player.js';
@@ -320,7 +321,7 @@ game.onSkid = skidAt;
 // ----- wanted level -----
 game.wanted = {
   heat: 0, level: 0, unseen: 0, seen: false,
-  add(h) { const was = this.level; this.heat = Math.min(30, this.heat + h); this.recalc(); this.unseen = 0; if (was === 0 && this.level > 0) game.quip('wanted', 0.7); else if (was < 4 && this.level >= 4) game.quip('wantedHigh', 1); },
+  add(h) { if (game.rampage) return; const was = this.level; this.heat = Math.min(30, this.heat + h); this.recalc(); this.unseen = 0; if (was === 0 && this.level > 0) game.quip('wanted', 0.7); else if (was < 4 && this.level >= 4) game.quip('wantedHigh', 1); },
   recalc() { const t = [1, 3, 6, 10, 15]; let l = 0; for (const x of t) if (this.heat >= x) l++; this.level = l; },
   clear() { this.heat = 0; this.level = 0; },
   update(dt) {
@@ -722,10 +723,15 @@ game.playerShoot = (W = WEAPONS.blaster) => {
         if (t > minT && t < best) { best = t; hit = { kind: 'car', c }; }
       }
     }
+    for (const xt of game.extraTargets || []) {
+      const t = raySphere(origin, dir, tmpV2.set(xt.x, xt.y, xt.z), xt.r);
+      if (t > minT && t < best) { best = t; hit = { kind: 'extra', xt }; }
+    }
     const end = origin.clone().addScaledVector(dir, best);
     tracer(muzzle, end, W.tracer || '#7fe8ff', W.beam ? 0.16 : 0.09);
     if (W.soak) for (let k = 0; k < 3; k++) { const t = 0.3 + Math.random() * 0.7; puff(muzzle.x + (end.x - muzzle.x) * t, muzzle.y + (end.y - muzzle.y) * t, muzzle.z + (end.z - muzzle.z) * t, { color: '#9fd8ff', life: 0.35, size: 0.15, grow: 1, vy: -1, opacity: 0.8 }); }
     if (!hit) continue;
+    if (hit.kind === 'extra') { hit.xt.hit(W.soak ? 0 : W.dmg); continue; }
     if (hit.kind === 'ped') {
       const p = hit.p;
       if (W.soak) { // soaked: knocked flat and fleeing, but not hurt much
@@ -858,6 +864,7 @@ function updateShots(dt) {
     let victim = null;
     for (const p of peds.list) if (p.state !== 'dead' && Math.hypot(p.x - nx, p.z - nz) < 0.6 && ny > p.y && ny < p.y + 2) { victim = p; hit = true; break; }
     let car = null;
+    if (!victim && !car) for (const xt of game.extraTargets || []) if (Math.hypot(xt.x - nx, xt.y - ny, xt.z - nz) < xt.r + 0.3) { xt.hit(s.kind === 'haggis' || s.kind === 'caber' ? 600 : (s.W.dmg || 40)); hit = true; break; }
     if (!victim) for (const c of cars) if (c !== player.car && !c.dead && Math.hypot(c.x - nx, c.z - nz) < c.T.len / 2 && ny < c.y + c.T.hgt) { car = c; hit = true; break; }
     s.x = nx; s.y = ny; s.z = nz; s.m.position.set(nx, ny, nz);
     s.m.lookAt(nx + s.vx, ny + s.vy, nz + s.vz);
@@ -1892,7 +1899,7 @@ function updateMission(dt) {
 
 // ---------------- save ----------------
 function save(bed) {
-  store.set('wta-save', { v: 2, slept: !!(bed || (store.get('wta-save', {}) || {}).slept), money: player.money, missionIdx: game.missionIdx, specs: game.collected || [], weapons: Object.keys(player.owned), ammoOf: player.ammoOf, stats: game.stats, time: game.time, outfit: player.outfit, extra: content.save() });
+  store.set('wta-save', { v: 2, slept: !!(bed || (store.get('wta-save', {}) || {}).slept), money: player.money, missionIdx: game.missionIdx, specs: game.collected || [], weapons: Object.keys(player.owned), ammoOf: player.ammoOf, stats: game.stats, time: game.time, outfit: player.outfit, extra: content.save(), extra2: extras.save() });
 }
 // Wally never leaves the house without his Highland Rifle
 function defaultWeapon(equip) {
@@ -1913,6 +1920,7 @@ function load(fresh) {
   if (s.stats) Object.assign(game.stats, s.stats);
   player.setOutfit(s.outfit || 0, game);
   content.load(s.extra);
+  extras.load(s.extra2);
   game.stats.specs = game.collected.length;
   if (s.time) game.time = s.time;
   return s;
@@ -2354,6 +2362,7 @@ function updateIntro(dt, inp) {
 game.puff = puff;
 game.relock = () => { if (!isTouch && game.playing && !game.paused) canvas.requestPointerLock?.(); };
 const content = initContent(game, scene, world);
+const extras = initExtras(game, scene, world); game.extras = extras;
 
 let last = performance.now();
 let acc = 0;
@@ -2415,6 +2424,7 @@ function frame(now) {
   if (game.intro) updateIntro(dt, inp); else updateCamera(dt, inp);
   updateWeather(dt);
   content.update(dt, game._inp);
+  extras.update(dt);
   if (!player.car && !game.mission && !game.intro && !player.dead) { idleQuipT -= dt; if (idleQuipT <= 0) { idleQuipT = 45 + Math.random() * 40; game.quip('idle', 1); } }
   updateChatter(dt);
   if (nessie) updateNessie(dt);
@@ -2516,7 +2526,7 @@ function togglePause(force) {
     voice.stop();
     if (document.pointerLockElement) document.exitPointerLock();
     const s = game.stats;
-    $('statsBox').innerHTML = `<div class="stat">Missions: ${game.missionIdx} / ${MISSIONS.length}</div><div class="stat">Golden Specs: ${s.specs} / 20</div><div class="stat">Motors borrowed: ${s.cars} · Successful flights: ${s.flights}</div><div class="stat">Times hopeless: ${s.wasted} · Times nicked: ${s.busted}</div><div class="stat">${content.stats()}</div>`;
+    $('statsBox').innerHTML = `<div class="stat">Missions: ${game.missionIdx} / ${MISSIONS.length}</div><div class="stat">Golden Specs: ${s.specs} / 20</div><div class="stat">Motors borrowed: ${s.cars} · Successful flights: ${s.flights}</div><div class="stat">Times hopeless: ${s.wasted} · Times nicked: ${s.busted}</div><div class="stat">${content.stats()}</div><div class="stat">${extras.stats()}</div>`;
     if (audio.ctx) audio.ctx.suspend();
   } else {
     if (!isTouch) canvas.requestPointerLock?.();
