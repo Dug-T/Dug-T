@@ -1,7 +1,13 @@
 // Bump VERSION for every update (1.1, 1.2, 1.3 ...) and add a line to CHANGES.
-export const VERSION = '4.3';
+export const VERSION = '4.4';
 
 export const CHANGES = [
+  ['4.4', [
+    "Buy property: The Chippy, Pie Palace, Haggis Hut, the Wally Wash and the Neep Market (green squares on the radar). Each pays you every hour",
+    "Wally's phone (T, the 📱 button, or Back on a controller): a full city map where you can tap to set a waypoint, contacts to phone (each does you a wee favour), property, stats and the camera",
+    'Photo mode from the phone camera: move round Wally, zoom, and snap a picture to your downloads',
+    'Three save slots on the title screen',
+  ]],
   ['4.3', [
     "Rampages: six red tokens around town (red squares on the radar). Walk into one for a timed challenge, like clattering 10 folk wi' Granda's golf club in a minute. $1500 each, $5000 bonus for all six",
     'Rival superheroes: Captain Clyde and the Tartan Avenger drop in now and then and race you to a landmark. Beat them for $750',

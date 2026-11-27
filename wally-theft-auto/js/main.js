@@ -24,6 +24,7 @@ import { Pad, runSetup } from './gamepad.js';
 import { buildFlat, FLAT } from './flat.js';
 import { initContent } from './content.js';
 import { initExtras } from './extras.js';
+import { initPhone } from './phone.js';
 import { Voice, QUIPS, DJ, WEAPON_QUIPS, CHATS, CALLS } from './voice.js';
 import { DJ_LINES } from './radio.js';
 import { OUTFITS } from './player.js';
@@ -41,6 +42,9 @@ const store = {
   get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch { return d; } },
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* private mode */ } },
 };
+// three save slots: slot 1 keeps the original key so existing saves carry on
+let saveSlot = store.get('wta-slot', 0) | 0;
+const slotKey = (i = saveSlot) => (i ? `wta-save-${i}` : 'wta-save');
 let quality = store.get('wta-gfx', 'high'); // v1.3: everyone starts on High (old 'wta-quality' choice is reset once)
 
 // ---------------- renderer ----------------
@@ -1310,7 +1314,7 @@ document.addEventListener('mousemove', (e) => {
 });
 document.addEventListener('pointerlockchange', () => {
   game._plT = performance.now();
-  if (document.pointerLockElement !== canvas && game.playing && !game.paused && !game.shopOpen && !isTouch) togglePause(true);
+  if (document.pointerLockElement !== canvas && game.playing && !game.paused && !game.shopOpen && !game.phoneOpen && !game.photo && !isTouch) togglePause(true);
 });
 
 // ---------------- game controller ----------------
@@ -1331,7 +1335,7 @@ window.addEventListener('popstate', () => { if (!game.playing) return; guardBack
 // menus: D-pad or left stick to move, A to choose, B to go back
 let menuFocus = null, menuRepeat = 0;
 function activeScreen() {
-  for (const id of ['padscreen', 'help', 'shop', 'crash', 'pause']) { const e = $(id); if (e && !e.classList.contains('hidden')) return e; }
+  for (const id of ['padscreen', 'slots', 'help', 'shop', 'crash', 'phone', 'pause']) { const e = $(id); if (e && !e.classList.contains('hidden')) return e; }
   if (!game.playing) return $('title');
   return null;
 }
@@ -1357,6 +1361,8 @@ function padMenus(dt) {
     else if (scr.id === 'help') $('helpBack').click();
     else if (scr.id === 'shop') game.closeShop();
     else if (scr.id === 'pause') togglePause(false);
+    else if (scr.id === 'phone') $('phoneClose').click();
+    else if (scr.id === 'slots') $('slotsBack').click();
   }
 }
 // the CONTROLLER screen: shows what's connected, the button layout, and lets you teach it your buttons
@@ -1460,7 +1466,7 @@ function readInput() {
   }
   // game controller
   const g = pad.state;
-  if (g && game.playing && !game.paused && !game.shopOpen) {
+  if (g && game.playing && !game.paused && !game.shopOpen && !game.phoneOpen) {
     const P = g.pressed;
     inp.mx += g.mx; inp.my += g.my;
     padLook.x = g.lx; padLook.y = g.ly;
@@ -1479,7 +1485,8 @@ function readInput() {
     inp.enter ||= P.enter; inp.power ||= P.power; inp.weapon ||= P.weapon || P.right;
     inp.gps ||= P.gps || P.left; inp.camera ||= P.camera; inp.radio ||= P.radio;
     if (P.down && player.car) inp.horn = true;
-    if (P.pause || P.back) togglePause();
+    if (P.pause) togglePause();
+    if (P.back) phone.open();
     if (g.any) usingPad(true);
   } else { padLook.x = padLook.y = 0; }
   inp.mx = Math.max(-1, Math.min(1, inp.mx)); inp.my = Math.max(-1, Math.min(1, inp.my));
@@ -1740,6 +1747,12 @@ function userGpsTarget() {
   if (Math.hypot(p.x - px, p.z - pz) < 12) { userGps = -1; game.toast(`🧭 You have arrived at ${p.name}. Probably.`); return null; }
   return p;
 }
+function waypointTarget() {
+  const w = game.waypoint; if (!w) return null;
+  const px = player.car ? player.car.x : player.x, pz = player.car ? player.car.z : player.z;
+  if (Math.hypot(w.x - px, w.z - pz) < 12) { game.waypoint = null; game.toast(`🧭 You have arrived: ${w.name}.`); return null; }
+  return w;
+}
 function drawRadar() {
   const W = RAD.width, c = W / 2, s = 1.1 * (W / 190) / 1.15;
   const px = player.car ? player.car.x : player.x, pz = player.car ? player.car.z : player.z;
@@ -1763,7 +1776,7 @@ function drawRadar() {
   };
   // specials
   // GPS route along the roads to the current target
-  const tgt = game.gps || (game.mission && !game.inside && game.autoRoute) || (game.inside ? null : userGpsTarget());
+  const tgt = game.gps || (game.mission && !game.inside && game.autoRoute) || (game.inside ? null : (waypointTarget() || userGpsTarget()));
   if (tgt) {
     const pts = gpsRoute(px, pz, tgt.x, tgt.z).map(([x, z]) => toR(x, z));
     rctx.save(); rctx.beginPath(); rctx.arc(c, c, c - 2, 0, 7); rctx.clip();
@@ -1899,7 +1912,7 @@ function updateMission(dt) {
 
 // ---------------- save ----------------
 function save(bed) {
-  store.set('wta-save', { v: 2, slept: !!(bed || (store.get('wta-save', {}) || {}).slept), money: player.money, missionIdx: game.missionIdx, specs: game.collected || [], weapons: Object.keys(player.owned), ammoOf: player.ammoOf, stats: game.stats, time: game.time, outfit: player.outfit, extra: content.save(), extra2: extras.save() });
+  store.set(slotKey(), { v: 2, savedAt: Date.now(), slept: !!(bed || (store.get(slotKey(), {}) || {}).slept), money: player.money, missionIdx: game.missionIdx, specs: game.collected || [], weapons: Object.keys(player.owned), ammoOf: player.ammoOf, stats: game.stats, time: game.time, outfit: player.outfit, extra: content.save(), extra2: extras.save(), extra3: phone.save() });
 }
 // Wally never leaves the house without his Highland Rifle
 function defaultWeapon(equip) {
@@ -1908,7 +1921,7 @@ function defaultWeapon(equip) {
   if (equip) player.weapon = 'rifle';
 }
 function load(fresh) {
-  const s = fresh ? {} : store.get('wta-save', {});
+  const s = fresh ? {} : store.get(slotKey(), {});
   player.money = s.money || 0; game.missionIdx = s.missionIdx || 0;
   if (!s.v) game.missionIdx = 0; // mission 1 is new (Pamazon), so older saves start the story again
   game.collected = s.specs || [];
@@ -1921,6 +1934,7 @@ function load(fresh) {
   player.setOutfit(s.outfit || 0, game);
   content.load(s.extra);
   extras.load(s.extra2);
+  phone.load(s.extra3);
   game.stats.specs = game.collected.length;
   if (s.time) game.time = s.time;
   return s;
@@ -2169,7 +2183,7 @@ function updateFlat(dt, inp) {
   flat.update(dt, performance.now() / 1000, game.inside, game.night);
   if (player.car || player.dead || game.intro || game.jack || performance.now() < doorUntil || game.sleeping) { $('prompt').classList.add('hidden'); return; }
   const near = (p, r) => Math.hypot(player.x - p[0], player.z - p[1]) < r;
-  let prompt = '';
+  let prompt = game._extraPrompt || ''; game._extraPrompt = '';
   if (!game.inside) { if (near(flat.door, 0.9)) enterFlat(); }
   else {
     if (near(flat.exitMarker, 0.8)) exitFlat();
@@ -2363,6 +2377,16 @@ game.puff = puff;
 game.relock = () => { if (!isTouch && game.playing && !game.paused) canvas.requestPointerLock?.(); };
 const content = initContent(game, scene, world);
 const extras = initExtras(game, scene, world); game.extras = extras;
+// hooks the phone needs
+game.isTouch = isTouch;
+game.prompt = (t) => { game._extraPrompt = t; };
+game.save = () => save();
+game.map = { canvas: mapCanvas, island: ISLAND };
+game.nextMissionPos = () => (missionMarker && !game.mission ? { x: missionMarker.x, z: missionMarker.z } : null);
+game.dropCrate = (x, z) => addPickup('crate', x, z, {});
+game.renderNow = () => render();
+game.statsHTML = () => { const s = game.stats; return `<div class="stat">Missions: ${game.missionIdx} / ${MISSIONS.length}</div><div class="stat">Golden Specs: ${s.specs} / 20</div><div class="stat">Motors borrowed: ${s.cars} · Successful flights: ${s.flights}</div><div class="stat">Times hopeless: ${s.wasted} · Times nicked: ${s.busted}</div><div class="stat">${content.stats()}</div><div class="stat">${extras.stats()}</div><div class="stat">${phone.stats()}</div>`; };
+const phone = initPhone(game, scene, world); game.phone = phone;
 
 let last = performance.now();
 let acc = 0;
@@ -2372,7 +2396,7 @@ function frame(now) {
   let dt = Math.max(0, Math.min(0.05, (now - last) / 1000)); last = now;
   pad.poll(); padMenus(dt);
   if (!$('padscreen').classList.contains('hidden')) $('padLive').textContent = pad.live();
-  if (!game.playing || game.paused || game.shopOpen || !$('padscreen').classList.contains('hidden')) { if (!game.playing) titleCam(dt); if (game.shopOpen && pressed.has('Escape')) { pressed.clear(); game.closeShop(); } render(); return; }
+  if (!game.playing || game.paused || game.shopOpen || game.phoneOpen || !$('padscreen').classList.contains('hidden')) { if (!game.playing) titleCam(dt); if (game.shopOpen && pressed.has('Escape')) { pressed.clear(); game.closeShop(); } render(); return; }
   // slow motion while Wally's car is flying off a stunt ramp
   const wantScale = player.car && player.car.air ? 0.4 : 1;
   game.timeScale += (wantScale - game.timeScale) * Math.min(1, dt * 6);
@@ -2389,6 +2413,7 @@ function frame(now) {
   if (inp.gps) cycleGps();
   if (inp.radio && player.car) { audio.nextStation(); showRadio(); if (audio.station < DJ_LINES.length && Math.random() < 0.6) voice.say(pickDJ(audio.station), 'DJ', true); }
   if (game.cuffs) { inp.enter = false; inp.mx = inp.my = 0; }
+  phone.update(dt, inp);
   updateFlat(dt, inp);
   if (inp.enter && !game.jack && !game.inside) { if (player.car) exitCar(); else enterCar(); }
   if (inp.aimPressed && !player.car && WEAPONS[player.weapon].melee) game.toast(player.hasWeapons ? 'You can only aim with a gun or neeps. Tap WEAPON to switch.' : 'Nothing to aim yet! Find a gun lying about town (gold rings on the radar... well, on the pavement).');
@@ -2526,7 +2551,7 @@ function togglePause(force) {
     voice.stop();
     if (document.pointerLockElement) document.exitPointerLock();
     const s = game.stats;
-    $('statsBox').innerHTML = `<div class="stat">Missions: ${game.missionIdx} / ${MISSIONS.length}</div><div class="stat">Golden Specs: ${s.specs} / 20</div><div class="stat">Motors borrowed: ${s.cars} · Successful flights: ${s.flights}</div><div class="stat">Times hopeless: ${s.wasted} · Times nicked: ${s.busted}</div><div class="stat">${content.stats()}</div><div class="stat">${extras.stats()}</div>`;
+    $('statsBox').innerHTML = game.statsHTML();
     if (audio.ctx) audio.ctx.suspend();
   } else {
     if (!isTouch) canvas.requestPointerLock?.();
@@ -2553,9 +2578,9 @@ const NESSIE_BANTER = [
   ['NESSIE: Mammy Wally gave me a scone this morning.', 'WALLY MAN: She\'s never given ME a scone!', 'NESSIE: Ye\'re no\' as cute as me, Wally.'],
 ];
 const NESSIE_LINES = ['Och aye the noo!', 'Och aye the noo! Fancy a deep-fried Mars bar?', 'Och aye the noo! Seen ma loch anywhere?', 'Och aye the noo! Nae photos, I\'m shy.', 'Och aye the noo, Wally!'];
-function startGame(fresh) {
+function startGame(fresh, reload) {
   audio.init();
-  if (!started || fresh) {
+  if (!started || fresh || reload) {
     const s = load(fresh);
     if (started) { for (const sp of game.specs) dropObject(sp.obj); for (const p of game.pickups) dropObject(p.obj); game.specs = []; game.pickups = []; failMission(); }
     setupCollectibles(s);
@@ -2602,7 +2627,21 @@ const onTurn = () => { if (isTouch && portrait.matches && game.playing && !game.
 portrait.addEventListener ? portrait.addEventListener('change', onTurn) : portrait.addListener(onTurn);
 for (const id of ['play', 'newgame']) $(id).addEventListener('click', lockLandscape);
 $('play').onclick = () => startGame(false);
-$('newgame').onclick = () => { if (!store.get('wta-save', null) || confirm('Start a new game? Your progress will be wiped.')) { store.set('wta-save', {}); startGame(true); } };
+$('newgame').onclick = () => { if (!store.get(slotKey(), null) || confirm(`Start a new game in slot ${saveSlot + 1}? That slot's progress will be wiped.`)) { store.set(slotKey(), {}); startGame(true); } };
+// the save slots screen
+function slotSummary(i) {
+  const s = store.get(slotKey(i), null);
+  if (!s || !s.v) return '<i>Empty</i>';
+  const when = s.savedAt ? new Date(s.savedAt).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'earlier';
+  return `Missions ${s.missionIdx || 0} / ${MISSIONS.length} · $${(s.money || 0).toLocaleString('en-GB')} · Specs ${(s.specs || []).length} / 20<br><small>Saved ${when}</small>`;
+}
+function renderSlots() {
+  $('slotList').innerHTML = [0, 1, 2].map((i) => `<div class="slot ${i === saveSlot ? 'cur' : ''}"><b>SLOT ${i + 1}${i === saveSlot ? ' · current' : ''}</b><p>${slotSummary(i)}</p><button class="btn" data-play="${i}">▶ PLAY</button><button class="btn alt" data-del="${i}">✖ CLEAR</button></div>`).join('');
+  for (const b of document.querySelectorAll('[data-play]')) b.onclick = () => { const i = +b.dataset.play; const changed = i !== saveSlot; saveSlot = i; store.set('wta-slot', i); $('slots').classList.add('hidden'); startGame(false, changed); };
+  for (const b of document.querySelectorAll('[data-del]')) b.onclick = () => { const i = +b.dataset.del; if (store.get(slotKey(i), null) && confirm(`Clear slot ${i + 1}? This can't be undone.`)) { store.set(slotKey(i), {}); if (i === saveSlot && started) startGame(true); renderSlots(); } };
+}
+$('slotsOpen').onclick = () => { renderSlots(); $('slots').classList.remove('hidden'); };
+$('slotsBack').onclick = () => $('slots').classList.add('hidden');
 $('howto').onclick = () => { $('help').classList.remove('hidden'); };
 $('pauseHelp').onclick = () => { $('help').classList.remove('hidden'); };
 $('helpBack').onclick = () => $('help').classList.add('hidden');

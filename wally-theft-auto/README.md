@@ -36,6 +36,7 @@ Open `wally-theft-auto/index.html` from any web server (GitHub Pages works). Not
   - Ceilidh Classics (accordion and fiddle jigs, reels and a waltz), Rave an' Scran (90s happy hardcore), Smooth Haar (late-night jazz)
 - If you die it's **HOPELESS!** and you wake up at the Infirmary. If you're arrested you're **NICKED!** and released from the Polis station.
 - **Rampages** (red squares on the radar): six timed challenges with a set weapon. **Rival superheroes** Captain Clyde and the Tartan Avenger turn up and race you to landmarks. At 3 stars the polis set up **roadblocks**; at 4 stars the **helicopter** comes out, with a searchlight at night.
+- **Property** (green squares on the radar): buy five businesses that pay every hour. **Wally's phone** (T, the 📱 button, or Back on a controller) has a city map with waypoints, contacts who do you favours, photo mode, property and stats. **Three save slots** on the title screen.
 - **Nessie**: the Loch Ness Monster is on her holidays outside Wally's flat. She can't swim on a pavement, so she wriggles after Wally wherever he goes (even chasing his motor) in a tartan bunnet, says "Och aye the noo!", and has the odd blether with him.
 - **Wally's Flat**: walk through the front door (the pink ring) to go inside. Sleep in the bed (green ring, then F) to save the game, and you'll wake up there next time. Progress also saves automatically after missions.
 
@@ -77,6 +78,7 @@ On phones and tablets there's a movement stick on the left, a camera stick next 
 
 The version number is shown on the title screen (with a "What's new" list) and on the pause screen. It lives in `js/version.js`: bump it by 0.1 for every update (1.1, 1.2, 1.3...) and add a line to `CHANGES`.
 
+- **4.4**: buy property for hourly income, Wally's phone (map with waypoints, contacts, camera/photo mode, property, stats) and three save slots
 - **4.3**: rampages, rival superheroes (Captain Clyde and the Tartan Avenger), the polis helicopter with a searchlight, and roadblocks
 - **4.2**: big frame rate boost: GPU particles, merged cars with distance detail levels, batched Nessie/pickups/specs/litter, adaptive resolution and lighter phone settings
 - **4.1**: higher-quality Wally (knitted suit, better skin, hair, eyes, moustache, cape lining, buckle), support for your own rigged glTF model at models/wally.glb, and a Scottish patter generator
