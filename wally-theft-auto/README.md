@@ -38,6 +38,17 @@ Open `wally-theft-auto/index.html` from any web server (GitHub Pages works). Not
 - **Nessie**: the Loch Ness Monster is on her holidays outside Wally's flat. She can't swim on a pavement, so she wriggles after Wally wherever he goes (even chasing his motor) in a tartan bunnet, says "Och aye the noo!", and has the odd blether with him.
 - **Wally's Flat**: walk through the front door (the pink ring) to go inside. Sleep in the bed (green ring, then F) to save the game, and you'll wake up there next time. Progress also saves automatically after missions.
 
+## Using your own 3D Wally
+
+The built-in Wally is built in code from rounded shapes skinned to a skeleton. For a much higher-quality look you can drop in your own model:
+
+1. Make or commission a rigged, skinned model of Wally Man (Blender works well). [Mixamo](https://www.mixamo.com) can auto-rig a model and give it animations.
+2. Export it as **glTF binary** (`.glb`) with the animations included, ideally named so they contain *Idle*, *Walk*, *Run*, *Jump*, *Punch*, *Sit* (for driving), *Fly* or *Fall*, and *Death*.
+3. Save it as `wally-theft-auto/models/wally.glb` and push it. The game picks it up automatically and falls back to the built-in Wally if it's missing.
+4. Optional `wally-theft-auto/models/wally.json` to fine-tune: `{ "height": 1.85, "turn": 0, "clips": { "idle": "MyIdle" }, "hand": "RightHand", "grip": [0, 0, 0] }`.
+
+Keep it under about 10 MB and 50k triangles so phones cope. Only use a model you have the rights to.
+
 ## Controls
 
 | Action | Keyboard / mouse | Gamepad |
@@ -65,6 +76,7 @@ On phones and tablets there's a movement stick on the left, a camera stick next 
 
 The version number is shown on the title screen (with a "What's new" list) and on the pause screen. It lives in `js/version.js`: bump it by 0.1 for every update (1.1, 1.2, 1.3...) and add a line to `CHANGES`.
 
+- **4.1**: higher-quality Wally (knitted suit, better skin, hair, eyes, moustache, cape lining, buckle), support for your own rigged glTF model at models/wally.glb, and a Scottish patter generator
 - **4.0**: FPS counter, bullet casings and muzzle smoke, explosion shockwaves and scorch marks, a rainbow after rain, shooting stars, smoking damaged cars, rain splashes, dust, a low-health effect and contact shadows under cars; fixed explosions killing Wally from anywhere when on foot
 - **3.9**: sun shafts and lens flare, smoother edges, headlight beams, bullet holes and sparks, tyre smoke, exhaust, crash sparks and blowing litter
 - **3.8**: fixed controllers (e.g. Nacon MG-X Pro) firing on their own and cars not driving forward; stuck controls are ignored; live controller readings

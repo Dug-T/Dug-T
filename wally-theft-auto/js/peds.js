@@ -1,6 +1,7 @@
 // Pedestrians and foot cops
 import * as THREE from 'three';
 import { buildHuman, animateHuman, randomPedLook, buildBlaster, SHARED_HUMAN } from './humans.js';
+import { patter } from './voice.js';
 import { disposeObject, SHARED } from './vehicles.js';
 const KEEP = { has: (x) => SHARED_HUMAN.has(x) || SHARED.has(x) };
 import { N, P, HALF, ROAD, KERB, blockMin, blockMax } from './city.js';
@@ -65,7 +66,7 @@ export class Ped {
       return true;
     }
     if (kind === 'punch') { this.vx = dx / d * 4; this.vz = dz / d * 4; this.vy = 3; this.state = 'tumble'; this.knock = true; }
-    if (!this.cop && !this.thug) { this.fleeFrom = [fromX, fromZ]; this.fleeT = 8; if (Math.random() < 0.6) game.say(this, pick(LINES.hit)); }
+    if (!this.cop && !this.thug) { this.fleeFrom = [fromX, fromZ]; this.fleeT = 8; if (Math.random() < 0.6) game.say(this, Math.random() < 0.35 ? patter('insult') : pick(LINES.hit)); }
     if (this.cop || this.thug) this.aggro = true;
     return false;
   }
@@ -182,7 +183,7 @@ export class Ped {
       // gawk at Wally when he's close
       if (pdist < 6 && !pl.car) {
         this.sayCool -= dt;
-        if (this.sayCool <= 0) { this.sayCool = 12 + Math.random() * 20; if (Math.random() < 0.5) game.say(this, pick(LINES.idle)); }
+        if (this.sayCool <= 0) { this.sayCool = 12 + Math.random() * 20; if (Math.random() < 0.5) { const r = Math.random(); game.say(this, r < 0.15 ? patter('insult') : (r < 0.3 ? patter('nice') : pick(LINES.idle))); } }
       }
       // panic if a car is bombing at us or guns are out
       if (game.alarm && Math.hypot(game.alarm[0] - this.x, game.alarm[1] - this.z) < 25) { this.state = 'flee'; this.fleeFrom = game.alarm; this.fleeT = 7; if (Math.random() < 0.15) game.say(this, pick(LINES.flee)); }

@@ -2,6 +2,7 @@
 import * as THREE from 'three';
 import { buildHuman, animateHuman } from './humans.js';
 import { WEAPONS, WEAPON_ORDER, HOLD, usesAmmo, buildWeaponModel } from './weapons.js';
+import { loadCustomModel } from './custommodel.js';
 
 export const OUTFITS = [
   { name: 'Classic Wally', suit: '#1f5fc4', red: '#e0471c', cape: '#e14a1e' },
@@ -35,15 +36,17 @@ export class Player {
     }
     this.blaster = this.models.blaster;
     // remember which materials are the suit, the red trim and the cape, so outfits can recolour them
-    this.outfitMats = { suit: new Set(), red: new Set(), cape: new Set() };
+    this.outfitMats = { suit: new Set(), red: new Set(), cape: new Set(), lining: new Set() };
     this.h.root.traverse((m) => {
       if (!m.isMesh) return;
+      if (m.userData.lining) { this.outfitMats.lining.add(m.material); m.material.color.multiplyScalar(0.55); return; }
       for (const mt of Array.isArray(m.material) ? m.material : [m.material]) {
         const hx = mt.color && mt.color.getHexString();
         if (hx === '1f5fc4') this.outfitMats.suit.add(mt); else if (hx === 'e0471c') this.outfitMats.red.add(mt); else if (hx === 'e14a1e') this.outfitMats.cape.add(mt);
       }
     });
     this.outfit = 0;
+    loadCustomModel(this);
     this.x = 0; this.y = 0.2; this.z = 0; this.vy = 0; this.heading = 0;
     this.vx = 0; this.vz = 0;
     this.health = 100; this.armour = 0; this.money = 0;
@@ -67,6 +70,7 @@ export class Player {
     for (const m of this.outfitMats.suit) m.color.set(o.suit);
     for (const m of this.outfitMats.red) m.color.set(o.red);
     for (const m of this.outfitMats.cape) m.color.set(o.cape);
+    for (const m of this.outfitMats.lining) m.color.set(o.cape).multiplyScalar(0.55);
     if (game) game.wallySuit = o.suit;
     return o;
   }
@@ -82,7 +86,7 @@ export class Player {
     const world = game.world;
     this.powerCool = Math.max(0, this.powerCool - dt);
     this.superPunch = Math.max(0, this.superPunch - dt);
-    if (this.dead) { this.h.root.visible = true; animateHuman(this.h, dt, { mode: 'dead' }); this.h.root.rotation.x = -Math.PI / 2; this.h.root.position.set(this.x, this.y + 0.15, this.z); return; }
+    if (this.dead) { this.h.root.visible = true; if (this.custom) this.custom.update(dt, { dead: true }); animateHuman(this.h, dt, { mode: 'dead' }); this.h.root.rotation.x = -Math.PI / 2; this.h.root.position.set(this.x, this.y + 0.15, this.z); return; }
     this.h.root.rotation.x = 0;
     if (this.car) {
       // sit Wally in the driver's seat (right-hand drive)
@@ -196,6 +200,7 @@ export class Player {
     if (inp.powerPressed) this.usePower(game);
 
     const air = !this.onGround && this.flyT <= 0;
+    if (this.custom) this.custom.update(dt, { speed: this.onGround ? this.speed : 0, air, fly: this.flyT > 0, punch: this.h.punchT > 0, car: !!this.car, dead: this.dead });
     animateHuman(this.h, dt, {
       speed: this.onGround ? this.speed : 0, air, mode: this.flyT > 0 ? 'fly' : 'move', flail: this.flail,
       aim: this.aiming || (!WEAPONS[this.weapon].melee && !WEAPONS[this.weapon].thrown && this.fireT > 0), aimPitch: -game.cam.pitch * 0.8,
