@@ -38,7 +38,7 @@ export class Audio {
     this.eng2 = ctx.createOscillator(); this.eng2.type = 'square'; this.eng2.frequency.value = 31; const e2g = ctx.createGain(); e2g.gain.value = 0.35; this.eng2.connect(e2g); e2g.connect(this.engF);
     this.eng1.start(); this.eng2.start();
     // rain: a hiss of filtered noise
-    this.rainL = loop(nb, 'highpass', 1500); this.rainL.s.playbackRate.value = 0.75;
+    this.rainL = loop(nb, 'bandpass', 2600, 0.35); this.rainL.s.playbackRate.value = 0.75; // a softer patter, without the harsh top end
     this.t0 = ctx.currentTime;
   }
   setOn(on) { this.on = on; if (this.master) this.master.gain.setTargetAtTime(on ? 0.8 : 0, this.ctx.currentTime, 0.05); }
@@ -53,8 +53,8 @@ export class Audio {
     ease(this.rumble.g, c.rumble * 0.9); ease(this.subG, c.rumble * 0.35);
     this.sub.frequency.setTargetAtTime(34 + 8 * Math.sin(t * 0.9), t, 0.3);
     ease(this.heliG, c.heli * 0.6, 0.2);
-    ease(this.fire.g, c.fire * 0.25);
-    ease(this.rainL.g, (c.rain || 0) * 0.22);
+    ease(this.fire.g, c.fire * 0.09);
+    ease(this.rainL.g, (c.rain || 0) * 0.08);
     const rpm = c.engine || 0;
     ease(this.engG, rpm > 0 ? 0.16 : 0, 0.15);
     this.eng1.frequency.setTargetAtTime(52 + rpm * 190, t, 0.08); this.eng2.frequency.setTargetAtTime(26 + rpm * 95, t, 0.08);

@@ -58,6 +58,7 @@ Version 1.0 is single player with NPC survivors. The world is seeded and determi
 
 ## Versions
 
+- **2.7**: animated, realistic flames for every fire and the torch; quieter rain and fire sounds.
 - **2.6**: performance: fixed the frame rate sliding over time (spent particles still drawn), a light budget (4 lights instead of 20), adaptive resolution for hot phones, area culling for vegetation, lighter settings on phones.
 - **2.5**: phone title screen fixed (two columns in landscape, title fully on screen); © Douglas Thomson credit.
 - **2.4**: fixed the GRAPHICS button getting stuck on Ultra.

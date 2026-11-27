@@ -1,7 +1,11 @@
 // Bump VERSION for every update (1.1, 1.2, 1.3 ...) and add a line to CHANGES.
-export const VERSION = '2.6';
+export const VERSION = '2.7';
 
 export const CHANGES = [
+  ['2.7', [
+    'Realistic fire: campfires, fire pits, the torch and the forest fires now have living flames that sway, lick and flicker, from a white-hot core through orange to red tips with a blue base, and campfires give off a little smoke',
+    'The rain and the fire are much quieter, and the rain is a softer patter',
+  ]],
   ['2.6', [
     'Performance: fixed the frame rate sliding down after a few minutes. Spent smoke and ash particles kept being drawn at full size, so the cost grew as the volcano\'s plume filled up; they now cost nothing',
     'Performance: only the 4 lights that matter most are switched on at any moment (8 on Ultra), instead of all 17 point lights and 3 spotlights in every shader',

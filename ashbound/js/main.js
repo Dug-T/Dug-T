@@ -12,6 +12,7 @@ import { buildSurvivor, animateSurvivor, buildAxe, LOOKS, groundTilt } from './s
 import { Volcano, Puffs } from './volcano.js';
 import { Jeep, Boat } from './vehicle.js';
 import { Dog } from './dog.js';
+import { makeFlame, FLAME_U } from './flame.js';
 import { Wildlife } from './wildlife.js';
 import { PAGES } from './journal.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
@@ -276,7 +277,8 @@ const torchModel = (() => {
   const g = new THREE.Group();
   const stick = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.028, 0.55, 8), new THREE.MeshStandardMaterial({ color: '#6a4a2a', roughness: 0.9 })); stick.rotation.x = Math.PI / 2; stick.position.z = 0.18; g.add(stick);
   const wrap = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.035, 0.12, 8), new THREE.MeshStandardMaterial({ color: '#3a2a1a', roughness: 1, emissive: '#ff4a10', emissiveIntensity: 0.6 })); wrap.rotation.x = Math.PI / 2; wrap.position.z = 0.45; g.add(wrap);
-  const flame = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture(), color: '#ffa040', transparent: true, blending: THREE.AdditiveBlending, depthWrite: false })); flame.scale.set(0.45, 0.6, 1); flame.position.z = 0.6; g.add(flame);
+  const flame = makeFlame(); flame.scale.set(0.26, 0.5, 1); flame.position.z = 0.5; g.add(flame);
+  const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture(), color: '#ff8030', transparent: true, opacity: 0.35, blending: THREE.AdditiveBlending, depthWrite: false })); halo.scale.set(0.7, 0.7, 1); halo.position.z = 0.55; g.add(halo);
   g.userData.flame = flame; g.visible = false; return g;
 })();
 const torchLight = new THREE.PointLight('#ffa040', 0, 18, 1.6); scene.add(torchLight);
@@ -1143,13 +1145,13 @@ function updateAtmosphere(dt, vfx) {
     const lit = f.t > 0, fuel = f.camp ? 1 : clamp(f.t / 25, 0.3, 1);
     const k = (0.85 + Math.sin(game.t * 13 + f.x) * 0.1 + Math.sin(game.t * 29 + f.z) * 0.05) * fuel;
     f.flame.visible = lit;
-    if (lit) { f.flame.scale.set((f.camp ? 1.1 : 1.0) * k, (f.camp ? 1.7 : 1.5) * k + Math.sin(game.t * 17 + f.x) * 0.2, 1); if (Math.random() < dt * 4 * fuel) fx.sparks.emit(f.x + (Math.random() - 0.5) * 0.4, heightAt(f.x, f.z) + 0.9, f.z + (Math.random() - 0.5) * 0.4, (Math.random() - 0.5) * 0.5, 1.2 + Math.random() * 1.4, (Math.random() - 0.5) * 0.5, 0.12, 1 + Math.random(), Math.random(), 1, 0, 1); }
+    if (lit) { const br = 0.94 + 0.06 * Math.sin(game.t * 2.3 + f.x); f.flame.scale.set((f.camp ? 1.25 : 1.1) * fuel * br, (f.camp ? 2.0 : 1.7) * fuel * (0.9 + 0.1 * k), 1); if (Math.random() < dt * 2.2 * fuel) fx.dust.emit(f.x + (Math.random() - 0.5) * 0.3, heightAt(f.x, f.z) + 1.9, f.z + (Math.random() - 0.5) * 0.3, 0.25 + Math.random() * 0.2, 0.6, (Math.random() - 0.5) * 0.2, 0.6, 4 + Math.random() * 2, 0.85, 0.16, 0.9); if (Math.random() < dt * 4 * fuel) fx.sparks.emit(f.x + (Math.random() - 0.5) * 0.4, heightAt(f.x, f.z) + 0.9, f.z + (Math.random() - 0.5) * 0.4, (Math.random() - 0.5) * 0.5, 1.2 + Math.random() * 1.4, (Math.random() - 0.5) * 0.5, 0.12, 1 + Math.random(), Math.random(), 1, 0, 1); }
     if (f.light) { f.light.intensity = lit ? 14 * k : 0; if (!lit && f.built) { f.light.userData.used = false; f.light = null; } }
   }
   // the torch lights itself in the dark
   const torchOn = player.inv.count('torch') > 0 && isDark() && !player.inJeep && !player.inBoat && !player.inBunker && !player.inHeli && !player.onRaft && !player.swimming && !player.dead;
   torchModel.visible = torchOn;
-  if (torchOn) { torchModel.userData.flame.getWorldPosition(_tp); torchLight.position.copy(_tp); const tk = 0.85 + Math.sin(game.t * 19) * 0.08 + Math.sin(game.t * 31) * 0.07; torchLight.intensity = 16 * tk; torchModel.userData.flame.scale.set(0.42 * tk, 0.6 * tk, 1); } else torchLight.intensity = 0;
+  if (torchOn) { torchModel.userData.flame.getWorldPosition(_tp); torchLight.position.copy(_tp); const tk = 0.85 + Math.sin(game.t * 19) * 0.08 + Math.sin(game.t * 31) * 0.07; torchLight.intensity = 16 * tk; torchModel.userData.flame.scale.set(0.26 * (0.9 + tk * 0.1), 0.5 * (0.85 + tk * 0.15), 1); } else torchLight.intensity = 0;
   // sound levels
   const seaD = Math.max(0, heightAt(player.x, player.z));
   audio.update(dt, {
@@ -1485,6 +1487,7 @@ function frame(now) {
   else if (game.started && !game.photo) camera.lookAt(props.heli.position);
   input.endFrame();
   if (showFps) { fpsT += dt; game.fpsN++; if (fpsT >= 0.5) { $('fps').textContent = Math.round(game.fpsN / fpsT) + ' FPS' + (res.scale < 0.999 ? ` · ${Math.round(res.scale * 100)}% res` : ''); fpsT = 0; game.fpsN = 0; } }
+  FLAME_U.uTime.value = now / 1000;
   budgetLights();
   try { world.reflect(renderer, camera, scene, quality === 'ultra' && game.started && !player.inBunker, [...world.smallPlants, rainLines, gasFx.points, fx.dust.points, fx.spray.points, fx.mist.points, fx.leaves.points, fx.fireflies.points, fx.sparks.points, volcano.ashFall.points, decals.foot.m, decals.tyre.m, pillar]);
     if (composer && quality !== 'low') composer.render(); else renderer.render(scene, camera); if (game.snap) { game.snap = false; snapPhoto(); } }
@@ -1497,7 +1500,7 @@ function benchFrames(n = 10) {
   for (let i = 0; i < n; i++) { const t0 = performance.now(); world.reflect(renderer, camera, scene, quality === 'ultra', []); if (composer && quality !== 'low') composer.render(); else renderer.render(scene, camera); gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px); t += performance.now() - t0; }
   return t / n;
 }
-window.ASH = { composerRef: () => composer, bloomRef: () => bloom, res, resize, benchFrames, renderer, scene, camera: () => camera, lighthouse, gasPockets, setWaypoint, lightBeacon, lensDrops, decals, quad, cars, car: () => car, wild: () => wild, unlock, enterPhoto, exitPhoto, addShelter, dog: () => dog, trySleep, surfaceAt, game, player, volcano, npcs, props, world, cam, save, load, die, win, jeep, enterJeep, exitJeep, voice, boat, enterBoat, exitBoat, dayNight, addFire };
+window.ASH = { heightAt, composerRef: () => composer, bloomRef: () => bloom, res, resize, benchFrames, renderer, scene, camera: () => camera, lighthouse, gasPockets, setWaypoint, lightBeacon, lensDrops, decals, quad, cars, car: () => car, wild: () => wild, unlock, enterPhoto, exitPhoto, addShelter, dog: () => dog, trySleep, surfaceAt, game, player, volcano, npcs, props, world, cam, save, load, die, win, jeep, enterJeep, exitJeep, voice, boat, enterBoat, exitBoat, dayNight, addFire };
 applyQuality();
 collectLights(); world.cullVegetation(camera.position.x, camera.position.z);
 $('loading').classList.add('hidden');
